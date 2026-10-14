@@ -8,7 +8,15 @@
   align-items: stretch;
 }
 
+/* 多列时所有行等高：行高统一取最高卡片，卡片大小一致，不会出现某一行更高。 */
+@media (min-width: 641px) {
+  .projects-page .project-grid {
+    grid-auto-rows: 1fr;
+  }
+}
+
 .project-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -17,8 +25,9 @@
   border-radius: 12px;
   background: var(--bg);
   min-width: 0;
-  /* 行高由该行最高卡片决定；卡片自身设高度上限并溢出省略。 */
-  max-height: 260px;
+  /* 卡片高度上限，超出部分溢出省略；行高由栅格的 grid-auto-rows 统一。 */
+  max-height: 320px;
+  overflow: hidden;
 }
 
 /* 悬停反馈：只改背景，取值与列表页卡片的悬停底色一致。 */
@@ -27,10 +36,9 @@
   background: var(--code-header-bg);
 }
 
+/* 主按钮不用 flex 行：图标与展示图用浮动参与环绕，正文整体不再被推右。 */
 .project-card__main {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
+  display: block;
   width: 100%;
   min-width: 0;
   padding: 0;
@@ -43,16 +51,50 @@
   min-height: var(--tap-min-h);
 }
 
-.project-card__main:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 8px;
+/* 整卡可点：按钮的覆盖层铺满卡片（卡片是定位祖先），底部链接用 z-index 抬到它之上。 */
+.project-card__main::after {
+  content: '';
+  position: absolute;
+  inset: 0;
 }
 
-.project-card__icon {
+.project-card__main:focus-visible {
+  outline: none;
+}
+
+.project-card:has(.project-card__main:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 末尾链接组固定在卡片右下角，四周间隙与卡片内边距一致；抬到覆盖层之上保持可点。 */
+.project-card .trailing-links {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+}
+
+/* 头部两列：图标在左、标题块在右，两列顶部对齐 */
+.project-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.project-card__headings {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  /* 抵消首行行距，让标题文字顶部与图标顶部齐平 */
+  margin-top: -2px;
+}
+
+/* 图标：卡片 36px、弹窗 44px，其余样式两处共用 */
+.project-card__icon,
+.project-dialog__icon {
   flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -62,18 +104,28 @@
   background: var(--panel);
 }
 
-.project-card__icon img {
+.project-card__icon {
+  width: 36px;
+  height: 36px;
+}
+
+.project-dialog__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+
+.project-card__icon img,
+.project-dialog__icon img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
+/* flow-root 让容器包住浮动，卡片高度不受影响 */
 .project-card__body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: flow-root;
   min-width: 0;
-  flex: 1;
 }
 
 .project-card__title-row {
@@ -94,7 +146,8 @@
 }
 
 .project-card__subtitle {
-  font-size: 13px;
+  display: block;
+  font-size: 12px;
   color: var(--muted);
   min-width: 0;
   overflow: hidden;
@@ -103,6 +156,8 @@
 }
 
 .project-card__description {
+  /* 与副标题拉开距离 */
+  margin-top: 10px;
   font-size: 13px;
   line-height: 1.6;
   color: var(--muted);
@@ -113,11 +168,30 @@
   overflow: hidden;
 }
 
+/* 展示图：左浮动贴卡片最左边，文字从它右侧开始并绕开它（类似 Word 的四周环绕）。 */
+.project-card__image {
+  float: left;
+  width: min(168px, 44%);
+  /* 与文段同为 10px：图顶因此与正文首行文字顶部齐平 */
+  margin: 10px 14px 8px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.project-card__image img {
+  display: block;
+  width: 100%;
+  height: 96px;
+  object-fit: cover;
+}
+
 /* ---------------- 弹窗（>=641px：居中，横屏宽、竖屏长） ---------------- */
 
 .project-dialog {
   margin: auto;
-  width: min(920px, calc(100vw - 64px));
+  width: var(--card-dialog-inline-size);
   max-height: min(84vh, 900px);
   padding: 0;
   border: 1px solid var(--border);
@@ -153,6 +227,8 @@
 .project-dialog__title-wrap {
   min-width: 0;
   flex: 1;
+  /* 与卡片同理：抵消首行行距，让标题文字顶部与图标顶部齐平 */
+  margin-top: 0;
 }
 
 .project-dialog__title-row {
@@ -249,6 +325,15 @@
   flex: 1;
 }
 
+/*
+ * 末尾元素的外边距会算进滚动区：正文最后一段的 margin 折叠到 .prose 外层后，
+ * 内容放得下也会出现滚动条，因此把直接子元素与它内部最后一个元素一起归零。
+ */
+.project-dialog__content > :last-child,
+.project-dialog__content > :last-child > :last-child {
+  margin-bottom: 0;
+}
+
 .project-dialog__fallback {
   margin: 0;
   color: var(--muted);
@@ -257,10 +342,6 @@
 /* ---------------- <=640px：底部抽屉 ---------------- */
 
 @media (max-width: 640px) {
-  .project-card {
-    max-height: 320px;
-  }
-
   .project-dialog {
     inset: auto 0 0;
     margin: 0;

@@ -46,6 +46,14 @@ describe('content editor adapters', () => {
     expect(about.isFrontmatterIssuePath('title')).toBe(false);
   });
 
+  it('registers the projects image field like the icon field', () => {
+    const projects = getContentEditorAdapter('projects');
+
+    expect(projects.isFrontmatterIssuePath('icon')).toBe(true);
+    expect(projects.isFrontmatterIssuePath('image')).toBe(true);
+    expect(projects.getWriteFieldLabel('image')).toBe('展示图');
+  });
+
   it('derives delete affordance from collection capabilities', () => {
     const collections = ADMIN_CONTENT_WRITE_COLLECTION_KEYS;
 

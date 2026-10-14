@@ -29,6 +29,8 @@ type ProjectCard = {
   description: string | null;
   type: string | null;
   icon: string | null;
+  /** 展示图路径（可为空）；卡片里以缩略图呈现 */
+  image: string | null;
   hasBody: boolean;
   /** 正文 html（含末尾链接行标记）；无正文时为空串 */
   bodyHtml: string;
@@ -50,6 +52,7 @@ const cards: ProjectCard[] = await Promise.all(
       description: deriveEntryDescription(entry.data.description, body),
       type: entry.data.type?.trim() || null,
       icon: entry.data.icon?.trim() || null,
+      image: entry.data.image?.trim() || null,
       hasBody,
       bodyHtml: html,
       links
@@ -82,17 +85,30 @@ const cards: ProjectCard[] = await Promise.all(
           aria-haspopup="dialog"
           aria-label={`查看项目：${card.title}`}
         >
-          {card.icon ? (
-            <span class="project-card__icon">
-              <img src={withBase(card.icon)} alt="" loading="lazy" decoding="async" />
-            </span>
-          ) : null}
+          {/*
+            头部两列：图标在左，胶囊标题与副标题在右侧两行，两列顶部对齐；
+            正文里展示图左浮动贴最左，文段从它右侧开始并绕开它。
+          */}
           <span class="project-card__body">
-            <span class="project-card__title-row">
-              {card.type ? <span class="badge">{card.type}</span> : null}
-              <span class="project-card__title">{card.title}</span>
+            <span class="project-card__head">
+              {card.icon ? (
+                <span class="project-card__icon">
+                  <img src={withBase(card.icon)} alt="" loading="lazy" decoding="async" />
+                </span>
+              ) : null}
+              <span class="project-card__headings">
+                <span class="project-card__title-row">
+                  {card.type ? <span class="badge">{card.type}</span> : null}
+                  <span class="project-card__title">{card.title}</span>
+                </span>
+                {card.subtitle ? <span class="project-card__subtitle">{card.subtitle}</span> : null}
+              </span>
             </span>
-            {card.subtitle ? <span class="project-card__subtitle">{card.subtitle}</span> : null}
+            {card.image ? (
+              <span class="project-card__image">
+                <img src={withBase(card.image)} alt={card.title} loading="lazy" decoding="async" />
+              </span>
+            ) : null}
             {card.description ? <span class="project-card__description">{card.description}</span> : null}
           </span>
         </button>
@@ -113,6 +129,12 @@ const cards: ProjectCard[] = await Promise.all(
       <div class="project-dialog__inner">
         <div class="project-dialog__handle" aria-hidden="true"></div>
         <div class="project-dialog__head">
+          {/* 与卡片同一套头部：图标在左，胶囊标题与副标题在右侧两行，顶部对齐 */}
+          {card.icon ? (
+            <span class="project-dialog__icon">
+              <img src={withBase(card.icon)} alt="" loading="lazy" decoding="async" />
+            </span>
+          ) : null}
           <div class="project-dialog__title-wrap">
             <div class="project-dialog__title-row">
               {card.type ? <span class="badge">{card.type}</span> : null}

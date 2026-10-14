@@ -222,6 +222,11 @@
   width: 100%;
 }
 
+/* 公开页底部不留内边距：页脚因此贴在页面底部（页脚自带上方间距）。 */
+:where(body:not(.admin-page)) .content {
+  padding-bottom: 0;
+}
+
 .content__inner {
   /* 内容铺满壳层，不设 max-width */
   margin-inline: auto;
@@ -233,7 +238,8 @@
 }
 
 .site-footer {
-  padding: 40px 0 10px;
+  /* 底部内边距即页脚到页面底部的距离（内容区底部不再留白） */
+  padding: 40px 0 16px;
   text-align: center;
   font-size: 12px;
   color: var(--faint);
@@ -1493,7 +1499,8 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
 
 /* 阅读模式：收起侧栏/导航/页脚，增强正文可读性 */
 body.immersive-page[data-reading="immersive"] .content {
-  padding: 64px 40px;
+  /* 左右内边距沿用普通设计的 --pad-x，正文左右到窗口的间隙因此与普通状态一致 */
+  padding: 64px var(--pad-x);
 }
 
 body.immersive-page[data-reading="immersive"] .content__inner {
@@ -1580,6 +1587,15 @@ body.immersive-page[data-reading="immersive"] .prose p {
 
   body.immersive-page[data-reading="immersive"] .shell {
     grid-template-columns: 0px 0px 1fr;
+  }
+
+  /**
+   * 阅读模式把左栏两列的 token 直接收为 0：目录的栅格规则引用同一对 token，
+   * 因此无需逐条覆写——有目录时第 4 列照常参与（展开挤压正文、收起为 0）。
+   */
+  body.immersive-page[data-reading="immersive"] {
+    --sidebar: 0px;
+    --layout-divider-inline-size: 0px;
   }
 
   body.immersive-page[data-reading="immersive"] .sidebar {

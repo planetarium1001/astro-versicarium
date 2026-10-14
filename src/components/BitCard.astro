@@ -1,7 +1,9 @@
 ---
 import { type BitsEntry, getBitAnchorId } from '../lib/bits';
-import { buildBitsCardViewModel } from '../lib/bits-card-view-model';
+import { BITS_CARD_VISIBLE_IMAGE_LIMIT, buildBitsCardViewModel } from '../lib/bits-card-view-model';
 import { getThemeSettings } from '../lib/theme-settings';
+import BitAvatar from './BitAvatar.astro';
+import BitTags from './BitTags.astro';
 
 const {
   bit,
@@ -24,8 +26,14 @@ const card = buildBitsCardViewModel({
   defaultAuthor: settings.page.bits.defaultAuthor,
   base
 });
-const previewExcerpt = excerpt || (!Content ? card.body.excerpt : '');
-const maxVisible = 4;
+const maxVisible = BITS_CARD_VISIBLE_IMAGE_LIMIT;
+/**
+ * 卡片正文的两套口径由视图模型统一给出：预算内渲染完整 Markdown，超出预算改用纯文本摘要，
+ * 保证「判定完整渲染」与可见行数不会错位。摘要被截断时另给一行「全文」提示。
+ */
+const renderFullBody = card.body.shouldRenderFull && !card.body.truncated && Boolean(Content);
+const previewExcerpt = excerpt || card.body.excerpt;
+const dialogId = `bit-dialog-${bitEntry.id}`;
 const getImageLoading = (prioritize: boolean) => (prioritize ? 'eager' : 'lazy');
 const getImageFetchPriority = (prioritize: boolean) => (prioritize ? 'high' : undefined);
 ---
@@ -39,31 +47,32 @@ const getImageFetchPriority = (prioritize: boolean) => (prioritize ? 'high' : un
   data-entry-item
   data-entry-year={String(bitEntry.data.date.getFullYear())}
 >
+  {/*
+    整卡可点的覆盖层：按钮本身不可见，`::after` 铺满卡片；图片与标签抬到 z-index 1 之上，
+    因此点击它们不会打开弹窗（样式见 components/bit-card.css）。
+  */}
+  <button
+    type="button"
+    class="bit-card__open"
+    data-bit-dialog-open
+    data-bit-dialog={dialogId}
+    aria-haspopup="dialog"
+    aria-label={`查看动态详情：${card.authorName}`}
+  ></button>
+
   <div class="bit-author">
-    <div class={`avatar${card.authorAvatar ? ' avatar--image' : ' is-fallback'}`} aria-hidden="true">
-      {card.authorAvatar ? (
-        <img
-          src={card.authorAvatar}
-          alt=""
-          width="32"
-          height="32"
-          loading="lazy"
-          decoding="async"
-          onerror="this.parentElement?.classList.add('is-fallback'); this.remove();"
-        />
-      ) : null}
-      <span class="avatar-fallback">{card.avatarLetter}</span>
-    </div>
+    <BitAvatar avatar={card.authorAvatar} letter={card.avatarLetter} />
     <div class="name">{card.authorName}</div>
   </div>
 
-  {Content ? (
-    <div class="bit-body">
+  {renderFullBody ? (
+    <div class="bit-body bit-body--rich">
       <Content />
     </div>
   ) : previewExcerpt ? (
     <div class="bit-body">
-      <p>{previewExcerpt}</p>
+      <p class="bit-body__excerpt">{previewExcerpt}</p>
+      {card.body.truncated ? <p class="bit-body-hint" data-bit-body-hint>查看全文</p> : null}
     </div>
   ) : null}
 
@@ -90,11 +99,11 @@ const getImageFetchPriority = (prioritize: boolean) => (prioritize ? 'high' : un
     <div class="bit-media bit-media--grid">
       <div class="bit-media-grid">
         {card.visibleImages.map((image, index) => {
-          const isMore = index === maxVisible - 1 && card.imageItems.length > maxVisible;
+          const isMore = index === card.visibleImages.length - 1 && card.moreCount > 0;
           return (
             <button
               type="button"
-              class={`bit-media-item${index === card.wideIndex ? ' bit-media-item--wide' : ''}${isMore ? ' bit-media-item--more' : ''}`}
+              class={`bit-media-item${isMore ? ' bit-media-item--more' : ''}`}
               data-bit-image-button
               data-bit-image-index={index}
               aria-label={isMore ? `查看全部图片（共 ${card.imageItems.length} 张）` : `图片 ${index + 1}`}
@@ -108,12 +117,10 @@ const getImageFetchPriority = (prioritize: boolean) => (prioritize ? 'high' : un
                 fetchpriority={getImageFetchPriority(prioritizeLeadMedia && index === 0)}
               />
               {isMore ? (
-                <>
-                  <span class="bit-media-more" aria-hidden="true" data-bit-image-open-hidden={maxVisible}>
-                    <span class="bit-media-more-short">+ {card.imageItems.length - maxVisible}</span>
-                    <span class="bit-media-more-full">查看其余{card.imageItems.length - maxVisible}张</span>
-                  </span>
-                </>
+                <span class="bit-media-more" aria-hidden="true" data-bit-image-open-hidden={maxVisible}>
+                  <span class="bit-media-more-short">+ {card.moreCount}</span>
+                  <span class="bit-media-more-full">查看其余{card.moreCount}张</span>
+                </span>
               ) : null}
             </button>
           );
@@ -137,26 +144,7 @@ const getImageFetchPriority = (prioritize: boolean) => (prioritize ? 'high' : un
   ) : null}
 
   <div class="bit-meta">
-    {card.hasTags ? (
-      <div class="bit-tags">
-        {card.placeText ? (
-          <span class="bit-tag bit-tag--place">
-            <span class="bit-tag-icon" aria-hidden="true">📍</span>
-            <span class="bit-tag-text">{card.placeText}</span>
-          </span>
-        ) : null}
-        {card.normalTagItems.length ? (
-          <span class="bit-tag bit-tag--normal">
-            <span class="bit-tag-icon" aria-hidden="true">❤</span>
-            <span class="bit-tag-list">
-              {card.normalTagItems.map((tag) => (
-                <span class="bit-tag-token">{tag}</span>
-              ))}
-            </span>
-          </span>
-        ) : null}
-      </div>
-    ) : null}
+    <BitTags card={card} />
     <div>{card.dateLabel}</div>
   </div>
 </article>

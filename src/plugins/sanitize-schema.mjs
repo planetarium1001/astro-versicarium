@@ -68,7 +68,8 @@ export const sanitizeSchema = {
     a: mergeAttrs(extendClassNameAttrs(getSchemaAttrs('a'), ['friend-card']), ['target', 'rel']),
     h2: mergeAttrs(getSchemaAttrs('h2'), ['dataAdminOutlineKey', 'data-admin-outline-key']),
     h3: mergeAttrs(getSchemaAttrs('h3'), ['dataAdminOutlineKey', 'data-admin-outline-key']),
-    img: mergeAttrs(getSchemaAttrs('img'), ['loading', 'decoding', 'width', 'height']),
+    // alt / title 是图片的语义属性，默认 schema 未列出，这里显式保留
+    img: mergeAttrs(getSchemaAttrs('img'), ['alt', 'title', 'loading', 'decoding', 'width', 'height']),
     source: mergeAttrs(getSchemaAttrs('source'), ['srcset', 'srcSet', 'type', 'media', 'sizes']),
     ul: [['className', 'gallery', 'cols-2', 'cols-3', 'contains-task-list', 'friend-list']],
     figure: [[

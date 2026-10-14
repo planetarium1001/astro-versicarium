@@ -550,6 +550,7 @@ const buildProjectsWritePlan = (
     { field: 'description', path: ['description'], currentValue: getCurrentOptionalText(frontmatter, 'description'), nextValue: values.description.trim() || undefined },
     { field: 'type', path: ['type'], currentValue: getCurrentOptionalText(frontmatter, 'type'), nextValue: values.type.trim() || undefined },
     { field: 'icon', path: ['icon'], currentValue: getCurrentOptionalText(frontmatter, 'icon'), nextValue: values.icon.trim() || undefined },
+    { field: 'image', path: ['image'], currentValue: getCurrentOptionalText(frontmatter, 'image'), nextValue: values.image.trim() || undefined },
     { field: 'date', path: ['date'], currentValue: getCurrentTextValue(frontmatter, 'date', ''), nextValue: date?.toISOString() },
     { field: 'draft', path: ['draft'], currentValue: getCurrentBooleanValue(frontmatter, 'draft', false), nextValue: values.draft }
   ];
@@ -753,6 +754,7 @@ export const parseAdminProjectsEditorInput = (
       description: getText('description'),
       type: getText('type'),
       icon: getText('icon'),
+      image: getText('image'),
       date: getText('date'),
       draft: draft as boolean
     }

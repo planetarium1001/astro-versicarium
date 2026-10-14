@@ -29,6 +29,7 @@
 | `article-toc.ts` | 目录展开与收起、滚动高亮、跳转高亮、状态持久化 |
 | `sidebar-*.ts` | 侧栏导航、主题切换涟漪、阅读模式、浮动操作列与阅读位置记忆 |
 | `entry-search.ts`、`tag-expression.ts`、`bits-*.ts`、`devlog-*.ts` | 列表页搜索、标签表达式、年份与项目筛选 |
+| `dialog-controller.ts` | 卡片详情弹窗的通用交互（打开、关闭、焦点），由 projects 与 bits 的脚本注入选择器复用 |
 | `view-stats.ts` | 浏览数据取数的唯一接入点，默认空实现 |
 | `admin-*/` | 后台各类控制台行为，仅开发环境加载 |
 

@@ -53,6 +53,7 @@ export type AdminProjectsEditorValues = {
   description: string;
   type: string;
   icon: string;
+  image: string;
   date: string;
   draft: boolean;
 };
@@ -236,6 +237,7 @@ const toProjectsEditorValues = (state: AdminContentSourceState): AdminProjectsEd
     description: normalizeOptionalText(frontmatter.description),
     type: normalizeOptionalText(frontmatter.type),
     icon: normalizeOptionalText(frontmatter.icon),
+    image: normalizeOptionalText(frontmatter.image),
     date: getDateString(frontmatter, 'date', ''),
     draft: frontmatter.draft === true
   };

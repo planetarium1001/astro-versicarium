@@ -67,6 +67,7 @@ const cloneProjectsValues = (value: AdminProjectsEditorValues): AdminProjectsEdi
   description: value.description,
   type: value.type,
   icon: value.icon,
+  image: value.image,
   date: value.date,
   draft: value.draft
 });
@@ -92,7 +93,7 @@ export const isProjectsEditorValues = (
   value: AdminContentWorkspaceEditorValues | null
 ): value is AdminProjectsEditorValues =>
   // projects 是唯一同时有 subtitle 与 icon 的列表型集合。
-  Boolean(value && 'subtitle' in value && 'icon' in value);
+  Boolean(value && 'subtitle' in value && 'icon' in value && 'image' in value);
 
 export const isDevlogEditorValues = (
   value: AdminContentWorkspaceEditorValues | null
@@ -156,6 +157,7 @@ const PROJECTS_FRONTMATTER_ISSUE_PATHS = new Set([
   'description',
   'type',
   'icon',
+  'image',
   'date',
   'draft'
 ]);
@@ -175,6 +177,7 @@ const PROJECTS_FIELD_LABELS: Readonly<Record<string, string>> = {
   description: '描述',
   type: '类型',
   icon: '图标',
+  image: '展示图',
   date: '日期',
   draft: '草稿状态',
   body: '正文'

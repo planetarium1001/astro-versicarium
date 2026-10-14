@@ -1,0 +1,53 @@
+---
+import type { BitsCardViewModel } from '../lib/bits-card-view-model';
+
+/** 动态卡片与详情弹窗共用的标签行：地点标签与普通标签都是 `/bits/?tags=<key>` 的筛选入口。 */
+const { card, class: extraClass = '' } = Astro.props as {
+  card: BitsCardViewModel;
+  class?: string;
+};
+---
+
+{card.hasTags ? (
+  <div class={`bit-tags${extraClass ? ` ${extraClass}` : ''}`}>
+    {card.placeTag ? (
+      card.placeTag.href ? (
+        <a
+          class="bit-tag bit-tag--place tag tag--link"
+          href={card.placeTag.href}
+          aria-label={`筛选标签 ${card.placeTag.label}`}
+          data-bit-tag-link={card.placeTag.key}
+        >
+          <span class="bit-tag-icon" aria-hidden="true">📍</span>
+          <span class="bit-tag-text">{card.placeTag.label}</span>
+        </a>
+      ) : (
+        <span class="bit-tag bit-tag--place">
+          <span class="bit-tag-icon" aria-hidden="true">📍</span>
+          <span class="bit-tag-text">{card.placeTag.label}</span>
+        </span>
+      )
+    ) : null}
+    {card.normalTagItems.length ? (
+      <span class="bit-tag bit-tag--normal">
+        <span class="bit-tag-icon" aria-hidden="true">❤</span>
+        <span class="bit-tag-list">
+          {card.normalTagItems.map((tag) =>
+            tag.href ? (
+              <a
+                class="bit-tag-token tag tag--link"
+                href={tag.href}
+                aria-label={`筛选标签 ${tag.label}`}
+                data-bit-tag-link={tag.key}
+              >
+                #{tag.label}
+              </a>
+            ) : (
+              <span class="bit-tag-token">#{tag.label}</span>
+            )
+          )}
+        </span>
+      </span>
+    ) : null}
+  </div>
+) : null}

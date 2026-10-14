@@ -162,6 +162,8 @@ const projects = defineCollection({
     // type 完全开放：写什么显示什么，渲染为标题前小胶囊。
     type: z.string().optional(),
     icon: z.string().optional(),
+    /** 展示图：卡片里与文字同列、左对齐的缩略图，路径写法与 icon 一致。 */
+    image: z.string().optional(),
     /**
      * 没有 tags 与 repo/demo：仓库、演示等外链统一写在正文末尾的链接组里
      * （见 src/lib/trailing-links.ts），列表卡片与弹窗渲染成右对齐链接行。

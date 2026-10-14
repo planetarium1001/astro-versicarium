@@ -1,0 +1,105 @@
+---
+import { type BitsEntry } from '../lib/bits';
+import { buildBitsCardViewModel } from '../lib/bits-card-view-model';
+import { getThemeSettings } from '../lib/theme-settings';
+import BitAvatar from './BitAvatar.astro';
+import BitTags from './BitTags.astro';
+
+const { bit, Content = null } = Astro.props;
+
+const bitEntry = bit as BitsEntry;
+const base = import.meta.env.BASE_URL ?? '/';
+const { settings } = getThemeSettings();
+const card = buildBitsCardViewModel({
+  id: bitEntry.id,
+  slug: bitEntry.data.slug,
+  bodyText: bitEntry.body ?? '',
+  tags: bitEntry.data.tags ?? [],
+  date: bitEntry.data.date,
+  images: bitEntry.data.images ?? [],
+  ...(bitEntry.data.author ? { author: bitEntry.data.author } : {}),
+  defaultAuthor: settings.page.bits.defaultAuthor,
+  base
+});
+const dialogId = `bit-dialog-${bitEntry.id}`;
+const titleId = `bit-dialog-title-${bitEntry.id}`;
+const title = (bitEntry.data.title ?? '').trim();
+---
+
+{/*
+  动态详情弹窗：完整正文、全部标签与全部图片；打开/关闭与焦点处理见 scripts/bits-dialog.ts。
+  弹窗自身带 `data-bit` 与完整的隐藏图片列表，灯箱因此能取到全部图片并以 0 为索引基准。
+*/}
+<dialog
+  class="bit-dialog"
+  id={dialogId}
+  data-bit-dialog-panel
+  data-bit
+  data-bit-key={bitEntry.id}
+  {...title ? { 'aria-labelledby': titleId } : { 'aria-label': `${card.authorName} 的动态` }}
+>
+  <div class="bit-dialog__inner">
+    <div class="bit-dialog__handle" aria-hidden="true"></div>
+    <div class="bit-dialog__head">
+      <div class="bit-dialog__title-wrap">
+        {title ? (
+          <h2 class="bit-dialog__title" id={titleId} tabindex="-1">{title}</h2>
+        ) : null}
+        <div class="bit-dialog__identity" tabindex="-1">
+          <BitAvatar avatar={card.authorAvatar} letter={card.avatarLetter} />
+          <div class="bit-dialog__identity-text">
+            <span class="bit-dialog__author">{card.authorName}</span>
+            {card.dateLabel ? <span class="bit-dialog__date">{card.dateLabel}</span> : null}
+          </div>
+        </div>
+      </div>
+      <button class="bit-dialog__close" type="button" data-bit-dialog-close aria-label="关闭动态详情">✕</button>
+    </div>
+
+    <div class="bit-dialog__content">
+      <div class="bit-body bit-dialog__body">
+        {Content ? <Content /> : <p>{card.body.plainText}</p>}
+      </div>
+
+      {card.imageItems.length ? (
+        <div class="bit-dialog__media">
+          <div class="bit-dialog__media-grid">
+            {card.imageItems.map((image, index) => (
+              <button
+                type="button"
+                class="bit-media-item bit-dialog__media-item"
+                data-bit-image-button
+                data-bit-image-index={index}
+                aria-label={`查看图片 ${index + 1}（共 ${card.imageItems.length} 张）`}
+              >
+                <img
+                  src={image.src}
+                  alt={image.alt}
+                  width={image.width}
+                  height={image.height}
+                  loading="lazy"
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {card.imageItems.length ? (
+        <div hidden aria-hidden="true">
+          {card.imageItems.map((image) => (
+            <span
+              data-bit-image-item
+              data-bit-image-src={image.src}
+              data-bit-image-alt={image.alt}
+              data-bit-image-width={image.width}
+              data-bit-image-height={image.height}
+            ></span>
+          ))}
+        </div>
+      ) : null}
+
+      <BitTags card={card} class="bit-dialog__tags" />
+    </div>
+  </div>
+</dialog>

@@ -1,0 +1,22 @@
+---
+/** 动态卡片与详情弹窗共用的头像：图片加载失败时回落到首字母块。 */
+const { avatar = '', letter = 'W' } = Astro.props as {
+  avatar?: string;
+  letter?: string;
+};
+---
+
+<div class={`avatar${avatar ? ' avatar--image' : ' is-fallback'}`} aria-hidden="true">
+  {avatar ? (
+    <img
+      src={avatar}
+      alt=""
+      width="32"
+      height="32"
+      loading="lazy"
+      decoding="async"
+      onerror="this.parentElement?.classList.add('is-fallback'); this.remove();"
+    />
+  ) : null}
+  <span class="avatar-fallback">{letter}</span>
+</div>

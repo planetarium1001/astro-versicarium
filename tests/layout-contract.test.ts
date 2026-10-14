@@ -351,6 +351,141 @@ describe('页面外缘间隙：后台 px 设置', () => {
   });
 });
 
+describe('项目卡片与末尾链接行', () => {
+  it('整卡可点、链接固定在右下角并抬到覆盖层之上，悬停下划线贴文字', async () => {
+    const [card, links] = await Promise.all([
+      read('src/styles/projects-page.css'),
+      read('src/styles/components/trailing-links.css')
+    ]);
+
+    // 按钮的覆盖层铺满卡片（卡片是定位祖先），整卡可点
+    expect(card).toMatch(/\.project-card\s*\{[^}]*position:\s*relative/);
+    expect(card).toMatch(/\.project-card__main::after\s*\{[^}]*position:\s*absolute[^}]*inset:\s*0/);
+    // 链接行固定在卡片右下角，并抬到覆盖层之上保持可点
+    expect(card).toMatch(/\.project-card \.trailing-links\s*\{[^}]*margin-top:\s*auto/);
+    expect(card).toMatch(/\.project-card \.trailing-links\s*\{[^}]*z-index:\s*1/);
+    // 触控热区用覆盖层实现，视觉高度就是文字一行
+    expect(links).toMatch(/\.trailing-links a::after\s*\{[^}]*height:\s*var\(--tap-min-h\)/);
+    expect(links).not.toMatch(/\.trailing-links a\s*\{[^}]*min-height/);
+    // 悬停下划线贴文字（text-decoration），不再画在盒子的底边上
+    expect(links).toMatch(/\.trailing-links a:hover[\s\S]{0,200}?text-decoration:\s*underline/);
+    expect(links).toMatch(/\.prose \.trailing-links a\s*\{[^}]*border-bottom:\s*0/);
+  });
+
+  it('多列时所有行等高：行高由栅格统一，单卡仍有高度上限', async () => {
+    const css = await read('src/styles/projects-page.css');
+
+    // grid-auto-rows: 1fr 让每一行都取最高卡片的高度，避免某一行更高；多列时才需要
+    expect(css).toMatch(
+      /@media \(min-width: 641px\)\s*\{[^@]*?\.projects-page \.project-grid\s*\{[^}]*grid-auto-rows:\s*1fr/
+    );
+    expect(css).toMatch(/\.projects-page \.project-grid\s*\{[^}]*align-items:\s*stretch/);
+    expect(css).toMatch(/\.project-card\s*\{[^}]*max-height:\s*320px/);
+  });
+
+  it('展示图：可选字段渲染成与文字左对齐的缩略图', async () => {
+    const [schema, page, css] = await Promise.all([
+      read('src/content.config.ts'),
+      read('src/pages/projects/index.astro'),
+      read('src/styles/projects-page.css')
+    ]);
+
+    // 可选前置字段，路径写法与 icon 一致
+    expect(schema).toMatch(
+      /icon: z\.string\(\)\.optional\(\),[\s\S]{0,200}?image: z\.string\(\)\.optional\(\)/
+    );
+    expect(page).toContain('image: entry.data.image?.trim() || null,');
+    // 卡片里与文字同列渲染，路径经 withBase 解析
+    expect(page).toMatch(
+      /card\.image \? \(\s*<span class="project-card__image">\s*<img src=\{withBase\(card\.image\)\}/
+    );
+    // 头部两列顶部对齐：图标在左，胶囊标题与小号副标题在右
+    expect(css).toMatch(/\.project-card__head\s*\{[^}]*display:\s*flex[^}]*align-items:\s*flex-start/);
+    expect(css).toMatch(/\.project-card__headings\s*\{[^}]*flex-direction:\s*column/);
+    expect(css).toMatch(/\.project-card__title\s*\{[^}]*font-size:\s*16px/);
+    expect(css).toMatch(/\.project-card__subtitle\s*\{[^}]*font-size:\s*12px/);
+    // 正文容器用 flow-root 包住浮动，展示图左浮动、正文整体不被推右
+    expect(css).toMatch(/\.project-card__main\s*\{[^}]*display:\s*block/);
+    expect(css).toMatch(/\.project-card__body\s*\{[^}]*display:\s*flow-root/);
+    expect(css).toMatch(/\.project-card__image\s*\{[^}]*float:\s*left/);
+    // 固定框裁切，高度可预期
+    expect(css).toMatch(/\.project-card__image img\s*\{[^}]*height:\s*96px[^}]*object-fit:\s*cover/);
+    // 弹窗复用同一套图标样式与头部
+    expect(css).toMatch(/\.project-card__icon,\s*\n\.project-dialog__icon\s*\{/);
+    expect(page).toContain('<span class="project-dialog__icon">');
+    expect(css).toMatch(/\.project-dialog__icon\s*\{[^}]*width:\s*44px/);
+
+    // 头部在图标之后，展示图排在头部之后、文段之前，文段才会绕开它
+    const iconIndex = page.indexOf('class="project-card__icon"');
+    const titleIndex = page.indexOf('class="project-card__title-row"');
+    const headEndIndex = page.indexOf('class="project-card__image"');
+    const descIndex = page.indexOf('class="project-card__description"');
+    expect(iconIndex).toBeGreaterThan(-1);
+    expect(iconIndex).toBeLessThan(titleIndex);
+    expect(titleIndex).toBeLessThan(headEndIndex);
+    expect(headEndIndex).toBeLessThan(descIndex);
+  });
+});
+
+describe('卡片弹窗：统一宽度与滚动区', () => {
+  it('项目与动态的卡片弹窗共用同一份宽度 token，不再各自写死', async () => {
+    const [global, projects, bits] = await Promise.all([
+      read('src/styles/global.css'),
+      read('src/styles/projects-page.css'),
+      read('src/styles/components/bit-card.css')
+    ]);
+
+    expect(global).toMatch(/--card-dialog-inline-size:\s*min\(920px, calc\(100vw - 64px\)\)/);
+    expect(projects).toMatch(/\.project-dialog\s*\{[^}]*width:\s*var\(--card-dialog-inline-size\)/);
+    expect(bits).toMatch(/\.bit-dialog\s*\{[^}]*width:\s*var\(--card-dialog-inline-size\)/);
+    // 写死宽度会让两个页面的弹窗在同一视口下不等宽（宽屏上尤其明显）
+    expect(projects).not.toMatch(/\.project-dialog\s*\{[^}]*width:\s*min\(/);
+    expect(bits).not.toMatch(/\.bit-dialog\s*\{[^}]*width:\s*min\(/);
+  });
+
+  it('滚动区按需出现：末尾外边距归零，overflow 不用 scroll', async () => {
+    const [projects, bits] = await Promise.all([
+      read('src/styles/projects-page.css'),
+      read('src/styles/components/bit-card.css')
+    ]);
+
+    // 内容放得下时不该出现滚动条：末尾元素折叠出来的外边距会算进滚动区
+    expect(projects).toMatch(/\.project-dialog__content > :last-child[\s\S]{0,140}?\{[^}]*margin-bottom:\s*0/);
+    expect(bits).toMatch(/\.bit-dialog__content > :last-child[\s\S]{0,140}?\{[^}]*margin-bottom:\s*0/);
+    expect(projects).toMatch(/\.project-dialog__content\s*\{[^}]*overflow-y:\s*auto/);
+    expect(bits).toMatch(/\.bit-dialog__content\s*\{[^}]*overflow-y:\s*auto/);
+    expect(projects).not.toMatch(/overflow-y:\s*scroll/);
+    expect(bits).not.toMatch(/overflow-y:\s*scroll/);
+  });
+});
+
+describe('阅读模式与页脚位置', () => {
+  it('阅读模式把左栏两列 token 收为 0，正文内边距沿用 --pad-x', async () => {
+    const [layout, toc] = await Promise.all([
+      read('src/styles/components/layout.css'),
+      read('src/styles/components/article-toc.css')
+    ]);
+
+    // 收起左栏靠 token 归零：目录的栅格规则引用同一对 token，因此无需逐条覆写
+    expect(layout).toMatch(
+      /body\.immersive-page\[data-reading="immersive"\]\s*\{[^}]*--sidebar:\s*0px[^}]*--layout-divider-inline-size:\s*0px/
+    );
+    expect(toc).toMatch(
+      /grid-template-columns:[\s\S]{0,140}?var\(--sidebar\)[\s\S]{0,100}?var\(--layout-divider-inline-size\)/
+    );
+    // 阅读模式的正文左右内边距跟随普通设计，不再用固定值
+    expect(layout).toMatch(
+      /body\.immersive-page\[data-reading="immersive"\] \.content\s*\{[^}]*padding:\s*64px var\(--pad-x\)/
+    );
+  });
+
+  it('公开页页脚贴页面底部：内容区底部不留内边距，页脚自身顶到底部', async () => {
+    const layout = await read('src/styles/components/layout.css');
+    expect(layout).toMatch(/:where\(body:not\(\.admin-page\)\) \.content\s*\{[^}]*padding-bottom:\s*0/);
+    expect(layout).toMatch(/\.site-footer\s*\{[^}]*margin-top:\s*auto/);
+  });
+});
+
 describe('文章目录列：右边界跟随页面外缘间隙', () => {
   it('列宽 = 文字区宽度 - --page-inline，补偿移到表头且收起态抵消', async () => {
     const css = await read('src/styles/components/article-toc.css');

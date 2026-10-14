@@ -27,6 +27,7 @@ import {
   rehypeRestoreMarkdownMathBoundary
 } from '../src/plugins/rehype-markdown-math-boundary.mjs';
 import { sanitizeSchema } from '../src/plugins/sanitize-schema.mjs';
+import { deriveMarkdownText } from '../src/utils/excerpt';
 
 const pluginOf = (entry: unknown) => (Array.isArray(entry) ? entry[0] : entry);
 const optionsOf = (entry: unknown) => (Array.isArray(entry) ? entry[1] : undefined);
@@ -174,5 +175,25 @@ describe('markdown pipeline contract', () => {
       public: 'Astro generated heading id',
       preview: 'data-admin-outline-key'
     });
+  });
+});
+
+/**
+ * 弹窗里的详细正文按正常 markdown 渲染（含图片），卡片摘要走纯文本派生、
+ * 因此图片只出现在弹窗里，不会以语法原文的形式漏到卡片上。
+ */
+describe('弹窗正文的 markdown 图片', () => {
+  it('图片正常渲染，且不会进入卡片摘要', () => {
+    // sanitize 白名单保留 img 与它的常用属性
+    expect(sanitizeSchema.tagNames).toContain('img');
+    const imgAttrs = JSON.stringify(sanitizeSchema.attributes?.img ?? []);
+    expect(imgAttrs).toContain('src');
+    expect(imgAttrs).toContain('alt');
+
+    // 摘要派生剥掉图片语法，只留文字
+    const derived = deriveMarkdownText('![封面](/images/projects/demo/cover.webp)\n\n这是正文。');
+    expect(derived.plainText).toContain('这是正文。');
+    expect(derived.plainText).not.toContain('![');
+    expect(derived.plainText).not.toContain('cover.webp');
   });
 });

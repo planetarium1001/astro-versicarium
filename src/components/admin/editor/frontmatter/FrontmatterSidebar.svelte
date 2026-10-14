@@ -568,6 +568,7 @@ const bitsAuthorAvatarFallback = $derived(
 
       {@render projectText('type', '类型（完全开放，如 开源 / 实验）')}
       {@render projectText('icon', '图标路径（可选，如 images/projects/demo/icon.webp）')}
+      {@render projectText('image', '展示图路径（可选，如 images/projects/demo/cover.webp）')}
 
       <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('date'))}>
         <span class="admin-field__label">日期</span>

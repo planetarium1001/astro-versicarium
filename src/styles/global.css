@@ -142,6 +142,8 @@
   --page-gap-inline: 32px;
   --page-inline: 17px;
   --sidebar-padding-inline: 15px;
+  /* 卡片弹窗的统一宽度：项目与动态的弹窗在同一视口下等宽，只有高度随内容变化。 */
+  --card-dialog-inline-size: min(920px, calc(100vw - 64px));
   /* 壳层铺满视口，不设 max-inline-size。 */
   --layout-divider-inline-size: 1px;
   --public-sidebar-inline-size: 224px;

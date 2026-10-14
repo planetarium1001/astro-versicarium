@@ -3,6 +3,7 @@
 */
 
 .bit-card {
+  position: relative;
   padding: 18px 18px 14px;
   border: 0;
   border-radius: 10px;
@@ -45,7 +46,37 @@
   margin-bottom: 10px;
 }
 
-.bit-card .avatar {
+/**
+ * 整卡可点的覆盖层：按钮本身不可见也不占布局（零尺寸块盒，否则空按钮会撑出一个行盒，
+ * 把头像挤离卡片顶部），`::after` 以卡片为包含块铺满；图片按钮与标签链接抬到 z-index 1。
+ */
+.bit-card__open {
+  display: block;
+  position: static;
+  width: 0;
+  height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 0;
+}
+
+.bit-card__open::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.bit-card:has(.bit-card__open:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: var(--focus-ring-offset, 2px);
+}
+
+.bit-card .avatar,
+.bit-dialog .avatar {
   width: 32px;
   height: 32px;
   border-radius: 999px;
@@ -58,11 +89,13 @@
   position: relative;
 }
 
-.bit-card .avatar--image {
+.bit-card .avatar--image,
+.bit-dialog .avatar--image {
   background: transparent;
 }
 
-.bit-card .avatar-fallback {
+.bit-card .avatar-fallback,
+.bit-dialog .avatar-fallback {
   position: absolute;
   inset: 0;
   display: inline-flex;
@@ -73,11 +106,13 @@
   opacity: 0;
 }
 
-.bit-card .avatar.is-fallback .avatar-fallback {
+.bit-card .avatar.is-fallback .avatar-fallback,
+.bit-dialog .avatar.is-fallback .avatar-fallback {
   opacity: 1;
 }
 
-.bit-card .avatar img {
+.bit-card .avatar img,
+.bit-dialog .avatar img {
   display: block;
   width: 100%;
   height: 100%;
@@ -91,6 +126,46 @@
 
 .bit-body {
   font-size: 14px;
+}
+
+/**
+ * 卡片正文的可见行数。字符预算（bits-card-view-model.ts 的 BITS_CARD_BODY_LINES）
+ * 与这里的行数必须一致：超出预算的内容一律走纯文本摘要，截断只发生在行边界上。
+ */
+.bit-card {
+  --bit-card-body-lines: 4;
+}
+
+/*
+ * 预算内的富文本整段渲染，不做高度裁切：需要截断的内容都在摘要路径处理，
+ * 「还有内容」的提示因此不会缺位。块的默认上下外边距在卡片里偏大，统一收紧。
+ */
+.bit-body--rich > :where(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, pre, figure, table, hr) {
+  margin: 0;
+}
+
+.bit-body--rich > :where(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, pre, figure, table, hr) + * {
+  margin-top: 0.5em;
+}
+
+/* 纯文本摘要路径同样按行数截断，省略号由 -webkit-line-clamp 画在末行末尾 */
+.bit-body__excerpt {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: var(--bit-card-body-lines, 4);
+  line-clamp: var(--bit-card-body-lines, 4);
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 截断提示：右对齐到卡片右下角；整卡可点开弹窗，因此提示只是静态文案，不引入第二个交互控件 */
+.bit-body-hint {
+  margin: 6px 0 0;
+  font-family: var(--font-copy);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--accent);
+  text-align: right;
 }
 
 .bit-media {
@@ -118,15 +193,18 @@
   overflow: visible;
 }
 
+/* 卡片里最多 4 张图，固定一行、等宽；第 4 张在还有更多图时叠加 `+N` 角标 */
 .bit-media-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: 12px;
   width: 100%;
 }
 
 .bit-media-item {
   position: relative;
+  z-index: 1;
   border-radius: 8px;
   overflow: hidden;
   aspect-ratio: 4 / 3;
@@ -154,11 +232,6 @@
   transition: transform 0.18s ease;
 }
 
-.bit-media-item--wide {
-  grid-column: 1 / -1;
-  aspect-ratio: 21 / 9;
-}
-
 .bit-media-item--single {
   aspect-ratio: auto;
 }
@@ -166,6 +239,16 @@
 .bit-media-item--single > img {
   width: 100%;
   height: auto;
+}
+
+/*
+ * 卡片里的单张大图给一个高度上限，避免竖长图把卡片撑得过高；
+ * 用 contain 完整缩放整图，不做裁切；弹窗内的大图不受此限。
+ */
+.bit-card .bit-media-item--single > img {
+  max-height: 420px;
+  margin: 0;
+  object-fit: contain;
 }
 
 .bit-media--grid .bit-media-item > img {
@@ -302,4 +385,216 @@
 
 .bit-tag--place {
   color: var(--muted);
+}
+
+/* 标签链接浮在整卡覆盖层之上，否则点击会被覆盖层截走（与 lists.css 的拉伸链接同构） */
+.bit-tag-token.tag--link,
+a.bit-tag.tag--link {
+  position: relative;
+  z-index: 1;
+  text-decoration: none;
+}
+
+.bit-tag-token.tag--link {
+  color: inherit;
+}
+
+.bit-tag-token.tag--link:hover,
+.bit-tag-token.tag--link:focus-visible,
+a.bit-tag.tag--link:hover,
+a.bit-tag.tag--link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.bit-tag-token.tag--link:focus-visible,
+a.bit-tag.tag--link:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset, 2px);
+}
+
+/* ---------------- 详情弹窗（>=641px：居中；<=640px：底部抽屉） ---------------- */
+
+.bit-dialog {
+  margin: auto;
+  width: var(--card-dialog-inline-size);
+  max-height: min(85vh, 720px);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.bit-dialog::backdrop {
+  background: var(--overlay-20);
+  backdrop-filter: blur(6px);
+}
+
+/* 内容整体在弹窗内滚动，弹窗高度随内容自适应但有上限 */
+.bit-dialog__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: inherit;
+  padding: 18px;
+}
+
+.bit-dialog__handle {
+  display: none;
+}
+
+.bit-dialog__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.bit-dialog__title-wrap {
+  min-width: 0;
+  flex: 1;
+}
+
+.bit-dialog__title {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.4;
+}
+
+.bit-dialog__title:focus,
+.bit-dialog__identity:focus {
+  outline: none;
+}
+
+.bit-dialog__identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.bit-dialog__identity-text {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.bit-dialog__author {
+  font-size: 14px;
+}
+
+.bit-dialog__date {
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.bit-dialog__close {
+  flex: 0 0 auto;
+  width: var(--tap-min-h);
+  height: var(--tap-min-h);
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--faint);
+  font: inherit;
+  font-family: "Segoe UI Symbol", "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.16s ease;
+}
+
+.bit-dialog__close:hover,
+.bit-dialog__close:focus-visible {
+  color: var(--text);
+}
+
+.bit-dialog__close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.bit-dialog__content {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* 末尾元素的外边距会算进滚动区，内容放得下也会出现滚动条，因此直接子元素与它最后一个子元素一起归零 */
+.bit-dialog__content > :last-child,
+.bit-dialog__content > :last-child > :last-child {
+  margin-bottom: 0;
+}
+
+.bit-dialog__body {
+  font-size: 14.5px;
+}
+
+.bit-dialog__body img {
+  max-width: 100%;
+  height: auto;
+}
+
+.bit-dialog__media-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.bit-dialog__media-item > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/**
+ * 弹窗标签落在正文与全部图片之后，单独一行。
+ * 字号沿用卡片里标签相对正文的比例（12 / 14），因此不会大于弹窗正文的 14.5px。
+ */
+.bit-dialog__tags {
+  width: 100%;
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .bit-dialog {
+    inset: auto 0 0;
+    margin: 0;
+    width: 100%;
+    max-width: none;
+    max-height: 85dvh;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .bit-dialog__inner {
+    gap: 12px;
+    padding: 12px 14px calc(22px + env(safe-area-inset-bottom));
+    max-height: 85dvh;
+  }
+
+  .bit-dialog__handle {
+    display: block;
+    width: 44px;
+    height: 4px;
+    margin: 0 auto;
+    border-radius: 999px;
+    background: var(--faint);
+  }
+
+  .bit-dialog__content {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
 }

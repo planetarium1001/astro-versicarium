@@ -480,15 +480,10 @@
     display: none;
   }
 
-  .bit-media-item {
+  .bit-media-grid .bit-media-item {
     flex: 0 0 auto;
     width: clamp(220px, 48vw, 280px);
     scroll-snap-align: start;
-  }
-
-  .bit-media-item--wide {
-    grid-column: auto;
-    aspect-ratio: 4 / 3;
   }
 }
 
@@ -561,16 +556,10 @@
   }
 
   .bit-media-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
-  .bit-media-item {
-    aspect-ratio: 1 / 1;
-  }
-
-  .bit-media-item--wide {
-    grid-column: auto;
+  .bit-media-grid .bit-media-item {
     aspect-ratio: 1 / 1;
   }
 }

@@ -20,9 +20,6 @@ let {
 
 let previewScrollElement = $state<HTMLElement | null>(null);
 
-const maxVisible = 4;
-const hiddenImageCount = $derived(Math.max(0, viewModel.totalImages - maxVisible));
-
 const handleAvatarError = (event: Event) => {
   const image = event.currentTarget as HTMLImageElement;
   image.parentElement?.classList.add('is-fallback');
@@ -74,13 +71,16 @@ $effect(() => {
           <div class="bit-body">
             <p class="admin-bits-preview__feedback" data-tone="error">{previewError}</p>
           </div>
-        {:else if viewModel.body.shouldRenderFull && previewHtml}
-          <div class="bit-body">
+        {:else if viewModel.body.shouldRenderFull && !viewModel.body.truncated && previewHtml}
+          <div class="bit-body bit-body--rich">
             {@html previewHtml}
           </div>
         {:else if viewModel.body.excerpt}
           <div class="bit-body">
-            <p>{viewModel.body.excerpt}</p>
+            <p class="bit-body__excerpt">{viewModel.body.excerpt}</p>
+            {#if viewModel.body.truncated}
+              <p class="bit-body-hint" data-bit-body-hint>查看全文</p>
+            {/if}
           </div>
         {/if}
 
@@ -102,8 +102,9 @@ $effect(() => {
           <div class="bit-media bit-media--grid">
             <div class="bit-media-grid">
               {#each viewModel.visibleImages as image, index}
+                {@const isMore = index === viewModel.visibleImages.length - 1 && viewModel.moreCount > 0}
                 <div
-                  class={`bit-media-item${index === viewModel.wideIndex ? ' bit-media-item--wide' : ''}${index === maxVisible - 1 && hiddenImageCount > 0 ? ' bit-media-item--more' : ''}`}
+                  class={`bit-media-item${isMore ? ' bit-media-item--more' : ''}`}
                 >
                   <img
                     src={image.src}
@@ -112,10 +113,10 @@ $effect(() => {
                     height={image.height}
                     loading="lazy"
                   />
-                  {#if index === maxVisible - 1 && hiddenImageCount > 0}
+                  {#if isMore}
                     <span class="bit-media-more" aria-hidden="true">
-                      <span class="bit-media-more-short">+ {hiddenImageCount}</span>
-                      <span class="bit-media-more-full">查看其余{hiddenImageCount}张</span>
+                      <span class="bit-media-more-short">+ {viewModel.moreCount}</span>
+                      <span class="bit-media-more-full">查看其余{viewModel.moreCount}张</span>
                     </span>
                   {/if}
                 </div>
@@ -141,10 +142,10 @@ $effect(() => {
         <div class="bit-meta">
           {#if viewModel.hasTags}
             <div class="bit-tags">
-              {#if viewModel.placeText}
+              {#if viewModel.placeTag}
                 <span class="bit-tag bit-tag--place">
                   <span class="bit-tag-icon" aria-hidden="true">📍</span>
-                  <span class="bit-tag-text">{viewModel.placeText}</span>
+                  <span class="bit-tag-text">{viewModel.placeTag.label}</span>
                 </span>
               {/if}
               {#if viewModel.normalTagItems.length}
@@ -152,7 +153,7 @@ $effect(() => {
                   <span class="bit-tag-icon" aria-hidden="true">❤</span>
                   <span class="bit-tag-list">
                     {#each viewModel.normalTagItems as tag}
-                      <span class="bit-tag-token">{tag}</span>
+                      <span class="bit-tag-token">#{tag.label}</span>
                     {/each}
                   </span>
                 </span>

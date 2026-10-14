@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   createJsonRequest,
@@ -16,7 +16,7 @@ describe('admin content projects/devlog write contract', () => {
     const current = await readAdminContentEntryEditorPayload('projects', 'demo-project');
     // projects 已取消 tags/repo/repoLabel/demo/demoLabel：字段袋只剩基础字段。
     expect(Object.keys(current.values).sort()).toEqual(
-      ['title', 'subtitle', 'description', 'type', 'icon', 'date', 'draft'].sort()
+      ['title', 'subtitle', 'description', 'type', 'icon', 'image', 'date', 'draft'].sort()
     );
 
     const nextValues = {
@@ -59,6 +59,83 @@ describe('admin content projects/devlog write contract', () => {
     for (const field of ['tags', 'repo', 'repoLabel', 'demo', 'demoLabel']) {
       expect(frontmatterText).not.toMatch(new RegExp(`^${field}:`, 'm'));
     }
+  });
+
+  // image 与 icon 同构：只有值变化才产生补丁，未登记进字段矩阵的 frontmatter 字段不会被重建丢弃。
+  it('writes the projects image field as a diff patch and keeps unlisted frontmatter fields', async () => {
+    const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
+    const { POST } = await import('../src/pages/api/admin/content/entry');
+
+    const sourcePath = path.join(getTempRoot(), 'src', 'content', 'projects', 'demo-project.md');
+    await writeFile(
+      sourcePath,
+      [
+        '---',
+        'title: Demo Project',
+        'subtitle: Demo subtitle',
+        'description: Demo description',
+        'type: 开源',
+        'icon: images/projects/demo/icon.webp',
+        'date: 2026-02-01T00:00:00.000Z',
+        'draft: false',
+        'legacyField: keep-me',
+        '---',
+        '',
+        'Project body',
+        ''
+      ].join('\n'),
+      'utf8'
+    );
+
+    const current = await readAdminContentEntryEditorPayload('projects', 'demo-project');
+    expect(Object.keys(current.values).sort()).toEqual(
+      ['title', 'subtitle', 'description', 'type', 'icon', 'image', 'date', 'draft'].sort()
+    );
+    expect('image' in current.values ? current.values.image : undefined).toBe('');
+
+    const nextValues = { ...current.values, image: 'images/projects/demo/cover.webp' };
+    const response = await POST({
+      request: createJsonRequest('http://127.0.0.1:4321/api/admin/content/entry', {
+        collection: 'projects',
+        entryId: 'demo-project',
+        revision: current.revision,
+        frontmatter: nextValues,
+        body: current.bodyText
+      }),
+      url: new URL('http://127.0.0.1:4321/api/admin/content/entry')
+    } as never);
+
+    expect(response.status).toBe(200);
+    const payload = JSON.parse(await response.text());
+    expect(payload.ok).toBe(true);
+    // 只有 image 变化：其余字段不产生补丁，写入计划仍是差分补丁。
+    expect(payload.result.changedFields).toEqual(['image']);
+
+    const saved = await readFile(sourcePath, 'utf8');
+    const frontmatterText = /^---\n([\s\S]*?)\n---/.exec(saved)?.[1] ?? '';
+    expect(frontmatterText).toMatch(/^image: images\/projects\/demo\/cover\.webp$/m);
+    expect(frontmatterText).toMatch(/^icon: images\/projects\/demo\/icon\.webp$/m);
+    expect(frontmatterText).toMatch(/^legacyField: keep-me$/m);
+    expect(saved).toContain('Project body');
+
+    // 原样再存一次：无变化即无补丁。
+    const reread = await readAdminContentEntryEditorPayload('projects', 'demo-project');
+    expect('image' in reread.values ? reread.values.image : undefined).toBe('images/projects/demo/cover.webp');
+    const second = await POST({
+      request: createJsonRequest('http://127.0.0.1:4321/api/admin/content/entry', {
+        collection: 'projects',
+        entryId: 'demo-project',
+        revision: reread.revision,
+        frontmatter: reread.values,
+        body: reread.bodyText
+      }),
+      url: new URL('http://127.0.0.1:4321/api/admin/content/entry')
+    } as never);
+
+    expect(second.status).toBe(200);
+    const secondPayload = JSON.parse(await second.text());
+    expect(secondPayload.ok).toBe(true);
+    expect(secondPayload.result.changedFields).toEqual([]);
   });
 
   it('no longer exposes tags/repo/demo in the projects editor values', async () => {
@@ -137,6 +214,7 @@ describe('client write request body for new collections', () => {
           description: '',
           type: '',
           icon: '',
+          image: '',
           date: '2026-02-01',
           draft: false
         }
@@ -179,6 +257,7 @@ describe('entry transport guards for new collections', () => {
           description: '',
           type: '',
           icon: '',
+          image: '',
           date: '2026-02-01',
           draft: false
         }

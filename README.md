@@ -35,6 +35,9 @@
 - 备案信息：页脚居中显示工信部备案号与公安联网备案号，链接与图标可配置，默认不显示。
 - 侧栏文案富文本：站点名与引用文案支持换行、少量 HTML 标签与对齐工具类。
 - 响应式壳层：侧栏 224px，壳层宽度随视口自适应；`html` 固定滚动条槽位，页面高度变化时不横跳。
+- 列表卡片详情弹窗：项目与动态卡片整卡可点（链接、图片等可交互部分除外），弹窗展示完整正文、全部标签与全部图片，内容过长在弹窗内滚动；弹窗宽度统一，高度随内容。
+- 卡片高度约束：项目卡片多列时所有行等高，单卡另有高度上限；动态卡片正文按行数温和截断，截断时在右下角给出「查看全文」提示。
+- 项目展示图：项目 frontmatter 的 `image?` 渲染成卡片内左浮动缩略图（固定框裁切），文字从它右侧绕排；卡片头部为「图标 + 胶囊标题 + 小号副标题」两列，弹窗复用同一套头部。
 
 沿袭上游：
 
@@ -139,13 +142,13 @@ npm run preview   # 预览构建结果
 | 集合 | frontmatter |
 | --- | --- |
 | `bits` | `title?`、`description?`、`date`、`tags`、`draft`、`slug?`、`images[]`（`src`、`width?`、`height?`、`alt?`）、`author?`（`name?`、`avatar?`） |
-| `projects` | `title`、`subtitle?`、`description?`、`type?`、`icon?`、`date`、`draft` |
+| `projects` | `title`、`subtitle?`、`description?`、`type?`、`icon?`、`image?`、`date`、`draft` |
 | `devlog` | `title`、`date`、`project`、`kind?`、`description?`、`draft` |
 | `about` | 无约束，正文写在 `index.md` |
 
 `projects` 与 `devlog` 共用「末尾链接」写法：正文与链接之间留一个空行，末尾连续若干行每行只写 markdown 链接，可一行多个，用空白或 `·|、,，/` 分隔。渲染时链接组落在正文下一行并右对齐，链接之间只留间隔，不输出 `·` 等分隔符。摘要派生，以及归档与后台的检索文本，都先用剥离链接组后的正文生成，链接组也不会在正文里重复出现。博客不使用这套写法，正文中间的链接仍按普通 markdown 渲染。
 
-图片放在 `public/` 下（如 `public/images/blog/<slug>/a.webp`），正文写 `/images/blog/<slug>/a.webp`；动态的 `images[].src` 与 `author.avatar` 不带前导斜杠、也不带 `public/`（如 `author/avatar.webp`）。博客详情页的 `slug` 默认为文件名去掉 `YYYY-MM-DD-` 前缀后的部分，可用 frontmatter 的 `slug` 覆盖；文件名规范见 [docs/development.md](docs/development.md)。
+图片放在 `public/` 下（如 `public/images/blog/<slug>/a.webp`），正文写 `/images/blog/<slug>/a.webp`；动态的 `images[].src` 与 `author.avatar`，以及项目的 `icon` / `image`，都不带前导斜杠、也不带 `public/`（如 `images/projects/demo/cover.webp`）。博客详情页的 `slug` 默认为文件名去掉 `YYYY-MM-DD-` 前缀后的部分，可用 frontmatter 的 `slug` 覆盖；文件名规范见 [docs/development.md](docs/development.md)。
 
 订阅源为 `/rss.xml` 与 `/blog/rss.xml`，两者内容相同，均输出博客。列表页的 RSS 入口由 `page.json` 的 `listRss` 控制，博客、动态、归档三页可分别开关，链接统一指向 `/blog/rss.xml`。
 

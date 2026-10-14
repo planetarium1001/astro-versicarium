@@ -2,6 +2,7 @@
 import { render } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import BitCard from './BitCard.astro';
+import BitDialog from './BitDialog.astro';
 import TagFilterHeader from './TagFilterHeader.astro';
 import Lightbox from './Lightbox.astro';
 import '../styles/bits-page.css';
@@ -47,14 +48,17 @@ const pageDescription = joinPageSubtitleText(
 ) ?? `${pageTitleText}列表`;
 const priorityMediaBitId = items.find((bit) => (bit.data.images?.length ?? 0) > 0)?.id ?? null;
 
+// 卡片按长短文本决定渲染完整正文还是摘要，弹窗始终渲染完整正文，因此每条都要 render。
 const cards = await Promise.all(
   items.map(async (bit) => {
     const derivedText = getBitsDerivedText(bit);
-    if (derivedText.shouldRenderFull) {
-      const { Content } = await render(bit);
-      return { bit, excerpt: '', Content, hasMath: containsMarkdownMath(bit.body ?? '') };
-    }
-    return { bit, excerpt: derivedText.excerpt, Content: null, hasMath: false };
+    const { Content } = await render(bit);
+    return {
+      bit,
+      excerpt: derivedText.excerpt,
+      Content,
+      hasMath: containsMarkdownMath(bit.body ?? '')
+    };
   })
 );
 const hasRenderedMath = cards.some((card) => card.hasMath);
@@ -163,6 +167,10 @@ const katexStylesheetAttrs = { [MARKDOWN_MATH_STYLESHEET_DATA_ATTR]: 'true' };
     <nav class="pagination" data-entry-pagination hidden aria-label={`${pageTitleText}分页`}>
       <div class="pagination__inner" data-entry-pagination-inner></div>
     </nav>
+
+    {cards.map(({ bit, Content }) => (
+      <BitDialog bit={bit} Content={Content} />
+    ))}
   </div>
 
   <section
@@ -205,5 +213,6 @@ const katexStylesheetAttrs = { [MARKDOWN_MATH_STYLESHEET_DATA_ATTR]: 'true' };
     import '../scripts/bits-search.ts';
     import '../scripts/bits-year-filter.ts';
     import '../scripts/bits-lightbox.ts';
+    import '../scripts/bits-dialog.ts';
   </script>
 </BaseLayout>

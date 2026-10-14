@@ -1,8 +1,23 @@
 import { createWithBase, formatDateTime } from '../utils/format';
-import { deriveMarkdownText, truncateText } from '../utils/excerpt';
+import { deriveMarkdownText, truncateTextAtWord } from '../utils/excerpt';
 import { normalizeBitsImageSource } from './bits-image-source';
+import { getBitsPagePath } from './bits-public-routing';
+import { isRoutableTagKey, toTagKey } from './tags';
 
-export const BITS_CARD_FULL_RENDER_LIMIT = 180;
+/** 卡片正文的可见行数；样式侧同一口径见 bit-card.css 的 `--bit-card-body-lines`。 */
+export const BITS_CARD_BODY_LINES = 4;
+
+/** 一行的预算字符数，按正文 14px、约 45 个全角字符估出。 */
+export const BITS_CARD_CHARS_PER_LINE = 45;
+
+/**
+ * 卡片完整渲染的字符上限，等于可见行数的预算。
+ * 它是「渲染完整 Markdown」与「用纯文本摘要截断」两套口径的分界：超过即截断并给出提示。
+ */
+export const BITS_CARD_FULL_RENDER_LIMIT = BITS_CARD_BODY_LINES * BITS_CARD_CHARS_PER_LINE;
+
+/** 卡片一行最多展示的图片数，多出的部分折叠为 `+N` 角标。 */
+export const BITS_CARD_VISIBLE_IMAGE_LIMIT = 4;
 
 export type BitsCardImageInput = {
   src?: string | undefined;
@@ -16,20 +31,29 @@ export type BitsCardAuthorInput = {
   avatar?: string | undefined;
 };
 
-export type BitsCardText = {
+type BitsCardText = {
   plainText: string;
   excerpt: string;
   shouldRenderFull: boolean;
+  /** 摘要已按上限截断：卡片需要给出「还有内容」的提示。 */
+  truncated: boolean;
 };
 
-export type BitsCardImageViewModel = {
+type BitsCardImageViewModel = {
   src: string;
   width?: number;
   height?: number;
   alt: string;
 };
 
-export type BitsCardViewModelInput = {
+/** 卡片上的标签入口：`href` 指向 `/bits/?tags=<key>`，key 与 entry-search 一致。 */
+type BitsCardTagLink = {
+  label: string;
+  key: string;
+  href: string | null;
+};
+
+type BitsCardViewModelInput = {
   id: string;
   slug?: string | undefined;
   bodyText: string;
@@ -50,18 +74,33 @@ export type BitsCardViewModel = {
   authorName: string;
   authorAvatar: string;
   avatarLetter: string;
-  placeText: string;
-  normalTagItems: string[];
+  /** `loc:` 前缀标签；key 参与 /bits/ 的标签筛选，可点时给出链接 */
+  placeTag: BitsCardTagLink | null;
+  /** 普通标签（`#xxx`），全部为 `/bits/` 的筛选入口 */
+  normalTagItems: BitsCardTagLink[];
   hasTags: boolean;
   dateLabel: string;
   imageItems: BitsCardImageViewModel[];
   visibleImages: BitsCardImageViewModel[];
   firstImage: BitsCardImageViewModel | null;
   totalImages: number;
-  wideIndex: number;
+  /** 卡片折叠为 `+N` 的图片数 */
+  moreCount: number;
 };
 
-const maxVisibleImages = 4;
+const toTagLink = (
+  label: string,
+  withBase: (path: string) => string,
+  keySource: string = label
+): BitsCardTagLink => {
+  const key = toTagKey(keySource);
+  const routable = isRoutableTagKey(key);
+  return {
+    label,
+    key: routable ? key : '',
+    href: routable ? withBase(`${getBitsPagePath()}?tags=${encodeURIComponent(key)}`) : null
+  };
+};
 
 const toPositiveInteger = (value: number | string | undefined): number | undefined => {
   if (typeof value === 'number') return Number.isInteger(value) && value > 0 ? value : undefined;
@@ -83,8 +122,9 @@ export const deriveBitsCardText = (bodyText: string): BitsCardText => {
   const { plainText, excerptText } = deriveMarkdownText(bodyText);
   return {
     plainText,
-    excerpt: truncateText(excerptText, BITS_CARD_FULL_RENDER_LIMIT),
-    shouldRenderFull: plainText.length <= BITS_CARD_FULL_RENDER_LIMIT
+    excerpt: truncateTextAtWord(excerptText, BITS_CARD_FULL_RENDER_LIMIT),
+    shouldRenderFull: plainText.length <= BITS_CARD_FULL_RENDER_LIMIT,
+    truncated: excerptText.length > BITS_CARD_FULL_RENDER_LIMIT
   };
 };
 
@@ -122,7 +162,7 @@ export const buildBitsCardViewModel = ({
   const placeText = placeTag ? placeTag.slice(4).trim() : '';
   const normalTagItems = tags
     .filter((tag) => !tag.toLowerCase().startsWith('loc:'))
-    .map((tag) => `#${tag}`);
+    .map((tag) => toTagLink(tag, withBase));
   const totalImages = imageItems.length;
 
   return {
@@ -133,14 +173,14 @@ export const buildBitsCardViewModel = ({
     authorName,
     authorAvatar: authorAvatarRaw ? withBase(authorAvatarRaw) : '',
     avatarLetter: Array.from(authorName)[0] ?? 'W',
-    placeText,
+    placeTag: placeTag && placeText ? toTagLink(placeText, withBase, placeTag) : null,
     normalTagItems,
     hasTags: Boolean(placeText || normalTagItems.length),
     dateLabel: toDateLabel(date),
     imageItems,
-    visibleImages: imageItems.slice(0, maxVisibleImages),
+    visibleImages: imageItems.slice(0, BITS_CARD_VISIBLE_IMAGE_LIMIT),
     firstImage: totalImages === 1 ? imageItems[0] ?? null : null,
     totalImages,
-    wideIndex: totalImages > 1 && totalImages <= maxVisibleImages && totalImages % 2 === 1 ? 0 : -1
+    moreCount: Math.max(0, totalImages - BITS_CARD_VISIBLE_IMAGE_LIMIT)
   };
 };
