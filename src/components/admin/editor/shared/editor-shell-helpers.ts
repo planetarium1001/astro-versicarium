@@ -69,7 +69,7 @@ type LegacyEditorOutlineState = {
 
 const STATUS_STATES: readonly StatusState[] = ['idle', 'loading', 'ready', 'ok', 'warn', 'error'];
 const EDITOR_LAYOUT_MODES: readonly EditorLayoutMode[] = ['stacked', 'split'];
-const EDITOR_OUTLINE_TABS: readonly EditorOutlineTab[] = ['headings', 'essays'];
+const EDITOR_OUTLINE_TABS: readonly EditorOutlineTab[] = ['headings', 'blogs'];
 export const DEFAULT_EDITOR_DISPLAY_PREFERENCE: EditorDisplayPreference = {
   lineNumbers: false,
   markdownHighlightTheme: DEFAULT_MARKDOWN_HIGHLIGHT_THEME
@@ -79,7 +79,7 @@ export const DEFAULT_EDITOR_LAYOUT_INTENT: EditorLayoutMode = 'split';
 // 940px 是双 pane 与工具按钮保持可读后的最低稳定宽度；CSS 只消费 data-effective-view。
 export const EDITOR_SPLIT_MIN_INLINE_SIZE = 940;
 export const EDITOR_OUTLINE_VISIBLE_MIN_INLINE_SIZE = {
-  // 目录是辅助导航；split + both 下允许主工作区轻微压缩，低于视觉验收线再收起。
+  // 目录是辅助导航；split + both 下允许主工作区轻微压缩，低于可读宽度再收起。
   splitBoth: 996,
   // 单区/stacked 只有一个主要内容面板，可以比双栏模式更晚收起目录。
   linear: 900

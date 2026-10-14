@@ -17,14 +17,14 @@ describe('admin route helpers', () => {
     const contentRoute = getAdminRoute('content');
 
     expect(isAdminRoutePathActive('/admin/content/', contentRoute.href, contentRoute.activeMatch)).toBe(true);
-    expect(isAdminRoutePathActive('/admin/content/essay/_edit/admin-console-guide/', contentRoute.href, contentRoute.activeMatch)).toBe(true);
+    expect(isAdminRoutePathActive('/admin/content/blog/_edit/admin-console-guide/', contentRoute.href, contentRoute.activeMatch)).toBe(true);
   });
 
   it('keeps rail active only on first-level admin route pages', () => {
     const contentRoute = getAdminRoute('content');
 
     expect(isAdminRouteRailPathActive('/admin/content/', contentRoute.href)).toBe(true);
-    expect(isAdminRouteRailPathActive('/admin/content/essay/_edit/admin-console-guide/', contentRoute.href)).toBe(false);
+    expect(isAdminRouteRailPathActive('/admin/content/blog/_edit/admin-console-guide/', contentRoute.href)).toBe(false);
   });
 
   it('keeps prefix matching as the default admin route behavior', () => {

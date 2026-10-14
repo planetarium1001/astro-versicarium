@@ -247,7 +247,7 @@ describe('admin editor shell helpers', () => {
 
     expect(resolveEditorSidePanelPreference({
       outlineOpen: false,
-      outlineActiveTab: 'essays',
+      outlineActiveTab: 'blogs',
       syntaxOpen: false
     }, {
       layout: 'split',
@@ -269,7 +269,7 @@ describe('admin editor shell helpers', () => {
       }),
       'side-panel': JSON.stringify({
         outlineOpen: false,
-        outlineActiveTab: 'essays',
+        outlineActiveTab: 'blogs',
         syntaxOpen: false
       })
     });
@@ -303,7 +303,7 @@ describe('admin editor shell helpers', () => {
       display: null,
       'side-panel': JSON.stringify({
         outlineOpen: true,
-        outlineActiveTab: 'essays',
+        outlineActiveTab: 'blogs',
         syntaxOpen: false
       })
     });
@@ -315,7 +315,7 @@ describe('admin editor shell helpers', () => {
       adminDefaults: null,
       normalizeSidePanelPreference: (preference) => ({
         ...preference,
-        outlineActiveTab: preference.outlineActiveTab === 'essays'
+        outlineActiveTab: preference.outlineActiveTab === 'blogs'
           ? 'headings'
           : preference.outlineActiveTab
       })
@@ -359,11 +359,11 @@ describe('admin editor shell helpers', () => {
 
     expect(resolveEditorSidePanelPreference({
       outlineOpen: false,
-      outlineActiveTab: 'essays',
+      outlineActiveTab: 'blogs',
       syntaxOpen: true
     }, null)).toEqual({
       outlineOpen: false,
-      outlineActiveTab: 'essays',
+      outlineActiveTab: 'blogs',
       syntaxOpen: true
     });
   });

@@ -60,9 +60,8 @@ describe('admin-console/content-source-index', () => {
     tempRoot = await mkdtemp(path.join(tmpdir(), 'astro-whono-admin-content-source-'));
     process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT = tempRoot;
     await Promise.all([
-      mkdir(path.join(tempRoot, 'src/content/essay'), { recursive: true }),
+      mkdir(path.join(tempRoot, 'src/content/blog'), { recursive: true }),
       mkdir(path.join(tempRoot, 'src/content/bits'), { recursive: true }),
-      mkdir(path.join(tempRoot, 'src/content/memo'), { recursive: true }),
       mkdir(path.join(tempRoot, 'src/content/about'), { recursive: true })
     ]);
   });
@@ -74,7 +73,7 @@ describe('admin-console/content-source-index', () => {
     }
   });
 
-  const writeContent = async (collection: 'essay' | 'bits' | 'memo' | 'about', entryPath: string, sourceText: string) => {
+  const writeContent = async (collection: 'blog' | 'bits' | 'about', entryPath: string, sourceText: string) => {
     const filePath = path.join(tempRoot, 'src/content', collection, ...entryPath.split('/'));
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, sourceText, 'utf8');
@@ -82,32 +81,32 @@ describe('admin-console/content-source-index', () => {
   };
 
   it('loads a .md-only manifest and derives counts without reparsing frontmatter', async () => {
-    await writeContent('essay', 'plain.md', markdown('title: Plain\ndate: 2026-05-01'));
-    await writeContent('essay', 'nested/index.md', markdown('title: Nested\ndate: 2026-05-02'));
-    await writeContent('essay', 'draft.mdx', markdown('title: MDX\ndate: 2026-05-03'));
+    await writeContent('blog', 'plain.md', markdown('title: Plain\ndate: 2026-05-01'));
+    await writeContent('blog', 'nested/index.md', markdown('title: Nested\ndate: 2026-05-02'));
+    await writeContent('blog', 'draft.mdx', markdown('title: MDX\ndate: 2026-05-03'));
     await writeContent('bits', 'bit.md', markdown('date: 2026-05-01T12:00:00.000Z'));
 
     const manifest = await loadAdminContentSourceManifest();
 
     expect(getAdminContentSourceCounts(manifest)).toEqual({
-      essay: 2,
+      blog: 2,
+      projects: 0,
       bits: 1,
-      memo: 0,
+      devlog: 0,
       about: 0
     });
-    expect(manifest.essay.every((filePath) => filePath.endsWith('.md'))).toBe(true);
-    expect(manifest.essay.some((filePath) => filePath.endsWith('.mdx'))).toBe(false);
+    expect(manifest.blog.every((filePath) => filePath.endsWith('.md'))).toBe(true);
+    expect(manifest.blog.some((filePath) => filePath.endsWith('.mdx'))).toBe(false);
   });
 
   it('builds source index items with stable source identity and public fields', async () => {
-    await writeContent('essay', 'Space Name.md', markdown(`
-      title: Source Essay
-      description: Essay description
+    await writeContent('blog', 'Space Name.md', markdown(`
+      title: Source blog
+      description: blog description
       date: 2026-05-01
       tags: [Astro, Admin]
       draft: false
-      archive: false
-      slug: source-essay
+      slug: source-blog
     `));
     await writeContent('bits', 'bits-2026-05-01-1200.md', markdown(`
       title: Source Bit
@@ -119,30 +118,22 @@ describe('admin-console/content-source-index', () => {
         name: Writer
         avatar: author/avatar.webp
     `));
-    await writeContent('memo', 'index.md', markdown(`
-      title: Memo Title
-      subtitle: Memo subtitle
-      date: 2026-05-03
-      slug: memo
-    `));
     await writeContent('about', 'index.md', markdown('', 'About body text.'));
 
     const manifest = await loadAdminContentSourceManifest();
-    const essay = (await loadAdminContentSourceIndex(manifest, 'essay'))[0];
+    const blog = (await loadAdminContentSourceIndex(manifest, 'blog'))[0];
     const bit = (await loadAdminContentSourceIndex(manifest, 'bits'))[0];
-    const memo = (await loadAdminContentSourceIndex(manifest, 'memo'))[0];
     const about = (await loadAdminContentSourceIndex(manifest, 'about'))[0];
 
-    expect(essay).toMatchObject({
-      collection: 'essay',
+    expect(blog).toMatchObject({
+      collection: 'blog',
       id: 'Space Name',
       publicEntryId: 'space-name',
-      title: 'Source Essay',
-      slug: 'source-essay',
-      relativePath: 'src/content/essay/Space Name.md',
-      publicHref: '/archive/source-essay/',
+      title: 'Source blog',
+      slug: 'source-blog',
+      relativePath: 'src/content/blog/Space Name.md',
+      publicHref: '/blog/source-blog/',
       isDraft: false,
-      archive: false,
       dateLabel: '2026-05-01',
       year: 2026,
       tags: ['Astro', 'Admin'],
@@ -159,15 +150,6 @@ describe('admin-console/content-source-index', () => {
     });
     expect(bit?.searchHaystack).toContain('writer');
     expect(bit?.searchHaystack).toContain('author/avatar.webp');
-    expect(memo).toMatchObject({
-      collection: 'memo',
-      id: 'index',
-      publicHref: '/memo/',
-      readonlyReason: null,
-      title: 'Memo Title',
-      slug: 'memo',
-      sourceError: null
-    });
     expect(about).toMatchObject({
       collection: 'about',
       id: 'index',
@@ -189,8 +171,8 @@ describe('admin-console/content-source-index', () => {
   it('keeps collection-specific date semantics in source index items', async () => {
     const bitsDateText = '2025-01-01T00:30:00+08:00';
     const bitsDate = new Date(bitsDateText);
-    await writeContent('essay', 'legacy-datetime.md', markdown(`
-      title: Legacy Datetime Essay
+    await writeContent('blog', 'legacy-datetime.md', markdown(`
+      title: Legacy Datetime blog
       date: 2025-01-01T00:30:00+08:00
     `));
     await writeContent('bits', 'timezone-edge.md', markdown(`
@@ -199,10 +181,10 @@ describe('admin-console/content-source-index', () => {
     `));
 
     const manifest = await loadAdminContentSourceManifest();
-    const essay = (await loadAdminContentSourceIndex(manifest, 'essay'))[0];
+    const blog = (await loadAdminContentSourceIndex(manifest, 'blog'))[0];
     const bit = (await loadAdminContentSourceIndex(manifest, 'bits'))[0];
 
-    expect(essay).toMatchObject({
+    expect(blog).toMatchObject({
       dateLabel: '2025-01-01',
       year: 2025
     });
@@ -235,23 +217,23 @@ describe('admin-console/content-source-index', () => {
 
     expect(items.find((item) => item.id === 'draft-newest')?.publicHref).toBeNull();
     expect(items.find((item) => item.id === 'published-01')?.publicHref).toBe('/bits/#bit-published-01');
-    expect(items.find((item) => item.id === 'published-21')?.publicHref).toBe('/bits/page/2/#bit-published-21');
+    expect(items.find((item) => item.id === 'published-21')?.publicHref).toBe('/bits/#bit-published-21');
   });
 
   it('keeps malformed frontmatter and missing required fields as placeholder rows', async () => {
-    await writeContent('essay', 'bad-yaml.md', '---\ntitle: [\n---\nBody');
+    await writeContent('blog', 'bad-yaml.md', '---\ntitle: [\n---\nBody');
     await writeContent('bits', 'missing-date.md', markdown('title: Missing date'));
 
     const manifest = await loadAdminContentSourceManifest();
-    const essay = (await loadAdminContentSourceIndex(manifest, 'essay'))[0];
+    const blog = (await loadAdminContentSourceIndex(manifest, 'blog'))[0];
     const bit = (await loadAdminContentSourceIndex(manifest, 'bits'))[0];
 
-    expect(essay?.id).toBe('bad-yaml');
-    expect(essay?.title).toBe('bad-yaml');
-    expect(essay?.sourceError).toContain('解析');
-    expect(essay?.sourceError).not.toContain('essay.title');
-    expect(essay?.sourceError).not.toContain('essay.date');
-    expect(essay?.dateLabel).toBe('源文件异常');
+    expect(blog?.id).toBe('bad-yaml');
+    expect(blog?.title).toBe('bad-yaml');
+    expect(blog?.sourceError).toContain('解析');
+    expect(blog?.sourceError).not.toContain('blog.title');
+    expect(blog?.sourceError).not.toContain('blog.date');
+    expect(blog?.dateLabel).toBe('源文件异常');
     expect(bit?.id).toBe('missing-date');
     expect(bit?.sourceError).toContain('bits.date');
     expect(bit?.dateLabel).toBe('未设置日期');
@@ -282,20 +264,6 @@ describe('admin-console/content-source-index', () => {
     expect(readFileMock).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps memo body search text capped in the body-augmented index', async () => {
-    const lateMarker = 'memo-late-marker';
-    await writeContent('memo', 'index.md', markdown(`
-      title: Memo
-      date: 2026-05-01
-    `, `${'memo body '.repeat(90)}${lateMarker}`));
-
-    const manifest = await loadAdminContentSourceManifest();
-    const memo = (await loadAdminContentSourceIndexWithBody(manifest, 'memo'))[0];
-
-    expect(memo?.bodyDerived.plainText).toContain(lateMarker);
-    expect(memo?.searchHaystack).not.toContain(lateMarker);
-  });
-
   it('uses about body text only in the body-augmented fixed-page index', async () => {
     await writeContent('about', 'index.md', markdown('legacyField: ignored', 'Body-only about marker.'));
 
@@ -310,50 +278,13 @@ describe('admin-console/content-source-index', () => {
     expect(withBody?.searchHaystack).not.toContain('legacyfield');
   });
 
-  it('keeps fixed-page source manifests constrained to index.md', async () => {
-    await writeContent('memo', 'index.md', markdown('title: Memo'));
-    await writeContent('memo', 'index.mdx', markdown('title: MDX Memo'));
-    await writeContent('memo', 'extra.md', markdown('title: Extra Memo'));
-    await writeContent('memo', 'nested/index.md', markdown('title: Nested Memo'));
-    await writeContent('memo', 'index/index.md', markdown('title: Directory Memo'));
-    await writeContent('about', 'index.md', markdown('', 'About'));
-    await writeContent('about', 'extra.md', markdown('', 'Extra About'));
-    await writeContent('about', 'nested/index.md', markdown('', 'Nested About'));
-
-    const manifest = await loadAdminContentSourceManifest();
-    const memoItems = await loadAdminContentSourceIndex(manifest, 'memo');
-    const aboutItems = await loadAdminContentSourceIndex(manifest, 'about');
-
-    expect(getAdminContentSourceCounts(manifest).memo).toBe(1);
-    expect(getAdminContentSourceCounts(manifest).about).toBe(1);
-    expect(manifest.memo).toHaveLength(1);
-    expect(manifest.about).toHaveLength(1);
-    expect(manifest.memo[0]?.replace(/\\/g, '/')).toContain('/src/content/memo/index.md');
-    expect(manifest.about[0]?.replace(/\\/g, '/')).toContain('/src/content/about/index.md');
-    expect(memoItems).toHaveLength(1);
-    expect(aboutItems).toHaveLength(1);
-    expect(memoItems[0]?.id).toBe('index');
-    expect(aboutItems[0]?.id).toBe('index');
-  });
-
-  it('does not require memo frontmatter title in the source index', async () => {
-    await writeContent('memo', 'index.md', markdown('subtitle: Memo subtitle', 'Memo body'));
-
-    const manifest = await loadAdminContentSourceManifest();
-    const memo = (await loadAdminContentSourceIndex(manifest, 'memo'))[0];
-
-    expect(memo?.title).toBe('index');
-    expect(memo?.sourceError).toBeNull();
-    expect(memo?.searchHaystack).toContain('memo subtitle');
-  });
-
   it('treats the manifest as a page-request snapshot', async () => {
-    await writeContent('essay', 'first.md', markdown('title: First\ndate: 2026-05-01'));
+    await writeContent('blog', 'first.md', markdown('title: First\ndate: 2026-05-01'));
     const manifest = await loadAdminContentSourceManifest();
-    await writeContent('essay', 'second.md', markdown('title: Second\ndate: 2026-05-02'));
+    await writeContent('blog', 'second.md', markdown('title: Second\ndate: 2026-05-02'));
 
-    expect(getAdminContentSourceCounts(manifest).essay).toBe(1);
-    expect(await loadAdminContentSourceIndex(manifest, 'essay')).toHaveLength(1);
-    expect(getAdminContentSourceCounts(await loadAdminContentSourceManifest()).essay).toBe(2);
+    expect(getAdminContentSourceCounts(manifest).blog).toBe(1);
+    expect(await loadAdminContentSourceIndex(manifest, 'blog')).toHaveLength(1);
+    expect(getAdminContentSourceCounts(await loadAdminContentSourceManifest()).blog).toBe(2);
   });
 });

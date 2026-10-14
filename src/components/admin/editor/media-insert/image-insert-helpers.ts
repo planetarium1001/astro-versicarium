@@ -1,10 +1,10 @@
 import { toSafeHttpUrl } from '../../../../utils/format';
 import type {
-  EssayImageBlockDraft,
-  EssayImageDisplayAlignment,
-  EssayImageDisplaySize,
-  EssayImageInsertPresentation
-} from '../../../../lib/admin-console/essay-image-blocks';
+  BlogImageBlockDraft,
+  BlogImageDisplayAlignment,
+  BlogImageDisplaySize,
+  BlogImageInsertPresentation
+} from '../../../../lib/admin-console/blog-image-blocks';
 import type { MarkdownInsertPlacement } from '../markdown/markdown-tools';
 import {
   escapeHtmlAttribute,
@@ -14,12 +14,12 @@ import {
 
 export const REMOTE_IMAGE_URL_ERROR = '请输入 https:// 开头的图片链接';
 
-export type ImageInsertPresentation = EssayImageInsertPresentation;
-export type ImageDisplaySize = EssayImageDisplaySize;
-export type ImageDisplayAlignment = EssayImageDisplayAlignment;
-export type ImageBlockDraft = EssayImageBlockDraft;
+export type ImageInsertPresentation = BlogImageInsertPresentation;
+export type ImageDisplaySize = BlogImageDisplaySize;
+export type ImageDisplayAlignment = BlogImageDisplayAlignment;
+export type ImageBlockDraft = BlogImageBlockDraft;
 
-export type ImageInsertText = {
+type ImageInsertText = {
   text: string;
   placement?: MarkdownInsertPlacement;
 };
@@ -32,7 +32,7 @@ export const normalizeRemoteMarkdownImageUrl = (value: string): string | null =>
   return safeUrl.startsWith('https://') ? escapeRemoteMarkdownImageUrl(safeUrl) : null;
 };
 
-export const escapeMarkdownAlt = (value: string): string =>
+const escapeMarkdownAlt = (value: string): string =>
   value.trim().replace(/\s+/g, ' ').replace(/\\/g, '\\\\').replace(/]/g, '\\]');
 
 export const createMarkdownImage = (alt: string, src: string): string =>
@@ -44,12 +44,12 @@ const getFigureClassNames = (draft: ImageBlockDraft): string[] => [
   `figure--${draft.alignment}`
 ];
 
-export const shouldUseFigureImageBlock = (draft: ImageBlockDraft): boolean =>
+const shouldUseFigureImageBlock = (draft: ImageBlockDraft): boolean =>
   draft.presentation === 'figure'
   || draft.size !== 'default'
   || draft.alignment !== 'center';
 
-export const createFigureImageBlock = (draft: ImageBlockDraft): string => {
+const createFigureImageBlock = (draft: ImageBlockDraft): string => {
   const alt = normalizeInlineText(draft.alt);
   const caption = draft.presentation === 'figure' ? normalizeInlineText(draft.caption) : '';
   const className = getFigureClassNames(draft).join(' ');

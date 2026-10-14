@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildEssayOutlineListItems,
+  buildBlogOutlineListItems,
   extractMarkdownOutline,
   getMarkdownOutlineSelectionRange
 } from '../src/lib/admin-console/editor-outline';
@@ -78,22 +78,22 @@ describe('admin editor outline helpers', () => {
     });
   });
 
-  it('builds essay list items with active state and title fallback', () => {
+  it('builds blog list items with active state and title fallback', () => {
     expect(
-      buildEssayOutlineListItems(
+      buildBlogOutlineListItems(
         [
           {
             entryId: 'current',
             title: '',
-            editHref: '/admin/content/essay/_edit/current/',
+            editHref: '/admin/content/blog/_edit/current/',
             dateLabel: '2026-05-14',
             sourceError: null
           },
           {
             entryId: 'other',
-            title: 'Other Essay',
-            editHref: '/admin/content/essay/_edit/other/',
-            sourceError: 'essay.date 缺失'
+            title: 'Other blog',
+            editHref: '/admin/content/blog/_edit/other/',
+            sourceError: 'blog.date 缺失'
           }
         ],
         'current'
@@ -102,16 +102,16 @@ describe('admin editor outline helpers', () => {
       {
         entryId: 'current',
         title: 'current',
-        editHref: '/admin/content/essay/_edit/current/',
+        editHref: '/admin/content/blog/_edit/current/',
         dateLabel: '2026-05-14',
         sourceError: null,
         active: true
       },
       {
         entryId: 'other',
-        title: 'Other Essay',
-        editHref: '/admin/content/essay/_edit/other/',
-        sourceError: 'essay.date 缺失',
+        title: 'Other blog',
+        editHref: '/admin/content/blog/_edit/other/',
+        sourceError: 'blog.date 缺失',
         active: false
       }
     ]);

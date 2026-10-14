@@ -1,0 +1,57 @@
+---
+import { render } from 'astro:content';
+import { getBlogSlug, getVisibleBlogRouteEntries, type BlogEntry } from '../../lib/content';
+import ArticleLayout from '../../layouts/ArticleLayout.astro';
+import { createWithBase } from '../../utils/format';
+import { getThemeSettings, getVisibleArticleMetaTags } from '../../lib/theme-settings';
+
+type ArticleNeighborLink = {
+  href: string;
+  title: string;
+};
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+  const base = import.meta.env.BASE_URL ?? '/';
+  const withBase = createWithBase(base);
+  const routeEntries = await getVisibleBlogRouteEntries();
+  return routeEntries.map(({ slug, entry, prev, next }) => {
+    return {
+      params: { slug },
+      props: {
+        entry,
+        prev: prev
+          ? { href: withBase(`/blog/${getBlogSlug(prev)}/`), title: prev.data.title }
+          : null,
+        next: next
+          ? { href: withBase(`/blog/${getBlogSlug(next)}/`), title: next.data.title }
+          : null
+      }
+    };
+  });
+}
+
+const { entry, prev, next } = Astro.props as {
+  entry: BlogEntry;
+  prev: ArticleNeighborLink | null;
+  next: ArticleNeighborLink | null;
+};
+const { Content, headings } = await render(entry);
+const { settings } = getThemeSettings();
+const articleMetaSettings = settings.ui.articleMeta;
+const viewStatsSettings = settings.ui.viewStats;
+const visibleTags = getVisibleArticleMetaTags(entry.data.tags, 'detail');
+---
+
+<ArticleLayout
+  entry={entry}
+  prev={prev}
+  next={next}
+  articleMetaSettings={articleMetaSettings}
+  viewStatsSettings={viewStatsSettings}
+  visibleTags={visibleTags}
+  headings={headings}
+>
+  <Content />
+</ArticleLayout>

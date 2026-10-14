@@ -147,23 +147,4 @@ describe('admin-console/frontmatter', () => {
     ]);
   });
 
-  it('supports deleting optional memo date fields', () => {
-    const source = ['---', 'title: Memo', 'date: 2026-01-10', '---', '', 'memo body', ''].join('\n');
-
-    const next = patchMarkdownFrontmatter(source, [
-      { path: ['date'], action: 'delete' }
-    ]);
-
-    expect(getFrontmatter(next).date).toBeUndefined();
-  });
-
-  it('supports memo slug values without applying essay slugRule restrictions', () => {
-    const source = ['---', 'title: Memo', '---', '', 'memo body', ''].join('\n');
-
-    const next = patchMarkdownFrontmatter(source, [
-      { path: ['slug'], value: 'memo/自由记录', action: 'set' }
-    ]);
-
-    expect(getFrontmatter(next).slug).toBe('memo/自由记录');
-  });
 });

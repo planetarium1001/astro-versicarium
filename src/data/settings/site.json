@@ -2,6 +2,7 @@
   "title": "Astro Themes by Whono",
   "description": "一个极简双栏 Astro 主题的展示站",
   "defaultLocale": "zh-CN",
+  "titleMaxPercent": 35,
   "footer": {
     "startYear": 2025,
     "showCurrentYear": true,

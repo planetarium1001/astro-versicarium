@@ -14,18 +14,16 @@ import {
   expect
 } from './smoke-utils.mjs';
 
-const normalizeSiteUrl = (value) => value.trim().replace(/\/+$/, '');
-
-/* 与 astro.config.mjs 的 normalizeDeploymentBase 同语义；根路径为空串，子路径形如 '/blog'。
-   dist 目录结构不随 base 嵌套，base 只影响产物内的 URL。 */
+// 与 astro.config.mjs 的 normalizeDeploymentBase 同语义：根路径为空串，子路径形如 '/blog'。
+// dist 目录结构不随 base 嵌套，base 只影响产物内的 URL。
 const basePathSegment = String(process.env.ASTRO_WHONO_BASE_PATH ?? '').trim().replace(/^\/+|\/+$/g, '');
 const basePrefix = basePathSegment ? `/${basePathSegment}` : '';
 
 const stripBasePrefix = (pathname) =>
   basePrefix && pathname.startsWith(`${basePrefix}/`) ? pathname.slice(basePrefix.length) : pathname;
 
-export const resolveRequiredSiteUrl = () => {
-  const siteUrl = normalizeSiteUrl(process.env.SITE_URL ?? '');
+const resolveRequiredSiteUrl = () => {
+  const siteUrl = (process.env.SITE_URL ?? '').trim().replace(/\/+$/, '');
   expect(siteUrl.length > 0, 'SITE_URL is required for production artifact verification');
   return siteUrl;
 };
@@ -105,16 +103,15 @@ const EXTERNAL_MODULE_SCRIPT_PATTERN = new RegExp(
 const getExternalModuleScriptSrcs = (html) =>
   Array.from(html.matchAll(EXTERNAL_MODULE_SCRIPT_PATTERN), (match) => match[1]);
 
-export const runProductionArtifactCheck = async (options = {}) => {
-  const siteUrl = options.siteUrl ?? resolveRequiredSiteUrl();
+const runProductionArtifactCheck = async () => {
+  const siteUrl = resolveRequiredSiteUrl();
 
   const requiredArtifacts = [
     'dist/sitemap-index.xml',
     'dist/sitemap-0.xml',
     'dist/robots.txt',
     'dist/rss.xml',
-    'dist/archive/rss.xml',
-    'dist/essay/rss.xml',
+    'dist/blog/rss.xml',
     'dist/index.html',
     'dist/about/index.html',
     'dist/admin/index.html',
@@ -136,6 +133,7 @@ export const runProductionArtifactCheck = async (options = {}) => {
     'dist/api/admin/images/list',
     'dist/api/admin/images/meta',
     'dist/api/admin/images/upload',
+    'dist/api/admin/images/rename',
     'dist/api/admin/site-assets/upload'
   ];
 
@@ -163,19 +161,27 @@ export const runProductionArtifactCheck = async (options = {}) => {
   expect(!sitemapXml.includes('/admin/content/'), 'Admin content route leaked into sitemap');
   expect(!sitemapXml.includes('/admin/images/'), 'Admin images route leaked into sitemap');
   expect(!sitemapXml.includes('/admin/data/'), 'Admin data route leaked into sitemap');
+
+  // 读者端不再有写稿入口：旧的 reader partial 路由不产出，读者页也不带写稿钩子。
   expect(
-    !sitemapXml.includes(`${siteUrl}${basePrefix}/bits/draft-dialog/`),
-    'Bits draft partial route leaked into sitemap'
+    !existsSync('dist/bits/draft-dialog'),
+    'Bits draft partial route should no longer be generated (moved to the admin console)'
+  );
+  const bitsPublicHtml = readText('dist/bits/index.html');
+  expect(
+    !bitsPublicHtml.includes('data-new-bit') && !bitsPublicHtml.includes('bits-draft-dialog'),
+    'Reader-side bits draft entry leaked back into the public /bits/ page'
   );
 
   const sitemapLocs = Array.from(
     sitemapXml.matchAll(/<loc>([^<]+)<\/loc>/g),
     (match) => match[1].trim()
   ).filter(Boolean);
-  const leakedEssayDetail = sitemapLocs.find((loc) =>
-    /^\/essay\/[^/]+\/$/.test(stripBasePrefix(new URL(loc).pathname))
+  const blogDetailLoc = sitemapLocs.find((loc) =>
+    // 同样先 decode：CJK slug 在 sitemap 里是百分号编码的
+    /^\/blog\/[^/]+\/$/.test(decodeURIComponent(stripBasePrefix(new URL(loc).pathname)))
   );
-  expect(!leakedEssayDetail, `Essay compatibility redirect leaked into sitemap: ${leakedEssayDetail}`);
+  expect(blogDetailLoc, 'Blog detail route is missing from the sitemap');
 
   assertNoEmojiPickerAssets();
 
@@ -210,9 +216,10 @@ export const runProductionArtifactCheck = async (options = {}) => {
     ['dist/admin/data/index.html', adminDataHtml, 'Data Console']
   ];
   [
-    'dist/admin/content/essay/index.html',
+    'dist/admin/content/blog/index.html',
     'dist/admin/content/bits/index.html',
-    'dist/admin/content/memo/index.html'
+    'dist/admin/content/projects/index.html',
+    'dist/admin/content/devlog/index.html'
   ].forEach((filePath) => {
     expect(!existsSync(filePath), `${filePath} should not be generated after collection list routes were removed`);
   });
@@ -333,81 +340,97 @@ export const runProductionArtifactCheck = async (options = {}) => {
   const getRssItemLinks = (xml) =>
     Array.from(xml.matchAll(/<item>[\s\S]*?<link>([^<]+)<\/link>/g), (match) => match[1].trim()).filter(Boolean);
 
-  const normalizeArchiveDetailPath = (href) => {
+  const normalizeBlogDetailPath = (href) => {
     const url = new URL(href);
-    const normalizedPath = stripBasePrefix(url.pathname).replace(/\/+$/, '').replace(/^\/+/, '');
+    // blog 的公开 slug 允许 CJK，URL.pathname 会对其做百分号编码，而磁盘上的目录名未编码，
+    // 不 decode 会在这里误报「产物缺失」。
+    const normalizedPath = decodeURIComponent(stripBasePrefix(url.pathname))
+      .replace(/\/+$/, '')
+      .replace(/^\/+/, '');
     expect(
-      normalizedPath.startsWith('archive/') && normalizedPath.split('/').length >= 2,
-      `Archive RSS item did not resolve to an /archive/{slug}/ detail page: ${href}`
+      normalizedPath.startsWith('blog/') && normalizedPath.split('/').length >= 2,
+      `RSS item did not resolve to a /blog/{slug}/ detail page: ${href}`
     );
     return path.join('dist', normalizedPath, 'index.html');
   };
 
   const defaultRssXml = readText('dist/rss.xml');
-  const archiveRssXml = readText('dist/archive/rss.xml');
-  const essayRssXml = readText('dist/essay/rss.xml');
+  const blogRssXml = readText('dist/blog/rss.xml');
 
   const defaultRssLinks = getRssItemLinks(defaultRssXml);
-  const archiveRssLinks = getRssItemLinks(archiveRssXml);
-  const essayRssLinks = getRssItemLinks(essayRssXml);
+  const blogRssLinks = getRssItemLinks(blogRssXml);
 
-  expect(archiveRssLinks.length > 0, 'Archive RSS does not contain any item links');
   expect(defaultRssLinks.length > 0, 'Default RSS does not contain any item links');
-  expect(essayRssLinks.length > 0, 'Essay RSS does not contain any item links');
+  expect(blogRssLinks.length > 0, 'Blog RSS does not contain any item links');
 
-  const sampleArchiveLink = archiveRssLinks[0];
+  const sampleBlogLink = blogRssLinks[0];
   expect(
-    sampleArchiveLink.startsWith(`${siteUrl}${basePrefix}/archive/`),
-    `Archive RSS item link is not absolute or not under /archive/: ${sampleArchiveLink}`
+    sampleBlogLink.startsWith(`${siteUrl}${basePrefix}/blog/`),
+    `Blog RSS item link is not absolute or not under /blog/: ${sampleBlogLink}`
   );
   expect(
-    defaultRssLinks.includes(sampleArchiveLink),
-    `Default RSS is missing archive item link: ${sampleArchiveLink}`
+    defaultRssLinks.includes(sampleBlogLink),
+    `Default RSS is missing blog item link: ${sampleBlogLink}`
   );
   expect(
-    essayRssLinks.includes(sampleArchiveLink),
-    `Essay RSS is missing archive item link: ${sampleArchiveLink}`
-  );
-  expect(
-    sitemapXml.includes(`<loc>${sampleArchiveLink}</loc>`),
-    `Sitemap is missing archive detail link: ${sampleArchiveLink}`
+    sitemapXml.includes(`<loc>${sampleBlogLink}</loc>`),
+    `Sitemap is missing blog detail link: ${sampleBlogLink}`
   );
 
-  const sampleArchiveHtmlPath = normalizeArchiveDetailPath(sampleArchiveLink);
-  const sampleArchiveHtml = readText(sampleArchiveHtmlPath);
+  const sampleBlogHtmlPath = normalizeBlogDetailPath(sampleBlogLink);
+  const sampleBlogHtml = readText(sampleBlogHtmlPath);
   expect(
-    sampleArchiveHtml.includes(`<link rel="canonical" href="${sampleArchiveLink}"`),
-    `Archive detail page canonical does not match RSS item link: ${sampleArchiveLink}`
+    sampleBlogHtml.includes(`<link rel="canonical" href="${sampleBlogLink}"`),
+    `Blog detail page canonical does not match RSS item link: ${sampleBlogLink}`
   );
   expect(
-    sampleArchiveHtml.includes(`<meta property="og:url" content="${sampleArchiveLink}"`),
-    `Archive detail page og:url does not match RSS item link: ${sampleArchiveLink}`
+    sampleBlogHtml.includes(`<meta property="og:url" content="${sampleBlogLink}"`),
+    `Blog detail page og:url does not match RSS item link: ${sampleBlogLink}`
   );
   expect(
-    !/\.admin-/.test(sampleArchiveHtml),
-    `Archive detail page still contains admin CSS rules: ${sampleArchiveHtmlPath}`
+    !/\.admin-/.test(sampleBlogHtml),
+    `Blog detail page still contains admin CSS rules: ${sampleBlogHtmlPath}`
   );
   expect(
-    !/--admin-status-/.test(sampleArchiveHtml),
-    `Archive detail page still contains admin CSS tokens: ${sampleArchiveHtmlPath}`
-  );
-
-  const latestEssayLink = essayRssLinks[0];
-  const latestEssayHtmlPath = normalizeArchiveDetailPath(latestEssayLink);
-  const latestEssayHtml = readText(latestEssayHtmlPath);
-  expect(
-    !PREV_LINK_PATTERN.test(latestEssayHtml),
-    `Latest essay detail page should not render a prev link: ${latestEssayHtmlPath}`
+    !/--admin-status-/.test(sampleBlogHtml),
+    `Blog detail page still contains admin CSS tokens: ${sampleBlogHtmlPath}`
   );
 
-  const oldestEssayLink = essayRssLinks.at(-1);
-  expect(oldestEssayLink, 'Essay RSS does not contain an oldest item link');
-  const oldestEssayHtmlPath = normalizeArchiveDetailPath(oldestEssayLink);
-  const oldestEssayHtml = readText(oldestEssayHtmlPath);
+  const latestBlogLink = blogRssLinks[0];
+  const latestBlogHtmlPath = normalizeBlogDetailPath(latestBlogLink);
+  const latestBlogHtml = readText(latestBlogHtmlPath);
   expect(
-    !NEXT_LINK_PATTERN.test(oldestEssayHtml),
-    `Oldest essay detail page should not render a next link: ${oldestEssayHtmlPath}`
+    !PREV_LINK_PATTERN.test(latestBlogHtml),
+    `Latest blog detail page should not render a prev link: ${latestBlogHtmlPath}`
   );
+
+  const oldestBlogLink = blogRssLinks.at(-1);
+  expect(oldestBlogLink, 'Blog RSS does not contain an oldest item link');
+  const oldestBlogHtmlPath = normalizeBlogDetailPath(oldestBlogLink);
+  const oldestBlogHtml = readText(oldestBlogHtmlPath);
+  expect(
+    !NEXT_LINK_PATTERN.test(oldestBlogHtml),
+    `Oldest blog detail page should not render a next link: ${oldestBlogHtmlPath}`
+  );
+
+  expect(
+    !existsSync('dist/archive/rss.xml'),
+    'Removed /archive/rss.xml artifact should not be generated'
+  );
+
+  // 服务端分页与 tag 分段产物必须不存在。
+  const pagedArtifactDirs = [
+    'dist/blog/page',
+    'dist/archive/page',
+    'dist/bits/page',
+    'dist/archive/tag'
+  ];
+  for (const dir of pagedArtifactDirs) {
+    expect(
+      !existsSync(dir),
+      `Server-side pagination artifact should not be generated: ${dir}`
+    );
+  }
 
   const adminSettingsArtifact = readText('dist/api/admin/settings');
   assertAdminSettingsStaticShell('dist/api/admin/settings', adminSettingsArtifact);

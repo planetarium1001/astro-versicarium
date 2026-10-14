@@ -35,7 +35,7 @@ export type AdminDataControls = {
   resultListEl: HTMLElement;
 };
 
-export type AdminDataPartialControls = {
+type AdminDataPartialControls = {
   [Key in keyof AdminDataControls]: AdminDataControls[Key] | null;
 };
 

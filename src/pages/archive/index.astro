@@ -1,23 +1,218 @@
 ---
-import ArchivePageView from '../../components/ArchivePageView.astro';
-import { getArchiveEssays, getPageSlice, getTotalPages } from '../../lib/content';
-import { collectTagSummary } from '../../lib/tags';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TagFilterHeader from '../../components/TagFilterHeader.astro';
+import { createWithBase, getBlogSlug, getVisibleDevlogs, getVisibleProjects, getVisibleblogs } from '../../lib/content';
+import { collectTagScopedSummary, type TagSummary } from '../../lib/tags';
+import { getThemeSettings } from '../../lib/theme-settings';
+import { formatISODateUtc, joinPageSubtitleText } from '../../utils/format';
 import { PAGE_SIZE_ARCHIVE } from '../../../site.config.mjs';
+import '../../styles/archive-page.css';
 
-const archiveItems = await getArchiveEssays();
-const tagSummaries = collectTagSummary(archiveItems);
-const totalPages = getTotalPages(archiveItems.length, PAGE_SIZE_ARCHIVE);
-const currentPage = 1;
-const pageItems = getPageSlice(archiveItems, currentPage, PAGE_SIZE_ARCHIVE);
+/**
+ * `/archive/` 全站时间线。
+ * 一级胶囊：全部 / 博客 / 项目 / 更新，默认「全部」。时间线只显示日期与标题，按年月分组，不含 bits。
+ * 标题跳转：博客到 /blog/<slug>/，项目到 /projects/#<entryId>，更新到 /devlog/#<entryId>。
+ * tag dialog 作用域跟随一级胶囊。无服务端分页，/archive/index.json 是客户端筛选与计数的唯一数据源。
+ */
+const [blogs, projects, devlogs] = await Promise.all([
+  getVisibleblogs(),
+  getVisibleProjects(),
+  getVisibleDevlogs()
+]);
+
+const base = import.meta.env.BASE_URL ?? '/';
+const withBase = createWithBase(base);
+const {
+  settings: { page }
+} = getThemeSettings();
+
+const pageTitleText = page.archive.title || '归档';
+const totalCount = blogs.length + projects.length + devlogs.length;
+const subtitleText = joinPageSubtitleText(page.archive.subtitle, `共 ${totalCount} 篇内容`);
+const pageDescription = joinPageSubtitleText(
+  `${pageTitleText}列表`,
+  page.archive.subtitle,
+  `共 ${totalCount} 篇内容`
+) ?? `${pageTitleText}列表`;
+
+type Row = {
+  kind: 'blog' | 'projects' | 'devlog';
+  key: string;
+  id: string;
+  title: string;
+  href: string;
+  date: Date;
+  year: number;
+  month: number;
+  /** 仅 devlog：所属项目名，行内显示成「项目名: 标题」 */
+  project?: string;
+};
+
+const rows: Row[] = [
+  ...blogs.map((entry): Row => ({
+    kind: 'blog',
+    key: `blog:${getBlogSlug(entry)}`,
+    id: getBlogSlug(entry),
+    title: entry.data.title,
+    href: withBase(`/blog/${getBlogSlug(entry)}/`),
+    date: entry.data.date,
+    year: entry.data.date.getUTCFullYear(),
+    month: entry.data.date.getUTCMonth() + 1
+  })),
+  ...projects.map((entry): Row => ({
+    kind: 'projects',
+    key: `projects:${entry.id}`,
+    id: entry.id,
+    title: entry.data.title,
+    href: withBase(`/projects/#${entry.id}`),
+    date: entry.data.date,
+    year: entry.data.date.getUTCFullYear(),
+    month: entry.data.date.getUTCMonth() + 1
+  })),
+  ...devlogs.map((entry): Row => ({
+    kind: 'devlog',
+    key: `devlog:${entry.id}`,
+    id: entry.id,
+    title: entry.data.title,
+    href: withBase(`/devlog/#${entry.id}`),
+    date: entry.data.date,
+    year: entry.data.date.getUTCFullYear(),
+    month: entry.data.date.getUTCMonth() + 1,
+    project: entry.data.project
+  }))
+].sort((left, right) => {
+  const dateOrder = right.date.valueOf() - left.date.valueOf();
+  if (dateOrder !== 0) return dateOrder;
+  return left.id.localeCompare(right.id, 'en');
+});
+
+/** 按年月分组。 */
+const groups: { key: string; label: string; rows: Row[] }[] = [];
+for (const row of rows) {
+  const groupKey = `${row.year}-${String(row.month).padStart(2, '0')}`;
+  const last = groups.at(-1);
+  if (last && last.key === groupKey) {
+    last.rows.push(row);
+    continue;
+  }
+  groups.push({
+    key: groupKey,
+    label: `${row.year} 年 ${row.month} 月`,
+    rows: [row]
+  });
+}
+
+/**
+ * 归档的 tag 取值域逐档收敛：
+ * 博客用自身 tags；项目不暴露任何标签（切到「项目」时页头的 #标签 入口整体隐藏，
+ * 见 scripts/archive-scope.ts）；更新只取项目名称，与 /devlog/ 的 #项目 一致；
+ * 「全部」= 博客 tags + 更新的项目名称，不含项目集合自身的 tags。
+ */
+const blogTags: TagSummary[] = collectTagScopedSummary('blog', blogs, (entry) => entry.data.tags);
+const projectTags: TagSummary[] = [];
+const devlogTags: TagSummary[] = collectTagScopedSummary('devlog', devlogs, (entry) => [
+  entry.data.project
+].filter(Boolean));
+const allTags: TagSummary[] = collectTagScopedSummary(
+  'all',
+  [...blogs, ...devlogs],
+  (entry) => ('tags' in entry.data ? entry.data.tags : [entry.data.project].filter(Boolean))
+);
+
+const scopePills = [
+  { id: 'all', label: '全部', count: totalCount },
+  { id: 'blog', label: '博客', count: blogs.length },
+  { id: 'projects', label: '项目', count: projects.length },
+  { id: 'devlog', label: '更新', count: devlogs.length }
+];
+
+const tagPayload = { blog: blogTags, projects: projectTags, devlog: devlogTags, all: allTags };
 ---
 
-<ArchivePageView
-  items={pageItems}
-  resultCount={archiveItems.length}
-  currentPage={currentPage}
-  totalPages={totalPages}
-  currentPath="/archive/"
-  prevPath={null}
-  nextPath={currentPage < totalPages ? `/archive/page/${currentPage + 1}/` : null}
-  tagSummaries={tagSummaries}
-/>
+<BaseLayout title={pageTitleText} description={pageDescription}>
+  <div
+    class="entry-filters archive-filters"
+    data-entry-filters
+    data-archive-timeline
+    data-index-url="/archive/index.json"
+    data-section-selector="[data-entry-section]"
+    data-page-size={String(PAGE_SIZE_ARCHIVE)}
+  >
+    <TagFilterHeader
+      pageTitleText={pageTitleText}
+      subtitleText={subtitleText}
+      rssHref={withBase('/blog/rss.xml')}
+      pickerHref="#archive-timeline"
+      fallbackListId="archive-timeline"
+      dialogTitleId="archive-tag-dialog-title"
+      searchAriaLabel={`搜索${pageTitleText}`}
+      showRss={page.listRss.enabled !== false && page.listRss.archive !== false}
+      tagOptions={allTags.map((tag) => ({ ...tag, isActive: false }))}
+    />
+  </div>
+
+  {/*
+    一级胶囊条，结构与语义对齐原 /bits/ 年份筛选胶囊（样式见共享的 scope-pills.css）：
+    不带计数徽章（条目数放 aria-label），用 aria-pressed 表达选中态，
+    外层胶囊内一个绝对定位滑块跟随激活项。
+  */}
+  <div
+    class="scope-pills"
+    data-archive-scope-bar
+    role="group"
+    aria-label="按作用域筛选归档"
+  >
+    <span class="scope-pills__cursor" data-archive-scope-cursor aria-hidden="true"></span>
+    {scopePills.map((pill) => (
+      <button
+        class:list={['scope-pills__item', pill.id === 'all' && 'is-active']}
+        type="button"
+        data-archive-scope={pill.id}
+        aria-label={`${pill.label === '全部' ? '显示全部归档' : `筛选${pill.label}，共 ${pill.count} 条`}`}
+        aria-pressed={pill.id === 'all' ? 'true' : 'false'}
+      >
+        {pill.label}
+      </button>
+    ))}
+  </div>
+
+  <div id="archive-timeline" class="archive-timeline" data-entry-list data-archive-content>
+    {groups.map((group) => (
+      <section class="archive-group" data-entry-section data-archive-group>
+        <h2 class="archive-group__label">{group.label}</h2>
+        <div class="archive-timeline__list">
+          {group.rows.map((row) => (
+            <div
+              class="archive-timeline__row"
+              data-entry-item
+              data-slug={row.key}
+              data-archive-kind={row.kind}
+              data-archive-key={row.key}
+            >
+              <time class="archive-timeline__date" datetime={formatISODateUtc(row.date)}>
+                {formatISODateUtc(row.date).slice(5)}
+              </time>
+              <a class="archive-timeline__title" href={row.href}>
+                {row.kind === 'devlog' && row.project ? (
+                  <span class="archive-timeline__project">{`${row.project}: `}</span>
+                ) : null}
+                {row.title}
+              </a>
+            </div>
+          ))}
+        </div>
+      </section>
+    ))}
+  </div>
+
+  <nav class="pagination" data-entry-pagination hidden aria-label={`${pageTitleText}分页`}>
+    <div class="pagination__inner" data-entry-pagination-inner></div>
+  </nav>
+
+  <script is:inline type="application/json" id="archive-tag-scope-data" set:html={JSON.stringify(tagPayload)}></script>
+
+  <script>
+    import '../../scripts/entry-search.ts';
+    import '../../scripts/archive-scope.ts';
+  </script>
+</BaseLayout>

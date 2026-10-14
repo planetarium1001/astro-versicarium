@@ -185,7 +185,8 @@ export const initAdminImagesConsole = () => {
   const icons = {
     copy: getIconMarkup('copy'),
     link: getIconMarkup('link'),
-    eye: getIconMarkup('eye')
+    eye: getIconMarkup('eye'),
+    rename: getIconMarkup('pencil')
   };
 
   const getCurrentPageSize = (): number =>
@@ -262,6 +263,7 @@ export const initAdminImagesConsole = () => {
       copyIcon: icons.copy,
       linkIcon: icons.link,
       eyeIcon: icons.eye,
+      renameIcon: icons.rename,
       largeFileThreshold: LARGE_FILE_THRESHOLD
     });
   };
@@ -841,6 +843,61 @@ export const initAdminImagesConsole = () => {
   });
 
   detailEl.addEventListener('click', async (event) => {
+    /**
+     * 重命名会同步改写内容里的引用，因此先确认再提交；失败时把服务端的原话透出去
+     * （例如「目标文件已存在，未做任何改动」）。
+     */
+    const renameTarget = event.target instanceof Element
+      ? event.target.closest<HTMLButtonElement>('[data-rename-path]')
+      : null;
+    if (renameTarget instanceof HTMLButtonElement) {
+      const renamePath = renameTarget.dataset.renamePath ?? '';
+      const currentFileName = renameTarget.dataset.renameFileName ?? '';
+      if (!renamePath || !bootstrap.renameEndpoint) return;
+
+      const next = window.prompt('新的文件名（扩展名保持不变）', currentFileName);
+      if (next === null) return;
+      const trimmed = next.trim();
+      if (!trimmed || trimmed === currentFileName) return;
+
+      renameTarget.disabled = true;
+      setStatus('loading', '正在重命名并改写引用…');
+      try {
+        const response = await fetch(bootstrap.renameEndpoint, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ from: renamePath, to: trimmed })
+        });
+        const payload = (await response.json().catch(() => null)) as
+          | { ok?: boolean; result?: { to?: string; rewritten?: { count: number }[] }; errors?: string[] }
+          | null;
+
+        if (!response.ok || !payload?.ok || !payload.result?.to) {
+          const message = payload?.errors?.[0] ?? `重命名失败（HTTP ${response.status}）`;
+          setStatus('error', message);
+          return;
+        }
+
+        const rewritten = payload.result.rewritten ?? [];
+        const count = rewritten.reduce((sum, entry) => sum + entry.count, 0);
+        setStatus(
+          'ok',
+          count > 0
+            ? `已重命名为 ${payload.result.to}，同步改写 ${rewritten.length} 个文件 / ${count} 处引用`
+            : `已重命名为 ${payload.result.to}（没有内容引用它）`
+        );
+        // 列表与详情都要重新拉取：路径变了，缓存里的预览/元数据也失效
+        detailMetaCache.delete(renamePath);
+        selectedPath = payload.result.to;
+        await loadList({ updateLocation: true });
+      } catch (error) {
+        setStatus('error', error instanceof Error ? error.message : '重命名失败');
+      } finally {
+        renameTarget.disabled = false;
+      }
+      return;
+    }
+
     const target = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-copy-value]') : null;
     if (!(target instanceof HTMLButtonElement)) return;
 

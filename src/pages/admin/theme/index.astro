@@ -16,7 +16,6 @@ const { default: adminShellStylesHref } = await import('../../../styles/componen
 
 const loadThemeDevState = async () => {
   const [
-    { getEntry },
     { getEditableThemeSettingsState },
     {
       ADMIN_FOOTER_START_YEAR_MIN,
@@ -34,7 +33,6 @@ const loadThemeDevState = async () => {
     { default: adminThemeStylesHref },
     { default: adminImageSharedStylesHref }
   ] = await Promise.all([
-    import('astro:content'),
     import('../../../lib/theme-settings'),
     import('../../../lib/admin-console/theme-shared'),
     import('../../../components/admin/AdminThemeDevConsole.astro'),
@@ -47,9 +45,10 @@ const loadThemeDevState = async () => {
   const settingsEndpoint = withBase(ADMIN_SETTINGS_API_PATH);
   const navIdOrder = ADMIN_NAV_IDS;
   const navLabelFallback = {
-    essay: '随笔',
-    bits: '絮语',
-    memo: '小记',
+    blog: '博客',
+    projects: '项目',
+    bits: '动态',
+    devlog: '更新',
     archive: '归档',
     about: '关于'
   } as const;
@@ -59,10 +58,6 @@ const loadThemeDevState = async () => {
   const pageTitleMaxLength = ADMIN_PAGE_TITLE_MAX_LENGTH;
   const pageSubtitleMaxLength = ADMIN_PAGE_SUBTITLE_MAX_LENGTH;
   const socialCustomLimit = ADMIN_SOCIAL_CUSTOM_LIMIT;
-  const memoEntry = await getEntry('memo', 'index');
-  const memoTitlePlaceholder = typeof memoEntry?.data.title === 'string' ? memoEntry.data.title.trim() : '';
-  const memoSubtitlePlaceholder =
-    typeof memoEntry?.data.subtitle === 'string' ? memoEntry.data.subtitle.trim() : '';
 
   const initialState = getEditableThemeSettingsState();
   const bootstrapState = initialState.ok
@@ -109,8 +104,6 @@ const loadThemeDevState = async () => {
     footerStartYearMin,
     footerStartYearMax,
     homeIntroMaxLength,
-    memoSubtitlePlaceholder,
-    memoTitlePlaceholder,
     navIdOrder,
     pageSubtitleMaxLength,
     pageTitleMaxLength,
@@ -144,8 +137,6 @@ const AdminImagePicker = adminDevState?.AdminImagePicker;
           footerStartYearMin={adminDevState.footerStartYearMin}
           footerStartYearMax={adminDevState.footerStartYearMax}
           homeIntroMaxLength={adminDevState.homeIntroMaxLength}
-          memoSubtitlePlaceholder={adminDevState.memoSubtitlePlaceholder}
-          memoTitlePlaceholder={adminDevState.memoTitlePlaceholder}
           navIdOrder={adminDevState.navIdOrder}
           pageSubtitleMaxLength={adminDevState.pageSubtitleMaxLength}
           pageTitleMaxLength={adminDevState.pageTitleMaxLength}

@@ -7,12 +7,14 @@ import type {
 } from '../../../../lib/admin-console/content-editor-payload';
 import type { BitsCardAuthorInput } from '../../../../lib/bits-card-view-model';
 import { getAdminImageFieldPreviewSrc } from '../../../../lib/admin-console/image-params';
-import { parseEssayDateInput } from '../../../../utils/date-only';
+import { parseBlogDateInput } from '../../../../utils/date-only';
 import AdminEditorIcon from '../shared/AdminEditorIcon.svelte';
 import FrontmatterTagsInput from './FrontmatterTagsInput.svelte';
 import {
   isBitsEditorValues,
-  isEssayEditorValues
+  isBlogEditorValues,
+  isDevlogEditorValues,
+  isProjectsEditorValues
 } from '../shared/content-editor-adapters';
 import {
   getFieldDescribedBy as getSharedFieldDescribedBy,
@@ -41,7 +43,7 @@ type Props = {
 
 let {
   value = $bindable(),
-  collection = 'essay',
+  collection = 'blog',
   issues = [],
   disabled = false,
   entryId = '',
@@ -103,7 +105,7 @@ const formatLocalDateTimeWithZoneText = (date: Date): string => {
 };
 
 const getPublishedAtResult = (value: string) => {
-  const result = parseEssayDateInput(value);
+  const result = parseBlogDateInput(value);
   return result?.publishedAt ? result : null;
 };
 
@@ -111,7 +113,7 @@ const getPublishedAtSyncDate = (value: string): string =>
   getPublishedAtResult(value)?.dateText ?? '';
 
 const getEffectivePublishDateResult = (date: string, publishedAt: string) =>
-  getPublishedAtResult(publishedAt) ?? parseEssayDateInput(date);
+  getPublishedAtResult(publishedAt) ?? parseBlogDateInput(date);
 
 const getPublishedAtInputIssue = (value: string): string =>
   value.trim() && !getPublishedAtResult(value)
@@ -122,7 +124,7 @@ const getUpdatedAtInputIssue = (value: string, date: string, publishedAt: string
   const trimmed = value.trim();
   if (!trimmed) return '';
 
-  const result = parseEssayDateInput(trimmed);
+  const result = parseBlogDateInput(trimmed);
   if (!result) {
     return '需填写 YYYY-MM-DD 或带时区的合法 ISO 日期时间';
   }
@@ -134,22 +136,22 @@ const getUpdatedAtInputIssue = (value: string, date: string, publishedAt: string
 };
 
 const publishedAtSyncDate = $derived(
-  isEssayEditorValues(value) ? getPublishedAtSyncDate(value.publishedAt) : ''
+  isBlogEditorValues(value) ? getPublishedAtSyncDate(value.publishedAt) : ''
 );
 const publishedAtSyncMessage = $derived(
-  isEssayEditorValues(value) && publishedAtSyncDate && value.date !== publishedAtSyncDate
+  isBlogEditorValues(value) && publishedAtSyncDate && value.date !== publishedAtSyncDate
     ? `发布日期与详细时间不一致，保存后将自动更新发布日期为 ${publishedAtSyncDate}`
     : ''
 );
 const publishedAtIssue = $derived(
-  getIssue('publishedAt') || (isEssayEditorValues(value) ? getPublishedAtInputIssue(value.publishedAt) : '')
+  getIssue('publishedAt') || (isBlogEditorValues(value) ? getPublishedAtInputIssue(value.publishedAt) : '')
 );
 const updatedAtIssue = $derived(
-  getIssue('updatedAt') || (isEssayEditorValues(value) ? getUpdatedAtInputIssue(value.updatedAt, value.date, value.publishedAt) : '')
+  getIssue('updatedAt') || (isBlogEditorValues(value) ? getUpdatedAtInputIssue(value.updatedAt, value.date, value.publishedAt) : '')
 );
 
 const setPublishedAtNow = () => {
-  if (!isEssayEditorValues(value)) return;
+  if (!isBlogEditorValues(value)) return;
   const now = new Date();
   value.date = formatLocalDateText(now);
   value.publishedAt = formatLocalDateTimeWithZoneText(now);
@@ -157,7 +159,7 @@ const setPublishedAtNow = () => {
 };
 
 const setUpdatedAtToday = () => {
-  if (!isEssayEditorValues(value)) return;
+  if (!isBlogEditorValues(value)) return;
   value.updatedAt = getLocalDateText();
   onDirty?.();
 };
@@ -186,7 +188,7 @@ const bitsAuthorAvatarFallback = $derived(
 
 <aside class="admin-editor-frontmatter" aria-label={ariaLabel}>
   <div class="admin-editor-frontmatter__fields">
-    {#if collection === 'essay' && isEssayEditorValues(value)}
+    {#if collection === 'blog' && isBlogEditorValues(value)}
       <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('title'))}>
         <span class="admin-field__label">文章标题</span>
         <input
@@ -221,9 +223,9 @@ const bitsAuthorAvatarFallback = $derived(
 
       <div class="admin-editor-frontmatter__datetime-grid">
         <div class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('date'))}>
-          <label class="admin-field__label" for="admin-essay-date">发布日期</label>
+          <label class="admin-field__label" for="admin-blog-date">发布日期</label>
           <input
-            id="admin-essay-date"
+            id="admin-blog-date"
             class="admin-field__control"
             name="date"
             type="date"
@@ -238,16 +240,16 @@ const bitsAuthorAvatarFallback = $derived(
         <div class="admin-field admin-content-editor__field" class:is-invalid={Boolean(publishedAtIssue)}>
           <div class="admin-editor-frontmatter__label-row admin-editor-frontmatter__label-row--with-action">
             <span class="admin-editor-frontmatter__label-help">
-              <label class="admin-field__label" for="admin-essay-published-at">详细时间（可选）</label>
+              <label class="admin-field__label" for="admin-blog-published-at">详细时间（可选）</label>
               <button
                 class="admin-editor-frontmatter__hint-trigger"
                 type="button"
                 aria-label="详细时间说明"
-                aria-describedby="admin-essay-published-at-tip"
+                aria-describedby="admin-blog-published-at-tip"
               >
                 <AdminEditorIcon name="info" size={13} strokeWidth={2} />
               </button>
-              <span id="admin-essay-published-at-tip" class="admin-editor-frontmatter__tooltip" role="tooltip">
+              <span id="admin-blog-published-at-tip" class="admin-editor-frontmatter__tooltip" role="tooltip">
                 按 ISO 日期时间填写，需包含时区，日期需与发布日期一致；留空时仅使用发布日期。
               </span>
             </span>
@@ -261,14 +263,14 @@ const bitsAuthorAvatarFallback = $derived(
             </button>
           </div>
           <input
-            id="admin-essay-published-at"
+            id="admin-blog-published-at"
             class="admin-field__control"
             name="publishedAt"
             type="text"
             bind:value={value.publishedAt}
             placeholder="2024-11-23T18:00:00+08:00"
             aria-invalid={publishedAtIssue ? 'true' : undefined}
-            aria-describedby={getFieldDescribedBy('publishedAt', publishedAtIssue, ['admin-essay-published-at-tip'])}
+            aria-describedby={getFieldDescribedBy('publishedAt', publishedAtIssue, ['admin-blog-published-at-tip'])}
             {disabled}
           />
         </div>
@@ -299,16 +301,16 @@ const bitsAuthorAvatarFallback = $derived(
         <div class="admin-field admin-content-editor__field" class:is-invalid={Boolean(updatedAtIssue)}>
           <div class="admin-editor-frontmatter__label-row admin-editor-frontmatter__label-row--with-action">
             <span class="admin-editor-frontmatter__label-help">
-              <label class="admin-field__label" for="admin-essay-updated-at">更新日期（可选）</label>
+              <label class="admin-field__label" for="admin-blog-updated-at">更新日期（可选）</label>
               <button
                 class="admin-editor-frontmatter__hint-trigger"
                 type="button"
                 aria-label="更新日期说明"
-                aria-describedby="admin-essay-updated-at-tip"
+                aria-describedby="admin-blog-updated-at-tip"
               >
                 <AdminEditorIcon name="info" size={13} strokeWidth={2} />
               </button>
-              <span id="admin-essay-updated-at-tip" class="admin-editor-frontmatter__tooltip" role="tooltip">
+              <span id="admin-blog-updated-at-tip" class="admin-editor-frontmatter__tooltip" role="tooltip">
                 支持 YYYY-MM-DD 或 ISO 日期时间，需包含时区；填写后文章日期显示为“更新于：YYYY-MM-DD”。
               </span>
             </span>
@@ -322,14 +324,14 @@ const bitsAuthorAvatarFallback = $derived(
             </button>
           </div>
           <input
-            id="admin-essay-updated-at"
+            id="admin-blog-updated-at"
             class="admin-field__control"
             name="updatedAt"
             type="text"
             bind:value={value.updatedAt}
             placeholder="2026-01-02"
             aria-invalid={updatedAtIssue ? 'true' : undefined}
-            aria-describedby={getFieldDescribedBy('updatedAt', updatedAtIssue, ['admin-essay-updated-at-tip'])}
+            aria-describedby={getFieldDescribedBy('updatedAt', updatedAtIssue, ['admin-blog-updated-at-tip'])}
             {disabled}
           />
         </div>
@@ -354,9 +356,9 @@ const bitsAuthorAvatarFallback = $derived(
       </label>
 
       <div class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('slug'))}>
-        <label class="admin-field__label" for="admin-essay-slug">公开 URL 别名（可选）</label>
+        <label class="admin-field__label" for="admin-blog-slug">公开 URL 别名（可选）</label>
         <input
-          id="admin-essay-slug"
+          id="admin-blog-slug"
           class="admin-field__control"
           name="slug"
           type="text"
@@ -386,9 +388,9 @@ const bitsAuthorAvatarFallback = $derived(
       </label>
 
       <div class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('tags'))}>
-        <label class="admin-field__label" for="admin-essay-tags">标签</label>
+        <label class="admin-field__label" for="admin-blog-tags">标签</label>
         <FrontmatterTagsInput
-          id="admin-essay-tags"
+          id="admin-blog-tags"
           bind:value={value.tagsText}
           {disabled}
           invalid={Boolean(getIssue('tags'))}
@@ -528,6 +530,161 @@ const bitsAuthorAvatarFallback = $derived(
           <p id={getFieldIssueId('imagesText')} class="admin-content-editor__error" hidden={!bitsImagesIssue}>{bitsImagesIssue}</p>
         </label>
       {/if}
+    {:else if collection === 'projects' && isProjectsEditorValues(value)}
+      {#snippet projectText(field, label)}
+        <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue(field))}>
+          <span class="admin-field__label">{label}</span>
+          <input
+            class="admin-field__control"
+            name={field}
+            type="text"
+            bind:value={value[field]}
+            aria-invalid={getIssue(field) ? 'true' : undefined}
+            aria-describedby={getFieldDescribedBy(field)}
+            oninput={onDirty}
+            {disabled}
+          />
+          <p id={getFieldIssueId(field)} class="admin-content-editor__error" hidden={!getIssue(field)}>{getIssue(field)}</p>
+        </label>
+      {/snippet}
+
+      {@render projectText('title', '项目标题')}
+      {@render projectText('subtitle', '副标题（可选）')}
+
+      <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('description'))}>
+        <span class="admin-field__label">描述（卡片溢出省略，弹窗正文为空时回退）</span>
+        <textarea
+          class="admin-field__control"
+          name="description"
+          bind:value={value.description}
+          rows="3"
+          aria-invalid={getIssue('description') ? 'true' : undefined}
+          aria-describedby={getFieldDescribedBy('description')}
+          oninput={onDirty}
+          {disabled}
+        ></textarea>
+        <p id={getFieldIssueId('description')} class="admin-content-editor__error" hidden={!getIssue('description')}>{getIssue('description')}</p>
+      </label>
+
+      {@render projectText('type', '类型（完全开放，如 开源 / 实验）')}
+      {@render projectText('icon', '图标路径（可选，如 images/projects/demo/icon.webp）')}
+
+      <div class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('tags'))}>
+        <label class="admin-field__label" for="admin-projects-tags">标签</label>
+        <FrontmatterTagsInput
+          id="admin-projects-tags"
+          bind:value={value.tagsText}
+          {disabled}
+          invalid={Boolean(getIssue('tags'))}
+          ariaDescribedby={getFieldDescribedBy('tags')}
+          onDirty={onDirty}
+        />
+        <p id={getFieldIssueId('tags')} class="admin-content-editor__error" hidden={!getIssue('tags')}>{getIssue('tags')}</p>
+      </div>
+
+      {@render projectText('repo', '仓库链接（https://）')}
+      {@render projectText('repoLabel', '仓库文字（留空用「仓库」）')}
+      {@render projectText('demo', '演示链接（https://）')}
+      {@render projectText('demoLabel', '演示文字（留空用「演示」）')}
+
+      <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('date'))}>
+        <span class="admin-field__label">日期</span>
+        <input
+          class="admin-field__control"
+          name="date"
+          type="text"
+          bind:value={value.date}
+          placeholder="YYYY-MM-DD"
+          aria-invalid={getIssue('date') ? 'true' : undefined}
+          aria-describedby={getFieldDescribedBy('date')}
+          oninput={onDirty}
+          {disabled}
+        />
+        <p id={getFieldIssueId('date')} class="admin-content-editor__error" hidden={!getIssue('date')}>{getIssue('date')}</p>
+      </label>
+
+      <label class="admin-field admin-content-editor__field">
+        <span class="admin-field__label">草稿状态</span>
+        <input class="admin-field__checkbox" name="draft" type="checkbox" bind:checked={value.draft} onchange={onDirty} {disabled} />
+      </label>
+    {:else if collection === 'devlog' && isDevlogEditorValues(value)}
+      <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('title'))}>
+        <span class="admin-field__label">更新标题</span>
+        <input
+          class="admin-field__control"
+          name="title"
+          type="text"
+          bind:value={value.title}
+          aria-invalid={getIssue('title') ? 'true' : undefined}
+          aria-describedby={getFieldDescribedBy('title')}
+          oninput={onDirty}
+          {disabled}
+        />
+        <p id={getFieldIssueId('title')} class="admin-content-editor__error" hidden={!getIssue('title')}>{getIssue('title')}</p>
+      </label>
+
+      <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('date'))}>
+        <span class="admin-field__label">日期</span>
+        <input
+          class="admin-field__control"
+          name="date"
+          type="text"
+          bind:value={value.date}
+          placeholder="YYYY-MM-DD"
+          aria-invalid={getIssue('date') ? 'true' : undefined}
+          aria-describedby={getFieldDescribedBy('date')}
+          oninput={onDirty}
+          {disabled}
+        />
+        <p id={getFieldIssueId('date')} class="admin-content-editor__error" hidden={!getIssue('date')}>{getIssue('date')}</p>
+      </label>
+
+      <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('project'))}>
+        <span class="admin-field__label">项目名称（自由字符串，不链接）</span>
+        <input
+          class="admin-field__control"
+          name="project"
+          type="text"
+          bind:value={value.project}
+          aria-invalid={getIssue('project') ? 'true' : undefined}
+          aria-describedby={getFieldDescribedBy('project')}
+          oninput={onDirty}
+          {disabled}
+        />
+        <p id={getFieldIssueId('project')} class="admin-content-editor__error" hidden={!getIssue('project')}>{getIssue('project')}</p>
+      </label>
+
+      <label class="admin-field admin-content-editor__field">
+        <span class="admin-field__label">类型标签（完全开放，如 feature / fix / improvement / breaking / docs）</span>
+        <input
+          class="admin-field__control"
+          name="kind"
+          type="text"
+          bind:value={value.kind}
+          oninput={onDirty}
+          {disabled}
+        />
+      </label>
+
+      <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('description'))}>
+        <span class="admin-field__label">摘要（可选，列表项截断显示）</span>
+        <textarea
+          class="admin-field__control"
+          name="description"
+          bind:value={value.description}
+          rows="3"
+          aria-invalid={getIssue('description') ? 'true' : undefined}
+          aria-describedby={getFieldDescribedBy('description')}
+          oninput={onDirty}
+          {disabled}
+        ></textarea>
+        <p id={getFieldIssueId('description')} class="admin-content-editor__error" hidden={!getIssue('description')}>{getIssue('description')}</p>
+      </label>
+
+      <label class="admin-field admin-content-editor__field">
+        <span class="admin-field__label">草稿状态</span>
+        <input class="admin-field__checkbox" name="draft" type="checkbox" bind:checked={value.draft} onchange={onDirty} {disabled} />
+      </label>
     {/if}
   </div>
 </aside>

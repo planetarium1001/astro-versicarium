@@ -41,7 +41,7 @@ export const getPayloadErrors = (payload: unknown): string[] => {
   return payload.errors.filter((error): error is string => typeof error === 'string' && error.length > 0);
 };
 
-export const buildSettingsRequestUrl = (
+const buildSettingsRequestUrl = (
   endpoint: string,
   currentUrl: string,
   options: { dryRun?: boolean } = {}
@@ -55,7 +55,7 @@ export const buildSettingsRequestUrl = (
   return requestUrl.toString();
 };
 
-export const createSettingsRequestBody = (
+const createSettingsRequestBody = (
   revision: string | null,
   settings: EditableSettings
 ): string | null => {

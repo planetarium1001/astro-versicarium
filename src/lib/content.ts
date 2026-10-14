@@ -5,8 +5,8 @@ import {
 } from 'astro:content';
 import { existsSync } from 'node:fs';
 import {
-  ESSAY_PUBLIC_SLUG_RE,
-  RESERVED_ESSAY_SLUGS,
+  BLOG_PUBLIC_SLUG_RE,
+  RESERVED_BLOG_SLUGS,
   flattenEntryIdToSlug
 } from '../utils/slug-rules';
 import { deriveMarkdownText, truncateText } from '../utils/excerpt';
@@ -26,23 +26,13 @@ export type GetPublishedOptions<K extends CollectionKey> = {
 };
 
 /**
- * Check whether a slug collides with sibling static routes under /archive/
- * or /essay/.  After the route narrowing (catch-all → single-segment), only
- * exact matches need to be checked.
+ * 判断 slug 是否与 `/archive/`、`/blog/` 下的同级静态路由冲突。路由收窄为单段后只需精确匹配。
  *
- * NOTE: The primary defence is `assertUniqueEssaySlugs` which throws at build
- * time.  This predicate is kept in `getVisibleEssays` / `getArchiveEssays` as
- * defense-in-depth — it is NOT the main enforcement point.
+ * 主要防线是 `assertUniqueBlogSlugs`（构建期抛错），此判断只是 `getVisibleblogs` 的补充防护。
  */
-export const isReservedSlug = (slug: string) => RESERVED_ESSAY_SLUGS.has(slug);
+const isReservedSlug = (slug: string) => RESERVED_BLOG_SLUGS.has(slug);
 
-export const getTotalPages = (itemCount: number, pageSize: number) =>
-  Math.ceil(itemCount / pageSize);
-
-export const getPageSlice = <T>(items: T[], currentPage: number, pageSize: number) => {
-  const start = (currentPage - 1) * pageSize;
-  return items.slice(start, start + pageSize);
-};
+/* 服务端分页已取消：列表页 SSR 渲染全部条目，筛选与分页交给客户端。 */
 
 const isContentSourceFilePresent = <K extends CollectionKey>(entry: CollectionEntry<K>): boolean => {
   if (!import.meta.env.DEV) return true;
@@ -57,13 +47,6 @@ const isContentSourceFilePresent = <K extends CollectionKey>(entry: CollectionEn
 const isDraftContentEntry = <K extends CollectionKey>(entry: CollectionEntry<K>): boolean =>
   (entry.data as CollectionEntryDataWithDraft).draft === true;
 
-export const buildPaginatedPaths = (totalPages: number) => {
-  if (totalPages <= 1) return [];
-  return Array.from({ length: totalPages - 1 }, (_, i) => ({
-    params: { page: String(i + 2) }
-  }));
-};
-
 export async function getPublished<K extends CollectionKey>(
   name: K,
   opts: GetPublishedOptions<K> = {}
@@ -77,55 +60,91 @@ export async function getPublished<K extends CollectionKey>(
   return items.slice().sort(opts.orderBy);
 }
 
-export type EssayEntry = CollectionEntry<'essay'>;
-export type MemoEntry = CollectionEntry<'memo'>;
-type EssayQueryOptions = Pick<GetPublishedOptions<'essay'>, 'includeDraft'>;
-export type EssayRouteEntry = {
-  slug: string;
-  entry: EssayEntry;
-  prev: EssayEntry | null;
-  next: EssayEntry | null;
+export type BlogEntry = CollectionEntry<'blog'>;
+type ProjectsEntry = CollectionEntry<'projects'>;
+type DevlogEntry = CollectionEntry<'devlog'>;
+
+type AnchorListQueryOptions = { includeDraft?: boolean };
+
+const orderByEntryDateDesc = <Entry extends { data: { date: Date } }>(
+  a: Entry,
+  b: Entry
+): number => b.data.date.valueOf() - a.data.date.valueOf();
+
+const orderByEntryDateDescThenId = <Entry extends { id: string; data: { date: Date } }>(
+  a: Entry,
+  b: Entry
+): number => {
+  const dateOrder = orderByEntryDateDesc(a, b);
+  if (dateOrder !== 0) return dateOrder;
+  // 同日期条目以 entryId 升序为第二键，保证构建可复现
+  return a.id.localeCompare(b.id, 'en');
 };
-export type EssayDerivedText = {
+
+/** projects：列表型集合，无详情路由，公开定位为 `/projects/#<entryId>`。 */
+export const getVisibleProjects = async (
+  options: AnchorListQueryOptions = {}
+): Promise<ProjectsEntry[]> => {
+  const entries = await getPublished('projects', {
+    ...(options.includeDraft === undefined ? {} : { includeDraft: options.includeDraft }),
+    orderBy: orderByEntryDateDesc
+  });
+  return entries;
+};
+
+/** devlog：列表型集合，无详情路由，公开定位为 `/devlog/#<entryId>`。 */
+export const getVisibleDevlogs = async (
+  options: AnchorListQueryOptions = {}
+): Promise<DevlogEntry[]> => {
+  const entries = await getPublished('devlog', {
+    ...(options.includeDraft === undefined ? {} : { includeDraft: options.includeDraft }),
+    orderBy: orderByEntryDateDescThenId
+  });
+  return entries;
+};
+type BlogQueryOptions = Pick<GetPublishedOptions<'blog'>, 'includeDraft'>;
+type BlogRouteEntry = {
+  slug: string;
+  entry: BlogEntry;
+  prev: BlogEntry | null;
+  next: BlogEntry | null;
+};
+type BlogDerivedText = {
   plainText: string;
   text: string;
   excerpt: string;
 };
-export type MemoDerivedText = {
-  plainText: string;
-  excerptText: string;
-};
 
-export const getEssaySlug = (entry: EssayEntry) =>
+export const getBlogSlug = (entry: BlogEntry) =>
   entry.data.slug ?? flattenEntryIdToSlug(entry.id);
 
-const assertUniqueEssaySlugs = (entries: readonly EssayEntry[]) => {
+const assertUniqueBlogSlugs = (entries: readonly BlogEntry[]) => {
   const seen = new Map<string, string>();
   const duplicates = new Map<string, string[]>();
 
   for (const entry of entries) {
-    const slug = getEssaySlug(entry);
+    const slug = getBlogSlug(entry);
     const slugSource = entry.data.slug ? 'frontmatter.slug' : `entry.id (flattened from "${entry.id}")`;
 
-    // --- reserved-word check (primary defence) ---
+    // 保留字检查，与 schema 校验共同构成第一道防线
     if (isReservedSlug(slug)) {
       throw new Error(
         [
-          'Essay route slug conflict detected.',
+          'blog route slug conflict detected.',
           `  Entry:       ${entry.id}`,
           `  Public slug: ${slug}`,
           `  Source:      ${slugSource}`,
-          `  Reason:      "${slug}" is reserved for sibling static routes under /archive/ and /essay/.`,
+          `  Reason:      "${slug}" is reserved for sibling static routes under /archive/ and /blog/.`,
           '  How to fix:  change frontmatter.slug, or rename the file/path so the final public slug is no longer reserved.'
         ].join('\n')
       );
     }
 
-    // --- format validity check (catches bad flattened results) ---
-    if (!ESSAY_PUBLIC_SLUG_RE.test(slug)) {
+    // 格式校验，兜住拼接结果不合法的 entryId
+    if (!BLOG_PUBLIC_SLUG_RE.test(slug)) {
       throw new Error(
         [
-          'Invalid public essay slug detected.',
+          'Invalid public blog slug detected.',
           `  Entry:       ${entry.id}`,
           `  Public slug: ${slug}`,
           `  Source:      ${slugSource}`,
@@ -135,7 +154,7 @@ const assertUniqueEssaySlugs = (entries: readonly EssayEntry[]) => {
       );
     }
 
-    // --- uniqueness check ---
+    // 唯一性校验，重复时汇总全部冲突条目后统一抛错
     const firstEntryId = seen.get(slug);
     if (!firstEntryId) {
       seen.set(slug, entry.id);
@@ -154,115 +173,84 @@ const assertUniqueEssaySlugs = (entries: readonly EssayEntry[]) => {
     .join('; ');
 
   throw new Error(
-    `Duplicate essay slug detected. Public essay slugs must be unique after path flattening. ${detail}`
+    `Duplicate blog slug detected. Public blog slugs must be unique after path flattening. ${detail}`
   );
 };
 
-const orderByEssayDate = (a: EssayEntry, b: EssayEntry) => b.data.date.valueOf() - a.data.date.valueOf();
-const shouldMemoizeEssayQueries = import.meta.env.PROD;
-const shouldMemoizeMemoQueries = import.meta.env.PROD;
-const MAX_ESSAY_INDEX_TEXT = 600;
+const orderByBlogDate = (a: BlogEntry, b: BlogEntry) => b.data.date.valueOf() - a.data.date.valueOf();
+const shouldMemoizeBlogQueries = import.meta.env.PROD;
+const MAX_BLOG_INDEX_TEXT = 600;
 
-let sortedEssaysPromise: Promise<EssayEntry[]> | null = null;
-let visibleEssaysPromise: Promise<EssayEntry[]> | null = null;
-let archiveEssaysPromise: Promise<EssayEntry[]> | null = null;
-const essayDerivedTextById = new Map<string, EssayDerivedText>();
-const memoDerivedTextById = new Map<string, MemoDerivedText>();
+let sortedblogsPromise: Promise<BlogEntry[]> | null = null;
+let visibleblogsPromise: Promise<BlogEntry[]> | null = null;
+const BlogDerivedTextById = new Map<string, BlogDerivedText>();
 
-const cloneEssayEntries = (entries: readonly EssayEntry[]) => entries.slice();
+const cloneBlogEntries = (entries: readonly BlogEntry[]) => entries.slice();
 
-const shouldUseDefaultEssayCache = (includeDraft?: boolean) =>
-  shouldMemoizeEssayQueries && includeDraft !== true;
+const shouldUseDefaultBlogCache = (includeDraft?: boolean) =>
+  shouldMemoizeBlogQueries && includeDraft !== true;
 
-const loadSortedEssays = async ({ includeDraft }: EssayQueryOptions = {}) => {
-  const essays = await getPublished('essay', {
+const loadSortedblogs = async ({ includeDraft }: BlogQueryOptions = {}) => {
+  const blogs = await getPublished('blog', {
     ...(includeDraft === undefined ? {} : { includeDraft }),
-    orderBy: orderByEssayDate
+    orderBy: orderByBlogDate
   });
-  assertUniqueEssaySlugs(essays);
-  return essays;
+  assertUniqueBlogSlugs(blogs);
+  return blogs;
 };
 
-const buildEssayDerivedText = (entry: EssayEntry): EssayDerivedText => {
+const buildBlogDerivedText = (entry: BlogEntry): BlogDerivedText => {
   const { plainText, excerptText } = deriveMarkdownText(entry.body ?? '');
 
   return {
     plainText,
-    text: plainText.length > MAX_ESSAY_INDEX_TEXT ? plainText.slice(0, MAX_ESSAY_INDEX_TEXT) : plainText,
+    text: plainText.length > MAX_BLOG_INDEX_TEXT ? plainText.slice(0, MAX_BLOG_INDEX_TEXT) : plainText,
     excerpt: truncateText(excerptText, 120)
   };
 };
 
-export function getEssayDerivedText(entry: EssayEntry): EssayDerivedText {
-  if (!shouldMemoizeEssayQueries) {
-    return buildEssayDerivedText(entry);
+export function getBlogDerivedText(entry: BlogEntry): BlogDerivedText {
+  if (!shouldMemoizeBlogQueries) {
+    return buildBlogDerivedText(entry);
   }
 
-  let derivedText = essayDerivedTextById.get(entry.id);
+  let derivedText = BlogDerivedTextById.get(entry.id);
   if (!derivedText) {
-    derivedText = buildEssayDerivedText(entry);
-    essayDerivedTextById.set(entry.id, derivedText);
+    derivedText = buildBlogDerivedText(entry);
+    BlogDerivedTextById.set(entry.id, derivedText);
   }
 
   return derivedText;
 }
 
-const buildMemoDerivedText = (entry: MemoEntry): MemoDerivedText =>
-  deriveMarkdownText(entry.body ?? '');
-
-export function getMemoDerivedText(entry: MemoEntry): MemoDerivedText {
-  if (!shouldMemoizeMemoQueries) {
-    return buildMemoDerivedText(entry);
+export async function getSortedblogs(options: BlogQueryOptions = {}) {
+  if (!shouldUseDefaultBlogCache(options.includeDraft)) {
+    return loadSortedblogs(options);
   }
 
-  let derivedText = memoDerivedTextById.get(entry.id);
-  if (!derivedText) {
-    derivedText = buildMemoDerivedText(entry);
-    memoDerivedTextById.set(entry.id, derivedText);
-  }
-
-  return derivedText;
+  sortedblogsPromise ??= loadSortedblogs();
+  return cloneBlogEntries(await sortedblogsPromise);
 }
 
-export async function getSortedEssays(options: EssayQueryOptions = {}) {
-  if (!shouldUseDefaultEssayCache(options.includeDraft)) {
-    return loadSortedEssays(options);
+/** 公开可见的博客条目：slug 未占用 `/archive/`、`/blog/` 下的同级静态路由名。 */
+export const isVisibleBlogEntry = (entry: BlogEntry): boolean => !isReservedSlug(getBlogSlug(entry));
+
+export async function getVisibleblogs(options: BlogQueryOptions = {}) {
+  if (!shouldUseDefaultBlogCache(options.includeDraft)) {
+    const blogs = await getSortedblogs(options);
+    return blogs.filter(isVisibleBlogEntry);
   }
 
-  sortedEssaysPromise ??= loadSortedEssays();
-  return cloneEssayEntries(await sortedEssaysPromise);
+  visibleblogsPromise ??= getSortedblogs().then((blogs) => blogs.filter(isVisibleBlogEntry));
+  return cloneBlogEntries(await visibleblogsPromise);
 }
 
-export async function getVisibleEssays(options: EssayQueryOptions = {}) {
-  if (!shouldUseDefaultEssayCache(options.includeDraft)) {
-    const essays = await getSortedEssays(options);
-    return essays.filter((entry) => !isReservedSlug(getEssaySlug(entry)));
-  }
-
-  visibleEssaysPromise ??= getSortedEssays().then((essays) =>
-    essays.filter((entry) => !isReservedSlug(getEssaySlug(entry)))
-  );
-  return cloneEssayEntries(await visibleEssaysPromise);
-}
-
-export async function getArchiveEssays(options: EssayQueryOptions = {}) {
-  if (!shouldUseDefaultEssayCache(options.includeDraft)) {
-    const essays = await getSortedEssays(options);
-    return essays.filter((entry) => entry.data.archive !== false && !isReservedSlug(getEssaySlug(entry)));
-  }
-
-  archiveEssaysPromise ??= getSortedEssays().then((essays) =>
-    essays.filter((entry) => entry.data.archive !== false && !isReservedSlug(getEssaySlug(entry)))
-  );
-  return cloneEssayEntries(await archiveEssaysPromise);
-}
-
-export async function getVisibleEssayRouteEntries(options: EssayQueryOptions = {}) {
-  const essays = await getVisibleEssays(options);
-  return essays.map((entry, index) => ({
-    slug: getEssaySlug(entry),
+export async function getVisibleBlogRouteEntries(options: BlogQueryOptions = {}) {
+  const blogs = await getVisibleblogs(options);
+  return blogs.map((entry, index) => ({
+    slug: getBlogSlug(entry),
     entry,
-    prev: essays[index - 1] ?? null,
-    next: essays[index + 1] ?? null
-  })) satisfies EssayRouteEntry[];
+    prev: blogs[index - 1] ?? null,
+    next: blogs[index + 1] ?? null
+  })) satisfies BlogRouteEntry[];
 }

@@ -1,6 +1,6 @@
 ---
-// 文章目录：同一份 render().headings 渲染两种形态——
-// rail（宽屏常驻 .shell 第 4 列）、inline（窄屏正文顶部折叠列表）。
+// 文章目录：同一份 render().headings 渲染 rail（宽屏常驻 .shell 第 4 列）
+// 与 inline（窄屏正文顶部折叠列表）两种形态。
 // 样式见 styles/components/article-toc.css，交互见 scripts/article-toc.ts。
 import '../styles/components/article-toc.css';
 import UiIcon from './UiIcon.astro';
@@ -49,7 +49,11 @@ const isRail = variant === 'rail';
         aria-label="收起目录"
         title="收起目录"
       >
-        <UiIcon name="chevron-right" class="icon" />
+        <span class="article-toc__glyph" aria-hidden="true">
+          <span class="article-toc__bar"></span>
+          <span class="article-toc__bar"></span>
+          <span class="article-toc__bar"></span>
+        </span>
       </button>
     </div>
     <div class="article-toc__rail-body" id="article-toc-rail-body">

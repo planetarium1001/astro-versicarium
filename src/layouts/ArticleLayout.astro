@@ -4,7 +4,7 @@ import ArticleToc from '../components/ArticleToc.astro';
 import ViewStats from '../components/ViewStats.astro';
 import Lightbox from '../components/Lightbox.astro';
 import '../styles/article.css';
-import { getEssayDerivedText, getEssaySlug, type EssayEntry } from '../lib/content';
+import { getBlogDerivedText, getBlogSlug, type BlogEntry } from '../lib/content';
 import { containsMarkdownMath } from '../lib/markdown-math';
 import {
   MARKDOWN_MATH_STYLESHEET_DATA_ATTR,
@@ -12,8 +12,9 @@ import {
   MARKDOWN_MATH_STYLESHEET_ID
 } from '../lib/markdown-math-styles';
 import type { ArticleMetaSettings, SidebarNavId, ViewStatsSettings } from '../lib/theme-settings';
-import { formatISODateUtc } from '../utils/format';
+import { formatISODateUtc, createWithBase } from '../utils/format';
 import { truncateText } from '../utils/excerpt';
+import { isRoutableTagKey, toTagKey } from '../lib/tags';
 
 type ArticleNeighborLink = {
   href: string;
@@ -29,7 +30,7 @@ const {
   visibleTags = [],
   headings = []
 } = Astro.props as {
-  entry: EssayEntry;
+  entry: BlogEntry;
   prev: ArticleNeighborLink | null;
   next: ArticleNeighborLink | null;
   articleMetaSettings: ArticleMetaSettings;
@@ -45,13 +46,25 @@ const tocHeadings = headings.filter(
 const hasToc = tocHeadings.length > 0;
 
 const entryTags: string[] = entry?.data?.tags ?? [];
+const base = import.meta.env.BASE_URL ?? '/';
+const withBase = createWithBase(base);
+// 静态标签路由已删除，详情页标签统一指向列表页的 `?tags=<key>`，由 entry-search.ts 即时筛选。
+const tagLinks = visibleTags.map((tag) => {
+  const key = toTagKey(tag);
+  return {
+    label: tag,
+    key,
+    href: isRoutableTagKey(key) ? withBase(`/blog/?tags=${encodeURIComponent(key)}`) : null
+  };
+});
 const defaultImage = '/og.svg';
 const coverImage = entry?.data?.cover ?? null;
 const ogImage = coverImage ?? defaultImage;
-const derivedText = getEssayDerivedText(entry);
+const derivedText = getBlogDerivedText(entry);
 const rawDescription = entry?.data?.description?.trim?.() ?? '';
 const description = rawDescription || truncateText(derivedText.excerpt, 90);
-const activeNavId: SidebarNavId = entry?.data?.archive === false ? 'essay' : 'archive';
+// 详情页导航高亮固定为「博客」。
+const activeNavId: SidebarNavId = 'blog';
 const hasMath = containsMarkdownMath(entry.body ?? '');
 const katexStylesheetAttrs = { [MARKDOWN_MATH_STYLESHEET_DATA_ATTR]: 'true' };
 const updatedAt = entry.data.updatedAt ?? null;
@@ -134,11 +147,17 @@ const shouldShowMetaLine = articleMetaSettings.showDate
             <time datetime={displayDate.toISOString()}>{`${displayDateLabel}${formatISODateUtc(displayDate)}`}</time>
           </span>
         ) : null}
-        {articleMetaSettings.showTags && visibleTags.length ? (
+        {articleMetaSettings.showTags && tagLinks.length ? (
           <span class="meta-line__item meta-line__item--tags">
-            {visibleTags.map((tag) => (
-              <span class="tag">#{tag}</span>
-            ))}
+            {tagLinks.map((tag) =>
+              tag.href ? (
+                <a class="tag tag--link" href={tag.href} aria-label={`筛选标签 ${tag.label}`} data-article-tag-link={tag.key}>
+                  #{tag.label}
+                </a>
+              ) : (
+                <span class="tag">#{tag.label}</span>
+              )
+            )}
           </span>
         ) : null}
         {articleMetaSettings.showWordCount ? (
@@ -155,7 +174,7 @@ const shouldShowMetaLine = articleMetaSettings.showDate
           <ViewStats
             scope="article"
             path={Astro.url.pathname}
-            route={`/archive/${getEssaySlug(entry)}/`}
+            route={`/blog/${getBlogSlug(entry)}/`}
             title={entry.data.title}
             showPv={viewStats.showPv}
             pvLabel={viewStats.pvLabel}

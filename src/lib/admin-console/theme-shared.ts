@@ -2,7 +2,6 @@ import type {
   EditableThemeSettings,
   HeroPresetId,
   HomeIntroLinkKey,
-  PageId,
   SidebarDividerVariant,
   SidebarNavId,
   SiteSocialIconKey,
@@ -40,18 +39,24 @@ export {
   normalizeAdminSiteFilingIconPath
 };
 
-export const ADMIN_SITE_FAVICON_SLOTS = ['svg', 'png', 'appleTouchIcon'] as const satisfies readonly SiteFaviconSlot[];
-export const ADMIN_SITE_FAVICON_SLOT_LABELS: Record<SiteFaviconSlot, string> = {
+const ADMIN_SITE_FAVICON_SLOTS = ['svg', 'png', 'appleTouchIcon'] as const satisfies readonly SiteFaviconSlot[];
+const ADMIN_SITE_FAVICON_SLOT_LABELS: Record<SiteFaviconSlot, string> = {
   svg: '站点图标（SVG）',
   png: '标签页图标（PNG）',
   appleTouchIcon: '触摸图标（PNG）'
 };
 
-export const ADMIN_NAV_IDS = ['essay', 'bits', 'memo', 'archive', 'about'] as const satisfies readonly SidebarNavId[];
-export const ADMIN_PAGE_IDS = ['essay', 'archive', 'bits', 'memo', 'about'] as const satisfies readonly PageId[];
+export const ADMIN_NAV_IDS = [
+  'blog',
+  'projects',
+  'bits',
+  'devlog',
+  'archive',
+  'about'
+] as const satisfies readonly SidebarNavId[];
 export const ADMIN_SOCIAL_CUSTOM_LIMIT = 8;
 
-export const ADMIN_HERO_PRESETS = ['default', 'none'] as const satisfies readonly HeroPresetId[];
+const ADMIN_HERO_PRESETS = ['default', 'none'] as const satisfies readonly HeroPresetId[];
 export const ADMIN_HERO_PRESET_SET: ReadonlySet<HeroPresetId> = new Set(ADMIN_HERO_PRESETS);
 export const ADMIN_HERO_IMAGE_ALT_DEFAULT = 'Whono theme preview';
 export const ADMIN_HERO_IMAGE_ALT_MAX_LENGTH = 120;
@@ -67,13 +72,13 @@ export const ADMIN_VIEW_STATS_PV_LABEL_DEFAULT = '浏览';
 export const ADMIN_VIEW_STATS_UV_LABEL_DEFAULT = '访客';
 export const ADMIN_VIEW_STATS_LABEL_MAX_LENGTH = 8;
 
-export const ADMIN_SIDEBAR_DIVIDER_VARIANTS = [
+const ADMIN_SIDEBAR_DIVIDER_VARIANTS = [
   'default',
   'subtle',
   'none'
 ] as const satisfies readonly SidebarDividerVariant[];
 export const ADMIN_SIDEBAR_DIVIDER_DEFAULT: SidebarDividerVariant = 'default';
-export const ADMIN_SIDEBAR_DIVIDER_SET: ReadonlySet<SidebarDividerVariant> = new Set(ADMIN_SIDEBAR_DIVIDER_VARIANTS);
+const ADMIN_SIDEBAR_DIVIDER_SET: ReadonlySet<SidebarDividerVariant> = new Set(ADMIN_SIDEBAR_DIVIDER_VARIANTS);
 export const ADMIN_SIDEBAR_DIVIDER_OPTIONS = [
   { id: 'default', label: '默认' },
   { id: 'subtle', label: '弱化' },
@@ -87,24 +92,28 @@ export const ADMIN_TYPOGRAPHY_DEFAULT: TypographySettings = THEME_TYPOGRAPHY_DEF
 export const getAdminTypographyFontOptions = getThemeFontOptionsForRole;
 export const isAdminTypographyFontId = isThemeFontIdForRole;
 
-export const ADMIN_HOME_INTRO_LINK_KEYS = [
+const ADMIN_HOME_INTRO_LINK_KEYS = [
   'archive',
-  'essay',
+  'blog',
+  'projects',
   'bits',
-  'memo',
+  'devlog',
   'about',
-  'tag'
+  'tag',
+  'blogTag'
 ] as const satisfies readonly HomeIntroLinkKey[];
-export const ADMIN_HOME_INTRO_LINK_DEFAULT = ['archive', 'essay'] as const satisfies readonly HomeIntroLinkKey[];
+export const ADMIN_HOME_INTRO_LINK_DEFAULT = ['archive', 'blog'] as const satisfies readonly HomeIntroLinkKey[];
 export const ADMIN_HOME_INTRO_LINK_LIMIT = 2;
 export const ADMIN_HOME_INTRO_LINK_KEY_SET: ReadonlySet<HomeIntroLinkKey> = new Set(ADMIN_HOME_INTRO_LINK_KEYS);
 export const ADMIN_HOME_INTRO_LINK_OPTIONS = [
   { id: 'archive', label: '归档', href: '/archive/' },
-  { id: 'essay', label: '随笔', href: '/essay/' },
-  { id: 'bits', label: '絮语', href: '/bits/' },
-  { id: 'memo', label: '小记', href: '/memo/' },
+  { id: 'blog', label: '博客', href: '/blog/' },
+  { id: 'projects', label: '项目', href: '/projects/' },
+  { id: 'bits', label: '动态', href: '/bits/' },
+  { id: 'devlog', label: '更新', href: '/devlog/' },
   { id: 'about', label: '关于', href: '/about/' },
-  { id: 'tag', label: '#标签', href: '/archive/?picker=tag' }
+  { id: 'tag', label: '#归档标签', href: '/archive/?picker=tag' },
+  { id: 'blogTag', label: '#博客标签', href: '/blog/?picker=tag' }
 ] as const satisfies readonly {
   id: HomeIntroLinkKey;
   label: string;
@@ -132,19 +141,19 @@ type AdminNavOrderInput = {
   order: number;
 };
 
-export type AdminSocialOrderIssue = {
+type AdminSocialOrderIssue = {
   type: 'range' | 'duplicate';
   scope: AdminSocialOrderScope;
   key: string;
   order: number;
 };
-export type AdminNavOrderIssue = {
+type AdminNavOrderIssue = {
   type: 'range' | 'duplicate';
   key: SidebarNavId;
   order: number;
 };
 
-export const ADMIN_SOCIAL_ICON_KEYS = [
+const ADMIN_SOCIAL_ICON_KEYS = [
   'github',
   'x',
   'email',
@@ -158,10 +167,10 @@ export const ADMIN_SOCIAL_ICON_KEYS = [
   'linkedin',
   'website'
 ] as const satisfies readonly SiteSocialIconKey[];
-export const ADMIN_SOCIAL_ICON_KEY_SET: ReadonlySet<SiteSocialIconKey> = new Set(ADMIN_SOCIAL_ICON_KEYS);
+const ADMIN_SOCIAL_ICON_KEY_SET: ReadonlySet<SiteSocialIconKey> = new Set(ADMIN_SOCIAL_ICON_KEYS);
 
-export const ADMIN_GITHUB_HOSTS = ['github.com'] as const;
-export const ADMIN_X_HOSTS = ['x.com', 'twitter.com'] as const;
+const ADMIN_GITHUB_HOSTS = ['github.com'] as const;
+const ADMIN_X_HOSTS = ['x.com', 'twitter.com'] as const;
 
 export const ADMIN_HOME_INTRO_MAX_LENGTH = 240;
 export const ADMIN_PAGE_TITLE_MAX_LENGTH = 60;
@@ -169,19 +178,26 @@ export const ADMIN_PAGE_SUBTITLE_MAX_LENGTH = 120;
 export const ADMIN_NAV_ORNAMENT_DEFAULT = '·';
 export const ADMIN_NAV_ORNAMENT_MAX_LENGTH = 4;
 export const ADMIN_FOOTER_START_YEAR_MIN = 1900;
-export const ADMIN_FOOTER_COPYRIGHT_MAX_LENGTH = 120;
+const ADMIN_FOOTER_COPYRIGHT_MAX_LENGTH = 120;
+/**
+ * 窄屏顶栏里「站点标题」可渲染宽度的上限（占页面宽度的百分比）。
+ * 默认 35%，后台「主题 → 站点设置」可改，取值范围 10%–100%。
+ */
+export const ADMIN_SITE_TITLE_PERCENT_DEFAULT = 35;
+export const ADMIN_SITE_TITLE_PERCENT_MIN = 10;
+export const ADMIN_SITE_TITLE_PERCENT_MAX = 100;
 export const ADMIN_OVERVIEW_HIDDEN_MESSAGE_DEFAULT = '作者暂未公开此页面。';
 export const ADMIN_OVERVIEW_HIDDEN_MESSAGE_MAX_LENGTH = 120;
 
 export const ADMIN_LOCALE_RE = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
-export const ADMIN_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ADMIN_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const getAdminFooterStartYearMax = (): number => new Date().getFullYear();
 
 export const isAdminNavId = (value: string): value is SidebarNavId =>
   (ADMIN_NAV_IDS as readonly string[]).includes(value);
 
-export const isAdminHeroPresetId = (value: string): value is HeroPresetId =>
+const isAdminHeroPresetId = (value: string): value is HeroPresetId =>
   ADMIN_HERO_PRESET_SET.has(value as HeroPresetId);
 
 export const isAdminSidebarDividerVariant = (value: string): value is SidebarDividerVariant =>
@@ -201,7 +217,7 @@ export const normalizeAdminSocialIconKey = (value: unknown): SiteSocialIconKey |
   return ADMIN_SOCIAL_ICON_KEY_SET.has(normalized as SiteSocialIconKey) ? (normalized as SiteSocialIconKey) : undefined;
 };
 
-export const isAdminSocialIconKey = (value: string): value is SiteSocialIconKey =>
+const isAdminSocialIconKey = (value: string): value is SiteSocialIconKey =>
   ADMIN_SOCIAL_ICON_KEY_SET.has(value as SiteSocialIconKey);
 
 export const isAdminSocialOrderValue = (value: number): boolean =>
@@ -278,7 +294,7 @@ export const getAdminHomeIntroLinkOption = (
 ): (typeof ADMIN_HOME_INTRO_LINK_OPTIONS)[number] =>
   ADMIN_HOME_INTRO_LINK_OPTIONS.find((option) => option.id === id) ?? ADMIN_HOME_INTRO_LINK_OPTIONS[0];
 
-export const isAdminAllowedHttpsUrl = (value: string, allowedHosts?: readonly string[]): boolean => {
+const isAdminAllowedHttpsUrl = (value: string, allowedHosts?: readonly string[]): boolean => {
   try {
     const parsed = new URL(value);
     if (parsed.protocol !== 'https:') return false;
@@ -291,13 +307,13 @@ export const isAdminAllowedHttpsUrl = (value: string, allowedHosts?: readonly st
   }
 };
 
-export type AdminThemeSettingsValidationIssue = {
+type AdminThemeSettingsValidationIssue = {
   path: string;
   message: string;
 };
 
-export type AdminThemeSettingsMismatchMode = 'exact' | 'subset';
-export type AdminThemeSettingsChangeKind = 'added' | 'removed' | 'updated';
+type AdminThemeSettingsMismatchMode = 'exact' | 'subset';
+type AdminThemeSettingsChangeKind = 'added' | 'removed' | 'updated';
 
 export type AdminThemeSettingsChangePreview = {
   path: string;
@@ -306,7 +322,7 @@ export type AdminThemeSettingsChangePreview = {
   after: string;
 };
 
-export type AdminWritableThemeSettingsGroups = {
+type AdminWritableThemeSettingsGroups = {
   site: EditableThemeSettings['site'];
   shell: EditableThemeSettings['shell'];
   home: EditableThemeSettings['home'];
@@ -363,6 +379,12 @@ const parseInteger = (value: string | number | null | undefined): number | null 
   return Number.isFinite(next) ? next : null;
 };
 
+/** 站点标题宽度百分比：缺失 / 非法 → 默认 35%，越界夹取到 10–100。 */
+const clampSiteTitlePercent = (value: number | null): number => {
+  if (value === null) return ADMIN_SITE_TITLE_PERCENT_DEFAULT;
+  return Math.min(Math.max(value, ADMIN_SITE_TITLE_PERCENT_MIN), ADMIN_SITE_TITLE_PERCENT_MAX);
+};
+
 const defaultNormalizeCustomSocialLabel = (value: unknown): string => normalizeTrimmed(value);
 
 const cloneCustomItems = (
@@ -417,6 +439,7 @@ export const canonicalizeAdminThemeSettings = (
   const socialLinks = isRecord(site.socialLinks) ? site.socialLinks : {};
   const customItems = Array.isArray(socialLinks.custom) ? socialLinks.custom : [];
   const bitsPage = isRecord(page.bits) ? page.bits : {};
+  const rawListRss = isRecord(page.listRss) ? page.listRss : {};
   const bitsDefaultAuthor = isRecord(bitsPage.defaultAuthor) ? bitsPage.defaultAuthor : {};
   const rawPresetOrder = isRecord(socialLinks.presetOrder) ? socialLinks.presetOrder : {};
   const rawFilings = isRecord(site.filings) ? site.filings : {};
@@ -529,6 +552,10 @@ export const canonicalizeAdminThemeSettings = (
         showCurrentYear: Boolean(siteFooter.showCurrentYear),
         copyright: normalizeTrimmed(siteFooter.copyright)
       },
+      /**
+       * 窄屏站点标题宽度百分比。非法 / 缺失 / 越界都回落到默认 35%，并夹取到 10–100。
+       */
+      titleMaxPercent: clampSiteTitlePercent(parseInteger(site.titleMaxPercent as string | number | null | undefined)),
       adminOverview: {
         publicVisible: typeof adminOverview.publicVisible === 'boolean' ? adminOverview.publicVisible : true,
         hiddenMessage: normalizeSingleLine(
@@ -586,9 +613,13 @@ export const canonicalizeAdminThemeSettings = (
       heroImageAlt
     },
     page: {
-      essay: {
-        title: normalizeOptionalSingleLine(String(isRecord(page.essay) ? page.essay.title ?? '' : '')),
-        subtitle: normalizeOptionalSingleLine(String(isRecord(page.essay) ? page.essay.subtitle ?? '' : ''))
+      blog: {
+        title: normalizeOptionalSingleLine(String(isRecord(page.blog) ? page.blog.title ?? '' : '')),
+        subtitle: normalizeOptionalSingleLine(String(isRecord(page.blog) ? page.blog.subtitle ?? '' : ''))
+      },
+      projects: {
+        title: normalizeOptionalSingleLine(String(isRecord(page.projects) ? page.projects.title ?? '' : '')),
+        subtitle: normalizeOptionalSingleLine(String(isRecord(page.projects) ? page.projects.subtitle ?? '' : ''))
       },
       archive: {
         title: normalizeOptionalSingleLine(String(isRecord(page.archive) ? page.archive.title ?? '' : '')),
@@ -602,13 +633,20 @@ export const canonicalizeAdminThemeSettings = (
           avatar: normalizeTrimmed(bitsDefaultAuthor.avatar)
         }
       },
-      memo: {
-        title: normalizeOptionalSingleLine(String(isRecord(page.memo) ? page.memo.title ?? '' : '')),
-        subtitle: normalizeOptionalSingleLine(String(isRecord(page.memo) ? page.memo.subtitle ?? '' : ''))
+      devlog: {
+        title: normalizeOptionalSingleLine(String(isRecord(page.devlog) ? page.devlog.title ?? '' : '')),
+        subtitle: normalizeOptionalSingleLine(String(isRecord(page.devlog) ? page.devlog.subtitle ?? '' : ''))
       },
       about: {
         title: normalizeOptionalSingleLine(String(isRecord(page.about) ? page.about.title ?? '' : '')),
         subtitle: normalizeOptionalSingleLine(String(isRecord(page.about) ? page.about.subtitle ?? '' : ''))
+      },
+      /* 列表页描述行的 RSS 开关：总开关 + 三个页面各自可勾，默认全开 */
+      listRss: {
+        enabled: typeof rawListRss.enabled === 'boolean' ? rawListRss.enabled : true,
+        blog: typeof rawListRss.blog === 'boolean' ? rawListRss.blog : true,
+        bits: typeof rawListRss.bits === 'boolean' ? rawListRss.bits : true,
+        archive: typeof rawListRss.archive === 'boolean' ? rawListRss.archive : true
       }
     },
     ui: {
@@ -675,6 +713,7 @@ export const createAdminWritableThemeSettingsGroups = (
     title: settings.site.title,
     description: settings.site.description,
     defaultLocale: settings.site.defaultLocale,
+    titleMaxPercent: settings.site.titleMaxPercent,
     footer: {
       ...settings.site.footer
     },
@@ -708,7 +747,9 @@ export const createAdminWritableThemeSettingsGroups = (
     introMoreLinks: [...settings.home.introMoreLinks]
   },
   page: {
-    essay: { ...settings.page.essay },
+    listRss: { ...settings.page.listRss },
+    blog: { ...settings.page.blog },
+    projects: { ...settings.page.projects },
     archive: { ...settings.page.archive },
     bits: {
       title: settings.page.bits.title,
@@ -717,7 +758,7 @@ export const createAdminWritableThemeSettingsGroups = (
         ...settings.page.bits.defaultAuthor
       }
     },
-    memo: { ...settings.page.memo },
+    devlog: { ...settings.page.devlog },
     about: { ...settings.page.about }
   },
   ui: {
@@ -747,6 +788,17 @@ export const validateAdminThemeSettings = (
     issues.push(createValidationIssue(path, message));
   };
 
+  for (const [key, label] of [
+    ['enabled', 'RSS 总开关'],
+    ['blog', '/blog/ RSS 开关'],
+    ['bits', '/bits/ RSS 开关'],
+    ['archive', '/archive/ RSS 开关']
+  ] as const) {
+    if (typeof settings.page?.listRss?.[key] !== 'boolean') {
+      pushIssue(`page.listRss.${key}`, `${label}必须是布尔值`);
+    }
+  }
+
   if (!settings.site.title) pushIssue('site.title', '站点标题不能为空');
   if (!settings.site.description) pushIssue('site.description', '站点描述不能为空');
   if (!settings.site.defaultLocale) {
@@ -766,6 +818,18 @@ export const validateAdminThemeSettings = (
 
   if (typeof settings.site.footer?.showCurrentYear !== 'boolean') {
     pushIssue('site.footer.showCurrentYear', '是否显示当前年必须是布尔值');
+  }
+
+  if (!Number.isInteger(settings.site.titleMaxPercent)) {
+    pushIssue('site.titleMaxPercent', '站点标题宽度百分比必须是整数');
+  } else if (
+    settings.site.titleMaxPercent < ADMIN_SITE_TITLE_PERCENT_MIN ||
+    settings.site.titleMaxPercent > ADMIN_SITE_TITLE_PERCENT_MAX
+  ) {
+    pushIssue(
+      'site.titleMaxPercent',
+      `站点标题宽度百分比必须在 ${ADMIN_SITE_TITLE_PERCENT_MIN}–${ADMIN_SITE_TITLE_PERCENT_MAX} 之间`
+    );
   }
 
   if (!settings.site.footer?.copyright) {
@@ -1034,10 +1098,11 @@ export const validateAdminThemeSettings = (
   }
 
   const pageTitleMap: Array<[string | null, string, string]> = [
-    [settings.page.essay?.title, '/essay/ 页面主标题', 'page.essay.title'],
+    [settings.page.blog?.title, '/blog/ 页面主标题', 'page.blog.title'],
     [settings.page.archive?.title, '/archive/ 页面主标题', 'page.archive.title'],
     [settings.page.bits?.title, '/bits/ 页面主标题', 'page.bits.title'],
-    [settings.page.memo?.title, '/memo/ 页面主标题', 'page.memo.title'],
+    [settings.page.projects?.title, '/projects/ 页面主标题', 'page.projects.title'],
+    [settings.page.devlog?.title, '/devlog/ 页面主标题', 'page.devlog.title'],
     [settings.page.about?.title, '/about/ 页面主标题', 'page.about.title']
   ];
 
@@ -1056,10 +1121,11 @@ export const validateAdminThemeSettings = (
   });
 
   const pageSubtitleMap: Array<[string | null, string, string]> = [
-    [settings.page.essay?.subtitle, '/essay/ 页面副标题', 'page.essay.subtitle'],
+    [settings.page.blog?.subtitle, '/blog/ 页面副标题', 'page.blog.subtitle'],
     [settings.page.archive?.subtitle, '/archive/ 页面副标题', 'page.archive.subtitle'],
     [settings.page.bits?.subtitle, '/bits/ 页面副标题', 'page.bits.subtitle'],
-    [settings.page.memo?.subtitle, '/memo/ 页面副标题', 'page.memo.subtitle'],
+    [settings.page.projects?.subtitle, '/projects/ 页面副标题', 'page.projects.subtitle'],
+    [settings.page.devlog?.subtitle, '/devlog/ 页面副标题', 'page.devlog.subtitle'],
     [settings.page.about?.subtitle, '/about/ 页面副标题', 'page.about.subtitle']
   ];
 
@@ -1156,7 +1222,7 @@ export const validateAdminThemeSettings = (
     ['ui.viewStats.showPv', '显示浏览量', settings.ui?.viewStats?.showPv],
     ['ui.viewStats.showUv', '显示访客数', settings.ui?.viewStats?.showUv],
     ['ui.viewStats.onArticleMeta', '显示在文章元信息行', settings.ui?.viewStats?.onArticleMeta],
-    ['ui.viewStats.onIndexPages', '显示在归档 / 絮语 / 随笔 / 小记等页面底部', settings.ui?.viewStats?.onIndexPages]
+    ['ui.viewStats.onIndexPages', '显示在博客 / 动态 / 更新 / 归档等列表页底部', settings.ui?.viewStats?.onIndexPages]
   ] as const) {
     if (typeof value !== 'boolean') {
       pushIssue(path, `浏览数据里的“${label}”必须是布尔值`);

@@ -22,13 +22,13 @@ import {
 export type AdminImageFieldContext =
   | 'bits.images'
   | 'home.heroImageSrc'
-  | 'page.bits.defaultAuthor.avatar';
+  | 'page.bits.defaultAuthor.avatar'
+  | 'projects.icon';
 
 export type AdminImageDirectory =
   | ''
   | 'public'
   | 'public/author'
-  | 'public/bits'
   | 'public/images'
   | 'src/assets'
   | 'src/content';
@@ -41,7 +41,8 @@ export type AdminImageDirectoryOption = {
 
 export type AdminImageListRequest = {
   field: AdminImageFieldContext | null;
-  directory: AdminImageDirectory;
+  /** 已知目录前缀或其子目录，例如 `public/images/bits`（只做前缀校验，不做精确白名单）。 */
+  directory: string;
   owner: string;
   origin: AdminImageOrigin | '';
   scope: AdminImageScopeKey | '';
@@ -70,12 +71,12 @@ type AdminImageFieldConfig = {
   toValue: (assetPath: string, origin: AdminImageOrigin) => string | null;
 };
 
-const IMAGE_LOCAL_EXT_RE = /\.(?:avif|gif|jpe?g|png|svg|webp)$/i;
+export const IMAGE_LOCAL_EXT_RE = /\.(?:avif|gif|jpe?g|png|svg|webp)$/i;
 
 const FIELD_CONFIG: Record<AdminImageFieldContext, AdminImageFieldConfig> = {
   'bits.images': {
     allowedOrigins: ['public'],
-    preferredPrefixes: ['public/bits/', 'public/images/', 'public/author/', 'public/'],
+    preferredPrefixes: ['public/images/bits/', 'public/images/', 'public/author/', 'public/'],
     toValue: (assetPath, origin) => (origin === 'public' ? assetPath.slice('public/'.length) : null)
   },
   'home.heroImageSrc': {
@@ -89,8 +90,13 @@ const FIELD_CONFIG: Record<AdminImageFieldContext, AdminImageFieldConfig> = {
   },
   'page.bits.defaultAuthor.avatar': {
     allowedOrigins: ['public'],
-    preferredPrefixes: ['public/author/', 'public/bits/', 'public/images/', 'public/'],
+    preferredPrefixes: ['public/author/', 'public/images/', 'public/'],
     toValue: (assetPath, origin) => (origin === 'public' ? assetPath.slice('public/'.length) : null)
+  },
+  'projects.icon': {
+    allowedOrigins: ['public'],
+    preferredPrefixes: ['public/images/projects/', 'public/images/', 'public/'],
+    toValue: (assetPath, origin) => (origin === 'public' ? `/${assetPath.slice('public/'.length)}` : null)
   }
 };
 
@@ -107,11 +113,6 @@ export const ADMIN_IMAGE_DIRECTORY_OPTIONS = [
     value: 'public/author',
     label: '头像资源',
     description: '查看作者头像和默认头像图片。'
-  },
-  {
-    value: 'public/bits',
-    label: '絮语配图',
-    description: '查看絮语常用的公开配图。'
   },
   {
     value: 'public/images',
@@ -163,11 +164,37 @@ export const isAdminImageFieldContext = (value: string): value is AdminImageFiel
   value in FIELD_CONFIG;
 
 export const isAdminImageDirectory = (value: string): value is AdminImageDirectory =>
-  ADMIN_IMAGE_DIRECTORY_OPTIONS.some((option) => option.value === value);
+  normalizeAdminImageDirectory(value) !== '';
 
+/** 统一空白、反斜杠与末尾斜杠。 */
+const normalizeDirectoryInput = (value: string | null | undefined): string =>
+  (value ?? '').trim().replace(/\\/g, '/').replace(/\/+$/, '');
+
+/**
+ * 请求参数里的 `dir`：保留子目录原文（如 `public/images/bits`）。
+ * 必须与 `normalizeAdminImageDirectory` 区分：后者把值收敛到已知目录选项，
+ * 会把子目录降级成父目录。这里只做前缀校验，避免任意路径进入扫描。
+ */
+const normalizeAdminImageRequestDirectory = (value: string | null | undefined): string => {
+  const normalized = normalizeDirectoryInput(value);
+  if (!normalized) return '';
+  return normalizeAdminImageDirectory(normalized) ? normalized : '';
+};
+
+/**
+ * 把值收敛到已知目录选项。用最长前缀匹配，因为 `public/images/bits` 这类子目录
+ * 是 `public/images` 的前缀延伸，新增子目录不必同步扩展 `AdminImageDirectory`。
+ */
 export const normalizeAdminImageDirectory = (value: string | null | undefined): AdminImageDirectory => {
-  const normalized = (value ?? '').trim().replace(/\\/g, '/');
-  return isAdminImageDirectory(normalized) ? normalized : '';
+  const normalized = normalizeDirectoryInput(value);
+  if (!normalized) return '';
+
+  const matched = ADMIN_IMAGE_DIRECTORY_OPTIONS
+    .map((option) => option.value)
+    .filter((candidate) => candidate && (normalized === candidate || normalized.startsWith(`${candidate}/`)))
+    .sort((left, right) => right.length - left.length)[0];
+
+  return matched ?? '';
 };
 
 export const getAdminImageFieldValue = (
@@ -283,7 +310,9 @@ export const getAdminImageListRequest = (searchParams: URLSearchParams): AdminIm
 
   return {
     field,
-    directory: normalizeAdminImageDirectory(searchParams.get('dir')),
+    // 保留调用方请求的目录原文（可以是已知前缀的子目录，如 public/images/bits）；
+    // 仅做协议/空白归一化，不用枚举做「精确白名单」。
+    directory: normalizeAdminImageRequestDirectory(searchParams.get('dir')),
     owner: normalizeAdminImageOwnerValue(searchParams.get('owner')),
     origin,
     scope,

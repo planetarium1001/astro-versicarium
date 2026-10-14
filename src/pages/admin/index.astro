@@ -44,7 +44,7 @@ const lastUpdateDays = overview?.stats.lastUpdate
   ? String(getDaysSinceUpdate(overview.stats.lastUpdate.date))
   : '暂无';
 const wordMetric = overview ? formatAdminOverviewWordMetric(overview.stats.wordCount) : null;
-const articleCount = overview?.collections.find((summary) => summary.key === 'essay')?.count ?? 0;
+const articleCount = overview?.collections.find((summary) => summary.key === 'blog')?.count ?? 0;
 const moreTagsHref = withBase('/archive/?picker=tag');
 const statItems = overview && wordMetric
   ? [

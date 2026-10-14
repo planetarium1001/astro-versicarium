@@ -43,7 +43,7 @@ let {
 
 const tabs = $derived([
   ...(headingsEnabled ? [{ id: 'headings' as const, label: headingsTabLabel, icon: headingsTabIcon }] : []),
-  ...(listEnabled ? [{ id: 'essays' as const, label: listTabLabel, icon: undefined }] : [])
+  ...(listEnabled ? [{ id: 'blogs' as const, label: listTabLabel, icon: undefined }] : [])
 ]);
 const fallbackTab = $derived(tabs[0]?.id ?? 'headings');
 const effectiveActiveTab = $derived(
@@ -167,31 +167,31 @@ const handleTabKeydown = (event: KeyboardEvent, tab: EditorOutlineTab) => {
   {:else}
     <div
       class="admin-editor-outline-panel__body"
-      id={getPanelId('essays')}
+      id={getPanelId('blogs')}
       role="tabpanel"
-      aria-labelledby={getTabId('essays')}
+      aria-labelledby={getTabId('blogs')}
     >
       {#if listItems.length > 0}
-        <ol class="admin-editor-outline-panel__list admin-editor-outline-panel__list--essays">
+        <ol class="admin-editor-outline-panel__list admin-editor-outline-panel__list--blogs">
           {#each listItems as item (item.entryId)}
-            <li class="admin-editor-outline-panel__essay-item">
+            <li class="admin-editor-outline-panel__blog-item">
               {#if item.active}
                 <span
-                  class="admin-editor-outline-panel__essay-link is-active"
+                  class="admin-editor-outline-panel__blog-link is-active"
                   aria-current="page"
                   title={item.title}
                 >
-                  <span class="admin-editor-outline-panel__essay-title">{item.title}</span>
-                  <span class="admin-editor-outline-panel__essay-meta">{item.sourceError ? '异常' : item.dateLabel}</span>
+                  <span class="admin-editor-outline-panel__blog-title">{item.title}</span>
+                  <span class="admin-editor-outline-panel__blog-meta">{item.sourceError ? '异常' : item.dateLabel}</span>
                 </span>
               {:else}
                 <a
-                  class="admin-editor-outline-panel__essay-link"
+                  class="admin-editor-outline-panel__blog-link"
                   href={item.editHref}
                   title={item.title}
                 >
-                  <span class="admin-editor-outline-panel__essay-title">{item.title}</span>
-                  <span class="admin-editor-outline-panel__essay-meta">{item.sourceError ? '异常' : item.dateLabel}</span>
+                  <span class="admin-editor-outline-panel__blog-title">{item.title}</span>
+                  <span class="admin-editor-outline-panel__blog-meta">{item.sourceError ? '异常' : item.dateLabel}</span>
                 </a>
               {/if}
             </li>

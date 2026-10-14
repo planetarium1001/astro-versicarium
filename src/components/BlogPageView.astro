@@ -1,0 +1,84 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import TagFilterHeader from './TagFilterHeader.astro';
+import BlogCard from './BlogCard.astro';
+import { createWithBase, getBlogDerivedText, getBlogSlug, type BlogEntry } from '../lib/content';
+import { getThemeSettings, getVisibleArticleMetaTags } from '../lib/theme-settings';
+import { collectTagSummary, type TagSummary } from '../lib/tags';
+import { joinPageSubtitleText } from '../utils/format';
+import { PAGE_SIZE_BLOG } from '../../site.config.mjs';
+
+const { items, resultCount } = Astro.props as {
+  items: BlogEntry[];
+  resultCount: number;
+};
+
+/** `/blog/` 的标签入口：不传 tagOptions 时 TagFilterHeader 不渲染标签 dialog。 */
+const tagOptions: TagSummary[] = collectTagSummary(items);
+
+const base = import.meta.env.BASE_URL ?? '/';
+const withBase = createWithBase(base);
+const {
+  settings: {
+    page,
+    ui: { articleMeta }
+  }
+} = getThemeSettings();
+/** 列表页描述行里的 RSS 由后台「内页设置 → RSS 订阅」控制（总开关且本页开关）。 */
+const showListRss = page.listRss.enabled !== false && page.listRss.blog !== false;
+
+const pageTitleText = page.blog.title || '博客';
+const subtitleText = joinPageSubtitleText(page.blog.subtitle, `共 ${resultCount} 篇`);
+const pageDescription = joinPageSubtitleText(
+  `${pageTitleText}列表`,
+  page.blog.subtitle,
+  `共 ${resultCount} 篇`
+) ?? `${pageTitleText}列表`;
+const fallbackListId = 'blog-tag-list';
+---
+
+<BaseLayout title={pageTitleText} description={pageDescription} bodyClass="blog-page">
+  <div
+    class="entry-filters"
+    data-entry-filters
+    data-index-url="/blog/index.json"
+    data-page-size={String(PAGE_SIZE_BLOG)}
+  >
+    <TagFilterHeader
+      pageTitleText={pageTitleText}
+      subtitleText={subtitleText}
+      rssHref={withBase('/blog/rss.xml')}
+      pickerHref={`#${fallbackListId}`}
+      fallbackListId={fallbackListId}
+      dialogTitleId="blog-tag-dialog-title"
+      searchAriaLabel={`搜索${pageTitleText}`}
+      tagOptions={tagOptions}
+      showRss={showListRss}
+      headerClass="page-header page-header--blog page-header--with-search"
+    />
+  </div>
+
+  <div class="list" data-entry-list>
+    {items.map((entry) => (
+      <BlogCard
+        href={withBase(`/blog/${getBlogSlug(entry)}/`)}
+        slug={getBlogSlug(entry)}
+        title={entry.data.title}
+        excerpt={getBlogDerivedText(entry).excerpt}
+        date={entry.data.date}
+        updatedAt={entry.data.updatedAt}
+        visibleTags={getVisibleArticleMetaTags(entry.data.tags, 'list')}
+        articleMetaSettings={articleMeta}
+        badge={entry.data.badge}
+      />
+    ))}
+  </div>
+
+  <nav class="pagination" data-entry-pagination hidden aria-label={`${pageTitleText}分页`}>
+    <div class="pagination__inner" data-entry-pagination-inner></div>
+  </nav>
+
+  <script>
+    import '../scripts/entry-search.ts';
+  </script>
+</BaseLayout>

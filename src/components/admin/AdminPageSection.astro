@@ -1,22 +1,33 @@
 ---
 import AdminIcon from './AdminIcon.astro';
-import AdminHelpTip from './AdminHelpTip.astro';
 import UiIcon from '../UiIcon.astro';
 import { ADMIN_ARTICLE_META_DATE_LABEL_MAX_LENGTH, ADMIN_VIEW_STATS_LABEL_MAX_LENGTH } from '../../lib/admin-console/theme-shared';
 
 interface Props {
   pageTitleMaxLength: number;
   pageSubtitleMaxLength: number;
-  memoTitlePlaceholder?: string;
-  memoSubtitlePlaceholder?: string;
 }
 
 const {
   pageTitleMaxLength,
-  pageSubtitleMaxLength,
-  memoTitlePlaceholder = '',
-  memoSubtitlePlaceholder = ''
+  pageSubtitleMaxLength
 } = Astro.props;
+
+// 内页文案：每个集合一对「主标题 | 副标题」输入框，只有占位文案不同。
+const pageTitlePairFields = [
+  { slug: 'blog', titlePlaceholder: '随笔', subtitlePlaceholder: '随笔与杂记' },
+  { slug: 'projects', titlePlaceholder: '项目', subtitlePlaceholder: '散者归之，各归其地' },
+  { slug: 'bits', titlePlaceholder: '动态', subtitlePlaceholder: '生活不只是长篇' },
+  { slug: 'devlog', titlePlaceholder: '更新', subtitlePlaceholder: '逐条记录项目的每一次改动' },
+  { slug: 'archive', titlePlaceholder: '归档', subtitlePlaceholder: '按年份分组的归档目录' },
+  { slug: 'about', titlePlaceholder: '关于', subtitlePlaceholder: null }
+];
+
+// 浏览数据：PV / UV 各一行「显示开关 | 前缀输入框」。
+const viewStatsInlineFields = [
+  { key: 'pv', toggleLabel: '显示浏览量', placeholder: '浏览' },
+  { key: 'uv', toggleLabel: '显示访客数', placeholder: '访客' }
+];
 ---
 
 <fieldset class="admin-group">
@@ -28,152 +39,36 @@ const {
     </span>
   </legend>
   <div class="admin-grid">
-    <label class="admin-field">
-      <span class="admin-label">
-        <span class="admin-label__main">
-          <code>/essay/</code> 页面主 <span class="admin-label__pipe" aria-hidden="true">|</span> 副标题
+    {pageTitlePairFields.map((field) => (
+      <label class="admin-field">
+        <span class="admin-label">
+          <span class="admin-label__main">
+            <code>/{field.slug}/</code> 页面主 <span class="admin-label__pipe" aria-hidden="true">|</span> 副标题
+          </span>
         </span>
-      </span>
-      <span class="admin-title-pair" role="group" aria-label="/essay/ 页面主标题与副标题">
-        <input
-          id="page-essay-title"
-          class="admin-title-pair__input admin-title-pair__input--title"
-          type="text"
-          maxlength={pageTitleMaxLength}
-          autocomplete="off"
-          placeholder="随笔"
-          aria-label="/essay/ 页面主标题"
-        />
-        <span class="admin-title-pair__sep" aria-hidden="true">|</span>
-        <input
-          id="page-essay-subtitle"
-          class="admin-title-pair__input admin-title-pair__input--subtitle"
-          type="text"
-          maxlength={pageSubtitleMaxLength}
-          autocomplete="off"
-          placeholder="随笔与杂记"
-          aria-label="/essay/ 页面副标题"
-        />
-      </span>
-    </label>
-    <label class="admin-field">
-      <span class="admin-label">
-        <span class="admin-label__main">
-          <code>/bits/</code> 页面主 <span class="admin-label__pipe" aria-hidden="true">|</span> 副标题
+        <span class="admin-title-pair" role="group" aria-label={`/${field.slug}/ 页面主标题与副标题`}>
+          <input
+            id={`page-${field.slug}-title`}
+            class="admin-title-pair__input admin-title-pair__input--title"
+            type="text"
+            maxlength={pageTitleMaxLength}
+            autocomplete="off"
+            placeholder={field.titlePlaceholder}
+            aria-label={`/${field.slug}/ 页面主标题`}
+          />
+          <span class="admin-title-pair__sep" aria-hidden="true">|</span>
+          <input
+            id={`page-${field.slug}-subtitle`}
+            class="admin-title-pair__input admin-title-pair__input--subtitle"
+            type="text"
+            maxlength={pageSubtitleMaxLength}
+            autocomplete="off"
+            placeholder={field.subtitlePlaceholder ?? undefined}
+            aria-label={`/${field.slug}/ 页面副标题`}
+          />
         </span>
-      </span>
-      <span class="admin-title-pair" role="group" aria-label="/bits/ 页面主标题与副标题">
-        <input
-          id="page-bits-title"
-          class="admin-title-pair__input admin-title-pair__input--title"
-          type="text"
-          maxlength={pageTitleMaxLength}
-          autocomplete="off"
-          placeholder="絮语"
-          aria-label="/bits/ 页面主标题"
-        />
-        <span class="admin-title-pair__sep" aria-hidden="true">|</span>
-        <input
-          id="page-bits-subtitle"
-          class="admin-title-pair__input admin-title-pair__input--subtitle"
-          type="text"
-          maxlength={pageSubtitleMaxLength}
-          autocomplete="off"
-          placeholder="生活不只是长篇"
-          aria-label="/bits/ 页面副标题"
-        />
-      </span>
-    </label>
-    <div class="admin-field admin-field--full admin-field--memo">
-      <span class="admin-label">
-        <span class="admin-label__main">
-          <code>/memo/</code> 页面主 <span class="admin-label__pipe" aria-hidden="true">|</span> 副标题
-        </span>
-        <AdminHelpTip
-          id="page-memo-title-tip"
-          label="/memo/ 页面标题说明"
-          text="填写后覆盖对应字段，留空则沿用 src/content/memo/index.md。"
-        />
-      </span>
-      <span class="admin-title-pair" role="group" aria-label="/memo/ 页面主标题与副标题">
-        <input
-          id="page-memo-title"
-          class="admin-title-pair__input admin-title-pair__input--title"
-          type="text"
-          maxlength={pageTitleMaxLength}
-          autocomplete="off"
-          placeholder={memoTitlePlaceholder || undefined}
-          aria-label="/memo/ 页面主标题"
-          aria-describedby="page-memo-title-tip"
-        />
-        <span class="admin-title-pair__sep" aria-hidden="true">|</span>
-        <input
-          id="page-memo-subtitle"
-          class="admin-title-pair__input admin-title-pair__input--subtitle"
-          type="text"
-          maxlength={pageSubtitleMaxLength}
-          autocomplete="off"
-          placeholder={memoSubtitlePlaceholder || undefined}
-          aria-label="/memo/ 页面副标题"
-          aria-describedby="page-memo-title-tip"
-        />
-      </span>
-    </div>
-    <label class="admin-field">
-      <span class="admin-label">
-        <span class="admin-label__main">
-          <code>/archive/</code> 页面主 <span class="admin-label__pipe" aria-hidden="true">|</span> 副标题
-        </span>
-      </span>
-      <span class="admin-title-pair" role="group" aria-label="/archive/ 页面主标题与副标题">
-        <input
-          id="page-archive-title"
-          class="admin-title-pair__input admin-title-pair__input--title"
-          type="text"
-          maxlength={pageTitleMaxLength}
-          autocomplete="off"
-          placeholder="归档"
-          aria-label="/archive/ 页面主标题"
-        />
-        <span class="admin-title-pair__sep" aria-hidden="true">|</span>
-        <input
-          id="page-archive-subtitle"
-          class="admin-title-pair__input admin-title-pair__input--subtitle"
-          type="text"
-          maxlength={pageSubtitleMaxLength}
-          autocomplete="off"
-          placeholder="按年份分组的归档目录"
-          aria-label="/archive/ 页面副标题"
-        />
-      </span>
-    </label>
-    <label class="admin-field">
-      <span class="admin-label">
-        <span class="admin-label__main">
-          <code>/about/</code> 页面主 <span class="admin-label__pipe" aria-hidden="true">|</span> 副标题
-        </span>
-      </span>
-      <span class="admin-title-pair" role="group" aria-label="/about/ 页面主标题与副标题">
-        <input
-          id="page-about-title"
-          class="admin-title-pair__input admin-title-pair__input--title"
-          type="text"
-          maxlength={pageTitleMaxLength}
-          autocomplete="off"
-          placeholder="关于"
-          aria-label="/about/ 页面主标题"
-        />
-        <span class="admin-title-pair__sep" aria-hidden="true">|</span>
-        <input
-          id="page-about-subtitle"
-          class="admin-title-pair__input admin-title-pair__input--subtitle"
-          type="text"
-          maxlength={pageSubtitleMaxLength}
-          autocomplete="off"
-          aria-label="/about/ 页面副标题"
-        />
-      </span>
-    </label>
+      </label>
+    ))}
   </div>
 
   <div class="admin-subgroup">
@@ -218,48 +113,66 @@ const {
     </p>
   </div>
 
+  {/*
+    RSS 订阅控制列表页描述行里的 RSS 链接：总开关在标题行最右，
+    三个页面各自勾选；总开关关闭时三个一起隐藏并置灰。
+  */}
+  <div class="admin-subgroup admin-subgroup--list-rss">
+    <div class="admin-label admin-label--split">
+      <span class="admin-label__copy">
+        <span class="admin-label__main">RSS 订阅</span>
+        <span class="admin-label__hint">（列表页描述行里的 RSS 链接；侧栏按钮见「侧栏设置」）</span>
+      </span>
+      <label class="admin-label__toggle" for="page-list-rss-enabled">
+        <input id="page-list-rss-enabled" type="checkbox" checked />
+        <span>展示</span>
+      </label>
+    </div>
+    <div id="page-list-rss-group" class="admin-toggle-row-group">
+      <label class="admin-toggle-row" for="page-list-rss-blog">
+        <input id="page-list-rss-blog" type="checkbox" />
+        <span>在 <code>/blog/</code> 描述行显示</span>
+      </label>
+      <label class="admin-toggle-row" for="page-list-rss-bits">
+        <input id="page-list-rss-bits" type="checkbox" />
+        <span>在 <code>/bits/</code> 描述行显示</span>
+      </label>
+      <label class="admin-toggle-row" for="page-list-rss-archive">
+        <input id="page-list-rss-archive" type="checkbox" />
+        <span>在 <code>/archive/</code> 描述行显示</span>
+      </label>
+    </div>
+    <p class="admin-help">
+      三个页面互不干扰；关掉总开关则一起隐藏（下面的勾选保留，便于随时恢复）。
+    </p>
+  </div>
+
   <div class="admin-subgroup admin-subgroup--view-stats">
     <p class="admin-subtitle">
       <span class="admin-subtitle__main">浏览数据</span>
       <span class="admin-subtitle__hint">（PV / UV ，默认关闭，由自定义脚本提供）</span>
     </p>
     <div class="admin-toggle-row-group">
-      <div class="admin-toggle-row admin-toggle-row--with-inline-field">
-        <label class="admin-toggle-row admin-toggle-row--compact" for="ui-view-stats-show-pv">
-          <input id="ui-view-stats-show-pv" type="checkbox" />
-          <span>显示浏览量</span>
-        </label>
-        <span class="admin-toggle-row__sep" aria-hidden="true">|</span>
-        <label class="admin-inline-field" for="ui-view-stats-pv-label">
-          <span class="admin-inline-field__label">前缀：</span>
-          <input
-            id="ui-view-stats-pv-label"
-            class="admin-inline-field__input"
-            type="text"
-            maxlength={ADMIN_VIEW_STATS_LABEL_MAX_LENGTH}
-            autocomplete="off"
-            placeholder="浏览"
-          />
-        </label>
-      </div>
-      <div class="admin-toggle-row admin-toggle-row--with-inline-field">
-        <label class="admin-toggle-row admin-toggle-row--compact" for="ui-view-stats-show-uv">
-          <input id="ui-view-stats-show-uv" type="checkbox" />
-          <span>显示访客数</span>
-        </label>
-        <span class="admin-toggle-row__sep" aria-hidden="true">|</span>
-        <label class="admin-inline-field" for="ui-view-stats-uv-label">
-          <span class="admin-inline-field__label">前缀：</span>
-          <input
-            id="ui-view-stats-uv-label"
-            class="admin-inline-field__input"
-            type="text"
-            maxlength={ADMIN_VIEW_STATS_LABEL_MAX_LENGTH}
-            autocomplete="off"
-            placeholder="访客"
-          />
-        </label>
-      </div>
+      {viewStatsInlineFields.map((field) => (
+        <div class="admin-toggle-row admin-toggle-row--with-inline-field">
+          <label class="admin-toggle-row admin-toggle-row--compact" for={`ui-view-stats-show-${field.key}`}>
+            <input id={`ui-view-stats-show-${field.key}`} type="checkbox" />
+            <span>{field.toggleLabel}</span>
+          </label>
+          <span class="admin-toggle-row__sep" aria-hidden="true">|</span>
+          <label class="admin-inline-field" for={`ui-view-stats-${field.key}-label`}>
+            <span class="admin-inline-field__label">前缀：</span>
+            <input
+              id={`ui-view-stats-${field.key}-label`}
+              class="admin-inline-field__input"
+              type="text"
+              maxlength={ADMIN_VIEW_STATS_LABEL_MAX_LENGTH}
+              autocomplete="off"
+              placeholder={field.placeholder}
+            />
+          </label>
+        </div>
+      ))}
     </div>
     <div class="admin-toggle-row-group">
       <label class="admin-toggle-row">
@@ -268,7 +181,7 @@ const {
       </label>
       <label class="admin-toggle-row">
         <input id="ui-view-stats-on-index-pages" type="checkbox" />
-        <span>显示在归档 / 絮语 / 随笔 / 小记等页面底部</span>
+        <span>显示在博客 / 动态 / 更新 / 归档等列表页底部</span>
       </label>
     </div>
     <p class="admin-help admin-help--view-stats-preview">

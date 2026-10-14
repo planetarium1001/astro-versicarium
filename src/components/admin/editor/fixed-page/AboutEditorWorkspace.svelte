@@ -97,7 +97,7 @@ const shell = createEditorShellController({
   displayPreferenceStorageKey: ADMIN_EDITOR_DISPLAY_PREFERENCE_STORAGE_KEY,
   sidePanelPreferenceStorageKey: ABOUT_EDITOR_SIDE_PANEL_PREFERENCE_STORAGE_KEY,
   readAdminDefaults: readDevAdminEditorDefaults,
-  normalizeOutlineTab: createFallbackOutlineTabNormalizer('essays', 'headings')
+  normalizeOutlineTab: createFallbackOutlineTabNormalizer('blogs', 'headings')
 });
 let toolbarCommand = $state<MarkdownToolbarCommand | null>(null);
 let outlineJumpCommand = $state<MarkdownOutlineJumpCommand | null>(null);

@@ -81,7 +81,7 @@ const client = new S3Client({
       : {})
   }
 });
-const key = [prefix, 'essay', 'smoke', `astro-whono-${randomUUID()}.png`]
+const key = [prefix, 'blog', 'smoke', `astro-whono-${randomUUID()}.png`]
   .filter(Boolean)
   .join('/');
 const publicUrl = new URL(`${baseUrl.toString().replace(/\/+$/, '')}/${key
@@ -112,7 +112,7 @@ try {
       ...(continuationToken ? { ContinuationToken: continuationToken } : {})
     }), { abortSignal }));
     for (const object of page.Contents ?? []) {
-      if (typeof object.Key === 'string' && object.Key.startsWith(`${prefix ? `${prefix}/` : ''}essay/`)) {
+      if (typeof object.Key === 'string' && object.Key.startsWith(`${prefix ? `${prefix}/` : ''}blog/`)) {
         listedKeys.push(object.Key);
       }
     }

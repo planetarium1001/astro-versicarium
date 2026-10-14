@@ -124,7 +124,7 @@ describe('about directives markdown transform', () => {
         '',
         '::contact-links'
       ].join('\n'),
-      { path: new URL('../src/content/essay/demo.md', import.meta.url) }
+      { path: new URL('../src/content/blog/demo.md', import.meta.url) }
     );
 
     expect(html).not.toContain('qa-list');

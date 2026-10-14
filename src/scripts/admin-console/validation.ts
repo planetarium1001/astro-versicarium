@@ -20,6 +20,11 @@ type ValidationContext = {
   inputSiteTitle: HTMLInputElement;
   inputSiteDescription: HTMLTextAreaElement;
   inputSiteDefaultLocale: HTMLInputElement;
+  inputSiteTitleMaxPercent: HTMLInputElement;
+  inputPageListRssEnabled: HTMLInputElement;
+  inputPageListRssBlog: HTMLInputElement;
+  inputPageListRssBits: HTMLInputElement;
+  inputPageListRssArchive: HTMLInputElement;
   inputSiteFooterStartYear: HTMLInputElement;
   inputSiteFooterShowCurrentYear: HTMLInputElement;
   inputSiteFooterCopyright: HTMLInputElement;
@@ -43,15 +48,17 @@ type ValidationContext = {
   inputHomeShowHero: HTMLInputElement;
   inputHeroImageSrc: HTMLInputElement;
   inputHeroImageAlt: HTMLInputElement;
-  inputPageEssayTitle: HTMLInputElement;
+  inputPageBlogTitle: HTMLInputElement;
+  inputPageProjectsTitle: HTMLInputElement;
   inputPageArchiveTitle: HTMLInputElement;
   inputPageBitsTitle: HTMLInputElement;
-  inputPageMemoTitle: HTMLInputElement;
+  inputPageDevlogTitle: HTMLInputElement;
   inputPageAboutTitle: HTMLInputElement;
-  inputPageEssaySubtitle: HTMLInputElement;
+  inputPageBlogSubtitle: HTMLInputElement;
+  inputPageProjectsSubtitle: HTMLInputElement;
   inputPageArchiveSubtitle: HTMLInputElement;
   inputPageBitsSubtitle: HTMLInputElement;
-  inputPageMemoSubtitle: HTMLInputElement;
+  inputPageDevlogSubtitle: HTMLInputElement;
   inputPageAboutSubtitle: HTMLInputElement;
   inputArticleMetaShowDate: HTMLInputElement;
   inputArticleMetaDateLabel: HTMLInputElement;
@@ -91,7 +98,7 @@ type ValidationContext = {
 
 const CUSTOM_ITEM_PATH_RE = /^site\.socialLinks\.custom\[(\d+)\](?:\.(id|label|href|iconKey|order|visible))?$/;
 const NAV_PATH_RE = /^shell\.nav(?:(?:\.([a-z]+))|\[(\d+)\])(?:\.(id|label|ornament|order|visible))?$/;
-const PAGE_TITLE_INPUT_KEYS = ['essay', 'archive', 'bits', 'memo', 'about'] as const;
+const PAGE_TITLE_INPUT_KEYS = ['blog', 'projects', 'archive', 'bits', 'devlog', 'about'] as const;
 
 export const createValidation = ({
   form,
@@ -101,6 +108,11 @@ export const createValidation = ({
   inputSiteTitle,
   inputSiteDescription,
   inputSiteDefaultLocale,
+  inputSiteTitleMaxPercent,
+  inputPageListRssEnabled,
+  inputPageListRssBlog,
+  inputPageListRssBits,
+  inputPageListRssArchive,
   inputSiteFooterStartYear,
   inputSiteFooterShowCurrentYear,
   inputSiteFooterCopyright,
@@ -124,15 +136,17 @@ export const createValidation = ({
   inputHomeShowHero,
   inputHeroImageSrc,
   inputHeroImageAlt,
-  inputPageEssayTitle,
+  inputPageBlogTitle,
+  inputPageProjectsTitle,
   inputPageArchiveTitle,
   inputPageBitsTitle,
-  inputPageMemoTitle,
+  inputPageDevlogTitle,
   inputPageAboutTitle,
-  inputPageEssaySubtitle,
+  inputPageBlogSubtitle,
+  inputPageProjectsSubtitle,
   inputPageArchiveSubtitle,
   inputPageBitsSubtitle,
-  inputPageMemoSubtitle,
+  inputPageDevlogSubtitle,
   inputPageAboutSubtitle,
   inputArticleMetaShowDate,
   inputArticleMetaDateLabel,
@@ -187,17 +201,19 @@ export const createValidation = ({
   };
 
   const pageTitleTargets: Record<(typeof PAGE_TITLE_INPUT_KEYS)[number], () => HTMLElement | null> = {
-    essay: () => inputPageEssayTitle,
+    blog: () => inputPageBlogTitle,
+    projects: () => inputPageProjectsTitle,
     archive: () => inputPageArchiveTitle,
     bits: () => inputPageBitsTitle,
-    memo: () => inputPageMemoTitle,
+    devlog: () => inputPageDevlogTitle,
     about: () => inputPageAboutTitle
   };
   const pageSubtitleTargets: Record<(typeof PAGE_TITLE_INPUT_KEYS)[number], () => HTMLElement | null> = {
-    essay: () => inputPageEssaySubtitle,
+    blog: () => inputPageBlogSubtitle,
+    projects: () => inputPageProjectsSubtitle,
     archive: () => inputPageArchiveSubtitle,
     bits: () => inputPageBitsSubtitle,
-    memo: () => inputPageMemoSubtitle,
+    devlog: () => inputPageDevlogSubtitle,
     about: () => inputPageAboutSubtitle
   };
 
@@ -215,6 +231,16 @@ export const createValidation = ({
         return () => inputSiteDescription;
       case 'site.defaultLocale':
         return () => inputSiteDefaultLocale;
+      case 'page.listRss.enabled':
+        return () => inputPageListRssEnabled;
+      case 'page.listRss.blog':
+        return () => inputPageListRssBlog;
+      case 'page.listRss.bits':
+        return () => inputPageListRssBits;
+      case 'page.listRss.archive':
+        return () => inputPageListRssArchive;
+      case 'site.titleMaxPercent':
+        return () => inputSiteTitleMaxPercent;
       case 'site.footer.startYear':
         return () => inputSiteFooterStartYear;
       case 'site.footer.showCurrentYear':

@@ -2,7 +2,7 @@ import type { MarkdownOutlineItem } from '../../../../lib/admin-console/editor-o
 
 export {
   buildEditorOutlineListItems,
-  buildEssayOutlineListItems,
+  buildBlogOutlineListItems,
   extractMarkdownOutline,
   getMarkdownOutlineSelectionRange
 } from '../../../../lib/admin-console/editor-outline';
@@ -10,8 +10,8 @@ export {
 export type {
   EditorOutlineListItem,
   EditorOutlineListSourceItem,
-  EditorOutlineEssayListItem,
-  EditorOutlineEssaySourceItem,
+  EditorOutlineBlogListItem,
+  EditorOutlineBlogSourceItem,
   EditorOutlineTab,
   MarkdownOutlineItem,
   MarkdownOutlineSelectionRange

@@ -1,5 +1,5 @@
 /* Admin Content Editor Bits Image Row
-   承载 bits 图片行编辑器；不承载 essay Svelte editor 或通用 legacy 表单规则。
+   承载 bits 图片行编辑器；不承载 blog Svelte editor 或通用 legacy 表单规则。
 */
 
 .admin-content-image-editor {

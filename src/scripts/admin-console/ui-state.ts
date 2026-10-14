@@ -1,13 +1,13 @@
 type AdminControl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLButtonElement;
 
-export type AdminConsoleErrorBannerState = {
+type AdminConsoleErrorBannerState = {
   title: string;
   message?: string;
   items?: Array<string | HTMLElement>;
   retryable?: boolean;
 };
 
-export type AdminConsoleErrorBannerOptions = {
+type AdminConsoleErrorBannerOptions = {
   title?: string;
   message?: string;
   retryable?: boolean;

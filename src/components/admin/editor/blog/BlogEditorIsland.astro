@@ -1,0 +1,10 @@
+---
+import EditorShell from './EditorShell.svelte';
+import type { BlogEditorShellProps } from './editor-shell-props';
+
+const props = Astro.props as BlogEditorShellProps;
+---
+
+<div data-admin-content-editor-island>
+  <EditorShell client:only="svelte" {...props} />
+</div>

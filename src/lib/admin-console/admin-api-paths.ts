@@ -11,4 +11,5 @@ export const ADMIN_DATA_SETTINGS_API_PATH = '/api/admin/data/settings/' as const
 export const ADMIN_IMAGE_LIST_API_PATH = '/api/admin/images/list/' as const;
 export const ADMIN_IMAGE_META_API_PATH = '/api/admin/images/meta/' as const;
 export const ADMIN_IMAGE_UPLOAD_API_PATH = '/api/admin/images/upload/' as const;
+export const ADMIN_IMAGE_RENAME_API_PATH = '/api/admin/images/rename/' as const;
 export const ADMIN_SITE_ASSET_UPLOAD_API_PATH = '/api/admin/site-assets/upload/' as const;

@@ -28,6 +28,8 @@ export type AdminImageListItem = AdminImageBrowseItem & {
 export type AdminImageBootstrap = {
   listEndpoint: string;
   metaEndpoint: string;
+  /** 图片重命名接口（仅开发环境）。 */
+  renameEndpoint: string;
   initialState: {
     scope: AdminImageScope;
     group: string;

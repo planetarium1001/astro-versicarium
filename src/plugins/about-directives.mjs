@@ -23,7 +23,7 @@ const shouldTransformAboutDirectives = (file, options = {}) => {
   return ABOUT_SOURCE_PATH_RE.test(getVFilePath(file));
 };
 
-export const normalizeAboutDirectiveFriendUrl = (value) => {
+const normalizeAboutDirectiveFriendUrl = (value) => {
   const trimmed = toOptionalString(value);
   if (!trimmed) return '';
 
@@ -36,7 +36,7 @@ export const normalizeAboutDirectiveFriendUrl = (value) => {
   }
 };
 
-export const normalizeAboutDirectiveAvatarSource = (value, base = '/') => {
+const normalizeAboutDirectiveAvatarSource = (value, base = '/') => {
   const trimmed = toOptionalString(value);
   if (!trimmed) return '';
 

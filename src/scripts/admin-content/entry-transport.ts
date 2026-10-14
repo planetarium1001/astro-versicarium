@@ -2,10 +2,13 @@ import type {
   AdminBitsEditorPayload,
   AdminBitsEditorValues,
   AdminContentEditorPayload,
-  AdminEssayEditorPayload,
-  AdminEssayEditorValues,
-  AdminMemoEditorPayload,
-  AdminMemoEditorValues
+  AdminContentEditorValues,
+  AdminBlogEditorPayload,
+  AdminBlogEditorValues,
+  AdminDevlogEditorPayload,
+  AdminDevlogEditorValues,
+  AdminProjectsEditorPayload,
+  AdminProjectsEditorValues
 } from '../../lib/admin-console/content-editor-payload';
 import type { AdminContentEntryWriteCollectionKey } from '../../lib/admin-console/content-collections';
 import type { AdminContentValidationIssue } from '../../lib/admin-console/content-entry-contract';
@@ -116,7 +119,7 @@ export const getPayloadPreviewResult = (value: unknown): AdminContentPreviewResu
   };
 };
 
-const isAdminEssayEditorValues = (value: unknown): value is AdminEssayEditorValues =>
+const isAdminBlogEditorValues = (value: unknown): value is AdminBlogEditorValues =>
   isRecord(value)
   && typeof value.title === 'string'
   && typeof value.description === 'string'
@@ -125,7 +128,6 @@ const isAdminEssayEditorValues = (value: unknown): value is AdminEssayEditorValu
   && typeof value.updatedAt === 'string'
   && typeof value.tagsText === 'string'
   && typeof value.draft === 'boolean'
-  && typeof value.archive === 'boolean'
   && typeof value.slug === 'string'
   && typeof value.cover === 'string'
   && typeof value.badge === 'string';
@@ -141,20 +143,40 @@ const isAdminBitsEditorValues = (value: unknown): value is AdminBitsEditorValues
   && typeof value.authorAvatar === 'string'
   && typeof value.imagesText === 'string';
 
-const isAdminMemoEditorValues = (value: unknown): value is AdminMemoEditorValues =>
+/** projects / devlog 的字段袋校验必须与 payload builder 的字段一一对应。 */
+const isAdminProjectsEditorValues = (value: unknown): value is AdminProjectsEditorValues =>
   isRecord(value)
   && typeof value.title === 'string'
   && typeof value.subtitle === 'string'
+  && typeof value.description === 'string'
+  && typeof value.type === 'string'
+  && typeof value.tagsText === 'string'
+  && typeof value.icon === 'string'
+  && typeof value.repo === 'string'
+  && typeof value.repoLabel === 'string'
+  && typeof value.demo === 'string'
+  && typeof value.demoLabel === 'string'
   && typeof value.date === 'string'
-  && typeof value.draft === 'boolean'
-  && typeof value.slug === 'string';
+  && typeof value.draft === 'boolean';
+
+const isAdminDevlogEditorValues = (value: unknown): value is AdminDevlogEditorValues =>
+  isRecord(value)
+  && typeof value.title === 'string'
+  && typeof value.date === 'string'
+  && typeof value.project === 'string'
+  && typeof value.kind === 'string'
+  && typeof value.description === 'string'
+  && typeof value.draft === 'boolean';
 
 const isAdminAboutEditorValues = (value: unknown): value is AdminAboutEditorValues =>
   isRecord(value) && Object.keys(value).length === 0;
 
-const isAdminEssayEditorPayload = (value: unknown): value is AdminEssayEditorPayload =>
+const makePayloadGuard = <Payload>(
+  collection: string,
+  isValues: (value: unknown) => boolean
+) => (value: unknown): value is Payload =>
   isRecord(value)
-  && value.collection === 'essay'
+  && value.collection === collection
   && typeof value.entryId === 'string'
   && typeof value.publicEntryId === 'string'
   && typeof value.defaultPublicSlug === 'string'
@@ -163,7 +185,30 @@ const isAdminEssayEditorPayload = (value: unknown): value is AdminEssayEditorPay
   && value.writable === true
   && value.readonlyReason === null
   && typeof value.bodyText === 'string'
-  && isAdminEssayEditorValues(value.values);
+  && isValues(value.values);
+
+const isAdminProjectsEditorPayload = makePayloadGuard<AdminProjectsEditorPayload>(
+  'projects',
+  isAdminProjectsEditorValues
+);
+
+const isAdminDevlogEditorPayload = makePayloadGuard<AdminDevlogEditorPayload>(
+  'devlog',
+  isAdminDevlogEditorValues
+);
+
+const isAdminBlogEditorPayload = (value: unknown): value is AdminBlogEditorPayload =>
+  isRecord(value)
+  && value.collection === 'blog'
+  && typeof value.entryId === 'string'
+  && typeof value.publicEntryId === 'string'
+  && typeof value.defaultPublicSlug === 'string'
+  && typeof value.revision === 'string'
+  && typeof value.relativePath === 'string'
+  && value.writable === true
+  && value.readonlyReason === null
+  && typeof value.bodyText === 'string'
+  && isAdminBlogEditorValues(value.values);
 
 const isAdminBitsEditorPayload = (value: unknown): value is AdminBitsEditorPayload =>
   isRecord(value)
@@ -177,19 +222,6 @@ const isAdminBitsEditorPayload = (value: unknown): value is AdminBitsEditorPaylo
   && value.readonlyReason === null
   && typeof value.bodyText === 'string'
   && isAdminBitsEditorValues(value.values);
-
-const isAdminMemoEditorPayload = (value: unknown): value is AdminMemoEditorPayload =>
-  isRecord(value)
-  && value.collection === 'memo'
-  && typeof value.entryId === 'string'
-  && typeof value.publicEntryId === 'string'
-  && typeof value.defaultPublicSlug === 'string'
-  && typeof value.revision === 'string'
-  && typeof value.relativePath === 'string'
-  && value.writable === true
-  && value.readonlyReason === null
-  && typeof value.bodyText === 'string'
-  && isAdminMemoEditorValues(value.values);
 
 const isAdminAboutEditorPayload = (value: unknown): value is AdminAboutEditorPayload =>
   isRecord(value)
@@ -207,45 +239,33 @@ const isAdminAboutEditorPayload = (value: unknown): value is AdminAboutEditorPay
 export const getPayloadEditorPayload = (value: unknown): AdminContentEditorPayload | null => {
   if (!isRecord(value) || !isRecord(value.payload)) return null;
   const { payload } = value;
-  if (isAdminEssayEditorPayload(payload)) return payload;
+  if (isAdminBlogEditorPayload(payload)) return payload;
+  if (isAdminProjectsEditorPayload(payload)) return payload;
   if (isAdminBitsEditorPayload(payload)) return payload;
-  if (isAdminMemoEditorPayload(payload)) return payload;
+  if (isAdminDevlogEditorPayload(payload)) return payload;
   if (isAdminAboutEditorPayload(payload)) return payload;
   return null;
 };
 
-export const getPayloadEssayPayload = (value: unknown): AdminEssayEditorPayload | null => {
-  const payload = getPayloadEditorPayload(value);
-  return isAdminEssayEditorPayload(payload) ? payload : null;
-};
-
-export const getPayloadEssayValues = (value: unknown): AdminEssayEditorValues | null => {
-  const payload = getPayloadEssayPayload(value);
-  return payload ? payload.values : null;
-};
-
-export const getPayloadEssayBody = (value: unknown): string | null => {
-  const payload = getPayloadEssayPayload(value);
-  return payload ? payload.bodyText : null;
-};
-
-export function getPayloadEditorValues(value: unknown, collection: 'essay'): AdminEssayEditorValues | null;
+export function getPayloadEditorValues(value: unknown, collection: 'blog'): AdminBlogEditorValues | null;
+export function getPayloadEditorValues(value: unknown, collection: 'projects'): AdminProjectsEditorValues | null;
 export function getPayloadEditorValues(value: unknown, collection: 'bits'): AdminBitsEditorValues | null;
-export function getPayloadEditorValues(value: unknown, collection: 'memo'): AdminMemoEditorValues | null;
+export function getPayloadEditorValues(value: unknown, collection: 'devlog'): AdminDevlogEditorValues | null;
 export function getPayloadEditorValues(value: unknown, collection: 'about'): AdminAboutEditorValues | null;
 export function getPayloadEditorValues(
   value: unknown,
   collection: AdminContentEntryWriteCollectionKey
-): AdminEssayEditorValues | AdminBitsEditorValues | AdminMemoEditorValues | AdminAboutEditorValues | null;
+): AdminContentEditorValues | null;
 export function getPayloadEditorValues(
   value: unknown,
   collection: AdminContentEntryWriteCollectionKey
-): AdminEssayEditorValues | AdminBitsEditorValues | AdminMemoEditorValues | AdminAboutEditorValues | null {
+): AdminContentEditorValues | null {
   const payload = getPayloadEditorPayload(value);
   if (!payload || payload.collection !== collection || !payload.writable) return null;
-  if (collection === 'essay' && isAdminEssayEditorPayload(payload)) return payload.values;
+  if (collection === 'blog' && isAdminBlogEditorPayload(payload)) return payload.values;
+  if (collection === 'projects' && isAdminProjectsEditorPayload(payload)) return payload.values;
   if (collection === 'bits' && isAdminBitsEditorPayload(payload)) return payload.values;
-  if (collection === 'memo' && isAdminMemoEditorPayload(payload)) return payload.values;
+  if (collection === 'devlog' && isAdminDevlogEditorPayload(payload)) return payload.values;
   if (collection === 'about' && isAdminAboutEditorPayload(payload)) return payload.values;
   return null;
 }
@@ -256,9 +276,10 @@ export const getPayloadEditorBody = (
 ): string | null => {
   const payload = getPayloadEditorPayload(value);
   if (!payload || payload.collection !== collection) return null;
-  if (collection === 'essay' && isAdminEssayEditorPayload(payload)) return payload.bodyText;
+  if (collection === 'blog' && isAdminBlogEditorPayload(payload)) return payload.bodyText;
+  if (collection === 'projects' && isAdminProjectsEditorPayload(payload)) return payload.bodyText;
   if (collection === 'bits' && isAdminBitsEditorPayload(payload)) return payload.bodyText;
-  if (collection === 'memo' && isAdminMemoEditorPayload(payload)) return payload.bodyText;
+  if (collection === 'devlog' && isAdminDevlogEditorPayload(payload)) return payload.bodyText;
   if (collection === 'about' && isAdminAboutEditorPayload(payload)) return payload.bodyText;
   return null;
 };

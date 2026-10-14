@@ -30,16 +30,18 @@ const mockedSourceIndex = vi.mocked(sourceIndexModule);
 const { getAdminContentEntryListHref } = contentRoutesModule;
 
 const COLLECTION_LABELS: Record<AdminContentCollectionKey, string> = {
-  essay: '随笔',
-  bits: '絮语',
-  memo: '小记',
+  blog: '博客',
+  projects: '项目',
+  bits: '动态',
+  devlog: '更新',
   about: '关于'
 };
 
 const defaultManifest: AdminContentSourceManifest = {
-  essay: ['src/content/essay/essay-a.md', 'src/content/essay/essay-b.md'],
+  blog: ['src/content/blog/blog-a.md', 'src/content/blog/blog-b.md'],
+  projects: ['src/content/projects/project-a.md'],
   bits: ['src/content/bits/bits-a.md'],
-  memo: ['src/content/memo/index.md'],
+  devlog: ['src/content/devlog/devlog-a.md'],
   about: ['src/content/about/index.md']
 };
 
@@ -48,7 +50,7 @@ let bodyItemsByCollection: Record<AdminContentCollectionKey, AdminContentIndexIt
 let sourceCounts: AdminContentSourceCountMap;
 
 const createItem = (overrides: Partial<AdminContentIndexItem> = {}): AdminContentIndexItem => {
-  const collection = overrides.collection ?? 'essay';
+  const collection = overrides.collection ?? 'blog';
   return {
     collection,
     collectionLabel: COLLECTION_LABELS[collection],
@@ -57,9 +59,9 @@ const createItem = (overrides: Partial<AdminContentIndexItem> = {}): AdminConten
     title: 'Admin Console Guide',
     slug: 'admin-console-guide',
     relativePath: `src/content/${collection}/admin-console-guide.md`,
-    publicHref: '/archive/admin-console-guide/',
+    publicHref: '/blog/admin-console-guide/',
     isDraft: false,
-    archive: true,
+    archive: null,
     date: new Date('2026-04-01T00:00:00.000Z'),
     dateLabel: '2026-04-01',
     year: 2026,
@@ -72,7 +74,41 @@ const createItem = (overrides: Partial<AdminContentIndexItem> = {}): AdminConten
 };
 
 const createDefaultItems = (): Record<AdminContentCollectionKey, AdminContentIndexItem[]> => ({
-  essay: [createItem()],
+  blog: [createItem()],
+  projects: [
+    createItem({
+      collection: 'projects',
+      collectionLabel: '项目',
+      id: 'project-a',
+      publicEntryId: 'project-a',
+      title: 'Project A',
+      slug: 'project-a',
+      relativePath: 'src/content/projects/project-a.md',
+      publicHref: '/projects/#project-a',
+      archive: null,
+      date: new Date('2026-02-01T00:00:00.000Z'),
+      dateLabel: '2026-02-01',
+      tags: ['工程'],
+      searchHaystack: 'project a project-a projects'
+    })
+  ],
+  devlog: [
+    createItem({
+      collection: 'devlog',
+      collectionLabel: '更新',
+      id: 'devlog-a',
+      publicEntryId: 'devlog-a',
+      title: 'Devlog A',
+      slug: 'devlog-a',
+      relativePath: 'src/content/devlog/devlog-a.md',
+      publicHref: '/devlog/#devlog-a',
+      archive: null,
+      date: new Date('2026-02-02T00:00:00.000Z'),
+      dateLabel: '2026-02-02',
+      tags: ['Whono', 'fix'],
+      searchHaystack: 'devlog a devlog-a fix whono'
+    })
+  ],
   bits: [
     createItem({
       collection: 'bits',
@@ -88,23 +124,6 @@ const createDefaultItems = (): Record<AdminContentCollectionKey, AdminContentInd
       dateLabel: '2026-02-03',
       tags: ['bits'],
       searchHaystack: 'bits note bits-2026-02-03-2230 bits description'
-    })
-  ],
-  memo: [
-    createItem({
-      collection: 'memo',
-      collectionLabel: '小记',
-      id: 'index',
-      publicEntryId: 'index',
-      title: 'Memo',
-      slug: 'memo',
-      relativePath: 'src/content/memo/index.md',
-      publicHref: '/memo/',
-      archive: null,
-      date: new Date('2026-01-01T00:00:00.000Z'),
-      dateLabel: '2026-01-01',
-      tags: [],
-      searchHaystack: 'memo memo subtitle index'
     })
   ],
   about: [
@@ -155,17 +174,21 @@ const setSourceItems = (
     ...items
   };
   bodyItemsByCollection = {
-    essay: sourceItemsByCollection.essay.map((item) => ({
+    blog: sourceItemsByCollection.blog.map((item) => ({
       ...item,
-      searchHaystack: `${item.searchHaystack} essay body text`
+      searchHaystack: `${item.searchHaystack} blog body text`
+    })),
+    projects: sourceItemsByCollection.projects.map((item) => ({
+      ...item,
+      searchHaystack: `${item.searchHaystack} projects body text`
     })),
     bits: sourceItemsByCollection.bits.map((item) => ({
       ...item,
       searchHaystack: `${item.searchHaystack} bits body text`
     })),
-    memo: sourceItemsByCollection.memo.map((item) => ({
+    devlog: sourceItemsByCollection.devlog.map((item) => ({
       ...item,
-      searchHaystack: `${item.searchHaystack} memo body text`
+      searchHaystack: `${item.searchHaystack} devlog body text`
     })),
     about: sourceItemsByCollection.about.map((item) => ({
       ...item,
@@ -177,9 +200,10 @@ const setSourceItems = (
 
 const setSourceCounts = (counts: Partial<AdminContentSourceCountMap> = {}) => {
   sourceCounts = {
-    essay: 2,
+    blog: 2,
+    projects: 1,
     bits: 1,
-    memo: 1,
+    devlog: 1,
     about: 1,
     ...counts
   };
@@ -223,30 +247,30 @@ describe('admin-console/content', () => {
 
   it('normalizes malformed page params to the first page', () => {
     expect(getAdminContentFilterState(new URLSearchParams([
-      ['collection', 'essay'],
+      ['collection', 'blog'],
       ['page', '2']
     ])).page).toBe(2);
     expect(getAdminContentFilterState(new URLSearchParams([
-      ['collection', 'essay'],
+      ['collection', 'blog'],
       ['page', '2abc']
     ])).page).toBe(1);
     expect(getAdminContentFilterState(new URLSearchParams([
-      ['collection', 'essay'],
+      ['collection', 'blog'],
       ['page', '1.5']
     ])).page).toBe(1);
   });
 
   it('builds content list hrefs with source entryId query identity', () => {
-    expect(getAdminContentEntryListHref('essay')).toBe('/admin/content/?collection=essay');
-    expect(getAdminContentEntryListHref('essay', { entryId: 'drafts/my note.md' }))
-      .toBe('/admin/content/?collection=essay&entryId=drafts%2Fmy+note.md');
+    expect(getAdminContentEntryListHref('blog')).toBe('/admin/content/?collection=blog');
+    expect(getAdminContentEntryListHref('blog', { entryId: 'drafts/my note.md' }))
+      .toBe('/admin/content/?collection=blog&entryId=drafts%2Fmy+note.md');
   });
 
   it('filters content items by query, draft, tag and year', () => {
     const items = [
       createItem(),
       createItem({
-        id: 'essay/draft',
+        id: 'blog/draft',
         title: 'Draft Entry',
         slug: 'draft-entry',
         isDraft: true,
@@ -315,15 +339,15 @@ describe('admin-console/content', () => {
 
   it('loads source index data only for the selected collection scope', async () => {
     const pageData = await getAdminContentConsolePageData(new URLSearchParams([
-      ['collection', 'essay']
+      ['collection', 'blog']
     ]));
 
     expect(mockedSourceIndex.loadAdminContentSourceManifest).toHaveBeenCalledTimes(1);
     expect(mockedSourceIndex.getAdminContentSourceCounts).toHaveBeenCalledWith(defaultManifest);
     expect(mockedSourceIndex.loadAdminContentSourceIndex).toHaveBeenCalledTimes(1);
-    expect(mockedSourceIndex.loadAdminContentSourceIndex).toHaveBeenCalledWith(defaultManifest, 'essay');
+    expect(mockedSourceIndex.loadAdminContentSourceIndex).toHaveBeenCalledWith(defaultManifest, 'blog');
     expect(mockedSourceIndex.loadAdminContentSourceIndexWithBody).not.toHaveBeenCalled();
-    expect(pageData.totalCount).toBe(5);
+    expect(pageData.totalCount).toBe(6);
     expect(pageData.mode).toBe('collection');
     expect(pageData.pagination).toEqual({
       page: 1,
@@ -334,21 +358,22 @@ describe('admin-console/content', () => {
       hasNext: false
     });
     expect(pageData.collectionOptions).toEqual([
-      { value: 'all', label: '全部内容', count: 5 },
-      { value: 'essay', label: '随笔', count: 2 },
-      { value: 'bits', label: '絮语', count: 1 },
-      { value: 'memo', label: '小记', count: 1 },
+      { value: 'all', label: '全部内容', count: 6 },
+      { value: 'blog', label: '博客', count: 2 },
+      { value: 'projects', label: '项目', count: 1 },
+      { value: 'bits', label: '动态', count: 1 },
+      { value: 'devlog', label: '更新', count: 1 },
       { value: 'about', label: '关于', count: 1 }
     ]);
     expect('tagOptions' in pageData).toBe(false);
     expect(pageData.sections).toHaveLength(1);
-    expect(pageData.sections[0]?.collection).toBe('essay');
+    expect(pageData.sections[0]?.collection).toBe('blog');
     expect(pageData.sections[0]?.totalCount).toBe(2);
   });
 
   it('keeps legacy URL tag filters compatible without exposing tag options', async () => {
     const pageData = await getAdminContentConsolePageData(new URLSearchParams([
-      ['collection', 'essay'],
+      ['collection', 'blog'],
       ['tag', 'Missing Tag']
     ]));
 
@@ -360,13 +385,13 @@ describe('admin-console/content', () => {
 
   it('loads body search text only when a scoped query is active', async () => {
     const pageData = await getAdminContentConsolePageData(new URLSearchParams([
-      ['collection', 'essay'],
+      ['collection', 'blog'],
       ['q', 'body']
     ]));
 
     expect(mockedSourceIndex.loadAdminContentSourceIndex).not.toHaveBeenCalled();
     expect(mockedSourceIndex.loadAdminContentSourceIndexWithBody).toHaveBeenCalledTimes(1);
-    expect(mockedSourceIndex.loadAdminContentSourceIndexWithBody).toHaveBeenCalledWith(defaultManifest, 'essay');
+    expect(mockedSourceIndex.loadAdminContentSourceIndexWithBody).toHaveBeenCalledWith(defaultManifest, 'blog');
     expect(pageData.filteredCount).toBe(1);
     expect(pageData.sections[0]?.items[0]?.id).toBe('admin-console-guide');
   });
@@ -385,9 +410,9 @@ describe('admin-console/content', () => {
     expect(pageData.filterState.page).toBe(1);
     expect(pageData.pagination).toBeNull();
     expect(mockedSourceIndex.loadAdminContentSourceIndexWithBody).not.toHaveBeenCalled();
-    expect(mockedSourceIndex.loadAdminContentSourceIndex).toHaveBeenCalledTimes(4);
+    expect(mockedSourceIndex.loadAdminContentSourceIndex).toHaveBeenCalledTimes(5);
     expect(pageData.filteredCount).toBe(1);
-    expect(pageData.sections.find((section) => section.collection === 'essay')?.items[0]?.id)
+    expect(pageData.sections.find((section) => section.collection === 'blog')?.items[0]?.id)
       .toBe('admin-console-guide');
   });
 
@@ -453,22 +478,22 @@ describe('admin-console/content', () => {
 
   it('uses entryId as an exact source identity without public slug fallback', async () => {
     setSourceItems({
-      essay: [
+      blog: [
         createItem({
           id: 'source file',
           publicEntryId: 'public-slug',
-          relativePath: 'src/content/essay/source file.md'
+          relativePath: 'src/content/blog/source file.md'
         })
       ]
     });
 
     const matched = await getAdminContentConsolePageData(new URLSearchParams([
-      ['collection', 'essay'],
+      ['collection', 'blog'],
       ['entryId', 'source file'],
       ['q', 'body']
     ]));
     const unmatched = await getAdminContentConsolePageData(new URLSearchParams([
-      ['collection', 'essay'],
+      ['collection', 'blog'],
       ['entryId', 'public-slug']
     ]));
 
@@ -484,7 +509,7 @@ describe('admin-console/content', () => {
 
   it('ignores legacy entry query params', async () => {
     const pageData = await getAdminContentConsolePageData(new URLSearchParams([
-      ['collection', 'essay'],
+      ['collection', 'blog'],
       ['entry', 'admin-console-guide']
     ]));
 
@@ -495,42 +520,42 @@ describe('admin-console/content', () => {
 
   it('uses the source file path as the admin entry id when the public id is normalized', async () => {
     setSourceItems({
-      essay: [
+      blog: [
         createItem({
           id: 'admin-console-guide copy',
           publicEntryId: 'admin-console-guide-copy',
-          relativePath: 'src/content/essay/admin-console-guide copy.md',
-          publicHref: '/archive/admin-console-guide-copy/'
+          relativePath: 'src/content/blog/admin-console-guide copy.md',
+          publicHref: '/blog/admin-console-guide-copy/'
         })
       ]
     });
 
     const pageData = await getAdminContentConsolePageData(new URLSearchParams([
-      ['collection', 'essay']
+      ['collection', 'blog']
     ]));
     const item = pageData.sections[0]?.items[0];
 
     expect(item?.id).toBe('admin-console-guide copy');
     expect(item?.publicEntryId).toBe('admin-console-guide-copy');
-    expect(item?.relativePath).toBe('src/content/essay/admin-console-guide copy.md');
-    expect(item?.publicHref).toBe('/archive/admin-console-guide-copy/');
+    expect(item?.relativePath).toBe('src/content/blog/admin-console-guide copy.md');
+    expect(item?.publicHref).toBe('/blog/admin-console-guide-copy/');
   });
 
   it('paginates collection scope data in the page data layer', async () => {
     const entries = Array.from({ length: 25 }, (_, index) => createItem({
-      id: `essay-${String(index + 1).padStart(2, '0')}`,
-      publicEntryId: `essay-${String(index + 1).padStart(2, '0')}`,
-      title: `Essay ${index + 1}`
+      id: `blog-${String(index + 1).padStart(2, '0')}`,
+      publicEntryId: `blog-${String(index + 1).padStart(2, '0')}`,
+      title: `blog ${index + 1}`
     }));
-    setSourceItems({ essay: entries });
-    setSourceCounts({ essay: 25, bits: 0, memo: 0, about: 0 });
+    setSourceItems({ blog: entries });
+    setSourceCounts({ blog: 25, bits: 0, about: 0 });
 
     const secondPage = await getAdminContentConsolePageData(new URLSearchParams([
-      ['collection', 'essay'],
+      ['collection', 'blog'],
       ['page', '2']
     ]));
     const overBoundPage = await getAdminContentConsolePageData(new URLSearchParams([
-      ['collection', 'essay'],
+      ['collection', 'blog'],
       ['page', '99']
     ]));
 
@@ -552,16 +577,16 @@ describe('admin-console/content', () => {
       id: `overview-${index + 1}`,
       publicEntryId: `overview-${index + 1}`
     }));
-    setSourceItems({ essay: entries, bits: [], memo: [], about: [] });
-    setSourceCounts({ essay: 10, bits: 0, memo: 0, about: 0 });
+    setSourceItems({ blog: entries, bits: [], about: [] });
+    setSourceCounts({ blog: 10, bits: 0, about: 0 });
 
     const pageData = await getAdminContentConsolePageData(new URLSearchParams());
-    const essaySection = pageData.sections.find((section) => section.collection === 'essay');
+    const BlogSection = pageData.sections.find((section) => section.collection === 'blog');
 
     expect(pageData.mode).toBe('overview');
     expect(pageData.pagination).toBeNull();
-    expect(essaySection?.filteredCount).toBe(10);
-    expect(essaySection?.items).toHaveLength(8);
+    expect(BlogSection?.filteredCount).toBe(10);
+    expect(BlogSection?.items).toHaveLength(8);
   });
 
   it('uses source-index public hrefs in the bits list without loading body index', async () => {
@@ -598,13 +623,13 @@ describe('admin-console/content', () => {
         title: `Published ${index + 1}`,
         slug: id,
         relativePath: `src/content/bits/${id}.md`,
-        publicHref: id === 'published-20' ? '/bits/page/2/#bit-published-20' : `/bits/#bit-${id}`,
+        publicHref: `/bits/#bit-${id}`,
         archive: null,
         searchHaystack: `published ${index + 1}`
       });
     });
     setSourceItems({ bits: [draftItem, ...publishedEntries] });
-    setSourceCounts({ essay: 0, bits: 21, memo: 0, about: 0 });
+    setSourceCounts({ blog: 0, bits: 21, about: 0 });
 
     const firstPage = await getAdminContentConsolePageData(new URLSearchParams([
       ['collection', 'bits']
@@ -617,20 +642,11 @@ describe('admin-console/content', () => {
     const lastPublishedItem = secondPage.sections[0]?.items.find((item) => item.id === 'published-20');
 
     expect(draft?.publicHref).toBeNull();
-    expect(lastPublishedItem?.publicHref).toBe('/bits/page/2/#bit-published-20');
+    expect(lastPublishedItem?.publicHref).toBe('/bits/#bit-published-20');
   });
 
   it('returns readable public fallback labels for non-public entries', () => {
     expect(getAdminContentPublicFallbackLabel(createItem({ isDraft: true, publicHref: null }))).toContain('draft');
-    expect(
-      getAdminContentPublicFallbackLabel(createItem({
-        collection: 'memo',
-        collectionLabel: '小记',
-        id: 'index',
-        publicHref: null,
-        relativePath: 'src/content/memo/index.md'
-      }))
-    ).toContain('/memo/');
     expect(
       getAdminContentPublicFallbackLabel(createItem({
         collection: 'about',
@@ -684,7 +700,7 @@ describe('admin-console/content', () => {
 
   it('drops article-only filter params when building fixed-page scope links', () => {
     const filterState = getAdminContentFilterState(new URLSearchParams([
-      ['collection', 'essay'],
+      ['collection', 'blog'],
       ['q', 'about body'],
       ['draft', 'draft'],
       ['tag', 'Admin'],
@@ -695,8 +711,6 @@ describe('admin-console/content', () => {
 
     expect(getAdminContentFilterHref(filterState, { collection: 'about' }))
       .toBe('/admin/content/?q=about+body&collection=about');
-    expect(getAdminContentFilterHref(filterState, { collection: 'memo' }))
-      .toBe('/admin/content/?q=about+body&collection=memo');
     expect(getAdminContentFilterHref(filterState, { collection: 'bits' }))
       .toBe('/admin/content/?q=about+body&collection=bits&draft=draft&sort=title&year=2026');
     expect(getAdminContentFilterHref(filterState, { collection: 'all' }))

@@ -1,0 +1,140 @@
+/* scope-pills.css — 一级胶囊条的共享样式（/archive/ 作用域胶囊、/bits/ 年份胶囊）。
+   参数逐行对齐原 /bits/ 年份筛选胶囊（见脚本里的 updateYearCursor / moveScopeCursor），
+   抽成共享层是为了避免两处各写一份而再次漂移。
+   脚本按 data-* 钩子工作，不依赖类名：
+   .scope-pills > .scope-pills__cursor（绝对定位滑块）+ button.scope-pills__item，
+   第一项必须是「全部」。 */
+.scope-pills {
+  /* 原 --bits-year-filter-h / --archive-scope-h 同值 */
+  --scope-pills-h: 34px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 68%, var(--bg));
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  min-height: var(--scope-pills-h);
+  width: fit-content;
+  max-width: 100%;
+  flex: 0 0 auto;
+  margin-top: 18px;
+  overflow: visible;
+  isolation: isolate;
+}
+
+.scope-pills__cursor {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  width: 0;
+  height: calc(100% - 6px);
+  border-radius: 999px;
+  background: color-mix(in srgb, #fff 92%, var(--panel));
+  box-shadow:
+    0 1px 1px rgba(17, 17, 17, 0.04),
+    0 6px 18px rgba(17, 17, 17, 0.06);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.42s cubic-bezier(0.34, 1.56, 0.64, 1),
+    width 0.42s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.24s ease;
+}
+
+.scope-pills[data-ready='true'] .scope-pills__cursor {
+  opacity: 1;
+}
+
+  /**
+   * 暗色下滑块必须是深色浮起面：用「面板 + 少量白」，浅色文案在其上对比充足（约 7:1）。
+   * 原来是 color-mix(#fff 92%, var(--panel))，暗色下接近纯白，
+   * 而激活项文案是 --text，白底白字不可视。
+   */
+:root[data-theme='dark'] .scope-pills__cursor {
+  background: color-mix(in srgb, #fff 14%, var(--panel));
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.35),
+    0 6px 18px rgba(0, 0, 0, 0.32);
+}
+
+.scope-pills__item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  min-width: fit-content;
+  /**
+   * 视觉高度 = calc(34px - 6px) = 28px，可点高度 44px 由 ::after 覆盖层撑出，
+   * 不占布局、不撑高胶囊条。
+   */
+  height: calc(var(--scope-pills-h) - 6px);
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--faint);
+  /* 字号与字体照搬原年份胶囊：不额外指定字体族，跟随页面正文字体。 */
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.24s ease,
+    color 0.24s ease;
+}
+
+/**
+ * 悬停只变色，不加底色（与原实现一致）。
+ */
+.scope-pills__item:hover,
+.scope-pills__item:focus-visible {
+  color: var(--text);
+}
+
+.scope-pills__item.is-active {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* 「全部」激活时不加粗（与原实现的 --all 特例一致） */
+.scope-pills__item:first-of-type.is-active {
+  font-weight: 400;
+}
+
+/* 触控热区：视觉 28px，可点 44px。check-touch-targets 按本伪元素判定 .scope-pills__item 的
+   有效触控高度；构建产物会把伪元素规范化为单冒号，功能不变。 */
+.scope-pills__item::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  height: var(--tap-min-h);
+  transform: translateY(-50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scope-pills__cursor,
+  .scope-pills__item {
+    transition: none;
+  }
+}
+
+/* ---------------- <=640px ---------------- */
+/**
+ * 窄屏胶囊尺寸照搬原年份胶囊：字号 13px、左右内边距 12px、容器高度 34px。
+ */
+@media (max-width: 640px) {
+  .scope-pills {
+    gap: 6px;
+    margin-top: 14px;
+  }
+
+  .scope-pills__item {
+    padding: 0 12px;
+    font-size: 13px;
+  }
+}

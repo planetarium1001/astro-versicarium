@@ -3,18 +3,20 @@ import { access, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import {
   contentSourceEntryIdToPublicEntryId,
-  flattenEntryIdToSlug
+  flattenEntryIdToSlug,
+  slugifyEntryTitle
 } from '../../utils/slug-rules';
 import { buildAdminContentEntryEditorPayloadFromState } from './content-editor-payload';
-import type { AdminBitsEditorValues, AdminEssayEditorValues } from './content-editor-payload';
+import type { AdminBitsEditorValues, AdminBlogEditorValues } from './content-editor-payload';
 import {
-  buildEssayFrontmatterFromValues,
-  loadEssayPublicSlugUsage,
-  type AdminEssayFrontmatter,
-  type AdminEssayPublicSlugUsage,
-  parseAdminEssayEditorInput,
-  validateEssayPublicSlug
-} from './content-essay-frontmatter';
+  buildBlogFrontmatterFromValues,
+  loadBlogPublicSlugUsage,
+  type AdminBlogFrontmatter,
+  type AdminBlogPublicSlugUsage,
+  parseAdminBlogEditorInput,
+  parseTagsText,
+  validateBlogPublicSlug
+} from './content-blog-frontmatter';
 import type { AdminContentValidationIssue } from './content-entry-contract';
 import {
   type AdminContentCreatableCollectionKey
@@ -26,18 +28,23 @@ import {
   toAdminContentRelativeProjectPath
 } from './content-entry-source';
 import {
-  createAdminContentValidationIssue as createIssue
+  createAdminContentValidationIssue as createIssue,
+  isRecord
 } from './content-entry-utils';
 import { getAdminContentEntryEditHref } from './content-routes';
-import { buildBitsFrontmatterFromValues } from './content-write-plan';
+import {
+  buildBitsFrontmatterFromValues,
+  parseAdminDevlogEditorInput,
+  parseAdminProjectsEditorInput
+} from './content-write-plan';
 import { patchMarkdownFrontmatter } from './frontmatter';
 
 type AdminContentCreateBaseInput = {
   frontmatter: unknown;
 };
 
-type AdminEssayContentCreateInput = AdminContentCreateBaseInput & {
-  collection: 'essay';
+type AdminBlogContentCreateInput = AdminContentCreateBaseInput & {
+  collection: 'blog';
   entryId: string;
 };
 
@@ -45,11 +52,17 @@ type AdminBitsContentCreateInput = AdminContentCreateBaseInput & {
   collection: 'bits';
 };
 
-export type AdminContentCreateInput =
-  | AdminEssayContentCreateInput
+type AdminTitleListContentCreateInput = AdminContentCreateBaseInput & {
+  collection: 'projects' | 'devlog';
+  entryId: string;
+};
+
+type AdminContentCreateInput =
+  | AdminBlogContentCreateInput
+  | AdminTitleListContentCreateInput
   | AdminBitsContentCreateInput;
 
-export type AdminContentCreatePlan = {
+type AdminContentCreatePlan = {
   collection: AdminContentCreatableCollectionKey;
   entryId: string;
   publicEntryId: string;
@@ -65,9 +78,11 @@ const EMPTY_MARKDOWN_SOURCE = '---\n---\n\n';
 const AUTO_SLUG_HASH_LENGTHS = [4, 5, 6] as const;
 const BITS_CREATE_DATETIME_RE = /^(\d{4})-(0[1-9]|1[0-2])-(\d{2})T([01]\d|2[0-3]):([0-5]\d)(?::00)?(Z|[+-](?:[01]\d|2[0-3]):?[0-5]\d)$/;
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
+/**
+ * 规范化创建用的 entryId：去 `.md` / 去 `/index` / 拒绝 `.` 与 `..`，并对每个路径段做一次 slug 化。
+ * 客户端用 `buildContentEntryId` 生成 `YYYY-MM-DD-title`，但接口也可能被手工调用，
+ * 带空格或特殊字符的文件名会破坏目录结构。`slugifyEntryTitle` 对已合规的 id 幂等。
+ */
 const normalizeCreateEntryId = (entryId: string): string => {
   const withoutExtension = entryId.trim().replace(/\\/g, '/').replace(/\.md$/i, '');
   const normalized = withoutExtension.endsWith('/index')
@@ -82,10 +97,15 @@ const normalizeCreateEntryId = (entryId: string): string => {
     throw new AdminContentEntryResolutionError('invalid-entry-id', `不支持的 content entryId：${entryId}`);
   }
 
-  return normalized;
+  const slugified = segments.map((segment) => slugifyEntryTitle(segment));
+  if (slugified.some((segment) => !segment)) {
+    throw new AdminContentEntryResolutionError('invalid-entry-id', `entryId 不能 slug 化为空：${entryId}`);
+  }
+
+  return slugified.join('/');
 };
 
-const buildEssayCreateValues = (values: AdminEssayEditorValues): AdminEssayEditorValues => ({
+const buildBlogCreateValues = (values: AdminBlogEditorValues): AdminBlogEditorValues => ({
   ...values,
   draft: true
 });
@@ -101,7 +121,7 @@ const buildBitsCreateValues = (date: string): AdminBitsEditorValues => ({
   imagesText: ''
 });
 
-const getShortEssayDateSlugPart = (date: string): string => {
+const getShortBlogDateSlugPart = (date: string): string => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
   if (!match) return '000000';
 
@@ -119,26 +139,26 @@ const buildStableSlugHash = (
   return Number.parseInt(digest, 16).toString(36).padStart(length, '0').slice(0, length);
 };
 
-const isEssayPublicSlugAvailable = async (
+const isBlogPublicSlugAvailable = async (
   publicEntryId: string,
-  slugUsage: AdminEssayPublicSlugUsage,
+  slugUsage: AdminBlogPublicSlugUsage,
   slug?: string
 ): Promise<boolean> => {
-  const frontmatter: Pick<AdminEssayFrontmatter, 'slug'> = slug === undefined ? {} : { slug };
-  return (await validateEssayPublicSlug({ publicEntryId }, frontmatter, { slugUsage })).length === 0;
+  const frontmatter: Pick<AdminBlogFrontmatter, 'slug'> = slug === undefined ? {} : { slug };
+  return (await validateBlogPublicSlug({ publicEntryId }, frontmatter, { slugUsage })).length === 0;
 };
 
-const buildFallbackEssayPublicSlug = (
-  frontmatter: AdminEssayFrontmatter,
+const buildFallbackBlogPublicSlug = (
+  frontmatter: AdminBlogFrontmatter,
   entryId: string,
   hashLength: number
 ): string =>
-  `essay-${getShortEssayDateSlugPart(frontmatter.date)}-${buildStableSlugHash(
+  `blog-${getShortBlogDateSlugPart(frontmatter.date)}-${buildStableSlugHash(
     [frontmatter.title, frontmatter.date, entryId],
     hashLength
   )}`;
 
-const resolveEssayCreateFrontmatterSlug = async ({
+const resolveBlogCreateFrontmatterSlug = async ({
   entryId,
   publicEntryId,
   frontmatter,
@@ -146,27 +166,27 @@ const resolveEssayCreateFrontmatterSlug = async ({
 }: {
   entryId: string;
   publicEntryId: string;
-  frontmatter: AdminEssayFrontmatter;
-  slugUsage: AdminEssayPublicSlugUsage;
-}): Promise<AdminEssayFrontmatter> => {
+  frontmatter: AdminBlogFrontmatter;
+  slugUsage: AdminBlogPublicSlugUsage;
+}): Promise<AdminBlogFrontmatter> => {
   if (frontmatter.slug?.trim()) return frontmatter;
-  if (await isEssayPublicSlugAvailable(publicEntryId, slugUsage)) return frontmatter;
+  if (await isBlogPublicSlugAvailable(publicEntryId, slugUsage)) return frontmatter;
 
   const titleSlug = flattenEntryIdToSlug(contentSourceEntryIdToPublicEntryId(frontmatter.title));
-  if (titleSlug && await isEssayPublicSlugAvailable(publicEntryId, slugUsage, titleSlug)) {
+  if (titleSlug && await isBlogPublicSlugAvailable(publicEntryId, slugUsage, titleSlug)) {
     return { ...frontmatter, slug: titleSlug };
   }
 
   for (const hashLength of AUTO_SLUG_HASH_LENGTHS) {
-    const slug = buildFallbackEssayPublicSlug(frontmatter, entryId, hashLength);
-    if (await isEssayPublicSlugAvailable(publicEntryId, slugUsage, slug)) {
+    const slug = buildFallbackBlogPublicSlug(frontmatter, entryId, hashLength);
+    if (await isBlogPublicSlugAvailable(publicEntryId, slugUsage, slug)) {
       return { ...frontmatter, slug };
     }
   }
 
   return {
     ...frontmatter,
-    slug: buildFallbackEssayPublicSlug(
+    slug: buildFallbackBlogPublicSlug(
       frontmatter,
       entryId,
       AUTO_SLUG_HASH_LENGTHS.at(-1) ?? 6
@@ -233,8 +253,8 @@ const assertUnsupportedCreateCollection = (collection: never): never => {
   throw new AdminContentEntryResolutionError('invalid-entry-id', `当前 collection 暂未实现新增：${String(collection)}`);
 };
 
-const buildEssayContentCreatePlan = async (
-  input: AdminEssayContentCreateInput
+const buildBlogContentCreatePlan = async (
+  input: AdminBlogContentCreateInput
 ): Promise<AdminContentCreatePlan> => {
   const collection = input.collection;
   const entryId = normalizeCreateEntryId(input.entryId);
@@ -247,7 +267,7 @@ const buildEssayContentCreatePlan = async (
   const publicEntryId = contentSourceEntryIdToPublicEntryId(entryId) || entryId;
   const defaultPublicSlug = flattenEntryIdToSlug(publicEntryId);
 
-  const parsed = parseAdminEssayEditorInput(input.frontmatter);
+  const parsed = parseAdminBlogEditorInput(input.frontmatter);
   if (!parsed.values) {
     return {
       collection,
@@ -262,7 +282,7 @@ const buildEssayContentCreatePlan = async (
     };
   }
 
-  const next = buildEssayFrontmatterFromValues(buildEssayCreateValues(parsed.values));
+  const next = buildBlogFrontmatterFromValues(buildBlogCreateValues(parsed.values));
   if (!next.frontmatter) {
     return {
       collection,
@@ -292,15 +312,15 @@ const buildEssayContentCreatePlan = async (
     };
   }
 
-  const slugUsage = await loadEssayPublicSlugUsage();
-  const frontmatter = await resolveEssayCreateFrontmatterSlug({
+  const slugUsage = await loadBlogPublicSlugUsage();
+  const frontmatter = await resolveBlogCreateFrontmatterSlug({
     entryId,
     publicEntryId,
     frontmatter: next.frontmatter,
     slugUsage
   });
 
-  const slugIssues = await validateEssayPublicSlug({ publicEntryId }, frontmatter, { slugUsage });
+  const slugIssues = await validateBlogPublicSlug({ publicEntryId }, frontmatter, { slugUsage });
   if (slugIssues.length > 0) {
     return {
       collection,
@@ -415,12 +435,128 @@ const buildBitsContentCreatePlan = async (
   };
 };
 
+/**
+ * projects / devlog 都是「标题 + 日期」的列表型集合，创建计划结构一致，因此共用一份实现。
+ * 新字段不需要在建条目时写入，由编辑页的字段矩阵负责。
+ */
+const buildTitleListContentCreatePlan = async (
+  input: AdminTitleListContentCreateInput
+): Promise<AdminContentCreatePlan> => {
+  const collection = input.collection;
+  const parsed = collection === 'projects'
+    ? parseAdminProjectsEditorInput(input.frontmatter)
+    : parseAdminDevlogEditorInput(input.frontmatter);
+  if (!parsed.values) {
+    return {
+      collection,
+      entryId: '',
+      publicEntryId: '',
+      defaultPublicSlug: '',
+      sourcePath: '',
+      relativePath: '',
+      sourceText: '',
+      editHref: '',
+      issues: parsed.issues
+    };
+  }
+
+  const entryId = normalizeCreateEntryId(input.entryId);
+  const sourcePathCandidates = getAdminContentEntrySourcePathCandidates(collection, entryId);
+  const [sourcePath] = sourcePathCandidates;
+  if (!sourcePath) {
+    throw new AdminContentEntryResolutionError('source-not-found', `未找到 content 源文件候选：${collection}/${entryId}`);
+  }
+  const relativePath = toAdminContentRelativeProjectPath(sourcePath);
+  const publicEntryId = contentSourceEntryIdToPublicEntryId(entryId) || entryId;
+  const defaultPublicSlug = flattenEntryIdToSlug(publicEntryId);
+  const editHref = getAdminContentEntryEditHref(collection, entryId);
+
+  const existingSourcePath = await findExistingFile(sourcePathCandidates);
+  if (existingSourcePath) {
+    return {
+      collection,
+      entryId,
+      publicEntryId,
+      defaultPublicSlug,
+      sourcePath,
+      relativePath,
+      sourceText: '',
+      editHref,
+      issues: [createIssue('entryId', `源文件已存在：${toAdminContentRelativeProjectPath(existingSourcePath)}`)]
+    };
+  }
+
+  const title = parsed.values.title.trim();
+  if (!title) {
+    return {
+      collection,
+      entryId,
+      publicEntryId,
+      defaultPublicSlug,
+      sourcePath,
+      relativePath,
+      sourceText: '',
+      editHref,
+      issues: [createIssue('title', 'frontmatter.title 不能为空')]
+    };
+  }
+
+  const dateText = parsed.values.date.trim();
+  const date = dateText ? new Date(dateText) : new Date();
+  if (Number.isNaN(date.valueOf())) {
+    return {
+      collection,
+      entryId,
+      publicEntryId,
+      defaultPublicSlug,
+      sourcePath,
+      relativePath,
+      sourceText: '',
+      editHref,
+      issues: [createIssue('date', 'frontmatter.date 必须是有效的 YYYY-MM-DD 或 ISO 8601 日期时间')]
+    };
+  }
+
+  const tags = collection === 'projects' && 'tagsText' in parsed.values
+    ? parseTagsText(parsed.values.tagsText)
+    : [];
+
+  const frontmatter: Record<string, unknown> = {
+    title,
+    date: date.toISOString(),
+    draft: true,
+    ...(collection === 'projects' ? { tags } : {})
+  };
+
+  return {
+    collection,
+    entryId,
+    publicEntryId,
+    defaultPublicSlug,
+    sourcePath,
+    relativePath,
+    sourceText: patchMarkdownFrontmatter(
+      EMPTY_MARKDOWN_SOURCE,
+      Object.entries(frontmatter).map(([key, value]) => ({
+        path: [key],
+        value,
+        action: 'set' as const
+      }))
+    ),
+    editHref,
+    issues: []
+  };
+};
+
 export const buildAdminContentCreatePlan = async (
   input: AdminContentCreateInput
 ): Promise<AdminContentCreatePlan> => {
   switch (input.collection) {
-    case 'essay':
-      return buildEssayContentCreatePlan(input);
+    case 'blog':
+      return buildBlogContentCreatePlan(input);
+    case 'projects':
+    case 'devlog':
+      return buildTitleListContentCreatePlan(input);
     case 'bits':
       return buildBitsContentCreatePlan(input);
     default:

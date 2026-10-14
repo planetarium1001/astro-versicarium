@@ -1,7 +1,7 @@
 import { normalizeBitsAvatarPath } from '../../utils/format';
 import {
-  parseEssayDateInput,
-  parseEssayPublishedAtInput
+  parseBlogDateInput,
+  parseBlogPublishedAtInput
 } from '../../utils/date-only';
 import { normalizeAdminBitsImageSource } from './image-shared';
 import {
@@ -9,30 +9,30 @@ import {
   replaceMarkdownBody,
   type FrontmatterPatch
 } from './frontmatter';
-import { findMissingMarkdownBodyLocalImageReferences } from './essay-image-references';
+import { findMissingMarkdownBodyLocalImageReferences } from './blog-image-references';
 import { buildAdminAboutWritePlan } from './content-about-contract';
 import {
-  buildEssayFrontmatterFromValues,
-  parseAdminEssayEditorInput,
+  buildBlogFrontmatterFromValues,
+  parseAdminBlogEditorInput,
   parseTagsText,
-  validateEssayPublicSlug,
+  validateBlogPublicSlug,
   validateRoutableTags,
-  type AdminEssayOptionalInputMode
-} from './content-essay-frontmatter';
+  type AdminBlogOptionalInputMode
+} from './content-blog-frontmatter';
 import type { AdminContentValidationIssue } from './content-entry-contract';
+import type { AdminContentEntryWriteCollectionKey } from './content-collections';
 import {
-  getAdminContentCollectionCapability,
-  type AdminContentEntryWriteCollectionKey
-} from './content-collections';
-import {
-  AdminContentEntryResolutionError,
-  getAdminContentReadOnlyReason,
   loadAdminContentSourceState,
   type AdminContentSourceState
 } from './content-entry-source';
-import type {
-  AdminBitsEditorValues,
-  AdminEssayEditorValues
+import {
+  assertAdminContentEntryWritable,
+  getRequiredBooleanField,
+  getRequiredStringField,
+  type AdminBitsEditorValues,
+  type AdminBlogEditorValues,
+  type AdminDevlogEditorValues,
+  type AdminProjectsEditorValues
 } from './content-editor-payload';
 import {
   createAdminContentValidationIssue as createIssue,
@@ -41,14 +41,14 @@ import {
   normalizeOptionalText
 } from './content-entry-utils';
 
-export type AdminBitsImage = {
+type AdminBitsImage = {
   src: string;
   width?: number;
   height?: number;
   alt?: string;
 };
 
-export type AdminBitsFrontmatter = {
+type AdminBitsFrontmatter = {
   title?: string;
   description?: string;
   date: string;
@@ -73,28 +73,6 @@ type FrontmatterDiffField = {
   path: readonly string[];
   currentValue: unknown;
   nextValue: unknown;
-};
-
-const getRequiredStringField = (
-  input: Record<string, unknown>,
-  field: string,
-  issues: AdminContentValidationIssue[]
-): string => {
-  const value = input[field];
-  if (typeof value === 'string') return value;
-  issues.push(createIssue(field, `frontmatter.${field} 必须是字符串`));
-  return '';
-};
-
-const getRequiredBooleanField = (
-  input: Record<string, unknown>,
-  field: string,
-  issues: AdminContentValidationIssue[]
-): boolean => {
-  const value = input[field];
-  if (typeof value === 'boolean') return value;
-  issues.push(createIssue(field, `frontmatter.${field} 必须是布尔值`));
-  return false;
 };
 
 const POSITIVE_INTEGER_PATTERN = /^[1-9]\d*$/;
@@ -311,7 +289,7 @@ const getCurrentStringArrayValue = (
     : value;
 };
 
-type AdminEssayCurrentFrontmatter = {
+type AdminBlogCurrentFrontmatter = {
   title: unknown;
   description: unknown;
   date: unknown;
@@ -321,7 +299,6 @@ type AdminEssayCurrentFrontmatter = {
   preservedUpdatedAt?: string;
   tags: unknown;
   draft: unknown;
-  archive: unknown;
   slug: unknown;
   cover: unknown;
   badge: unknown;
@@ -337,16 +314,16 @@ type AdminBitsCurrentFrontmatter = {
   images: unknown;
 };
 
-const buildEssayCurrentFrontmatter = (state: AdminContentSourceState): AdminEssayCurrentFrontmatter => {
+const buildBlogCurrentFrontmatter = (state: AdminContentSourceState): AdminBlogCurrentFrontmatter => {
   const frontmatter = state.rawFrontmatter;
   const currentDate = getCurrentTextValue(frontmatter, 'date', '');
-  const dateResult = typeof currentDate === 'string' ? parseEssayDateInput(currentDate) : null;
+  const dateResult = typeof currentDate === 'string' ? parseBlogDateInput(currentDate) : null;
   const currentPublishedAt = getCurrentOptionalTextValue(frontmatter, 'publishedAt');
   const preservedPublishedAt = typeof currentPublishedAt === 'string'
-    ? (parseEssayPublishedAtInput(currentPublishedAt) ? currentPublishedAt : undefined)
+    ? (parseBlogPublishedAtInput(currentPublishedAt) ? currentPublishedAt : undefined)
     : dateResult?.publishedAtText;
   const currentUpdatedAt = getCurrentOptionalTextValue(frontmatter, 'updatedAt');
-  const currentUpdatedAtResult = parseEssayDateInput(currentUpdatedAt);
+  const currentUpdatedAtResult = parseBlogDateInput(currentUpdatedAt);
 
   return {
     title: getCurrentTextValue(frontmatter, 'title', ''),
@@ -358,7 +335,6 @@ const buildEssayCurrentFrontmatter = (state: AdminContentSourceState): AdminEssa
     ...(currentUpdatedAtResult ? { preservedUpdatedAt: currentUpdatedAtResult.dateText } : {}),
     tags: getCurrentStringArrayValue(frontmatter, 'tags', []),
     draft: getCurrentBooleanValue(frontmatter, 'draft', false),
-    archive: getCurrentBooleanValue(frontmatter, 'archive', true),
     slug: getCurrentOptionalTextValue(frontmatter, 'slug'),
     cover: getCurrentOptionalTextValue(frontmatter, 'cover'),
     badge: getCurrentOptionalTextValue(frontmatter, 'badge')
@@ -434,19 +410,19 @@ const buildFrontmatterDiff = (
   return { changedFields, patches };
 };
 
-const buildEssayWritePlan = async (
+const buildBlogWritePlan = async (
   state: AdminContentSourceState,
-  values: AdminEssayEditorValues,
+  values: AdminBlogEditorValues,
   bodyInput?: string,
   options: {
-    publishedAtInputMode?: AdminEssayOptionalInputMode;
-    updatedAtInputMode?: AdminEssayOptionalInputMode;
+    publishedAtInputMode?: AdminBlogOptionalInputMode;
+    updatedAtInputMode?: AdminBlogOptionalInputMode;
   } = {}
 ): Promise<AdminWritePlan> => {
-  const current = buildEssayCurrentFrontmatter(state);
+  const current = buildBlogCurrentFrontmatter(state);
   const shouldPreservePublishedAt = options.publishedAtInputMode === 'missing';
   const shouldPreserveUpdatedAt = options.updatedAtInputMode === 'missing';
-  const next = buildEssayFrontmatterFromValues(values, {
+  const next = buildBlogFrontmatterFromValues(values, {
     ...(shouldPreservePublishedAt && current.preservedPublishedAt
       ? { preservedPublishedAt: current.preservedPublishedAt }
       : {}),
@@ -458,7 +434,7 @@ const buildEssayWritePlan = async (
     return { issues: next.issues, changedFields: [], patches: [] };
   }
 
-  const slugIssues = await validateEssayPublicSlug(state, next.frontmatter);
+  const slugIssues = await validateBlogPublicSlug(state, next.frontmatter);
   if (slugIssues.length > 0) {
     return { issues: slugIssues, changedFields: [], patches: [] };
   }
@@ -487,7 +463,6 @@ const buildEssayWritePlan = async (
     { field: 'updatedAt', path: ['updatedAt'], currentValue: current.updatedAt, nextValue: next.frontmatter.updatedAt },
     { field: 'tags', path: ['tags'], currentValue: current.tags, nextValue: next.frontmatter.tags },
     { field: 'draft', path: ['draft'], currentValue: current.draft, nextValue: next.frontmatter.draft },
-    { field: 'archive', path: ['archive'], currentValue: current.archive, nextValue: next.frontmatter.archive },
     { field: 'slug', path: ['slug'], currentValue: current.slug, nextValue: next.frontmatter.slug },
     { field: 'cover', path: ['cover'], currentValue: current.cover, nextValue: next.frontmatter.cover },
     { field: 'badge', path: ['badge'], currentValue: current.badge, nextValue: next.frontmatter.badge }
@@ -505,6 +480,127 @@ const buildEssayWritePlan = async (
     patches,
     ...(bodyInput !== undefined ? { bodyText: bodyInput } : {})
   };
+};
+
+const HTTPS_URL_RE = /^https:\/\/[^\s]+$/;
+
+const getCurrentOptionalText = (
+  frontmatter: Record<string, unknown>,
+  key: string
+): string | undefined => {
+  if (!hasOwn(frontmatter, key)) return undefined;
+  const value = frontmatter[key];
+  if (value == null) return undefined;
+  return typeof value === 'string' ? value : String(value);
+};
+
+/**
+ * projects / devlog 的 frontmatter 全部是普通文本字段，共用一个「字段袋 → 字段矩阵」实现。
+ * 新字段必须登记进字段矩阵，否则不会被写回且不会报错。
+ */
+const buildTextFieldWritePlan = (
+  state: AdminContentSourceState,
+  fieldMatrix: readonly FrontmatterDiffField[],
+  bodyInput?: string
+): AdminWritePlan => {
+  const { changedFields, patches } = buildFrontmatterDiff(fieldMatrix);
+
+  if (bodyInput !== undefined && bodyInput !== state.bodyText) {
+    changedFields.push('body');
+  }
+
+  return {
+    issues: [],
+    changedFields,
+    patches,
+    ...(bodyInput !== undefined ? { bodyText: bodyInput } : {})
+  };
+};
+
+const parseProjectsOptionalDate = (
+  value: string,
+  issues: AdminContentValidationIssue[]
+): Date | undefined => {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.valueOf())) {
+    issues.push(createIssue('date', 'frontmatter.date 必须是有效的 YYYY-MM-DD 或 ISO 8601 日期时间'));
+    return undefined;
+  }
+  return parsed;
+};
+
+const buildProjectsWritePlan = (
+  state: AdminContentSourceState,
+  values: AdminProjectsEditorValues,
+  bodyInput?: string
+): AdminWritePlan => {
+  const issues: AdminContentValidationIssue[] = [];
+  const frontmatter = state.rawFrontmatter;
+  const title = values.title.trim();
+  if (!title) issues.push(createIssue('title', 'frontmatter.title 不能为空'));
+
+  for (const field of ['repo', 'demo'] as const) {
+    const value = values[field].trim();
+    if (value && !HTTPS_URL_RE.test(value)) {
+      issues.push(createIssue(field, `frontmatter.${field} 必须是 https:// 开头的绝对 URL`));
+    }
+  }
+
+  const date = parseProjectsOptionalDate(values.date, issues);
+  if (issues.length > 0) {
+    return { issues, changedFields: [], patches: [] };
+  }
+
+  const fieldMatrix: FrontmatterDiffField[] = [
+    { field: 'title', path: ['title'], currentValue: getCurrentOptionalText(frontmatter, 'title'), nextValue: title },
+    { field: 'subtitle', path: ['subtitle'], currentValue: getCurrentOptionalText(frontmatter, 'subtitle'), nextValue: values.subtitle.trim() || undefined },
+    { field: 'description', path: ['description'], currentValue: getCurrentOptionalText(frontmatter, 'description'), nextValue: values.description.trim() || undefined },
+    { field: 'type', path: ['type'], currentValue: getCurrentOptionalText(frontmatter, 'type'), nextValue: values.type.trim() || undefined },
+    { field: 'tags', path: ['tags'], currentValue: getCurrentStringArrayValue(frontmatter, 'tags', []), nextValue: parseTagsText(values.tagsText) },
+    { field: 'icon', path: ['icon'], currentValue: getCurrentOptionalText(frontmatter, 'icon'), nextValue: values.icon.trim() || undefined },
+    { field: 'repo', path: ['repo'], currentValue: getCurrentOptionalText(frontmatter, 'repo'), nextValue: values.repo.trim() || undefined },
+    { field: 'repoLabel', path: ['repoLabel'], currentValue: getCurrentOptionalText(frontmatter, 'repoLabel'), nextValue: values.repoLabel.trim() || undefined },
+    { field: 'demo', path: ['demo'], currentValue: getCurrentOptionalText(frontmatter, 'demo'), nextValue: values.demo.trim() || undefined },
+    { field: 'demoLabel', path: ['demoLabel'], currentValue: getCurrentOptionalText(frontmatter, 'demoLabel'), nextValue: values.demoLabel.trim() || undefined },
+    { field: 'date', path: ['date'], currentValue: getCurrentTextValue(frontmatter, 'date', ''), nextValue: date?.toISOString() },
+    { field: 'draft', path: ['draft'], currentValue: getCurrentBooleanValue(frontmatter, 'draft', false), nextValue: values.draft }
+  ];
+
+  return buildTextFieldWritePlan(state, fieldMatrix, bodyInput);
+};
+
+const buildDevlogWritePlan = (
+  state: AdminContentSourceState,
+  values: AdminDevlogEditorValues,
+  bodyInput?: string
+): AdminWritePlan => {
+  const issues: AdminContentValidationIssue[] = [];
+  const frontmatter = state.rawFrontmatter;
+
+  if (!values.title.trim()) issues.push(createIssue('title', 'frontmatter.title 不能为空'));
+  if (!values.project.trim()) issues.push(createIssue('project', 'frontmatter.project 不能为空'));
+
+  const date = parseProjectsOptionalDate(values.date, issues);
+  if (date === undefined && !issues.some((issue) => issue.path === 'date')) {
+    issues.push(createIssue('date', 'frontmatter.date 不能为空'));
+  }
+  if (issues.length > 0) {
+    return { issues, changedFields: [], patches: [] };
+  }
+
+  const fieldMatrix: FrontmatterDiffField[] = [
+    { field: 'title', path: ['title'], currentValue: getCurrentOptionalText(frontmatter, 'title'), nextValue: values.title.trim() },
+    { field: 'date', path: ['date'], currentValue: getCurrentTextValue(frontmatter, 'date', ''), nextValue: date?.toISOString() },
+    { field: 'project', path: ['project'], currentValue: getCurrentOptionalText(frontmatter, 'project'), nextValue: values.project.trim() },
+    { field: 'kind', path: ['kind'], currentValue: getCurrentOptionalText(frontmatter, 'kind'), nextValue: values.kind.trim() || undefined },
+    { field: 'description', path: ['description'], currentValue: getCurrentOptionalText(frontmatter, 'description'), nextValue: values.description.trim() || undefined },
+    // 没有 links 字段：外链直接写正文 markdown，不写回 frontmatter
+    { field: 'draft', path: ['draft'], currentValue: getCurrentBooleanValue(frontmatter, 'draft', false), nextValue: values.draft }
+  ];
+
+  return buildTextFieldWritePlan(state, fieldMatrix, bodyInput);
 };
 
 const buildBitsWritePlan = (
@@ -542,54 +638,16 @@ const buildBitsWritePlan = (
   };
 };
 
-const buildMemoWritePlan = (
-  state: AdminContentSourceState,
-  bodyInput?: string
-): AdminWritePlan => {
-  if (bodyInput !== undefined) {
-    const missingImageReferences = findMissingMarkdownBodyLocalImageReferences({
-      bodyText: bodyInput,
-      sourcePath: state.sourcePath
-    });
-    if (missingImageReferences.length > 0) {
-      return {
-        issues: missingImageReferences.map((reference) =>
-          createIssue('body', `正文引用的本地图片不存在：${reference.relativePath}`)
-        ),
-        changedFields: [],
-        patches: []
-      };
-    }
-  }
-
-  const changedFields: string[] = [];
-  if (bodyInput !== undefined && bodyInput !== state.bodyText) {
-    changedFields.push('body');
-  }
-
-  return {
-    issues: [],
-    changedFields,
-    patches: [],
-    ...(bodyInput !== undefined ? { bodyText: bodyInput } : {})
-  };
-};
-
 export const buildAdminContentWritePlanFromState = async (
   state: AdminContentSourceState,
   frontmatterInput: unknown,
   bodyInput?: string
 ): Promise<AdminWritePlan & { state: AdminContentSourceState }> => {
   const { collection } = state;
-  if (!getAdminContentCollectionCapability(collection).entryWritable) {
-    throw new AdminContentEntryResolutionError(
-      'invalid-entry-id',
-      getAdminContentReadOnlyReason(collection) ?? `当前 collection 暂不支持写盘：${collection}`
-    );
-  }
+  assertAdminContentEntryWritable(collection);
 
-  if (collection === 'essay') {
-    const parsed = parseAdminEssayEditorInput(frontmatterInput);
+  if (collection === 'blog') {
+    const parsed = parseAdminBlogEditorInput(frontmatterInput);
     if (!parsed.values) {
       return {
         state,
@@ -601,10 +659,21 @@ export const buildAdminContentWritePlanFromState = async (
 
     return {
       state,
-      ...(await buildEssayWritePlan(state, parsed.values, bodyInput, {
+      ...(await buildBlogWritePlan(state, parsed.values, bodyInput, {
         publishedAtInputMode: parsed.publishedAtInputMode,
         updatedAtInputMode: parsed.updatedAtInputMode
       }))
+    };
+  }
+
+  if (collection === 'projects') {
+    const parsed = parseAdminProjectsEditorInput(frontmatterInput);
+    if (!parsed.values) {
+      return { state, issues: parsed.issues, changedFields: [], patches: [] };
+    }
+    return {
+      state,
+      ...buildProjectsWritePlan(state, parsed.values, bodyInput)
     };
   }
 
@@ -625,16 +694,20 @@ export const buildAdminContentWritePlanFromState = async (
     };
   }
 
-  if (collection === 'about') {
+  if (collection === 'devlog') {
+    const parsed = parseAdminDevlogEditorInput(frontmatterInput);
+    if (!parsed.values) {
+      return { state, issues: parsed.issues, changedFields: [], patches: [] };
+    }
     return {
       state,
-      ...buildAdminAboutWritePlan(state, bodyInput)
+      ...buildDevlogWritePlan(state, parsed.values, bodyInput)
     };
   }
 
   return {
     state,
-    ...buildMemoWritePlan(state, bodyInput)
+    ...buildAdminAboutWritePlan(state, bodyInput)
   };
 };
 
@@ -657,4 +730,87 @@ export const applyAdminContentWritePlan = (
 ): string => {
   const nextSourceText = patchMarkdownFrontmatter(state.sourceText, patches);
   return bodyText === undefined ? nextSourceText : replaceMarkdownBody(nextSourceText, bodyText);
+};
+
+const createMissingValuesIssue = (field: string, expected: string): AdminContentValidationIssue =>
+  createIssue(field, `${expected}`);
+
+export const parseAdminProjectsEditorInput = (
+  input: unknown
+): { values?: AdminProjectsEditorValues; issues: AdminContentValidationIssue[] } => {
+  if (!isRecord(input)) {
+    return { issues: [createMissingValuesIssue('frontmatter', 'frontmatter 必须是对象')] };
+  }
+
+  const issues: AdminContentValidationIssue[] = [];
+  const getText = (field: keyof AdminProjectsEditorValues): string => {
+    const value = input[field];
+    if (value == null) return '';
+    if (typeof value !== 'string') {
+      issues.push(createIssue(String(field), `frontmatter.${String(field)} 必须是字符串`));
+      return '';
+    }
+    return value;
+  };
+
+  const draft = input.draft;
+  if (typeof draft !== 'boolean') {
+    issues.push(createIssue('draft', 'frontmatter.draft 必须是布尔值'));
+  }
+  if (issues.length > 0) return { issues };
+
+  return {
+    issues,
+    values: {
+      title: getText('title'),
+      subtitle: getText('subtitle'),
+      description: getText('description'),
+      type: getText('type'),
+      tagsText: getText('tagsText'),
+      icon: getText('icon'),
+      repo: getText('repo'),
+      repoLabel: getText('repoLabel'),
+      demo: getText('demo'),
+      demoLabel: getText('demoLabel'),
+      date: getText('date'),
+      draft: draft as boolean
+    }
+  };
+};
+
+export const parseAdminDevlogEditorInput = (
+  input: unknown
+): { values?: AdminDevlogEditorValues; issues: AdminContentValidationIssue[] } => {
+  if (!isRecord(input)) {
+    return { issues: [createMissingValuesIssue('frontmatter', 'frontmatter 必须是对象')] };
+  }
+
+  const issues: AdminContentValidationIssue[] = [];
+  const getText = (field: keyof AdminDevlogEditorValues): string => {
+    const value = input[field];
+    if (value == null) return '';
+    if (typeof value !== 'string') {
+      issues.push(createIssue(String(field), `frontmatter.${String(field)} 必须是字符串`));
+      return '';
+    }
+    return value;
+  };
+
+  const draft = input.draft;
+  if (typeof draft !== 'boolean') {
+    issues.push(createIssue('draft', 'frontmatter.draft 必须是布尔值'));
+  }
+  if (issues.length > 0) return { issues };
+
+  return {
+    issues,
+    values: {
+      title: getText('title'),
+      date: getText('date'),
+      project: getText('project'),
+      kind: getText('kind'),
+      description: getText('description'),
+      draft: draft as boolean
+    }
+  };
 };

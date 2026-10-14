@@ -1,14 +1,15 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
-  resolveAdminContentEntryLegacySourcePath
+  resolveAdminContentEntryLegacySourcePath,
+  toAdminContentRelativeProjectPath
 } from './content-entry-source';
 import {
   getAdminContentFixedPageCapability,
   type AdminContentCollectionKey
 } from './content-collections';
 
-export type AdminContentSourceDownload = {
+type AdminContentSourceDownload = {
   collection: AdminContentCollectionKey;
   entryId: string;
   sourcePath: string;
@@ -17,11 +18,6 @@ export type AdminContentSourceDownload = {
   contentType: string;
   sourceText: string;
 };
-
-const getProjectRoot = (): string => process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
-
-const toRelativeProjectPath = (filePath: string): string =>
-  path.relative(getProjectRoot(), filePath).replace(/\\/g, '/');
 
 const getContentSourceContentType = (fileName: string): string =>
   fileName.toLowerCase().endsWith('.mdx')
@@ -50,14 +46,14 @@ const getEntryDownloadStem = (collection: AdminContentCollectionKey, entryId: st
     : lastSegment || collection;
 };
 
-export const getAdminContentSourceDownloadName = (
+const getAdminContentSourceDownloadName = (
   collection: AdminContentCollectionKey,
   entryId: string,
   sourcePath: string
 ): string => {
   const sourceFileName = path.basename(sourcePath);
   const parsed = path.parse(sourceFileName);
-  // 目录型条目磁盘上使用 index.md；下载时按条目末段命名，memo 单页保持 memo.md。
+  // 目录型条目磁盘上使用 index.md；下载时按条目末段命名，固定单页保持 index.md。
   return parsed.name.toLowerCase() === 'index'
     ? `${getEntryDownloadStem(collection, entryId)}${parsed.ext.toLowerCase()}`
     : sourceFileName;
@@ -85,7 +81,7 @@ export const readAdminContentSourceDownload = async (
     collection,
     entryId,
     sourcePath,
-    relativePath: toRelativeProjectPath(sourcePath),
+    relativePath: toAdminContentRelativeProjectPath(sourcePath),
     fileName,
     contentType: getContentSourceContentType(fileName),
     sourceText

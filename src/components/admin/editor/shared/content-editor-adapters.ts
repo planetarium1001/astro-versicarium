@@ -1,8 +1,9 @@
 import type {
   AdminBitsEditorValues,
   AdminContentWorkspaceEditorValues,
-  AdminEssayEditorValues,
-  AdminMemoEditorValues
+  AdminBlogEditorValues,
+  AdminDevlogEditorValues,
+  AdminProjectsEditorValues
 } from '../../../../lib/admin-console/content-editor-payload';
 import type { AdminContentWriteCollectionKey } from '../../../../lib/admin-console/content-collections';
 import type { AdminAboutEditorValues } from '../../../../lib/admin-console/content-about-contract';
@@ -19,11 +20,11 @@ type ContentEditorCapabilities = {
   bodyImageInsert: boolean;
   bodyGalleryInsert: boolean;
   imageArray: boolean;
-  essayOutline: boolean;
+  blogOutline: boolean;
   delete: boolean;
 };
 
-export type ContentEditorAdapter<
+type ContentEditorAdapter<
   Values extends AdminContentWorkspaceEditorValues = AdminContentWorkspaceEditorValues
 > = {
   collection: AdminContentWriteCollectionKey;
@@ -36,7 +37,7 @@ export type ContentEditorAdapter<
   getDeleteTitle: (value: Values, entryId: string) => string;
 };
 
-const cloneEssayValues = (value: AdminEssayEditorValues): AdminEssayEditorValues => ({
+const cloneBlogValues = (value: AdminBlogEditorValues): AdminBlogEditorValues => ({
   title: value.title,
   description: value.description,
   date: value.date,
@@ -44,7 +45,6 @@ const cloneEssayValues = (value: AdminEssayEditorValues): AdminEssayEditorValues
   updatedAt: value.updatedAt,
   tagsText: value.tagsText,
   draft: value.draft,
-  archive: value.archive,
   slug: value.slug,
   cover: value.cover,
   badge: value.badge
@@ -61,21 +61,48 @@ const cloneBitsValues = (value: AdminBitsEditorValues): AdminBitsEditorValues =>
   imagesText: value.imagesText
 });
 
-const cloneMemoValues = (value: AdminMemoEditorValues): AdminMemoEditorValues => ({
+const cloneProjectsValues = (value: AdminProjectsEditorValues): AdminProjectsEditorValues => ({
   title: value.title,
   subtitle: value.subtitle,
+  description: value.description,
+  type: value.type,
+  tagsText: value.tagsText,
+  icon: value.icon,
+  repo: value.repo,
+  repoLabel: value.repoLabel,
+  demo: value.demo,
+  demoLabel: value.demoLabel,
   date: value.date,
-  draft: value.draft,
-  slug: value.slug
+  draft: value.draft
+});
+
+const cloneDevlogValues = (value: AdminDevlogEditorValues): AdminDevlogEditorValues => ({
+  title: value.title,
+  date: value.date,
+  project: value.project,
+  kind: value.kind,
+  description: value.description,
+  draft: value.draft
 });
 
 const cloneAboutValues = (): AdminAboutEditorValues => ({});
 
-export const isEssayEditorValues = (value: AdminContentWorkspaceEditorValues | null): value is AdminEssayEditorValues =>
-  Boolean(value && 'publishedAt' in value && 'updatedAt' in value && 'archive' in value && 'cover' in value && 'badge' in value);
+export const isBlogEditorValues = (value: AdminContentWorkspaceEditorValues | null): value is AdminBlogEditorValues =>
+  Boolean(value && 'publishedAt' in value && 'updatedAt' in value && 'cover' in value && 'badge' in value);
 
 export const isBitsEditorValues = (value: AdminContentWorkspaceEditorValues | null): value is AdminBitsEditorValues =>
   Boolean(value && 'authorName' in value && 'authorAvatar' in value && 'imagesText' in value);
+
+export const isProjectsEditorValues = (
+  value: AdminContentWorkspaceEditorValues | null
+): value is AdminProjectsEditorValues =>
+  Boolean(value && 'repoLabel' in value && 'demoLabel' in value && 'tagsText' in value);
+
+export const isDevlogEditorValues = (
+  value: AdminContentWorkspaceEditorValues | null
+): value is AdminDevlogEditorValues =>
+  // devlog 没有 links 字段，用 description 判别（只有 devlog 同时有 project 与 description）。
+  Boolean(value && 'project' in value && 'description' in value);
 
 // 编辑器值是扁平字段袋（仅字符串/布尔基本类型），按 own 键名与值逐项比较即可，不依赖键顺序。
 const isEqualContentEditorValues = <Values extends AdminContentWorkspaceEditorValues>(
@@ -101,7 +128,7 @@ const getContentWriteFieldLabel = (
 const hasExactFrontmatterIssuePath = (paths: ReadonlySet<string>, path: string): boolean =>
   paths.has(path);
 
-const ESSAY_FRONTMATTER_ISSUE_PATHS = new Set([
+const BLOG_FRONTMATTER_ISSUE_PATHS = new Set([
   'title',
   'date',
   'publishedAt',
@@ -124,12 +151,60 @@ const BITS_FRONTMATTER_ISSUE_PATHS = new Set([
   'imagesText'
 ]);
 
-const MEMO_FRONTMATTER_ISSUE_PATHS = new Set<string>();
-
 const isBitsFrontmatterIssuePath = (path: string): boolean =>
   BITS_FRONTMATTER_ISSUE_PATHS.has(path) || path.startsWith('images[');
 
-const ESSAY_FIELD_LABELS: Readonly<Record<string, string>> = {
+const PROJECTS_FRONTMATTER_ISSUE_PATHS = new Set([
+  'title',
+  'subtitle',
+  'description',
+  'type',
+  'tags',
+  'icon',
+  'repo',
+  'repoLabel',
+  'demo',
+  'demoLabel',
+  'date',
+  'draft'
+]);
+
+const DEVLOG_FRONTMATTER_ISSUE_PATHS = new Set([
+  'title',
+  'date',
+  'project',
+  'kind',
+  'description',
+  'draft'
+]);
+
+const PROJECTS_FIELD_LABELS: Readonly<Record<string, string>> = {
+  title: '标题',
+  subtitle: '副标题',
+  description: '描述',
+  type: '类型',
+  tags: '标签',
+  icon: '图标',
+  repo: '仓库链接',
+  repoLabel: '仓库文字',
+  demo: '演示链接',
+  demoLabel: '演示文字',
+  date: '日期',
+  draft: '草稿状态',
+  body: '正文'
+};
+
+const DEVLOG_FIELD_LABELS: Readonly<Record<string, string>> = {
+  title: '标题',
+  date: '日期',
+  project: '项目',
+  kind: '类型标签',
+  description: '摘要',
+  draft: '草稿状态',
+  body: '正文'
+};
+
+const BLOG_FIELD_LABELS: Readonly<Record<string, string>> = {
   title: '标题',
   description: '摘要',
   date: '日期',
@@ -137,7 +212,6 @@ const ESSAY_FIELD_LABELS: Readonly<Record<string, string>> = {
   updatedAt: '更新日期',
   tags: '标签',
   draft: '草稿状态',
-  archive: '归档状态',
   slug: '链接别名',
   cover: '封面图',
   badge: '徽标',
@@ -158,20 +232,11 @@ const BITS_FIELD_LABELS: Readonly<Record<string, string>> = {
   body: '正文'
 };
 
-const MEMO_FIELD_LABELS: Readonly<Record<string, string>> = {
-  title: '标题',
-  subtitle: '副标题',
-  date: '日期',
-  draft: '生产阻断状态',
-  slug: '元信息别名',
-  body: '正文'
-};
-
 const buildContentEditorCapabilities = (
   collection: AdminContentWriteCollectionKey,
   editorCapabilities: Pick<
     ContentEditorCapabilities,
-    'body' | 'preview' | 'bodyImageInsert' | 'bodyGalleryInsert' | 'imageArray' | 'essayOutline'
+    'body' | 'preview' | 'bodyImageInsert' | 'bodyGalleryInsert' | 'imageArray' | 'blogOutline'
   >
 ): ContentEditorCapabilities => {
   const collectionCapability = getAdminContentCollectionCapability(collection);
@@ -181,21 +246,21 @@ const buildContentEditorCapabilities = (
   };
 };
 
-const ESSAY_ADAPTER: ContentEditorAdapter<AdminEssayEditorValues> = {
-  collection: 'essay',
-  capabilities: buildContentEditorCapabilities('essay', {
+const BLOG_ADAPTER: ContentEditorAdapter<AdminBlogEditorValues> = {
+  collection: 'blog',
+  capabilities: buildContentEditorCapabilities('blog', {
     body: true,
     preview: true,
     bodyImageInsert: true,
     bodyGalleryInsert: true,
     imageArray: false,
-    essayOutline: true
+    blogOutline: true
   }),
-  frontmatterIssuePaths: ESSAY_FRONTMATTER_ISSUE_PATHS,
-  isFrontmatterIssuePath: (path) => hasExactFrontmatterIssuePath(ESSAY_FRONTMATTER_ISSUE_PATHS, path),
-  cloneValues: cloneEssayValues,
+  frontmatterIssuePaths: BLOG_FRONTMATTER_ISSUE_PATHS,
+  isFrontmatterIssuePath: (path) => hasExactFrontmatterIssuePath(BLOG_FRONTMATTER_ISSUE_PATHS, path),
+  cloneValues: cloneBlogValues,
   isEqualValues: isEqualContentEditorValues,
-  getWriteFieldLabel: (field) => getContentWriteFieldLabel(field, ESSAY_FIELD_LABELS),
+  getWriteFieldLabel: (field) => getContentWriteFieldLabel(field, BLOG_FIELD_LABELS),
   getDeleteTitle: (value, entryId) => value.title || entryId
 };
 
@@ -207,7 +272,7 @@ const BITS_ADAPTER: ContentEditorAdapter<AdminBitsEditorValues> = {
     bodyImageInsert: false,
     bodyGalleryInsert: false,
     imageArray: true,
-    essayOutline: false
+    blogOutline: false
   }),
   frontmatterIssuePaths: BITS_FRONTMATTER_ISSUE_PATHS,
   isFrontmatterIssuePath: isBitsFrontmatterIssuePath,
@@ -217,21 +282,39 @@ const BITS_ADAPTER: ContentEditorAdapter<AdminBitsEditorValues> = {
   getDeleteTitle: (value, entryId) => value.title || entryId
 };
 
-const MEMO_ADAPTER: ContentEditorAdapter<AdminMemoEditorValues> = {
-  collection: 'memo',
-  capabilities: buildContentEditorCapabilities('memo', {
+const PROJECTS_ADAPTER: ContentEditorAdapter<AdminProjectsEditorValues> = {
+  collection: 'projects',
+  capabilities: buildContentEditorCapabilities('projects', {
     body: true,
     preview: true,
     bodyImageInsert: true,
-    bodyGalleryInsert: false,
+    bodyGalleryInsert: true,
     imageArray: false,
-    essayOutline: false
+    blogOutline: false
   }),
-  frontmatterIssuePaths: MEMO_FRONTMATTER_ISSUE_PATHS,
-  isFrontmatterIssuePath: (path) => hasExactFrontmatterIssuePath(MEMO_FRONTMATTER_ISSUE_PATHS, path),
-  cloneValues: cloneMemoValues,
+  frontmatterIssuePaths: PROJECTS_FRONTMATTER_ISSUE_PATHS,
+  isFrontmatterIssuePath: (path) => hasExactFrontmatterIssuePath(PROJECTS_FRONTMATTER_ISSUE_PATHS, path),
+  cloneValues: cloneProjectsValues,
   isEqualValues: isEqualContentEditorValues,
-  getWriteFieldLabel: (field) => getContentWriteFieldLabel(field, MEMO_FIELD_LABELS),
+  getWriteFieldLabel: (field) => getContentWriteFieldLabel(field, PROJECTS_FIELD_LABELS),
+  getDeleteTitle: (value, entryId) => value.title || entryId
+};
+
+const DEVLOG_ADAPTER: ContentEditorAdapter<AdminDevlogEditorValues> = {
+  collection: 'devlog',
+  capabilities: buildContentEditorCapabilities('devlog', {
+    body: true,
+    preview: true,
+    bodyImageInsert: true,
+    bodyGalleryInsert: true,
+    imageArray: false,
+    blogOutline: false
+  }),
+  frontmatterIssuePaths: DEVLOG_FRONTMATTER_ISSUE_PATHS,
+  isFrontmatterIssuePath: (path) => hasExactFrontmatterIssuePath(DEVLOG_FRONTMATTER_ISSUE_PATHS, path),
+  cloneValues: cloneDevlogValues,
+  isEqualValues: isEqualContentEditorValues,
+  getWriteFieldLabel: (field) => getContentWriteFieldLabel(field, DEVLOG_FIELD_LABELS),
   getDeleteTitle: (value, entryId) => value.title || entryId
 };
 
@@ -243,7 +326,7 @@ const ABOUT_ADAPTER: ContentEditorAdapter<AdminAboutEditorValues> = {
     bodyImageInsert: false,
     bodyGalleryInsert: false,
     imageArray: false,
-    essayOutline: false
+    blogOutline: false
   }),
   frontmatterIssuePaths: new Set<string>(),
   isFrontmatterIssuePath: isAdminAboutFrontmatterIssuePath,
@@ -254,16 +337,18 @@ const ABOUT_ADAPTER: ContentEditorAdapter<AdminAboutEditorValues> = {
 };
 
 type ContentEditorAdapterMap = {
-  essay: ContentEditorAdapter<AdminEssayEditorValues>;
+  blog: ContentEditorAdapter<AdminBlogEditorValues>;
+  projects: ContentEditorAdapter<AdminProjectsEditorValues>;
   bits: ContentEditorAdapter<AdminBitsEditorValues>;
-  memo: ContentEditorAdapter<AdminMemoEditorValues>;
+  devlog: ContentEditorAdapter<AdminDevlogEditorValues>;
   about: ContentEditorAdapter<AdminAboutEditorValues>;
 };
 
 const CONTENT_EDITOR_ADAPTERS = {
-  essay: ESSAY_ADAPTER,
+  blog: BLOG_ADAPTER,
+  projects: PROJECTS_ADAPTER,
   bits: BITS_ADAPTER,
-  memo: MEMO_ADAPTER,
+  devlog: DEVLOG_ADAPTER,
   about: ABOUT_ADAPTER
 } as const satisfies ContentEditorAdapterMap;
 

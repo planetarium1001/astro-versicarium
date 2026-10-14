@@ -1,0 +1,319 @@
+/* projects-page.css — /projects/ 卡片栅格与弹窗、底部抽屉（<=640px） */
+
+.projects-page .project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+  align-items: stretch;
+}
+
+.project-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: var(--card-pad);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  min-width: 0;
+  /* 行高由该行最高卡片决定；卡片自身设高度上限并溢出省略。 */
+  max-height: 260px;
+}
+
+.project-card__main {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-height: var(--tap-min-h);
+}
+
+.project-card__main:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.project-card__icon {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.project-card__icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.project-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.project-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.project-card__title {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-card__subtitle {
+  font-size: 13px;
+  color: var(--muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-card__description {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.project-card__links {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: auto;
+}
+
+/* 链接是独立元素：点击不触发弹窗 */
+.project-card__link {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  min-height: var(--tap-min-h);
+  display: inline-flex;
+  align-items: center;
+}
+
+.project-card__link:hover,
+.project-card__link:focus-visible {
+  text-decoration: underline;
+}
+
+/* ---------------- 弹窗（>=641px：居中，横屏宽、竖屏长） ---------------- */
+
+.project-dialog {
+  margin: auto;
+  width: min(920px, calc(100vw - 64px));
+  max-height: min(84vh, 900px);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.project-dialog::backdrop {
+  background: var(--overlay-20);
+  backdrop-filter: blur(6px);
+}
+
+.project-dialog__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: inherit;
+  padding: 18px;
+}
+
+.project-dialog__handle {
+  display: none;
+}
+
+.project-dialog__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.project-dialog__title-wrap {
+  min-width: 0;
+  flex: 1;
+}
+
+.project-dialog__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/**
+ * 弹窗里主次分明：标题、副标题、类型胶囊放大，正文压到标题以下
+ * （见下面的 .project-dialog__prose）。
+ */
+.project-dialog__title {
+  margin: 0;
+  font-size: 21px;
+  line-height: 1.4;
+}
+
+.project-dialog__title:focus {
+  outline: none;
+}
+
+.project-dialog__subtitle {
+  margin: 5px 0 0;
+  font-size: 14.5px;
+  color: var(--muted);
+}
+
+/* 类型胶囊跟着标题一起放大 */
+.project-dialog .badge {
+  height: 24px;
+  padding: 0 9px;
+  font-size: 13px;
+}
+
+/**
+ * 弹窗正文（含各级标题）都必须小于弹窗标题的 21px，否则正文里的一级标题会盖过标题本身。
+ * 普通正文对齐描述字号 14.5px，各级标题按层级略大但仍小于 21px。
+ */
+.project-dialog__prose {
+  font-size: 14.5px;
+}
+
+.project-dialog__prose h1 {
+  font-size: 18px;
+}
+
+.project-dialog__prose h2 {
+  font-size: 16.5px;
+}
+
+.project-dialog__prose h3,
+.project-dialog__prose h4 {
+  font-size: 15.5px;
+}
+
+/**
+ * 关闭按钮只留一个叉号：不要圆角方形底（原来有边框 + 面板底色 + 圆角）。
+ * 与 tag dialog 的关闭按钮统一，无边框无底色，只保留颜色变化；44px 热区由 width/height 保留。
+ */
+.project-dialog__close {
+  flex: 0 0 auto;
+  width: var(--tap-min-h);
+  height: var(--tap-min-h);
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--faint);
+  font: inherit;
+  font-family: "Segoe UI Symbol", "Segoe UI", sans-serif;
+  /* 关闭图标缩小一点，不喧宾夺主（44px 热区仍保留） */
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.16s ease;
+}
+
+.project-dialog__close:hover,
+.project-dialog__close:focus-visible {
+  color: var(--text);
+}
+
+.project-dialog__close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.project-dialog__content {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
+  flex: 1;
+}
+
+.project-dialog__fallback {
+  margin: 0;
+  color: var(--muted);
+}
+
+.project-dialog__links {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* ---------------- <=640px：底部抽屉 ---------------- */
+
+@media (max-width: 640px) {
+  .project-card {
+    max-height: 320px;
+  }
+
+  .project-dialog {
+    inset: auto 0 0;
+    margin: 0;
+    width: 100%;
+    max-width: none;
+    max-height: 85dvh;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .project-dialog__inner {
+    gap: 12px;
+    padding: 12px 14px calc(22px + env(safe-area-inset-bottom));
+    max-height: 85dvh;
+  }
+
+  .project-dialog__handle {
+    display: block;
+    width: 44px;
+    height: 4px;
+    margin: 0 auto;
+    border-radius: 999px;
+    background: var(--faint);
+  }
+
+  /* 抽屉内部滚动，不带动整页 */
+  .project-dialog__content {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}

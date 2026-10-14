@@ -1,9 +1,9 @@
 {
-  "introLead": "这是一个开源写作主题与示例内容库:包含 随笔/essay、小记/memo、归档/archive 与 絮语/bits，使用与配置请见 README 。",
+  "introLead": "这是一个开源写作主题与示例内容库：包含 博客/blog、归档/archive、动态/bits、更新/devlog 与 关于/about，使用与配置请见 README。",
   "introMore": "更多文章请访问",
   "introMoreLinks": [
-    "archive",
-    "tag"
+    "tag",
+    "blogTag"
   ],
   "showIntroLead": true,
   "showIntroMore": true,

@@ -10,16 +10,13 @@ import {
   type AdminContentEditorStyleSlot
 } from '../src/components/admin/admin-content-editor-registry';
 import { ADMIN_CONTENT_EDITOR_ISLAND_KEYS } from '../src/components/admin/admin-content-editor-islands';
+import { ADMIN_CONTENT_WRITE_COLLECTION_KEYS } from '../src/lib/admin-console/content-collections';
 import type {
   AdminAboutEditorPayload,
   AdminBitsEditorPayload,
-  AdminEssayEditorPayload,
-  AdminMemoEditorPayload
+  AdminBlogEditorPayload,
 } from '../src/lib/admin-console/content-shared';
-import {
-  getAdminContentCollectionCapability,
-  type AdminContentWriteCollectionKey
-} from '../src/lib/admin-console/content-collections';
+import { getAdminContentCollectionCapability } from '../src/lib/admin-console/content-collections';
 
 const endpoints: AdminContentEditorEndpoints = {
   endpoint: '/api/admin/content/entry/',
@@ -29,25 +26,24 @@ const endpoints: AdminContentEditorEndpoints = {
   imageUploadEndpoint: '/api/admin/images/upload/'
 };
 
-const essayPayload: AdminEssayEditorPayload = {
-  collection: 'essay',
-  entryId: 'essay-entry',
-  publicEntryId: 'essay-entry',
-  defaultPublicSlug: 'essay-entry',
-  revision: 'essay-rev',
-  relativePath: 'src/content/essay/essay-entry.md',
+const BlogPayload: AdminBlogEditorPayload = {
+  collection: 'blog',
+  entryId: 'blog-entry',
+  publicEntryId: 'blog-entry',
+  defaultPublicSlug: 'blog-entry',
+  revision: 'blog-rev',
+  relativePath: 'src/content/blog/blog-entry.md',
   writable: true,
   readonlyReason: null,
-  bodyText: 'Essay body',
+  bodyText: 'blog body',
   values: {
-    title: 'Essay title',
-    description: 'Essay description',
+    title: 'blog title',
+    description: 'blog description',
     date: '2026-06-01',
     publishedAt: '',
     updatedAt: '',
     tagsText: 'tag',
     draft: false,
-    archive: true,
     slug: '',
     cover: '',
     badge: ''
@@ -76,25 +72,6 @@ const bitsPayload: AdminBitsEditorPayload = {
   }
 };
 
-const memoPayload: AdminMemoEditorPayload = {
-  collection: 'memo',
-  entryId: 'index',
-  publicEntryId: 'index',
-  defaultPublicSlug: 'index',
-  revision: 'memo-rev',
-  relativePath: 'src/content/memo/index.md',
-  writable: true,
-  readonlyReason: null,
-  bodyText: 'Memo body',
-  values: {
-    title: 'Memo title',
-    subtitle: '',
-    date: '',
-    draft: false,
-    slug: ''
-  }
-};
-
 const aboutPayload: AdminAboutEditorPayload = {
   collection: 'about',
   entryId: 'index',
@@ -109,31 +86,30 @@ const aboutPayload: AdminAboutEditorPayload = {
 };
 
 describe('admin content editor page registry', () => {
-  it('declares page-level affordances for essay, bits, memo, and about', () => {
-    const essay = getAdminContentEditorPageRegistration('essay');
+  it('declares page-level affordances for blog, bits, and about', () => {
+    const blog = getAdminContentEditorPageRegistration('blog');
     const bits = getAdminContentEditorPageRegistration('bits');
-    const memo = getAdminContentEditorPageRegistration('memo');
     const about = getAdminContentEditorPageRegistration('about');
 
-    expect(essay.island).toBe('essay');
-    expect(essay.styleSlots).toEqual([
+    expect(blog.island).toBe('blog');
+    expect(blog.styleSlots).toEqual([
       'article',
       'adminContentEditor',
       'adminContentEditorFrontmatter',
       'adminContentEditorImageInsert',
       'adminContentEditorGalleryInsert'
     ]);
-    expect(essay.outlineKind).toBe('essay');
-    expect(essay.resolveReturnHref({
+    expect(blog.outlineKind).toBe('blog');
+    expect(blog.resolveReturnHref({
       withBase: (path) => `/base${path}`,
-      collectionHref: '/base/admin/content/?collection=essay'
+      collectionHref: '/base/admin/content/?collection=blog'
     })).toBe('/base/admin/content/');
-    expect(essay.infoTrigger).toEqual({
+    expect(blog.infoTrigger).toEqual({
       attribute: 'data-admin-article-info-trigger',
       label: '修改信息',
       panelId: 'admin-editor-frontmatter-panel'
     });
-    expect(essay.usesImagePicker).toBe(false);
+    expect(blog.usesImagePicker).toBe(false);
 
     expect(bits.island).toBe('bits');
     expect(bits.styleSlots).toEqual([
@@ -150,18 +126,6 @@ describe('admin content editor page registry', () => {
     expect(bits.infoTrigger?.attribute).toBe('data-admin-bits-info-trigger');
     expect(bits.usesImagePicker).toBe(true);
 
-    expect(memo.island).toBe('memo');
-    expect(memo.styleSlots).toEqual([
-      'article',
-      'memo',
-      'adminContentEditor',
-      'adminContentEditorMemo',
-      'adminContentEditorImageInsert'
-    ]);
-    expect(memo.outlineKind).toBe('none');
-    expect(memo.infoTrigger).toBeNull();
-    expect(memo.usesImagePicker).toBe(false);
-
     expect(about.island).toBe('about');
     expect(about.styleSlots).toEqual(['about', 'adminContentEditor', 'adminContentEditorAbout']);
     expect(about.outlineKind).toBe('none');
@@ -174,7 +138,7 @@ describe('admin content editor page registry', () => {
   });
 
   it('derives image picker affordance from collection capabilities', () => {
-    const collections: AdminContentWriteCollectionKey[] = ['essay', 'bits', 'memo', 'about'];
+    const collections = ADMIN_CONTENT_WRITE_COLLECTION_KEYS;
 
     for (const collection of collections) {
       expect(getAdminContentEditorPageRegistration(collection).usesImagePicker)
@@ -190,23 +154,10 @@ describe('admin content editor page registry', () => {
     };
 
     await expect(loadAdminContentEditorBaseStyleHrefs(loadStyleSlot)).resolves.toEqual(['adminContentEditor.css']);
-    await expect(loadAdminContentEditorStyleHrefs(getAdminContentEditorStyleSlots('memo'), loadStyleSlot))
-      .resolves.toEqual([
-        'article.css',
-        'memo.css',
-        'adminContentEditor.css',
-        'adminContentEditorMemo.css',
-        'adminContentEditorImageInsert.css'
-      ]);
     await expect(loadAdminContentEditorStyleHrefs(getAdminContentEditorStyleSlots('about'), loadStyleSlot))
       .resolves.toEqual(['about.css', 'adminContentEditor.css', 'adminContentEditorAbout.css']);
     expect(requested).toEqual([
       'adminContentEditor',
-      'article',
-      'memo',
-      'adminContentEditor',
-      'adminContentEditorMemo',
-      'adminContentEditorImageInsert',
       'about',
       'adminContentEditor',
       'adminContentEditorAbout'
@@ -214,20 +165,19 @@ describe('admin content editor page registry', () => {
   });
 
   it('keeps registered editor islands within the supported island loader keys', () => {
-    expect(ADMIN_CONTENT_EDITOR_ISLAND_KEYS).toEqual(['essay', 'bits', 'memo', 'about']);
-    expect(ADMIN_CONTENT_EDITOR_ISLAND_KEYS).toContain(getAdminContentEditorPageRegistration('essay').island);
+    expect(ADMIN_CONTENT_EDITOR_ISLAND_KEYS).toEqual(['blog', 'projects', 'bits', 'devlog', 'about']);
+    expect(ADMIN_CONTENT_EDITOR_ISLAND_KEYS).toContain(getAdminContentEditorPageRegistration('blog').island);
     expect(ADMIN_CONTENT_EDITOR_ISLAND_KEYS).toContain(getAdminContentEditorPageRegistration('bits').island);
-    expect(ADMIN_CONTENT_EDITOR_ISLAND_KEYS).toContain(getAdminContentEditorPageRegistration('memo').island);
     expect(ADMIN_CONTENT_EDITOR_ISLAND_KEYS).toContain(getAdminContentEditorPageRegistration('about').island);
   });
 
   it('builds island props without mixing collection-specific fields', () => {
     const outlines = {
-      essayOutlineItems: [
+      BlogOutlineItems: [
         {
-          entryId: 'essay-entry',
-          title: 'Essay title',
-          editHref: '/admin/content/essay/_edit/essay-entry/',
+          entryId: 'blog-entry',
+          title: 'blog title',
+          editHref: '/admin/content/blog/_edit/blog-entry/',
           dateLabel: '2026-06-01',
           sourceError: null
         }
@@ -243,23 +193,23 @@ describe('admin content editor page registry', () => {
       ]
     };
 
-    const essayProps = buildAdminContentEditorIslandProps({
-      payload: essayPayload,
+    const BlogProps = buildAdminContentEditorIslandProps({
+      payload: BlogPayload,
       endpoints,
       returnHref: '/admin/content/',
       defaultAuthor: { name: 'Default', avatar: '/avatar.png' },
       outlines,
       initialArticleInfoOpen: true
     });
-    expect(essayProps).toMatchObject({
-      entryId: 'essay-entry',
+    expect(BlogProps).toMatchObject({
+      entryId: 'blog-entry',
       returnHref: '/admin/content/',
-      initialFrontmatter: essayPayload.values,
-      initialBody: 'Essay body',
-      essayOutlineItems: outlines.essayOutlineItems,
+      initialFrontmatter: BlogPayload.values,
+      initialBody: 'blog body',
+      BlogOutlineItems: outlines.BlogOutlineItems,
       initialArticleInfoOpen: true
     });
-    expect('defaultAuthor' in essayProps).toBe(false);
+    expect('defaultAuthor' in BlogProps).toBe(false);
 
     const bitsProps = buildAdminContentEditorIslandProps({
       payload: bitsPayload,
@@ -278,26 +228,6 @@ describe('admin content editor page registry', () => {
       bitsOutlineItems: outlines.bitsOutlineItems
     });
     expect('initialArticleInfoOpen' in bitsProps).toBe(false);
-
-    const memoProps = buildAdminContentEditorIslandProps({
-      payload: memoPayload,
-      endpoints,
-      returnHref: '/admin/content/?collection=memo',
-      defaultAuthor: { name: 'Default', avatar: '/avatar.png' },
-      outlines: createEmptyAdminContentEditorOutlines(),
-      initialArticleInfoOpen: true
-    });
-    expect(memoProps).toEqual({
-      endpoint: endpoints.endpoint,
-      exportEndpoint: endpoints.exportEndpoint,
-      previewEndpoint: endpoints.previewEndpoint,
-      imageUploadEndpoint: endpoints.imageUploadEndpoint,
-      returnHref: '/admin/content/?collection=memo',
-      entryId: 'index',
-      revision: 'memo-rev',
-      initialFrontmatter: memoPayload.values,
-      initialBody: 'Memo body'
-    });
 
     const aboutProps = buildAdminContentEditorIslandProps({
       payload: aboutPayload,

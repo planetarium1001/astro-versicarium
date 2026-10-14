@@ -24,8 +24,10 @@ export const site = {
   description: '一个 Astro 主题的展示站：轻量、可维护、可复用。'
 };
 
-export const PAGE_SIZE_ARCHIVE = 12;
-export const PAGE_SIZE_ESSAY = 12;
+// 服务端分页已取消，这三个值是前端每页条目数：列表页写入
+// `[data-entry-filters][data-page-size]`，客户端分页读取。
+export const PAGE_SIZE_BLOG = 12;
 export const PAGE_SIZE_BITS = 20;
+export const PAGE_SIZE_ARCHIVE = 20;
 
 export { hasSiteUrl, siteUrl };

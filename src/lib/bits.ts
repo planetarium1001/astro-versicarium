@@ -1,5 +1,5 @@
 import type { CollectionEntry } from 'astro:content';
-import { getPublished, getPageSlice, getTotalPages, type GetPublishedOptions } from './content';
+import { getPublished, type GetPublishedOptions } from './content';
 import { createWithBase, formatDateTime } from '../utils/format';
 import { deriveBitsCardText } from './bits-card-view-model';
 import {
@@ -24,7 +24,7 @@ export type BitsYearOption = {
   count: number;
 };
 
-export type BitsIndexItem = {
+type BitsIndexItem = {
   key: string;
   slug: string;
   title: string;
@@ -35,7 +35,6 @@ export type BitsIndexItem = {
   date: string | null;
   dateLabel: string | null;
   year: number | null;
-  page: number;
   href: string;
   thumbnail?: {
     src: string;
@@ -45,7 +44,7 @@ export type BitsIndexItem = {
   } | null;
 };
 
-export type BitsDerivedText = {
+type BitsDerivedText = {
   plainText: string;
   text: string;
   excerpt: string;
@@ -55,13 +54,12 @@ export type BitsDerivedText = {
 type BitsQueryOptions = Pick<GetPublishedOptions<'bits'>, 'includeDraft'>;
 
 const MAX_INDEX_TEXT = 600;
-export const MAX_PRIMARY_BITS_FILTER_YEARS = 2;
 const shouldMemoizeBitQueries = import.meta.env.PROD;
 const base = import.meta.env.BASE_URL ?? '/';
 const withBase = createWithBase(base);
 
 let sortedBitsPromise: Promise<BitsEntry[]> | null = null;
-const bitsIndexPromiseByPageSize = new Map<number, Promise<BitsIndexItem[]>>();
+let bitsIndexPromise: Promise<BitsIndexItem[]> | null = null;
 const bitsDerivedTextById = new Map<string, BitsDerivedText>();
 
 const cloneBitEntries = (entries: readonly BitsEntry[]) => entries.slice();
@@ -111,16 +109,14 @@ export async function getSortedBits(options: BitsQueryOptions = {}) {
   return cloneBitEntries(await sortedBitsPromise);
 }
 
-export async function getBitsPageData(currentPage: number, pageSize: number) {
+/** 服务端分页已取消：返回全部条目，分页交给客户端。 */
+export async function getBitsPageData() {
   const bits = await getSortedBits();
-  const totalCount = bits.length;
-  const totalPages = Math.max(getTotalPages(totalCount, pageSize), 1);
 
   return {
-    items: getPageSlice(bits, currentPage, pageSize),
+    items: bits,
     yearOptions: buildBitsYearOptions(bits),
-    totalCount,
-    totalPages
+    totalCount: bits.length
   };
 }
 
@@ -152,14 +148,13 @@ export function getBitsDerivedText(bit: BitsEntry): BitsDerivedText {
   return derivedText;
 }
 
-const buildBitsIndex = async (pageSize: number) => {
+const buildBitsIndex = async () => {
   const bits = await getSortedBits();
-  const publishedHrefById = buildPublishedBitsHrefMap(bits.map(toBitPublicOrderItem), pageSize);
-  return bits.map((bit, index) => {
+  const publishedHrefById = buildPublishedBitsHrefMap(bits.map(toBitPublicOrderItem));
+  return bits.map((bit) => {
     const derivedText = getBitsDerivedText(bit);
-    const page = Math.floor(index / pageSize) + 1;
     const firstImage = bit.data.images?.[0];
-    const hrefPath = publishedHrefById.get(bit.id) ?? `${getBitsPagePath(page)}#${getBitAnchorId(bit.id)}`;
+    const hrefPath = publishedHrefById.get(bit.id) ?? `${getBitsPagePath()}#${getBitAnchorId(bit.id)}`;
 
     return {
       key: bit.id,
@@ -172,7 +167,6 @@ const buildBitsIndex = async (pageSize: number) => {
       date: bit.data.date ? bit.data.date.toISOString() : null,
       dateLabel: bit.data.date ? formatDateTime(bit.data.date) : null,
       year: bit.data.date ? bit.data.date.getFullYear() : null,
-      page,
       href: withBase(hrefPath),
       thumbnail: firstImage
         ? {
@@ -186,15 +180,15 @@ const buildBitsIndex = async (pageSize: number) => {
   });
 };
 
-export async function getBitsSearchIndex(pageSize: number) {
+export async function getBitsSearchIndex() {
   if (!shouldMemoizeBitQueries) {
-    return buildBitsIndex(pageSize);
+    return buildBitsIndex();
   }
 
-  let promise = bitsIndexPromiseByPageSize.get(pageSize);
+  let promise: Promise<BitsIndexItem[]> | null = bitsIndexPromise;
   if (!promise) {
-    promise = buildBitsIndex(pageSize);
-    bitsIndexPromiseByPageSize.set(pageSize, promise);
+    promise = buildBitsIndex();
+    bitsIndexPromise = promise;
   }
 
   const index = await promise;

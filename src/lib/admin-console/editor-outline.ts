@@ -1,4 +1,4 @@
-export type EditorOutlineTab = 'headings' | 'essays';
+export type EditorOutlineTab = 'headings' | 'blogs';
 
 export type MarkdownOutlineItem = {
   key: string;
@@ -27,8 +27,8 @@ export type EditorOutlineListItem = EditorOutlineListSourceItem & {
   active: boolean;
 };
 
-export type EditorOutlineEssaySourceItem = EditorOutlineListSourceItem;
-export type EditorOutlineEssayListItem = EditorOutlineListItem;
+export type EditorOutlineBlogSourceItem = EditorOutlineListSourceItem;
+export type EditorOutlineBlogListItem = EditorOutlineListItem;
 
 type FenceState = {
   marker: '`' | '~';
@@ -186,4 +186,4 @@ export const buildEditorOutlineListItems = (
     };
   });
 
-export const buildEssayOutlineListItems = buildEditorOutlineListItems;
+export const buildBlogOutlineListItems = buildEditorOutlineListItems;

@@ -11,7 +11,7 @@ const getOpenDetailsMenus = (
 ): HTMLDetailsElement[] =>
   Array.from(documentRoot.querySelectorAll<HTMLDetailsElement>(`${selector}[open]`));
 
-export const closeAdminDetailsMenus = (
+const closeAdminDetailsMenus = (
   selector: string,
   except: HTMLDetailsElement | null = null,
   documentRoot: Document = document

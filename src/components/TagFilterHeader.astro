@@ -4,95 +4,92 @@ import UiIcon from './UiIcon.astro';
 type TagOption = {
   count: number;
   href: string;
-  isActive?: boolean;
   key: string;
   label: string;
 };
 
-type CurrentTagState = {
-  clearHref: string;
-  label: string;
-};
-
 const {
-  currentTag = null,
+  allOptionLabel = null,
   dialogTitleId,
   fallbackListId,
   headerClass = 'page-header page-header--with-search',
+  itemNoun = '标签',
+  optionPrefix = '#',
+  optionsAriaLabel = null,
   pageTitleText,
   pickerHref,
   rssHref,
   searchAriaLabel,
+  searchPlaceholder = '搜索：标题 / 摘要 / 标签',
+  showModeToggle = true,
+  showRss = true,
+  showSearch = true,
   subtitleText = null,
   tagOptions = []
 } = Astro.props as {
-  currentTag?: CurrentTagState | null;
+  /** 传值时在选项列表最前面渲染一个「全部」选项（key 为空串），供单选筛选使用。 */
+  allOptionLabel?: string | null;
   dialogTitleId: string;
   fallbackListId: string;
   headerClass?: string;
+  /** 选项称谓：`标签`（默认）或 `项目`；用于触发器与 dialog 文案。 */
+  itemNoun?: string;
+  /** 选项文案前缀，默认 `#`；「项目」不是标签，传空串。 */
+  optionPrefix?: string;
+  optionsAriaLabel?: string | null;
   pageTitleText: string;
   pickerHref: string;
   rssHref: string;
   searchAriaLabel: string;
+  searchPlaceholder?: string;
+  /** 单选筛选没有 AND/OR 语义，传 false 隐藏逻辑预览行。 */
+  showModeToggle?: boolean;
+  showRss?: boolean;
+  /**
+   * `/bits/` 自带工具栏搜索（含结果面板），页头搜索与之重复，且会对同一份
+   * `index.json` 再 fetch 一次，因此那里传 false，只复用标题行与标签 dialog。
+   */
+  showSearch?: boolean;
   subtitleText?: string | null;
   tagOptions?: TagOption[];
 };
 
 const hasTagEntry = tagOptions.length > 0;
-const tagTriggerText = currentTag ? '切换标签' : '#标签';
+/** 触发器文案：`#标签` / `#项目`（`optionPrefix` 只作用于 dialog 里的选项文案）。 */
+const tagTriggerText = `#${itemNoun}`;
 ---
 
 <div class={headerClass}>
-  <div class="page-heading">
+  {/* 有 tag 入口时页头锁成两行结构并预留 tag 行，选择/取消标签时描述行不跳动。 */}
+  <div class:list={['page-heading', hasTagEntry && 'page-heading--tag-slot']}>
     <div class="page-title-row">
       <h1 class="page-title">{pageTitleText}</h1>
-      {currentTag ? (
-        <span class="entry-tag-current__pill entry-tag-current__pill--inline">
-          <UiIcon name="tag" class="entry-tag-current__icon" size={14} />
-          <strong class="entry-tag-current__label">#{currentTag.label}</strong>
-        </span>
-      ) : null}
     </div>
-    <span class:list={['page-subtitle', 'page-subtitle--entry-filters', currentTag && 'page-subtitle--with-current-tag']}>
+    <span class:list={['page-subtitle', 'page-subtitle--entry-filters']}>
       {subtitleText ? <span class="page-subtitle__text">{subtitleText}</span> : null}
-      {!currentTag ? <a class="page-subtitle__link page-subtitle__item" href={rssHref}>RSS</a> : null}
+      {showRss ? <a class="page-subtitle__link page-subtitle__item" href={rssHref}>RSS</a> : null}
       {hasTagEntry ? (
-        currentTag ? (
-          <span class="page-subtitle__item page-subtitle__actions">
-            <a
-              class="page-subtitle__action"
-              href={pickerHref}
-              data-entry-tag-trigger
-              aria-haspopup="dialog"
-              aria-expanded="false"
-            >
-              {tagTriggerText}
-            </a>
-            <a class="page-subtitle__link" href={currentTag.clearHref}>
-              清除筛选
-            </a>
-          </span>
-        ) : (
-          <a
-            class="page-subtitle__action page-subtitle__item"
-            href={pickerHref}
-            data-entry-tag-trigger
-            aria-haspopup="dialog"
-            aria-expanded="false"
-          >
-            {tagTriggerText}
-          </a>
-        )
+        <a
+          class="page-subtitle__action page-subtitle__item"
+          href={pickerHref}
+          data-entry-tag-trigger
+          data-entry-tag-open
+          aria-haspopup="dialog"
+          aria-expanded="false"
+        >
+          {tagTriggerText}
+        </a>
       ) : null}
     </span>
   </div>
   <div class="page-actions">
+    {showSearch ? (
     <div class="entry-search" data-entry-search>
       <div class="entry-search-panel" data-entry-search-panel aria-hidden="true">
         <input
           data-entry-search-input
           type="search"
-          placeholder="搜索：标题 / 摘要 / 标签"
+          placeholder={searchPlaceholder}
           autocomplete="off"
           aria-label={searchAriaLabel}
         />
@@ -110,6 +107,7 @@ const tagTriggerText = currentTag ? '切换标签' : '#标签';
       </button>
       <p class="sr-only" data-entry-search-live role="status" aria-live="polite" aria-atomic="true"></p>
     </div>
+    ) : null}
   </div>
 </div>
 
@@ -121,27 +119,91 @@ const tagTriggerText = currentTag ? '切换标签' : '#标签';
         <div class="entry-tags-dialog__head">
           <div class="entry-tags-dialog__title-wrap">
             <div class="entry-tags-dialog__title-row">
-              <h2 class="entry-tags-dialog__title" id={dialogTitleId} tabindex="-1">{pageTitleText}标签</h2>
-              <p class="entry-tags-dialog__hint">共 {tagOptions.length} 个</p>
+              <h2 class="entry-tags-dialog__title" id={dialogTitleId} tabindex="-1">{pageTitleText}{itemNoun}</h2>
+              <p class="entry-tags-dialog__hint" data-entry-tag-count>共 {tagOptions.length} 个</p>
             </div>
           </div>
           <div class="entry-tags-dialog__actions">
-            <button class="entry-tags-dialog__close" type="button" data-entry-tag-close aria-label="关闭标签选择器">
+            <button class="entry-tags-dialog__clear" type="button" data-entry-tag-clear hidden>清除筛选</button>
+            <button class="entry-tags-dialog__close" type="button" data-entry-tag-close aria-label={`关闭${itemNoun}选择器`}>
               ✕
             </button>
           </div>
         </div>
-        <div class="entry-tags-dialog__list">
-          {tagOptions.map((tagOption) => (
-            <a
-              class:list={['entry-tag-option', tagOption.isActive && 'is-active']}
-              href={tagOption.href}
-              data-entry-tag-key={tagOption.key}
-              aria-current={tagOption.isActive ? 'page' : undefined}
+
+        {showModeToggle ? (
+        /*
+          逻辑预览行：左侧长胶囊由 scripts/entry-search.ts 实时渲染已选标签与
+          `+` / `/` 运算符，右侧是 AND/OR 开关（`+` 同时包含，`/` 任一）。
+        */
+        <div class="entry-tags-dialog__expression-row">
+          <div
+            class="entry-tags-dialog__expression"
+            data-entry-tag-expression
+            data-empty="true"
+            role="status"
+            aria-live="polite"
+            aria-label="标签逻辑预览：暂无"
+          >
+            <span class="entry-tags-dialog__expression-hint">选择标签后，这里会实时显示筛选逻辑</span>
+          </div>
+          <div class="entry-tags-dialog__mode" role="group" aria-label={`${itemNoun}匹配方式`}>
+            <button
+              class="entry-tags-dialog__mode-btn is-active"
+              type="button"
+              data-entry-tag-mode="and"
+              aria-pressed="true"
+              title="同时包含（AND）：切换后已选部分会被括起来，新标签按“同时包含”叠加"
+              aria-label="同时包含所有已选标签"
             >
-              <span class="entry-tag-option__label">#{tagOption.label}</span>
+              +
+            </button>
+            <button
+              class="entry-tags-dialog__mode-btn"
+              type="button"
+              data-entry-tag-mode="or"
+              aria-pressed="false"
+              title="任一标签（OR）：切换后已选部分会被括起来，新标签按“任一”叠加"
+              aria-label="包含任一已选标签"
+            >
+              /
+            </button>
+          </div>
+        </div>
+        ) : null}
+
+        {/* 标签数量有限，不再提供 dialog 内的二次筛选输入框。 */}
+        <p class="entry-tags-dialog__empty" data-entry-tag-empty hidden>没有同时包含这些{itemNoun}的内容</p>
+        <button class="entry-tags-dialog__switch-hint" type="button" data-entry-tag-switch-or hidden>
+          切换到 /（任一标签）
+        </button>
+        <div
+          class="entry-tags-dialog__list"
+          data-entry-tag-options
+          role="group"
+          aria-label={optionsAriaLabel ?? `按${itemNoun}筛选`}
+        >
+          {allOptionLabel ? (
+            <button
+              class="entry-tag-option is-active"
+              type="button"
+              data-entry-tag-key=""
+              aria-pressed="true"
+            >
+              <span class="entry-tag-option__label">{allOptionLabel}</span>
+              <span class="entry-tag-option__count">{tagOptions.reduce((total, option) => total + option.count, 0)}</span>
+            </button>
+          ) : null}
+          {tagOptions.map((tagOption) => (
+            <button
+              class="entry-tag-option"
+              type="button"
+              data-entry-tag-key={tagOption.key}
+              aria-pressed="false"
+            >
+              <span class="entry-tag-option__label">{optionPrefix}{tagOption.label}</span>
               <span class="entry-tag-option__count">{tagOption.count}</span>
-            </a>
+            </button>
           ))}
         </div>
       </div>
@@ -149,29 +211,20 @@ const tagTriggerText = currentTag ? '切换标签' : '#标签';
     <noscript>
       <section class="entry-tags-fallback" id={fallbackListId} aria-labelledby={`${dialogTitleId}-fallback`}>
         <div class="entry-tags-fallback__head">
-          <h2 class="entry-tags-fallback__title" id={`${dialogTitleId}-fallback`}>{pageTitleText}标签</h2>
+          <h2 class="entry-tags-fallback__title" id={`${dialogTitleId}-fallback`}>{pageTitleText}{itemNoun}</h2>
           <p class="entry-tags-fallback__hint">
-            当前为无 JavaScript 模式，可直接点击下列标签进入静态结果页。
+            当前为无 JavaScript 模式，{itemNoun}筛选不可用；请直接在列表中浏览全部条目。
           </p>
         </div>
         <div class="entry-tags-dialog__toolbar">
-          <span class="entry-tags-dialog__summary">共 {tagOptions.length} 个标签，可直接访问结果页。</span>
-          {currentTag ? (
-            <a class="entry-tags-dialog__clear" href={currentTag.clearHref}>查看全部</a>
-          ) : (
-            <span class="entry-tags-dialog__summary entry-tags-dialog__summary--secondary">下列标签链接可直接访问结果页</span>
-          )}
+          <span class="entry-tags-dialog__summary">共 {tagOptions.length} 个{itemNoun}；开启 JavaScript 后可按{itemNoun}筛选。</span>
         </div>
         <div class="entry-tags-dialog__list">
           {tagOptions.map((tagOption) => (
-            <a
-              class:list={['entry-tag-option', tagOption.isActive && 'is-active']}
-              href={tagOption.href}
-              aria-current={tagOption.isActive ? 'page' : undefined}
-            >
-              <span class="entry-tag-option__label">#{tagOption.label}</span>
+            <span class="entry-tag-option">
+              <span class="entry-tag-option__label">{optionPrefix}{tagOption.label}</span>
               <span class="entry-tag-option__count">{tagOption.count}</span>
-            </a>
+            </span>
           ))}
         </div>
       </section>

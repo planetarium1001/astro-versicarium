@@ -10,7 +10,7 @@ import type { BitsCardAuthorInput } from '../../../../lib/bits-card-view-model';
 import { createModalDialogFocusController } from '../../../../scripts/admin-console/modal-dialog-focus';
 import AdminEditorIcon from '../shared/AdminEditorIcon.svelte';
 import FrontmatterSidebar from './FrontmatterSidebar.svelte';
-import { isEssayEditorValues } from '../shared/content-editor-adapters';
+import { isBlogEditorValues } from '../shared/content-editor-adapters';
 
 type AdminContentIssue = {
   path: string;
@@ -48,7 +48,7 @@ type Props = {
 let {
   open,
   value = $bindable(),
-  collection = 'essay',
+  collection = 'blog',
   issues = [],
   disabled = false,
   loading = false,
@@ -209,7 +209,7 @@ $effect(() => {
             <div class="admin-editor-frontmatter-popover__toggles">
               {#if draftLocked}
                 <span class="admin-badge admin-editor-frontmatter-popover__state-badge">草稿</span>
-                {#if collection === 'essay' && isEssayEditorValues(value)}
+                {#if collection === 'blog' && isBlogEditorValues(value)}
                   <span class="admin-badge admin-editor-frontmatter-popover__state-badge">归档</span>
                 {/if}
                 {#if draftLockHelp}
@@ -220,7 +220,7 @@ $effect(() => {
                   <input name="draft" type="checkbox" bind:checked={value.draft} disabled={disabled || loading} onchange={onDirty} />
                   <span>草稿</span>
                 </label>
-                {#if collection === 'essay' && isEssayEditorValues(value)}
+                {#if collection === 'blog' && isBlogEditorValues(value)}
                   <label class="admin-toggle-row">
                     <input name="archive" type="checkbox" bind:checked={value.archive} disabled={disabled || loading} onchange={onDirty} />
                     <span>归档</span>

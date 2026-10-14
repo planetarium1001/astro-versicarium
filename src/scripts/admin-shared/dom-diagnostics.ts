@@ -8,7 +8,7 @@ type RequiredAdminDomControls<TControls extends AdminDomControlMap<TControls>> =
   [Key in keyof TControls]: NonNullable<TControls[Key]>;
 };
 
-export type AdminDomControlQueryResult<TControls extends AdminDomControlMap<TControls>> =
+type AdminDomControlQueryResult<TControls extends AdminDomControlMap<TControls>> =
   | {
       ok: true;
       controls: RequiredAdminDomControls<TControls>;

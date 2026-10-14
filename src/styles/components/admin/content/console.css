@@ -616,7 +616,7 @@
   text-decoration: none;
 }
 
-/* 计数 badge：仅多条目的 collection（essay / bits）展示。 */
+/* 计数 badge：仅多条目的 collection（blog / bits）展示。 */
 .admin-content-module__title-count {
   align-self: center;
   padding: 1px 6px;

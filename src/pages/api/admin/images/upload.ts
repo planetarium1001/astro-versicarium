@@ -7,8 +7,9 @@ import {
 import {
   AdminImageUploadError,
   uploadAdminBitsImage,
-  uploadAdminEssayImage,
-  uploadAdminMemoImage
+  uploadAdminBlogImage,
+  uploadAdminDevlogImage,
+  uploadAdminProjectsImage
 } from '../../../../lib/admin-console/image-upload';
 import { isAdminImageCloudStorageEnabled } from '../../../../lib/admin-console/image-cloud-storage';
 import {
@@ -69,10 +70,11 @@ const getRequiredFile = (formData: FormData, key: string): File | null => {
 const withAdminImageUploadLock = createAdminWriteQueue();
 
 const uploaders = {
-  essay: uploadAdminEssayImage,
+  blog: uploadAdminBlogImage,
+  projects: uploadAdminProjectsImage,
   bits: uploadAdminBitsImage,
-  memo: uploadAdminMemoImage
-} as const satisfies Record<AdminContentImageUploadCollectionKey, typeof uploadAdminEssayImage>;
+  devlog: uploadAdminDevlogImage
+} as const satisfies Record<AdminContentImageUploadCollectionKey, typeof uploadAdminBlogImage>;
 
 export const GET: APIRoute = async () => {
   if (!import.meta.env.DEV && !process.env.VITEST) {
@@ -115,7 +117,7 @@ export const POST: APIRoute = async ({ request, url }) => {
   const errors: string[] = [];
 
   if (!isAdminContentImageUploadCollectionKey(collection)) {
-    errors.push('当前仅支持随笔正文图片、小记正文图片或絮语配图上传');
+    errors.push('当前仅支持博客 / 项目 / 更新正文图片或动态配图上传');
   }
   if (!entryId) {
     errors.push('上传请求缺少 entryId');

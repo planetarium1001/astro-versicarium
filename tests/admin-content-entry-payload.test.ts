@@ -6,17 +6,17 @@ import { createJsonRequest, setupAdminContentWriteFixture } from './admin-conten
 describe('admin content entry payload contract', () => {
   const getTempRoot = setupAdminContentWriteFixture();
 
-  it('loads editable payload for essay entries', async () => {
+  it('loads editable payload for blog entries', async () => {
     const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
-    const payload = await readAdminContentEntryEditorPayload('essay', 'demo');
+    const payload = await readAdminContentEntryEditorPayload('blog', 'demo');
 
-    expect(payload.collection).toBe('essay');
-    if (payload.collection !== 'essay') throw new Error('Expected essay payload');
+    expect(payload.collection).toBe('blog');
+    if (payload.collection !== 'blog') throw new Error('Expected blog payload');
     expect(payload.writable).toBe(true);
-    expect(payload.values.title).toBe('Demo Essay');
+    expect(payload.values.title).toBe('Demo blog');
     expect(payload.values.date).toBe('2026-03-18');
     expect(payload.defaultPublicSlug).toBe('demo');
-    if (payload.collection === 'essay') {
+    if (payload.collection === 'blog') {
       expect(payload.values.publishedAt).toBe('');
       expect(payload.values.updatedAt).toBe('');
     }
@@ -37,20 +37,20 @@ describe('admin content entry payload contract', () => {
   it('loads and validates source files whose names differ from Astro public ids', async () => {
     const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
     const { POST } = await import('../src/pages/api/admin/content/entry');
-    const current = await readAdminContentEntryEditorPayload('essay', 'admin-console-guide copy');
+    const current = await readAdminContentEntryEditorPayload('blog', 'admin-console-guide copy');
 
     expect(current.entryId).toBe('admin-console-guide copy');
     expect(current.defaultPublicSlug).toBe('admin-console-guide-copy');
-    expect(current.relativePath).toBe('src/content/essay/admin-console-guide copy.md');
+    expect(current.relativePath).toBe('src/content/blog/admin-console-guide copy.md');
 
     const response = await POST({
       request: createJsonRequest('http://127.0.0.1:4321/api/admin/content/entry?dryRun=1', {
-        collection: 'essay',
+        collection: 'blog',
         entryId: 'admin-console-guide copy',
         revision: current.revision,
         frontmatter: {
           ...current.values,
-          title: 'Space Name Essay Updated'
+          title: 'Space Name blog Updated'
         }
       }),
       url: new URL('http://127.0.0.1:4321/api/admin/content/entry?dryRun=1')
@@ -62,9 +62,9 @@ describe('admin content entry payload contract', () => {
     expect(payload.result.changedFields).toEqual(['title']);
   });
 
-  it('loads legacy essay datetime dates for compatibility', async () => {
+  it('loads legacy blog datetime dates for compatibility', async () => {
     await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'essay', 'legacy-datetime.md'),
+      path.join(getTempRoot(), 'src', 'content', 'blog', 'legacy-datetime.md'),
       [
         '---',
         'title: Legacy Datetime',
@@ -79,17 +79,17 @@ describe('admin content entry payload contract', () => {
     );
 
     const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
-    const payload = await readAdminContentEntryEditorPayload('essay', 'legacy-datetime');
+    const payload = await readAdminContentEntryEditorPayload('blog', 'legacy-datetime');
 
-    if (payload.collection === 'essay') {
+    if (payload.collection === 'blog') {
       expect(payload.values.date).toBe('2024-11-23');
       expect(payload.values.publishedAt).toBe('2024-11-23T18:00:00+08:00');
     }
   });
 
-  it('loads optional essay updatedAt as editable date text', async () => {
+  it('loads optional blog updatedAt as editable date text', async () => {
     await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'essay', 'updated-date.md'),
+      path.join(getTempRoot(), 'src', 'content', 'blog', 'updated-date.md'),
       [
         '---',
         'title: Updated Date',
@@ -105,99 +105,14 @@ describe('admin content entry payload contract', () => {
     );
 
     const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
-    const payload = await readAdminContentEntryEditorPayload('essay', 'updated-date');
+    const payload = await readAdminContentEntryEditorPayload('blog', 'updated-date');
 
-    if (payload.collection === 'essay') {
+    if (payload.collection === 'blog') {
       expect(payload.values.updatedAt).toBe('2026-03-20');
     }
   });
 
-  it('loads editable payload for memo entries with body text', async () => {
-    const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
-    const payload = await readAdminContentEntryEditorPayload('memo', 'index');
-
-    expect(payload.writable).toBe(true);
-    expect(payload.readonlyReason).toBeNull();
-    expect(payload.collection).toBe('memo');
-    if (payload.collection === 'memo') {
-      expect(payload.bodyText).toBe('\nmemo body\n');
-      expect(payload.values.title).toBe('Memo');
-      expect(payload.values.subtitle).toBe('Memo subtitle');
-      expect(payload.values.date).toBe('2026-01-10');
-      expect(payload.values.draft).toBe(true);
-      expect(payload.values.slug).toBe('memo-note');
-    }
-  });
-
-  it('rejects non-index memo entry writes even if an extra source file exists', async () => {
-    await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'memo', 'extra.md'),
-      ['---', 'title: Extra Memo', '---', '', 'extra memo body', ''].join('\n'),
-      'utf8'
-    );
-
-    const { POST } = await import('../src/pages/api/admin/content/entry');
-    const response = await POST({
-      request: createJsonRequest('http://127.0.0.1:4321/api/admin/content/entry', {
-        collection: 'memo',
-        entryId: 'extra',
-        revision: 'stale',
-        body: 'updated extra memo body'
-      }),
-      url: new URL('http://127.0.0.1:4321/api/admin/content/entry')
-    } as never);
-
-    expect(response.status).toBe(400);
-    const payload = JSON.parse(await response.text());
-    expect(payload.ok).toBe(false);
-    expect(payload.issues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          path: 'entryId',
-          message: expect.stringContaining('memo 仅支持固定源文件')
-        })
-      ])
-    );
-  });
-
-  it('does not resolve memo index.mdx as the fixed page source', async () => {
-    await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'memo', 'index.mdx'),
-      ['---', 'title: MDX Memo', '---', '', 'mdx memo body', ''].join('\n'),
-      'utf8'
-    );
-
-    const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
-    const current = await readAdminContentEntryEditorPayload('memo', 'index');
-    expect(current.relativePath).toBe('src/content/memo/index.md');
-    if (current.collection === 'memo') {
-      expect(current.bodyText).toBe('\nmemo body\n');
-    }
-
-    const { POST } = await import('../src/pages/api/admin/content/entry');
-    const response = await POST({
-      request: createJsonRequest('http://127.0.0.1:4321/api/admin/content/entry', {
-        collection: 'memo',
-        entryId: 'index.mdx',
-        revision: 'stale',
-        body: 'updated mdx memo body'
-      }),
-      url: new URL('http://127.0.0.1:4321/api/admin/content/entry')
-    } as never);
-
-    expect(response.status).toBe(400);
-    const payload = JSON.parse(await response.text());
-    expect(payload.issues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          path: 'entryId',
-          message: expect.stringContaining('memo 仅支持固定源文件')
-        })
-      ])
-    );
-  });
-
-  it('does not load non-memo .mdx entries into the writable editor path', async () => {
+  it('does not load .mdx entries into the writable editor path', async () => {
     await writeFile(
       path.join(getTempRoot(), 'src', 'content', 'bits', 'legacy-mdx.mdx'),
       ['---', 'date: 2025-02-03T22:30:00+08:00', '---', '', '<Aside />', ''].join('\n'),
@@ -222,25 +137,25 @@ describe('admin content entry payload contract', () => {
         message: '不支持的 content collection'
       },
       {
-        body: { collection: 'memo', entryId: 'index', revision: null, body: 'memo body' },
+        body: { collection: 'about', entryId: 'index', revision: null, body: 'about body' },
         status: 400,
         issuePath: 'revision',
         message: '请求体缺少 revision'
       },
       {
-        body: { collection: 'essay', entryId: '../secret', revision: 'stale', frontmatter: {} },
+        body: { collection: 'blog', entryId: '../secret', revision: 'stale', frontmatter: {} },
         status: 400,
         issuePath: 'entryId',
         message: 'entryId'
       },
       {
-        body: { collection: 'essay', entryId: 'missing', revision: 'stale', frontmatter: {} },
+        body: { collection: 'blog', entryId: 'missing', revision: 'stale', frontmatter: {} },
         status: 404,
         issuePath: 'entryId',
         message: '未找到 content 源文件'
       },
       {
-        body: { collection: 'essay', entryId: 'demo', revision: 'stale', frontmatter: [] },
+        body: { collection: 'blog', entryId: 'demo', revision: 'stale', frontmatter: [] },
         status: 400,
         issuePath: 'frontmatter',
         message: 'frontmatter 必须是对象'
@@ -252,13 +167,7 @@ describe('admin content entry payload contract', () => {
         message: 'about 保存请求缺少 body 字段'
       },
       {
-        body: { collection: 'memo', entryId: 'index', revision: 'stale' },
-        status: 400,
-        issuePath: 'body',
-        message: 'memo 保存请求缺少 body 字段'
-      },
-      {
-        body: { collection: 'essay', entryId: 'demo', revision: 'stale', frontmatter: {}, body: 42 },
+        body: { collection: 'blog', entryId: 'demo', revision: 'stale', frontmatter: {}, body: 42 },
         status: 400,
         issuePath: 'body',
         message: 'body 必须是 Markdown 字符串'

@@ -1,7 +1,7 @@
 <script lang="ts">
 import { createModalDialogFocusController } from '../../../../scripts/admin-console/modal-dialog-focus';
 import AdminEditorIcon from '../shared/AdminEditorIcon.svelte';
-import { uploadEssayEditorImage } from './editor-image-upload';
+import { uploadBlogEditorImage } from './editor-image-upload';
 import {
   GALLERY_IMAGE_SOURCE_ERROR,
   createGalleryInsertText,
@@ -185,7 +185,7 @@ const handleFileChange = async () => {
   uploadingItemId = itemId;
   errorText = '';
 
-  const upload = await uploadEssayEditorImage({ uploadEndpoint, entryId, file });
+  const upload = await uploadBlogEditorImage({ uploadEndpoint, entryId, file });
   if (upload.ok) {
     updateItem(itemId, { source: upload.result.src });
   } else {

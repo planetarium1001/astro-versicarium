@@ -47,11 +47,18 @@ const htmlLang = settings.site.defaultLocale || 'zh-CN';
 const footerStartYear = settings.site.footer.startYear;
 const footerShowCurrentYear = settings.site.footer.showCurrentYear;
 const footerCopyright = settings.site.footer.copyright;
+/** 窄屏顶栏站点标题宽度上限（后台可配，默认 35%），作为 CSS 变量写在 `<html>` 上。 */
+const siteTitleMaxPercent = settings.site.titleMaxPercent;
 const showCodeLineNumbers = settings.ui.codeBlock.showLineNumbers;
 const sidebarDividerVariant = settings.ui.layout.sidebarDivider;
 // 非默认字体角色以 <html> 内联自定义属性覆盖 global.css 的 :root tokens；默认态不输出，
 // 保持 global.css 为唯一默认来源（deferGlobalStyles 异步加载路径下行内属性也不受加载顺序影响）。
 const typographyStyleOverride = getTypographyStyleOverride(settings.ui.typography);
+/** `<html>` 内联声明：字体覆盖（可选）+ 窄屏站点标题宽度上限（默认值也照常输出）。 */
+const htmlStyleOverride = [
+  typographyStyleOverride,
+  `--site-title-max-inline: ${siteTitleMaxPercent}%`
+].filter(Boolean).join('; ');
 // 选中 astro-fonts-api 字体时渲染 <Font>（注入构建期生成的 @font-face 与 cssVariable）；默认态为空数组。
 // 只渲染 config 期实际注册的 cssVariable（快照来自 vite.define）：dev 下热改 ui.json 的未注册
 // 条目会让 <Font> 抛 FontFamilyNotFound 崩掉全站，此处跳过并提示重启。
@@ -88,7 +95,7 @@ const basePrefix = base.endsWith('/') ? base.slice(0, -1) : base;
 const routePath = basePrefix && pathname.startsWith(basePrefix)
   ? pathname.slice(basePrefix.length) || '/'
   : pathname;
-const showFloatStack = !isAdminPage && /^\/(?:archive|bits|essay|memo)(?:\/|$)/.test(routePath);
+const showFloatStack = !isAdminPage && /^\/(?:archive|projects|bits|blog|devlog)(?:\/|$)/.test(routePath);
 // 阅读模式入口开关（Theme Console →「浮动操作列」）
 const showReaderToggle = settings.ui.readingMode.showEntry;
 // 同组的另外两个按钮开关
@@ -123,7 +130,7 @@ const adminUiPrefsScriptHref = isDevAdminPage
 ---
 
 <!doctype html>
-<html lang={htmlLang} style={typographyStyleOverride ?? undefined}>
+<html lang={htmlLang} style={htmlStyleOverride}>
   <head>
     <script is:inline>
       (() => {

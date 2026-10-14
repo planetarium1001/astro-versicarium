@@ -18,8 +18,8 @@ import {
 import {
   replaceMarkdownText
 } from '../src/components/admin/editor/markdown/editor-markdown-transforms';
-import { decodeHtmlText } from '../src/lib/admin-console/essay-image-blocks';
-import { collectMarkdownBodyLocalImageReferences } from '../src/lib/admin-console/essay-image-references';
+import { decodeHtmlText } from '../src/lib/admin-console/blog-image-blocks';
+import { collectMarkdownBodyLocalImageReferences } from '../src/lib/admin-console/blog-image-references';
 
 describe('admin editor image insert helpers', () => {
   it('keeps the default image output as Markdown', () => {
@@ -310,12 +310,12 @@ describe('admin editor image insert helpers', () => {
 
     expect(collectMarkdownBodyLocalImageReferences({
       bodyText: '<figure class="figure"><img src="./encoded&amp;lt;name.webp" alt="Encoded" /></figure>',
-      sourcePath: '/project/src/content/essay/demo.md',
+      sourcePath: '/project/src/content/blog/demo.md',
       projectRoot: '/project'
     })).toEqual([
       expect.objectContaining({
         src: './encoded&lt;name.webp',
-        relativePath: 'src/content/essay/encoded&lt;name.webp'
+        relativePath: 'src/content/blog/encoded&lt;name.webp'
       })
     ]);
   });

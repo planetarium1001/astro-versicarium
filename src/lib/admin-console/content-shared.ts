@@ -1,3 +1,11 @@
+/** 可空日期倒序比较：空值排在末尾。 */
+export const compareByNullableDateDesc = (left: Date | null, right: Date | null): number => {
+  if (left && right) return right.valueOf() - left.valueOf();
+  if (left) return -1;
+  if (right) return 1;
+  return 0;
+};
+
 export type {
   AdminAboutEditorPayload,
   AdminAboutEditorValues
@@ -63,10 +71,8 @@ export type {
   AdminContentEditorValues,
   AdminContentWorkspaceEditorPayload,
   AdminContentWorkspaceEditorValues,
-  AdminEssayEditorPayload,
-  AdminEssayEditorValues,
-  AdminMemoEditorPayload,
-  AdminMemoEditorValues
+  AdminBlogEditorPayload,
+  AdminBlogEditorValues
 } from './content-editor-payload';
 
 export {

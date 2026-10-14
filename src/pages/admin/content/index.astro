@@ -117,13 +117,13 @@ const getContentPublicLinkLabel = (item: Pick<AdminContentIndexItem, 'collection
 const getContentInfoActionLabel = (item: Pick<AdminContentIndexItem, 'collection'>): string => {
   const capability = getAdminContentCollectionCapability(item.collection);
   if (!capability.writable) return '查看源信息';
-  if (item.collection === 'essay' || item.collection === 'bits') return '修改信息';
+  if (item.collection === 'blog' || item.collection === 'bits') return '修改信息';
   if (capability.fixedPage) return `${capability.label}信息`;
   return '编辑信息';
 };
 
-const hasListInfoAction = (collection: AdminContentCollectionKey): collection is 'essay' | 'bits' =>
-  collection === 'essay' || collection === 'bits';
+const hasListInfoAction = (collection: AdminContentCollectionKey): collection is 'blog' | 'bits' =>
+  collection === 'blog' || collection === 'bits';
 
 const getContentPaginationHref = (page: number): string => {
   // 分页只属于具体 collection scope；总览和全部内容搜索不生成分页链接。
@@ -198,15 +198,30 @@ const getContentEmptyMessage = (sectionLabel: string): string => {
 };
 
 const CONTENT_CREATE_ACTIONS = {
-  essay: {
+  blog: {
     attribute: 'data-admin-content-create-action',
-    label: '新建文章'
+    label: '新建文章',
+    collection: 'blog'
+  },
+  projects: {
+    attribute: 'data-admin-content-projects-create-action',
+    label: '新建项目',
+    collection: 'projects'
   },
   bits: {
     attribute: 'data-admin-content-bits-create-action',
-    label: '新建动态'
+    label: '新建动态',
+    collection: 'bits'
+  },
+  devlog: {
+    attribute: 'data-admin-content-devlog-create-action',
+    label: '新建更新',
+    collection: 'devlog'
   }
-} as const satisfies Record<AdminContentCreatableCollectionKey, { attribute: string; label: string }>;
+} as const satisfies Record<
+  AdminContentCreatableCollectionKey,
+  { attribute: string; label: string; collection: AdminContentCreatableCollectionKey }
+>;
 
 const hasContentCreateAction = (
   collection: AdminContentCollectionKey
@@ -215,7 +230,7 @@ const hasContentCreateAction = (
 
 const getContentCreateAction = (
   collection: AdminContentCollectionKey
-): { attribute: string; label: string } | null => {
+): { attribute: string; label: string; collection: AdminContentCreatableCollectionKey } | null => {
   if (!hasContentCreateAction(collection)) return null;
   return CONTENT_CREATE_ACTIONS[collection];
 };
@@ -490,6 +505,7 @@ const getContentCreateAction = (
                                   type="button"
                                   {...{ [createAction.attribute]: true }}
                                   data-create-action-label={createAction.label}
+                                  data-create-collection={createAction.collection}
                                   disabled
                                 >
                                   <AdminIcon name="plus" size={13} strokeWidth={2.2} class="admin-content-create-action__icon" />
@@ -512,7 +528,7 @@ const getContentCreateAction = (
                                 const editHref = withBase(editPath);
                                 const supportsListInfoAction = capability.writable && hasListInfoAction(item.collection);
                                 const articleInfoHref = capability.writable
-                                  ? item.collection === 'essay'
+                                  ? item.collection === 'blog'
                                     ? withBase(`${editPath}?panel=info`)
                                     : editHref
                                   : null;

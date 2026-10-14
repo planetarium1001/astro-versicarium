@@ -13,7 +13,7 @@ import {
 } from './image-upload-error';
 
 type AdminImageCloudUploadInput = {
-  collection: 'essay' | 'bits' | 'memo';
+  collection: 'blog' | 'projects' | 'bits' | 'devlog';
   entryId: string;
   fileName: string;
   buffer: Buffer;
@@ -56,8 +56,27 @@ const MIME_BY_EXT: Record<string, string> = {
 };
 
 const ADMIN_IMAGE_CLOUD_MAX_ATTEMPTS = 2;
-const ADMIN_IMAGE_CLOUD_UPLOAD_DEADLINE_MS = 60_000;
-const ADMIN_IMAGE_CLOUD_LIST_DEADLINE_MS = 15_000;
+const ADMIN_IMAGE_CLOUD_DEFAULT_UPLOAD_DEADLINE_MS = 60_000;
+const ADMIN_IMAGE_CLOUD_DEFAULT_LIST_DEADLINE_MS = 15_000;
+
+/**
+ * 超时时间延迟解析并允许环境变量覆盖：测试需要真实计时器下缩短超时，
+ * 而不是用假时钟推进（假时钟推不到位会让模块级上传队列整体挂住）。
+ */
+const readDeadlineOverrideMs = (envKey: string): number | null => {
+  const raw = process.env[envKey]?.trim();
+  if (!raw) return null;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+const resolveCloudUploadDeadlineMs = (): number =>
+  readDeadlineOverrideMs('ASTRO_WHONO_IMAGE_CLOUD_UPLOAD_DEADLINE_MS')
+  ?? ADMIN_IMAGE_CLOUD_DEFAULT_UPLOAD_DEADLINE_MS;
+
+const resolveCloudListDeadlineMs = (): number =>
+  readDeadlineOverrideMs('ASTRO_WHONO_IMAGE_CLOUD_LIST_DEADLINE_MS')
+  ?? ADMIN_IMAGE_CLOUD_DEFAULT_LIST_DEADLINE_MS;
 
 class AdminImageCloudDeadlineError extends Error {
   constructor(deadlineMs: number) {
@@ -78,6 +97,7 @@ const encodeS3PathSegment = (segment: string): string =>
 const encodeS3Path = (value: string): string =>
   value.split('/').map(encodeS3PathSegment).join('/');
 
+/** 本地与云端共用同一套 slug 规范化。 */
 const toSafeKeyPart = (value: string): string =>
   value
     .trim()
@@ -94,6 +114,20 @@ const toSafeKeyPart = (value: string): string =>
     )
     .filter(Boolean)
     .join('/');
+
+/**
+ * `entryId` 可能含 `/`（如 `no-assets/index`），会产生嵌套目录；
+ * 对象键里的 `{slug}` 必须单层，因此这里把分隔符折叠掉。
+ */
+export const toSingleLayerSafeKeyPart = (value: string, fallback = 'entry'): string => {
+  const normalized = toSafeKeyPart(value);
+  const singleLayer = normalized
+    .replace(/\//g, '-')
+    .replace(/^\.+|\.+$/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return singleLayer || fallback;
+};
 
 const readImportMetaEnv = (key: string): string => {
   const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
@@ -267,7 +301,7 @@ const withCloudOperationDeadline = async <T>(
   }
 };
 
-const getMimeTypeFromFileName = (fileName: string): string | null =>
+export const getMimeTypeFromFileName = (fileName: string): string | null =>
   MIME_BY_EXT[path.extname(fileName).toLowerCase()] ?? null;
 
 const createCloudObjectKey = ({
@@ -277,7 +311,8 @@ const createCloudObjectKey = ({
 }: Pick<AdminImageCloudUploadInput, 'collection' | 'entryId' | 'fileName'>): string => {
   const extension = path.extname(fileName).toLowerCase();
   const baseName = path.basename(fileName, extension);
-  const entryPart = toSafeKeyPart(entryId) || 'entry';
+  // {slug} 必须单层，entryId 可能含 /
+  const entryPart = toSingleLayerSafeKeyPart(entryId);
   const uniqueName = `${baseName}-${randomUUID()}${extension}`;
   return [collection, entryPart, uniqueName].map(trimSlashes).filter(Boolean).join('/');
 };
@@ -322,7 +357,7 @@ export const uploadAdminImageToCloudStorage = async (
   const contentType = input.mimeType || 'application/octet-stream';
 
   try {
-    await withCloudOperationDeadline(ADMIN_IMAGE_CLOUD_UPLOAD_DEADLINE_MS, (abortSignal) =>
+    await withCloudOperationDeadline(resolveCloudUploadDeadlineMs(), (abortSignal) =>
       createS3Client(config).send(new PutObjectCommand({
         Bucket: config.bucket,
         Key: objectKey,
@@ -347,7 +382,7 @@ export const listAdminCloudStorageImages = async (): Promise<AdminImageCloudList
   const items: AdminImageCloudListItem[] = [];
 
   try {
-    await withCloudOperationDeadline(ADMIN_IMAGE_CLOUD_LIST_DEADLINE_MS, async (abortSignal) => {
+    await withCloudOperationDeadline(resolveCloudListDeadlineMs(), async (abortSignal) => {
       const paginator = paginateListObjectsV2(
         { client: createS3Client(config) },
         {
@@ -378,6 +413,6 @@ const isManagedAdminImageKey = (key: string, prefix: string): boolean => {
 
   const parts = key.slice(namespace.length).split('/');
   return parts.length >= 3
-    && (parts[0] === 'essay' || parts[0] === 'bits' || parts[0] === 'memo')
+    && (parts[0] === 'blog' || parts[0] === 'projects' || parts[0] === 'bits' || parts[0] === 'devlog')
     && parts.every((part) => part.length > 0 && part !== '.' && part !== '..');
 };

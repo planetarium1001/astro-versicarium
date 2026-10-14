@@ -51,6 +51,12 @@ export type AdminThemeControls = RequiredElements<{
   inputSiteTitle: HTMLInputElement | null;
   inputSiteDescription: HTMLTextAreaElement | null;
   inputSiteDefaultLocale: HTMLInputElement | null;
+  inputSiteTitleMaxPercent: HTMLInputElement | null;
+  inputPageListRssEnabled: HTMLInputElement | null;
+  inputPageListRssBlog: HTMLInputElement | null;
+  inputPageListRssBits: HTMLInputElement | null;
+  inputPageListRssArchive: HTMLInputElement | null;
+  pageListRssGroupEl: HTMLElement | null;
   inputSiteFooterStartYear: HTMLInputElement | null;
   inputSiteFooterShowCurrentYear: HTMLInputElement | null;
   inputSiteFooterCopyright: HTMLInputElement | null;
@@ -77,14 +83,16 @@ export type AdminThemeControls = RequiredElements<{
   inputHomeIntroMoreLinkSecondaryEnabled: HTMLInputElement | null;
   homeIntroMoreLinkSecondaryGroupEl: HTMLElement | null;
   inputHomeIntroMoreLinkSecondary: HTMLSelectElement | null;
-  inputPageEssayTitle: HTMLInputElement | null;
-  inputPageEssaySubtitle: HTMLInputElement | null;
+  inputPageBlogTitle: HTMLInputElement | null;
+  inputPageBlogSubtitle: HTMLInputElement | null;
+  inputPageProjectsTitle: HTMLInputElement | null;
+  inputPageProjectsSubtitle: HTMLInputElement | null;
   inputPageArchiveTitle: HTMLInputElement | null;
   inputPageArchiveSubtitle: HTMLInputElement | null;
   inputPageBitsTitle: HTMLInputElement | null;
   inputPageBitsSubtitle: HTMLInputElement | null;
-  inputPageMemoTitle: HTMLInputElement | null;
-  inputPageMemoSubtitle: HTMLInputElement | null;
+  inputPageDevlogTitle: HTMLInputElement | null;
+  inputPageDevlogSubtitle: HTMLInputElement | null;
   inputPageAboutTitle: HTMLInputElement | null;
   inputPageAboutSubtitle: HTMLInputElement | null;
   inputArticleMetaShowDate: HTMLInputElement | null;
@@ -159,6 +167,12 @@ export const queryAdminThemeControls = (): AdminThemeControls | null => {
     inputSiteTitle: byId<HTMLInputElement>('site-title'),
     inputSiteDescription: byId<HTMLTextAreaElement>('site-description'),
     inputSiteDefaultLocale: byId<HTMLInputElement>('site-default-locale'),
+    inputSiteTitleMaxPercent: byId<HTMLInputElement>('site-title-max-percent'),
+    inputPageListRssEnabled: byId<HTMLInputElement>('page-list-rss-enabled'),
+    inputPageListRssBlog: byId<HTMLInputElement>('page-list-rss-blog'),
+    inputPageListRssBits: byId<HTMLInputElement>('page-list-rss-bits'),
+    inputPageListRssArchive: byId<HTMLInputElement>('page-list-rss-archive'),
+    pageListRssGroupEl: byId<HTMLElement>('page-list-rss-group'),
     inputSiteFooterStartYear: byId<HTMLInputElement>('site-footer-start-year'),
     inputSiteFooterShowCurrentYear: byId<HTMLInputElement>('site-footer-show-current-year'),
     inputSiteFooterCopyright: byId<HTMLInputElement>('site-footer-copyright'),
@@ -184,14 +198,16 @@ export const queryAdminThemeControls = (): AdminThemeControls | null => {
     inputHomeIntroMoreLinkSecondaryEnabled: byId<HTMLInputElement>('home-intro-more-link-secondary-enabled'),
     homeIntroMoreLinkSecondaryGroupEl: byId<HTMLElement>('home-intro-more-link-secondary-group'),
     inputHomeIntroMoreLinkSecondary: byId<HTMLSelectElement>('home-intro-more-link-secondary'),
-    inputPageEssayTitle: byId<HTMLInputElement>('page-essay-title'),
-    inputPageEssaySubtitle: byId<HTMLInputElement>('page-essay-subtitle'),
+    inputPageBlogTitle: byId<HTMLInputElement>('page-blog-title'),
+    inputPageBlogSubtitle: byId<HTMLInputElement>('page-blog-subtitle'),
+    inputPageProjectsTitle: byId<HTMLInputElement>('page-projects-title'),
+    inputPageProjectsSubtitle: byId<HTMLInputElement>('page-projects-subtitle'),
     inputPageArchiveTitle: byId<HTMLInputElement>('page-archive-title'),
     inputPageArchiveSubtitle: byId<HTMLInputElement>('page-archive-subtitle'),
     inputPageBitsTitle: byId<HTMLInputElement>('page-bits-title'),
     inputPageBitsSubtitle: byId<HTMLInputElement>('page-bits-subtitle'),
-    inputPageMemoTitle: byId<HTMLInputElement>('page-memo-title'),
-    inputPageMemoSubtitle: byId<HTMLInputElement>('page-memo-subtitle'),
+    inputPageDevlogTitle: byId<HTMLInputElement>('page-devlog-title'),
+    inputPageDevlogSubtitle: byId<HTMLInputElement>('page-devlog-subtitle'),
     inputPageAboutTitle: byId<HTMLInputElement>('page-about-title'),
     inputPageAboutSubtitle: byId<HTMLInputElement>('page-about-subtitle'),
     inputArticleMetaShowDate: byId<HTMLInputElement>('ui-article-meta-show-date'),

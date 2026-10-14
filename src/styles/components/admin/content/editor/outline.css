@@ -1,5 +1,5 @@
 /* Admin Content Editor Outline
-   承载 essay 编辑器右侧目录面板、tab 与列表行；面板作为布局列参与 grid，不作为 overlay。
+   承载 blog 编辑器右侧目录面板、tab 与列表行；面板作为布局列参与 grid，不作为 overlay。
 */
 
 .admin-editor-outline-panel {
@@ -88,7 +88,7 @@
 }
 
 .admin-editor-outline-panel__heading-item,
-.admin-editor-outline-panel__essay-item {
+.admin-editor-outline-panel__blog-item {
   min-width: 0;
 }
 
@@ -97,7 +97,7 @@
 }
 
 .admin-editor-outline-panel__heading-button,
-.admin-editor-outline-panel__essay-link {
+.admin-editor-outline-panel__blog-link {
   display: grid;
   grid-template-columns: 14px minmax(0, 1fr) auto;
   align-items: center;
@@ -120,7 +120,7 @@
   cursor: pointer;
 }
 
-.admin-editor-outline-panel__essay-link {
+.admin-editor-outline-panel__blog-link {
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
   gap: 1px;
@@ -129,21 +129,21 @@
 
 .admin-editor-outline-panel__heading-button:hover,
 .admin-editor-outline-panel__heading-button:focus-visible,
-.admin-editor-outline-panel__essay-link:hover,
-.admin-editor-outline-panel__essay-link:focus-visible,
-.admin-editor-outline-panel__essay-link.is-active {
+.admin-editor-outline-panel__blog-link:hover,
+.admin-editor-outline-panel__blog-link:focus-visible,
+.admin-editor-outline-panel__blog-link.is-active {
   border-color: color-mix(in srgb, var(--admin-row-border) 64%, transparent);
   background: var(--admin-row-hover-bg);
   color: var(--text);
 }
 
 .admin-editor-outline-panel__heading-button:focus-visible,
-.admin-editor-outline-panel__essay-link:focus-visible {
+.admin-editor-outline-panel__blog-link:focus-visible {
   outline: none;
   box-shadow: var(--admin-focus-shadow);
 }
 
-.admin-editor-outline-panel__essay-link.is-active {
+.admin-editor-outline-panel__blog-link.is-active {
   cursor: default;
 }
 
@@ -172,8 +172,8 @@
 }
 
 .admin-editor-outline-panel__heading-label,
-.admin-editor-outline-panel__essay-title,
-.admin-editor-outline-panel__essay-meta {
+.admin-editor-outline-panel__blog-title,
+.admin-editor-outline-panel__blog-meta {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -184,11 +184,11 @@
   font-weight: 600;
 }
 
-.admin-editor-outline-panel__essay-title {
+.admin-editor-outline-panel__blog-title {
   font-weight: 500;
 }
 
-.admin-editor-outline-panel__essay-link.is-active .admin-editor-outline-panel__essay-title {
+.admin-editor-outline-panel__blog-link.is-active .admin-editor-outline-panel__blog-title {
   font-weight: 600;
 }
 
@@ -197,7 +197,7 @@
 }
 
 .admin-editor-outline-panel__line,
-.admin-editor-outline-panel__essay-meta {
+.admin-editor-outline-panel__blog-meta {
   color: var(--faint);
   font-family: var(--admin-font-mono);
   font-size: var(--admin-text-2xs);

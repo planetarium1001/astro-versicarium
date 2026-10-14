@@ -101,7 +101,7 @@ const extractCreateInput = (body: unknown): CreateInput => {
     collection = rawCollection;
   }
 
-  if (collection === 'essay' && !entryId) {
+  if (collection === 'blog' && !entryId) {
     const message = '请求体缺少 entryId';
     errors.push(message);
     issues.push({ path: 'entryId', message });
@@ -184,9 +184,9 @@ export const POST: APIRoute = async ({ request, url }) => {
   return withAdminContentWriteLock(async () => {
     let plan: Awaited<ReturnType<typeof buildAdminContentCreatePlan>>;
     try {
-      plan = collection === 'essay'
-        ? await buildAdminContentCreatePlan({ collection, entryId: entryId ?? '', frontmatter })
-        : await buildAdminContentCreatePlan({ collection, frontmatter });
+      plan = collection === 'bits'
+        ? await buildAdminContentCreatePlan({ collection, frontmatter })
+        : await buildAdminContentCreatePlan({ collection, entryId: entryId ?? '', frontmatter });
     } catch (error) {
       const errorResponse = createEntryResolutionErrorResponse(error);
       if (errorResponse) return errorResponse;

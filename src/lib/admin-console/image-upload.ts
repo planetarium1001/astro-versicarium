@@ -6,17 +6,20 @@ import {
   resolveAdminContentEntrySourcePath
 } from './content-entry-source';
 import {
+  getProjectRoot,
   invalidateAdminImageCaches,
   readAdminLocalImageInspectionMeta
 } from './image-shared';
 import { getAdminImageFieldValue } from './image-params';
 import {
+  getMimeTypeFromFileName,
   isAdminImageCloudStorageEnabled,
+  toSingleLayerSafeKeyPart,
   uploadAdminImageToCloudStorage
 } from './image-cloud-storage';
 import { AdminImageUploadError } from './image-upload-error';
 
-export type AdminImageUploadResult = {
+type AdminImageUploadResult = {
   src: string;
   path: string;
   fileName: string;
@@ -30,8 +33,6 @@ export { AdminImageUploadError } from './image-upload-error';
 
 const SUPPORTED_IMAGE_EXTENSIONS = new Set(['.avif', '.gif', '.jpg', '.jpeg', '.png', '.svg', '.webp']);
 const ADMIN_IMAGE_UPLOAD_MAX_BYTES = 12 * 1024 * 1024;
-
-const getProjectRoot = (): string => process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
 
 const toRelativeProjectPath = (filePath: string): string =>
   path.relative(getProjectRoot(), filePath).replace(/\\/g, '/');
@@ -73,18 +74,26 @@ const assertUploadFile = (file: File): void => {
   }
 };
 
-const resolveMarkdownBodyUploadDirectory = (sourcePath: string): string => {
-  const parsed = path.parse(sourcePath);
-  return parsed.name === 'index'
-    ? path.join(parsed.dir, 'assets')
-    : path.join(parsed.dir, `${parsed.name}-assets`);
-};
+/**
+ * 本地与云端落点统一为 `public/images/{collection}/{slug}/filename.ext`，
+ * 其中 `{slug}` 是条目 entryId 且必须单层。
+ */
+const resolvePublicImageUploadDirectory = (
+  collection: 'blog' | 'projects' | 'bits' | 'devlog',
+  entryId: string
+): string =>
+  path.join(
+    getProjectRoot(),
+    'public',
+    'images',
+    collection,
+    toSingleLayerSafeKeyPart(entryId)
+  );
 
-const resolveBitsUploadDirectory = (): string => path.join(getProjectRoot(), 'public', 'bits');
-
-const toMarkdownRelativeImageSrc = (sourcePath: string, assetPath: string): string => {
-  const relative = path.relative(path.dirname(sourcePath), assetPath).replace(/\\/g, '/');
-  return relative.startsWith('.') ? relative : `./${relative}`;
+/** 正文图统一写绝对路径 `/images/...`（校验器同时支持相对路径与绝对路径）。 */
+const toPublicImageAbsoluteSrc = (assetPath: string): string => {
+  const relative = path.relative(path.join(getProjectRoot(), 'public'), assetPath).replace(/\\/g, '/');
+  return `/${relative}`;
 };
 
 const createCandidateFileName = (safeFileName: string, index: number): string => {
@@ -120,7 +129,33 @@ const writeUniqueImageFile = async (
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
-const assertContentEntryCanReceiveImage = (collection: 'essay' | 'bits' | 'memo', entryId: string): string => {
+/** 落盘到该条目的 public 目录，返回绝对路径与仓库相对路径。 */
+const writeLocalImageFile = async (
+  collection: 'blog' | 'projects' | 'bits' | 'devlog',
+  entryId: string,
+  safeFileName: string,
+  buffer: Buffer
+): Promise<{ assetPath: string; relativePath: string }> => {
+  const assetPath = await writeUniqueImageFile(
+    resolvePublicImageUploadDirectory(collection, entryId),
+    safeFileName,
+    buffer
+  );
+  return { assetPath, relativePath: toRelativeProjectPath(assetPath) };
+};
+
+/** 读取新写入图片的尺寸/大小信息；读写前后都要失效缓存，避免读到旧扫描结果。 */
+const readFreshImageInspectionMeta = async (relativePath: string) => {
+  invalidateAdminImageCaches();
+  const meta = await readAdminLocalImageInspectionMeta(relativePath);
+  invalidateAdminImageCaches();
+  return meta;
+};
+
+const assertContentEntryCanReceiveImage = (
+  collection: 'blog' | 'projects' | 'bits' | 'devlog',
+  entryId: string
+): string => {
   try {
     return resolveAdminContentEntrySourcePath(collection, entryId);
   } catch (error) {
@@ -138,7 +173,7 @@ const uploadAdminCloudImage = async ({
   safeFileName,
   buffer
 }: {
-  collection: 'essay' | 'bits' | 'memo';
+  collection: 'blog' | 'projects' | 'bits' | 'devlog';
   entryId: string;
   file: File;
   safeFileName: string;
@@ -166,29 +201,19 @@ const uploadAdminCloudImage = async ({
   };
 };
 
-const getMimeTypeFromFileName = (fileName: string): string | null => {
-  const extension = path.extname(fileName).toLowerCase();
-  if (extension === '.avif') return 'image/avif';
-  if (extension === '.gif') return 'image/gif';
-  if (extension === '.jpeg' || extension === '.jpg') return 'image/jpeg';
-  if (extension === '.png') return 'image/png';
-  if (extension === '.svg') return 'image/svg+xml';
-  if (extension === '.webp') return 'image/webp';
-  return null;
-};
-
-export const uploadAdminMarkdownBodyImage = async ({
+const uploadAdminMarkdownBodyImage = async ({
   collection,
   entryId,
   file
 }: {
-  collection: 'essay' | 'memo';
+  collection: 'blog' | 'projects' | 'devlog';
   entryId: string;
   file: File;
 }): Promise<AdminImageUploadResult> => {
   assertUploadFile(file);
 
-  const sourcePath = assertContentEntryCanReceiveImage(collection, entryId);
+  // 条目必须存在（否则落到别人的目录里）。
+  assertContentEntryCanReceiveImage(collection, entryId);
   const safeFileName = getSafeImageFileName(file.name);
   const buffer = Buffer.from(await file.arrayBuffer());
 
@@ -196,15 +221,11 @@ export const uploadAdminMarkdownBodyImage = async ({
     return uploadAdminCloudImage({ collection, entryId, file, safeFileName, buffer });
   }
 
-  const assetPath = await writeUniqueImageFile(resolveMarkdownBodyUploadDirectory(sourcePath), safeFileName, buffer);
-  const relativePath = toRelativeProjectPath(assetPath);
-
-  invalidateAdminImageCaches();
-  const meta = await readAdminLocalImageInspectionMeta(relativePath);
-  invalidateAdminImageCaches();
+  const { assetPath, relativePath } = await writeLocalImageFile(collection, entryId, safeFileName, buffer);
+  const meta = await readFreshImageInspectionMeta(relativePath);
 
   return {
-    src: toMarkdownRelativeImageSrc(sourcePath, assetPath),
+    src: toPublicImageAbsoluteSrc(assetPath),
     path: relativePath,
     fileName: path.basename(assetPath),
     width: meta.width,
@@ -214,23 +235,32 @@ export const uploadAdminMarkdownBodyImage = async ({
   };
 };
 
-export const uploadAdminEssayImage = async ({
+export const uploadAdminBlogImage = async ({
   entryId,
   file
 }: {
   entryId: string;
   file: File;
 }): Promise<AdminImageUploadResult> =>
-  uploadAdminMarkdownBodyImage({ collection: 'essay', entryId, file });
+  uploadAdminMarkdownBodyImage({ collection: 'blog', entryId, file });
 
-export const uploadAdminMemoImage = async ({
+export const uploadAdminProjectsImage = async ({
   entryId,
   file
 }: {
   entryId: string;
   file: File;
 }): Promise<AdminImageUploadResult> =>
-  uploadAdminMarkdownBodyImage({ collection: 'memo', entryId, file });
+  uploadAdminMarkdownBodyImage({ collection: 'projects', entryId, file });
+
+export const uploadAdminDevlogImage = async ({
+  entryId,
+  file
+}: {
+  entryId: string;
+  file: File;
+}): Promise<AdminImageUploadResult> =>
+  uploadAdminMarkdownBodyImage({ collection: 'devlog', entryId, file });
 
 export const uploadAdminBitsImage = async ({
   entryId,
@@ -250,16 +280,13 @@ export const uploadAdminBitsImage = async ({
     return uploadAdminCloudImage({ collection: 'bits', entryId, file, safeFileName, buffer });
   }
 
-  const assetPath = await writeUniqueImageFile(resolveBitsUploadDirectory(), safeFileName, buffer);
-  const relativePath = toRelativeProjectPath(assetPath);
+  const { assetPath, relativePath } = await writeLocalImageFile('bits', entryId, safeFileName, buffer);
   const src = getAdminImageFieldValue('bits.images', relativePath, 'public');
   if (!src) {
     throw new AdminImageUploadError('无法生成 bits.images 可保存的图片路径');
   }
 
-  invalidateAdminImageCaches();
-  const meta = await readAdminLocalImageInspectionMeta(relativePath);
-  invalidateAdminImageCaches();
+  const meta = await readFreshImageInspectionMeta(relativePath);
 
   return {
     src,

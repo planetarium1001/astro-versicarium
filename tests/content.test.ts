@@ -43,7 +43,7 @@ describe('content queries', () => {
       }
     ] as never);
 
-    const entries = await getPublished('essay', { includeDraft: true });
+    const entries = await getPublished('blog', { includeDraft: true });
 
     expect(entries.map((entry) => entry.id)).toEqual(['existing']);
   });

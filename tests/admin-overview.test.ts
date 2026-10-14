@@ -18,15 +18,14 @@ import {
 const getCollectionMock = vi.mocked(getCollection);
 const date = (value: string) => new Date(value);
 
-const essay = (id: string, options: Record<string, unknown> = {}) => ({
+const blog = (id: string, options: Record<string, unknown> = {}) => ({
   id,
-  collection: 'essay',
+  collection: 'blog',
   data: {
-    title: `Essay ${id}`,
+    title: `blog ${id}`,
     date: date('2026-01-10T00:00:00.000Z'),
     tags: [] as string[],
     draft: false,
-    archive: true,
     ...options
   }
 });
@@ -38,17 +37,6 @@ const bit = (id: string, options: Record<string, unknown> = {}) => ({
     title: `Bit ${id}`,
     date: date('2026-01-09T12:00:00.000Z'),
     tags: [] as string[],
-    draft: false,
-    ...options
-  }
-});
-
-const memo = (id: string, options: Record<string, unknown> = {}) => ({
-  id,
-  collection: 'memo',
-  data: {
-    title: `Memo ${id}`,
-    date: date('2026-01-08T00:00:00.000Z'),
     draft: false,
     ...options
   }
@@ -78,15 +66,26 @@ describe('admin-console/overview', () => {
 
   it('builds public summary from published source and archive-only tag source', () => {
     const publicSource = {
-      essays: [
-        essay('archive-essay', { tags: ['Design', 'Astro'] }),
-        essay('essay-only', { archive: false, tags: ['Hidden'] })
+      blogs: [
+        blog('archive-blog', { tags: ['Design', 'Astro'] }),
+        blog('blog-only', { archive: false, tags: ['Hidden'] })
       ],
-      archiveEssays: [
-        essay('archive-essay', { tags: ['Design', 'Astro'] })
+      archiveblogs: [
+        blog('archive-blog', { tags: ['Design', 'Astro'] })
+      ],
+      projects: [
+        {
+          id: 'published-project',
+          data: { title: 'Published Project', date: date('2026-01-11T00:00:00.000Z') }
+        }
       ],
       bits: [bit('published-bit', { date: date('2026-01-12T12:00:00.000Z') })],
-      memos: [memo('published-memo')],
+      devlogs: [
+        {
+          id: 'published-devlog',
+          data: { title: 'Published Devlog', date: date('2026-01-10T00:00:00.000Z') }
+        }
+      ],
       bitsHrefById: new Map([['published-bit', '/bits/#bit-published-bit']])
     } as unknown as AdminOverviewPublicSource;
 
@@ -94,7 +93,7 @@ describe('admin-console/overview', () => {
       now: date('2026-01-20T06:00:00.000Z')
     });
 
-    expect(summary.stats.publishedCount).toBe(4);
+    expect(summary.stats.publishedCount).toBe(5);
     expect(summary.stats.tagCount).toBe(2);
     expect(summary.stats.wordCount).toBe(0);
     expect(summary.stats.lastUpdate?.date.toISOString()).toBe('2026-01-12T12:00:00.000Z');
@@ -130,27 +129,22 @@ describe('admin-console/overview', () => {
   it('excludes draft bodies from word count while maintainer data can still include drafts', async () => {
     const publicWordCount = [
       '中文 alpha 123',
-      'beta test 42',
-      'かな memo'
+      'beta test 42'
     ].reduce((total, body) => total + countAdminOverviewWords(body), 0);
     const draftWordCount = [
       '草稿 draft 999',
       '草稿 bit 888',
-      '草稿 memo 777'
+      '草稿 about 777'
     ].reduce((total, body) => total + countAdminOverviewWords(body), 0);
 
     mockCollections({
-      essay: [
-        withBody(essay('published-essay'), '中文 alpha 123'),
-        withBody(essay('draft-essay', { draft: true }), '草稿 draft 999')
+      blog: [
+        withBody(blog('published-blog'), '中文 alpha 123'),
+        withBody(blog('draft-blog', { draft: true }), '草稿 draft 999')
       ],
       bits: [
         withBody(bit('published-bit'), 'beta test 42'),
         withBody(bit('draft-bit', { draft: true }), '草稿 bit 888')
-      ],
-      memo: [
-        withBody(memo('published-memo'), 'かな memo'),
-        withBody(memo('draft-memo', { draft: true }), '草稿 memo 777')
       ]
     });
 
@@ -161,13 +155,15 @@ describe('admin-console/overview', () => {
 
     expect(data.stats.wordCount).toBe(publicWordCount);
     expect(data.stats.wordCount).not.toBe(publicWordCount + draftWordCount);
-    expect(data.maintainerSummary?.draftCount).toBe(3);
+    expect(data.maintainerSummary?.draftCount).toBe(2);
     expect(data.recentPublications.some((entry) => entry.isDraft)).toBe(true);
   });
 
   it('keeps draft recent items unlinkable while published bits use the public href map', () => {
     const maintainerSource = {
-      essays: [],
+      blogs: [],
+      projects: [],
+      devlogs: [],
       bits: [
         bit('draft-bit', {
           title: 'Draft Bit',
@@ -178,8 +174,7 @@ describe('admin-console/overview', () => {
           title: 'Published Bit',
           date: date('2026-01-12T12:00:00.000Z')
         })
-      ],
-      memos: []
+      ]
     } as unknown as AdminOverviewMaintainerSource;
 
     const summary = buildAdminOverviewMaintainerSummary(
@@ -207,6 +202,6 @@ describe('admin-console/overview', () => {
     const hrefById = buildAdminOverviewBitsHrefById(bits as unknown as AdminOverviewPublicSource['bits']);
 
     expect(hrefById.get('bit-0')).toBe('/bits/#bit-bit-0');
-    expect(hrefById.get('bit-20')).toBe('/bits/page/2/#bit-bit-20');
+    expect(hrefById.get('bit-20')).toBe('/bits/#bit-bit-20');
   });
 });

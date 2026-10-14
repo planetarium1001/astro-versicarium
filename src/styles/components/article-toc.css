@@ -70,6 +70,8 @@
 .article-toc__summary-label {
   flex: 1;
   min-width: 0;
+  /* 与宽屏的 .article-toc__title 一致 */
+  font-size: 14px;
 }
 
 .article-toc__count {
@@ -105,8 +107,12 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
 
 :root {
   --article-toc-inline-size: 260px;
-  /* 收起后只留把手宽度的窄轨，保证把手在壳层内可见 */
-  --article-toc-handle-column: 34px;
+  /**
+   * 收起后只留把手宽度的窄轨，保证把手在壳层内可见。
+   * 把手尺寸与右偏移跟悬浮列统一（--rail-action-size / --rail-action-offset，定义在 layout.css），
+   * 窄轨宽度 = 左右各一份偏移 + 把手本身。只把把手改大而不加宽窄轨会被 overflow: hidden 裁掉。
+   */
+  --article-toc-handle-column: calc(var(--rail-action-offset) * 2 + var(--rail-action-size));
   /* 实际列宽：收起/入场时收窄，栅格规则统一引用 */
   --article-toc-column: var(--article-toc-inline-size);
 }
@@ -130,7 +136,8 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
 
 :root[data-toc-collapsed='true'] .article-toc--rail,
 :root[data-toc-intro='true'] .article-toc--rail {
-  padding: var(--sidebar-padding-block) 0 40px 4px;
+  /* 收起态列宽 = --article-toc-handle-column（左右偏移 + 把手），左右内边距各留一份偏移 */
+  padding: var(--sidebar-padding-block) var(--rail-action-offset) 40px var(--rail-action-offset);
 }
 
 /* 把手与「本文目录」同行并贴行右端（即壳层右缘），收起/展开/入场都不位移 */
@@ -143,6 +150,10 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
 }
 
 /* flex:1 + min-width:0：列变窄时标题缩到 0 宽，不挤走把手，也不需硬切 */
+/**
+ * 目录顶部「本文目录」的字号不得小于目录条目（.article-toc 为 13px），
+ * 这里用 14px 作为这一块的小标题。
+ */
 .article-toc__title {
   flex: 1;
   min-width: 0;
@@ -151,14 +162,15 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
   white-space: nowrap;
   margin: 0;
   color: var(--faint);
-  font-size: 12px;
+  font-size: 14px;
   letter-spacing: 0.04em;
   transition: opacity 200ms ease, visibility 0s linear 0s;
 }
 
 .article-toc__toggle {
-  width: 26px;
-  height: 26px;
+  /* 尺寸与悬浮列按钮共用同一 token（视觉 34px，对齐侧栏图标按钮） */
+  width: var(--rail-action-size);
+  height: var(--rail-action-size);
   flex: none;
   padding: 0;
   display: inline-flex;
@@ -177,14 +189,55 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
   border-color: var(--muted);
 }
 
-.article-toc__toggle .icon {
+/**
+ * 目录开关图标用三条线段，在「≡（展开）」与「|||（收起）」之间做形变过渡：
+ * 展开时三条 14×2 横线纵排（y 偏移 −4/0/+4），收起时三条 2×14 竖线横排（x 偏移 −4/0/+4）。
+ * 两个状态的 transform 函数列表必须完全一致，width/height 与位移才能连续插值而不跳变。
+ */
+.article-toc__glyph {
+  position: relative;
+  display: block;
   width: 14px;
   height: 14px;
-  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-:root[data-toc-collapsed='true'] .article-toc__toggle .icon {
-  transform: rotate(180deg);
+.article-toc__bar {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+  transform: translate(-50%, -50%) translate3d(0, 0, 0);
+  transition:
+    width 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.article-toc__bar:nth-child(1) {
+  transform: translate(-50%, -50%) translate3d(0, -4px, 0);
+}
+
+.article-toc__bar:nth-child(3) {
+  transform: translate(-50%, -50%) translate3d(0, 4px, 0);
+}
+
+:root[data-toc-collapsed='true'] .article-toc__bar,
+:root[data-toc-intro='true'] .article-toc__bar {
+  width: 2px;
+  height: 14px;
+}
+
+:root[data-toc-collapsed='true'] .article-toc__bar:nth-child(1),
+:root[data-toc-intro='true'] .article-toc__bar:nth-child(1) {
+  transform: translate(-50%, -50%) translate3d(-4px, 0, 0);
+}
+
+:root[data-toc-collapsed='true'] .article-toc__bar:nth-child(3),
+:root[data-toc-intro='true'] .article-toc__bar:nth-child(3) {
+  transform: translate(-50%, -50%) translate3d(4px, 0, 0);
 }
 
 /* 目录是 .shell 的第 4 列（sticky）；壳层宽度全局统一，加列不移动左侧栏 */
@@ -193,7 +246,14 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
   position: sticky;
   top: 0;
   align-self: start;
-  padding: var(--sidebar-padding-block) 0 40px 24px;
+  /**
+   * 目录与正文的间隙：目录侧不留 --pad-x 左内边距，正文侧 --pad-x 减半（见下方 .content 规则），
+   * 实际间隙约 15px，校准基准是「本文目录」下第一级目录文字的最左端。右内边距取
+   * --rail-action-offset 并配负的右外边距，使把手右缘与浮动列按钮右缘（距 ICB 右缘
+   * --rail-action-offset）落在同一条竖线上。
+   */
+  margin-right: calc(var(--page-inline) * -1);
+  padding: var(--sidebar-padding-block) var(--rail-action-offset) 40px 0;
   /* 过渡期间裁掉外溢，避免内容溢出到正文上 */
   overflow: hidden;
   transition: opacity 260ms ease, visibility 0s linear 0s;
@@ -227,7 +287,7 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
   }
 }
 
-/* 1024–1280：普通模式先把第 4 列占位成 0px，保证进出阅读模式时列数不变（3→4 无法插值） */
+/* 1024–1280：普通模式先把第 4 列占位成 0px，保证进出阅读模式时列数不变（3 到 4 无法插值） */
 @media (min-width: 1024px) and (max-width: 1279.98px) {
   body.immersive-page .shell[data-toc='true'] {
     grid-template-columns:
@@ -239,6 +299,37 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
 
   body.immersive-page .shell[data-toc='true'][data-sidebar-divider='none'] {
     grid-template-columns: var(--sidebar) 0 minmax(0, 1fr) 0px;
+  }
+}
+
+/**
+ * 目录收起时让正文贴近右缘。收起态不再占 34px 的把手列，
+ * 否则正文右内边距变成 --pad-x + 34px，与左侧的 26px 不对称。
+ * 收起态把第 4 列压到 0（四列不变，宽度可平滑插值），
+ * 把手改成绝对定位悬在原竖线上，与右下角浮动列同一条竖线。
+ */
+@media (min-width: 1280px) {
+  :root[data-toc-collapsed='true'] body.immersive-page .shell[data-toc='true'],
+  :root[data-toc-collapsed='true'] body.immersive-page .shell[data-toc='true'][data-sidebar-divider='none'] {
+    grid-template-columns:
+      var(--sidebar)
+      var(--layout-divider-inline-size)
+      minmax(0, 1fr)
+      0px;
+  }
+
+  /**
+   * 收起态的把手必须浮动（position: fixed，跟随滚动常驻），不能钉在文档顶部随页面滚走。
+   * 位置与右下角浮动列同一条竖线（--rail-action-offset）。
+   */
+  :root[data-toc-collapsed='true'] body.immersive-page .article-toc--rail {
+    position: fixed;
+    top: var(--sidebar-padding-block);
+    right: var(--rail-action-offset);
+    width: auto;
+    margin-right: 0;
+    padding: 0;
+    overflow: visible;
   }
 }
 
@@ -268,6 +359,7 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .article-toc__link,
   .article-toc__summary-chevron,
+  .article-toc__bar,
   .article-toc--rail {
     transition: none;
   }

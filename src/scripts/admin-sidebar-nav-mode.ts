@@ -120,7 +120,7 @@ const syncSwitchers = (
   });
 };
 
-export function initAdminSidebarNavMode() {
+function initAdminSidebarNavMode() {
   const root = document.documentElement;
   const isAdminPage = document.body.classList.contains('admin-page');
   const railViewportQuery = typeof window.matchMedia === 'function'

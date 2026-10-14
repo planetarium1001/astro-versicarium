@@ -1,23 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { access, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { strFromU8, unzipSync } from 'fflate';
-
-const createJsonRequest = (url: string, payload: unknown) =>
-  new Request(url, {
-    method: 'POST',
-    headers: {
-      origin: new URL(url).origin,
-      'content-type': 'application/json; charset=utf-8'
-    },
-    body: JSON.stringify(payload)
-  });
-
-const toAbsoluteTestPath = (root: string, relativePath: string): string =>
-  path.join(root, ...relativePath.split('/'));
-
-const readJson = async (response: Response) => JSON.parse(await response.text()) as Record<string, any>;
+import {
+  createJsonRequest,
+  readJson,
+  setupTempProjectRoot,
+  toAbsoluteTestPath
+} from './admin-content-write-fixture';
 
 const readZipText = (entries: Record<string, Uint8Array>, entryPath: string): string => {
   const entry = entries[entryPath];
@@ -26,44 +16,35 @@ const readZipText = (entries: Record<string, Uint8Array>, entryPath: string): st
 };
 
 describe('admin content bulk api', () => {
-  let tempRoot = '';
+  const getTempRoot = setupTempProjectRoot('astro-whono-content-bulk-');
 
   beforeEach(async () => {
-    tempRoot = await mkdtemp(path.join(tmpdir(), 'astro-whono-content-bulk-'));
-    process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT = tempRoot;
-
-    await mkdir(path.join(tempRoot, 'src', 'content', 'essay'), { recursive: true });
-    await mkdir(path.join(tempRoot, 'src', 'content', 'bits'), { recursive: true });
-    await mkdir(path.join(tempRoot, 'src', 'content', 'memo'), { recursive: true });
-    await mkdir(path.join(tempRoot, 'src', 'content', 'about'), { recursive: true });
+    await mkdir(path.join(getTempRoot(), 'src', 'content', 'blog'), { recursive: true });
+    await mkdir(path.join(getTempRoot(), 'src', 'content', 'bits'), { recursive: true });
+    await mkdir(path.join(getTempRoot(), 'src', 'content', 'about'), { recursive: true });
 
     await writeFile(
-      path.join(tempRoot, 'src', 'content', 'essay', 'published.md'),
+      path.join(getTempRoot(), 'src', 'content', 'blog', 'published.md'),
       ['---', 'title: Published', 'date: 2026-03-18', '---', '', '# Published', ''].join('\n'),
       'utf8'
     );
     await writeFile(
-      path.join(tempRoot, 'src', 'content', 'essay', 'delete-me.md'),
+      path.join(getTempRoot(), 'src', 'content', 'blog', 'delete-me.md'),
       ['---', 'title: Delete Me', 'date: 2026-03-19', 'draft: false', '---', '', '# Delete', ''].join('\n'),
       'utf8'
     );
     await writeFile(
-      path.join(tempRoot, 'src', 'content', 'bits', 'stale.md'),
+      path.join(getTempRoot(), 'src', 'content', 'bits', 'stale.md'),
       ['---', 'date: 2025-02-03T22:30:00+08:00', 'draft: false', '---', '', 'stale bit', ''].join('\n'),
       'utf8'
     );
     await writeFile(
-      path.join(tempRoot, 'src', 'content', 'essay', 'broken-frontmatter.md'),
+      path.join(getTempRoot(), 'src', 'content', 'blog', 'broken-frontmatter.md'),
       ['---', 'title: [broken', '---', '', 'still exportable', ''].join('\n'),
       'utf8'
     );
     await writeFile(
-      path.join(tempRoot, 'src', 'content', 'memo', 'index.md'),
-      ['---', 'title: Memo', '---', '', 'memo body', ''].join('\n'),
-      'utf8'
-    );
-    await writeFile(
-      path.join(tempRoot, 'src', 'content', 'about', 'index.md'),
+      path.join(getTempRoot(), 'src', 'content', 'about', 'index.md'),
       ['---', '---', '', 'about body', ''].join('\n'),
       'utf8'
     );
@@ -73,15 +54,11 @@ describe('admin content bulk api', () => {
     vi.doUnmock('../src/lib/admin-console/admin-api');
     vi.restoreAllMocks();
     vi.resetModules();
-    delete process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT;
-    if (tempRoot) {
-      await rm(tempRoot, { recursive: true, force: true });
-    }
   });
 
   it('patches draft status per entry without rewriting unchanged published entries', async () => {
     const { POST } = await import('../src/pages/api/admin/content/bulk-status');
-    const sourcePath = path.join(tempRoot, 'src', 'content', 'essay', 'published.md');
+    const sourcePath = path.join(getTempRoot(), 'src', 'content', 'blog', 'published.md');
     const before = await readFile(sourcePath, 'utf8');
     const url = 'http://127.0.0.1:4321/api/admin/content/bulk-status/';
 
@@ -90,9 +67,9 @@ describe('admin content bulk api', () => {
         targetDraft: false,
         entries: [
           {
-            collection: 'essay',
+            collection: 'blog',
             entryId: 'published',
-            expectedRelativePath: 'src/content/essay/published.md'
+            expectedRelativePath: 'src/content/blog/published.md'
           }
         ]
       }),
@@ -109,9 +86,9 @@ describe('admin content bulk api', () => {
         targetDraft: true,
         entries: [
           {
-            collection: 'essay',
+            collection: 'blog',
             entryId: 'published',
-            expectedRelativePath: 'src/content/essay/published.md'
+            expectedRelativePath: 'src/content/blog/published.md'
           },
           {
             collection: 'bits',
@@ -119,9 +96,9 @@ describe('admin content bulk api', () => {
             expectedRelativePath: 'src/content/bits/other.md'
           },
           {
-            collection: 'memo',
+            collection: 'unknown-collection',
             entryId: 'index',
-            expectedRelativePath: 'src/content/memo/index.md'
+            expectedRelativePath: 'src/content/unknown-collection/index.md'
           }
         ]
       }),
@@ -142,7 +119,7 @@ describe('admin content bulk api', () => {
   });
 
   it('reports revision conflicts when bulk status source changes before write', async () => {
-    const sourcePath = path.join(tempRoot, 'src', 'content', 'essay', 'published.md');
+    const sourcePath = path.join(getTempRoot(), 'src', 'content', 'blog', 'published.md');
     vi.resetModules();
     vi.doMock('../src/lib/admin-console/admin-api', async (importOriginal) => {
       const actual = await importOriginal<typeof import('../src/lib/admin-console/admin-api')>();
@@ -170,9 +147,9 @@ describe('admin content bulk api', () => {
         targetDraft: true,
         entries: [
           {
-            collection: 'essay',
+            collection: 'blog',
             entryId: 'published',
-            expectedRelativePath: 'src/content/essay/published.md'
+            expectedRelativePath: 'src/content/blog/published.md'
           }
         ]
       }),
@@ -192,9 +169,9 @@ describe('admin content bulk api', () => {
   it('bulk-deletes successful entries while keeping conflicted entries in place', async () => {
     const { POST } = await import('../src/pages/api/admin/content/bulk-delete');
     const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
-    const deletePayload = await readAdminContentEntryEditorPayload('essay', 'delete-me');
+    const deletePayload = await readAdminContentEntryEditorPayload('blog', 'delete-me');
     const stalePayload = await readAdminContentEntryEditorPayload('bits', 'stale');
-    const stalePath = path.join(tempRoot, 'src', 'content', 'bits', 'stale.md');
+    const stalePath = path.join(getTempRoot(), 'src', 'content', 'bits', 'stale.md');
     await writeFile(
       stalePath,
       ['---', 'date: 2025-02-03T22:30:00+08:00', 'draft: true', '---', '', 'updated stale bit', ''].join('\n'),
@@ -206,7 +183,7 @@ describe('admin content bulk api', () => {
       request: createJsonRequest(url, {
         entries: [
           {
-            collection: 'essay',
+            collection: 'blog',
             entryId: 'delete-me',
             revision: deletePayload.revision,
             expectedRelativePath: deletePayload.relativePath
@@ -229,10 +206,10 @@ describe('admin content bulk api', () => {
       succeeded: 1,
       failed: 1
     });
-    await expect(access(path.join(tempRoot, 'src', 'content', 'essay', 'delete-me.md'))).rejects.toThrow();
+    await expect(access(path.join(getTempRoot(), 'src', 'content', 'blog', 'delete-me.md'))).rejects.toThrow();
     await expect(readFile(stalePath, 'utf8')).resolves.toContain('updated stale bit');
     const deleted = payload.results.find((result: any) => result.entryId === 'delete-me');
-    await expect(readFile(toAbsoluteTestPath(tempRoot, deleted.trashedPath), 'utf8')).resolves.toContain('# Delete');
+    await expect(readFile(toAbsoluteTestPath(getTempRoot(), deleted.trashedPath), 'utf8')).resolves.toContain('# Delete');
   });
 
   it('bulk-exports source files into a zip report without parsing frontmatter', async () => {
@@ -243,9 +220,9 @@ describe('admin content bulk api', () => {
       request: createJsonRequest(url, {
         entries: [
           {
-            collection: 'essay',
+            collection: 'blog',
             entryId: 'broken-frontmatter',
-            expectedRelativePath: 'src/content/essay/broken-frontmatter.md'
+            expectedRelativePath: 'src/content/blog/broken-frontmatter.md'
           },
           {
             collection: 'about',
@@ -267,7 +244,7 @@ describe('admin content bulk api', () => {
     expect(response.headers.get('x-admin-content-bulk-export-summary')).toBeTruthy();
 
     const zip = unzipSync(new Uint8Array(await response.arrayBuffer()));
-    expect(readZipText(zip, 'essay/broken-frontmatter/broken-frontmatter.md')).toContain('title: [broken');
+    expect(readZipText(zip, 'blog/broken-frontmatter/broken-frontmatter.md')).toContain('title: [broken');
     expect(readZipText(zip, 'about/index/about.md')).toContain('about body');
     const report = readZipText(zip, '_admin-content-export-report.md');
     expect(report).toContain('# Admin Content 批量下载报告');

@@ -43,14 +43,14 @@ describe('admin-console/shared', () => {
   it('reports duplicate and range issues for nav orders', () => {
     expect(
       getAdminNavOrderIssues([
-        { key: 'essay', order: 1 },
+        { key: 'blog', order: 1 },
         { key: 'bits', order: 1 },
-        { key: 'memo', order: 0 }
+        { key: 'about', order: 0 }
       ])
     ).toEqual([
-      { type: 'duplicate', key: 'essay', order: 1 },
+      { type: 'duplicate', key: 'blog', order: 1 },
       { type: 'duplicate', key: 'bits', order: 1 },
-      { type: 'range', key: 'memo', order: 0 }
+      { type: 'range', key: 'about', order: 0 }
     ]);
   });
 
@@ -337,5 +337,98 @@ describe('admin-console/shared', () => {
     );
     expect(partialMismatchPaths).not.toContain('site.favicon.svg');
     expect(partialMismatchPaths).not.toContain('site.favicon.appleTouchIcon');
+  });
+});
+
+/**
+ * 窄屏站点标题宽度是页面宽度百分比（默认 35%），在单位层钉住默认值 / 夹取 / 校验。
+ * 该值最终写到 `<html>` 的 `--site-title-max-inline`，写错会让窄屏标题过宽或消失。
+ */
+describe('admin-console/shared：窄屏站点标题宽度百分比', () => {
+  const baseSettings = () => structuredClone(getEditableThemeSettingsPayload().settings);
+
+  it('默认值 35%，缺失时补齐', () => {
+    const payload = getEditableThemeSettingsPayload().settings;
+    expect(payload.site.titleMaxPercent).toBe(35);
+
+    const raw = baseSettings() as Record<string, any>;
+    delete raw.site.titleMaxPercent;
+    expect(canonicalizeAdminThemeSettings(raw).site.titleMaxPercent).toBe(35);
+  });
+
+  it('字符串数字会被规范化，越界会被夹取到 10–100', () => {
+    const raw = baseSettings() as Record<string, any>;
+    raw.site.titleMaxPercent = '48';
+    expect(canonicalizeAdminThemeSettings(raw).site.titleMaxPercent).toBe(48);
+
+    raw.site.titleMaxPercent = 5;
+    expect(canonicalizeAdminThemeSettings(raw).site.titleMaxPercent).toBe(10);
+
+    raw.site.titleMaxPercent = 400;
+    expect(canonicalizeAdminThemeSettings(raw).site.titleMaxPercent).toBe(100);
+
+    raw.site.titleMaxPercent = 'abc';
+    expect(canonicalizeAdminThemeSettings(raw).site.titleMaxPercent).toBe(35);
+  });
+
+  it('校验会拦住非整数与越界值', () => {
+    const raw = baseSettings() as Record<string, any>;
+    const ok = canonicalizeAdminThemeSettings(raw);
+    expect(validateAdminThemeSettings(ok).map((issue) => issue.path)).not.toContain('site.titleMaxPercent');
+
+    const broken = { ...ok, site: { ...ok.site, titleMaxPercent: 2 } };
+    expect(validateAdminThemeSettings(broken).map((issue) => issue.path)).toContain('site.titleMaxPercent');
+  });
+});
+
+/**
+ * RSS 订阅设置：一个总开关（`enabled`）加 `/blog/` `/bits/` `/archive/` 三个互不干扰的页面开关。
+ */
+describe('admin-console/shared：列表页 RSS 开关', () => {
+  const baseSettings = () => structuredClone(getEditableThemeSettingsPayload().settings);
+
+  it('缺省时四个都是开（默认值），并可被输入覆盖', () => {
+    // 不断言磁盘上的当前值：后台保存过之后它可能是用户调过的状态
+    //（总开关被关过就是 enabled: false），这里只钉默认值与规范化。
+    const raw = baseSettings() as Record<string, any>;
+    delete raw.page.listRss;
+    expect(canonicalizeAdminThemeSettings(raw).page.listRss).toEqual({
+      enabled: true,
+      blog: true,
+      bits: true,
+      archive: true
+    });
+
+    raw.page.listRss = { enabled: false, blog: true, bits: false, archive: true };
+    expect(canonicalizeAdminThemeSettings(raw).page.listRss).toEqual({
+      enabled: false,
+      blog: true,
+      bits: false,
+      archive: true
+    });
+
+    // 非布尔值 → 逐个回落到默认（开）
+    raw.page.listRss = { enabled: 'yes', blog: 0, bits: null, archive: 'no' };
+    expect(canonicalizeAdminThemeSettings(raw).page.listRss).toEqual({
+      enabled: true,
+      blog: true,
+      bits: true,
+      archive: true
+    });
+  });
+
+  it('校验会逐个拦住非布尔值', () => {
+    const ok = canonicalizeAdminThemeSettings(baseSettings());
+    const paths = validateAdminThemeSettings(ok).map((issue) => issue.path);
+    expect(paths).not.toContain('page.listRss.enabled');
+
+    const broken = {
+      ...ok,
+      page: {
+        ...ok.page,
+        listRss: { ...ok.page.listRss, bits: 'no' as unknown as boolean }
+      }
+    };
+    expect(validateAdminThemeSettings(broken).map((issue) => issue.path)).toContain('page.listRss.bits');
   });
 });

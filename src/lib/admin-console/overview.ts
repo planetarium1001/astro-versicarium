@@ -1,29 +1,27 @@
-import { PAGE_SIZE_BITS } from '../../../site.config.mjs';
 import {
   getBitSlug,
   getBitsDerivedText,
   getSortedBits,
   type BitsEntry
 } from '../bits';
+import { getPublished as getPublishedCollection } from '../content';
 import { buildPublishedBitsHrefMap, type BitPublicOrderItem } from '../bits-public-routing';
 import {
-  getEssayDerivedText,
-  getEssaySlug,
-  getMemoDerivedText,
-  getPublished,
-  getSortedEssays,
-  isReservedSlug,
-  type EssayEntry,
-  type MemoEntry
+  getBlogDerivedText,
+  getBlogSlug,
+  getSortedblogs,
+  isVisibleBlogEntry,
+  type BlogEntry
 } from '../content';
 import { collectTagSummary, getTagPath } from '../tags';
+import { compareByNullableDateDesc } from './content-shared';
 import { formatDateTime, formatISODate, formatISODateUtc } from '../../utils/format';
 import { cleanMarkdownToText } from '../../utils/excerpt';
 import packageJson from '../../../package.json';
 
-export type AdminOverviewCollectionKey = 'essay' | 'bits' | 'memo';
+type AdminOverviewCollectionKey = 'blog' | 'projects' | 'bits' | 'devlog';
 
-export type AdminOverviewDataOptions = {
+type AdminOverviewDataOptions = {
   includeMaintainer: boolean;
   includeDraftInRecent: boolean;
   isDev?: boolean;
@@ -31,28 +29,42 @@ export type AdminOverviewDataOptions = {
   env?: Record<string, string | undefined>;
 };
 
-export type AdminOverviewSourceOptions = Pick<AdminOverviewDataOptions, 'includeMaintainer'>;
+type AdminOverviewSourceOptions = Pick<AdminOverviewDataOptions, 'includeMaintainer'>;
 
-export type AdminOverviewSource = {
+type AdminOverviewSource = {
   public: AdminOverviewPublicSource;
   maintainer: AdminOverviewMaintainerSource | null;
 };
 
+/** projects / devlog 只需要「标题 + 日期 + 锚点」，用最小结构承载，避免耦合完整集合类型。 */
+type AdminOverviewListEntry = {
+  id: string;
+  data: {
+    title: string;
+    date: Date;
+    draft?: boolean;
+  };
+  /** 可选正文，供字数统计使用；未加载正文时缺省。 */
+  bodyText?: string;
+};
+
 export type AdminOverviewPublicSource = {
-  essays: EssayEntry[];
-  archiveEssays: EssayEntry[];
+  blogs: BlogEntry[];
+  archiveblogs: BlogEntry[];
+  projects: AdminOverviewListEntry[];
   bits: BitsEntry[];
-  memos: MemoEntry[];
+  devlogs: AdminOverviewListEntry[];
   bitsHrefById: Map<string, string>;
 };
 
 export type AdminOverviewMaintainerSource = {
-  essays: EssayEntry[];
+  blogs: BlogEntry[];
+  projects: AdminOverviewListEntry[];
   bits: BitsEntry[];
-  memos: MemoEntry[];
+  devlogs: AdminOverviewListEntry[];
 };
 
-export type AdminOverviewStats = {
+type AdminOverviewStats = {
   publishedCount: number;
   tagCount: number;
   wordCount: number;
@@ -62,7 +74,7 @@ export type AdminOverviewStats = {
   } | null;
 };
 
-export type AdminOverviewCollectionShare = {
+type AdminOverviewCollectionShare = {
   key: AdminOverviewCollectionKey;
   label: string;
   detail: string;
@@ -71,21 +83,21 @@ export type AdminOverviewCollectionShare = {
   percentageLabel: string;
 };
 
-export type AdminOverviewTagSummary = {
+type AdminOverviewTagSummary = {
   key: string;
   label: string;
   count: number;
   href: string;
 };
 
-export type AdminOverviewActivityDay = {
+type AdminOverviewActivityDay = {
   date: string;
   dateLabel: string;
   count: number;
   level: 0 | 1 | 2 | 3 | 4;
 };
 
-export type AdminOverviewRecentPublication = {
+type AdminOverviewRecentPublication = {
   collection: AdminOverviewCollectionKey;
   collectionLabel: string;
   title: string;
@@ -96,26 +108,26 @@ export type AdminOverviewRecentPublication = {
   shortDateLabel: string;
 };
 
-export type AdminOverviewSystemStatusItemKey =
+type AdminOverviewSystemStatusItemKey =
   | 'runtime'
   | 'hostTarget'
   | 'engine'
   | 'lastBuild';
 
-export type AdminOverviewSystemStatusItem = {
+type AdminOverviewSystemStatusItem = {
   key: AdminOverviewSystemStatusItemKey;
   label: string;
   value: string;
   dateTime?: string;
 };
 
-export type AdminOverviewSystemStatus = {
+type AdminOverviewSystemStatus = {
   statusLabel: string;
   items: AdminOverviewSystemStatusItem[];
   activity: AdminOverviewActivityDay[];
 };
 
-export type AdminOverviewPublicSummary = {
+type AdminOverviewPublicSummary = {
   stats: AdminOverviewStats;
   collections: AdminOverviewCollectionShare[];
   topTags: AdminOverviewTagSummary[];
@@ -125,14 +137,14 @@ export type AdminOverviewPublicSummary = {
 
 type AdminOverviewPublicSummaryOptions = Pick<AdminOverviewDataOptions, 'now'>;
 
-export type AdminOverviewCollectionDraftSummary = {
+type AdminOverviewCollectionDraftSummary = {
   key: AdminOverviewCollectionKey;
   label: string;
   draftCount: number;
   totalCount: number;
 };
 
-export type AdminOverviewMaintainerSummary = {
+type AdminOverviewMaintainerSummary = {
   draftCount: number;
   collectionDrafts: AdminOverviewCollectionDraftSummary[];
   recentDraftCount: number;
@@ -145,22 +157,25 @@ export type AdminOverviewData = AdminOverviewPublicSummary & {
 };
 
 type RecentSource = {
-  essays: EssayEntry[];
+  blogs: BlogEntry[];
+  projects: AdminOverviewListEntry[];
   bits: BitsEntry[];
-  memos: MemoEntry[];
+  devlogs: AdminOverviewListEntry[];
   bitsHrefById: ReadonlyMap<string, string>;
 };
 
 const COLLECTION_LABELS: Record<AdminOverviewCollectionKey, string> = {
-  essay: 'Essay',
-  bits: 'Bits',
-  memo: 'Memo'
+  blog: '博客',
+  projects: '项目',
+  bits: '动态',
+  devlog: '更新'
 };
 
 const COLLECTION_DETAILS: Record<AdminOverviewCollectionKey, string> = {
-  essay: '文章',
+  blog: '文章',
+  projects: '项目',
   bits: '动态',
-  memo: '小记'
+  devlog: '更新'
 };
 
 const RECENT_LIMIT = 6;
@@ -194,12 +209,6 @@ const DEPLOY_TARGET_ALIASES = new Map<string, AdminOverviewDeployTarget>([
   ['static-host', 'static-host']
 ]);
 
-const orderByNullableDateDesc = (left: Date | null, right: Date | null): number =>
-  (right?.valueOf() ?? -Infinity) - (left?.valueOf() ?? -Infinity);
-
-const orderByMemoDate = (a: MemoEntry, b: MemoEntry): number =>
-  orderByNullableDateDesc(a.data.date ?? null, b.data.date ?? null);
-
 const formatCompactDate = (date: Date) => formatISODate(date).replace(/-/g, '.');
 const formatCompactDateUtc = (date: Date) => formatISODateUtc(date).replace(/-/g, '.');
 
@@ -209,16 +218,16 @@ const formatShortDate = (date: Date | null, useUtc = false): string => {
   return source.slice(5).replace('-', '.');
 };
 
+const orderByEntryDateDesc = <Entry extends { data: { date: Date } }>(a: Entry, b: Entry): number =>
+  b.data.date.valueOf() - a.data.date.valueOf();
+
 const getCollectionDraftCount = (
-  entries: readonly EssayEntry[] | readonly BitsEntry[] | readonly MemoEntry[]
+  entries: readonly (BlogEntry | BitsEntry | AdminOverviewListEntry)[]
 ): number => entries.filter((entry) => entry.data.draft === true).length;
 
 const filterPublishedEntries = <Entry extends { data: { draft?: boolean } }>(
   entries: readonly Entry[]
 ): Entry[] => entries.filter((entry) => entry.data.draft !== true);
-
-const filterArchiveEssays = (essays: readonly EssayEntry[]): EssayEntry[] =>
-  essays.filter((entry) => entry.data.archive !== false && !isReservedSlug(getEssaySlug(entry)));
 
 const getPercentage = (count: number, total: number): number => {
   if (total <= 0 || count <= 0) return 0;
@@ -231,17 +240,16 @@ export const buildAdminOverviewBitsHrefById = (bits: readonly BitsEntry[]): Map<
       id: entry.id,
       date: entry.data.date,
       draft: entry.data.draft === true
-    })),
-    PAGE_SIZE_BITS
+    }))
   );
 
-const getRecentEssayPublication = (entry: EssayEntry): AdminOverviewRecentPublication => {
+const getRecentBlogPublication = (entry: BlogEntry): AdminOverviewRecentPublication => {
   const isDraft = entry.data.draft === true;
   return {
-    collection: 'essay',
-    collectionLabel: COLLECTION_LABELS.essay,
+    collection: 'blog',
+    collectionLabel: COLLECTION_LABELS.blog,
     title: entry.data.title,
-    href: isDraft ? null : `/archive/${getEssaySlug(entry)}/`,
+    href: isDraft ? null : `/blog/${getBlogSlug(entry)}/`,
     isDraft,
     date: entry.data.date,
     dateLabel: formatCompactDateUtc(entry.data.date),
@@ -270,60 +278,64 @@ const getRecentBitsPublication = (
   };
 };
 
-const getRecentMemoPublication = (entry: MemoEntry): AdminOverviewRecentPublication => {
+const getRecentAnchorPublication = (
+  entry: AdminOverviewListEntry,
+  collection: 'projects' | 'devlog'
+): AdminOverviewRecentPublication => {
   const isDraft = entry.data.draft === true;
-  const title = entry.data.title?.trim()
-    || getMemoDerivedText(entry).excerptText
-    || '小记';
   return {
-    collection: 'memo',
-    collectionLabel: COLLECTION_LABELS.memo,
-    title,
-    href: isDraft ? null : '/memo/',
+    collection,
+    collectionLabel: COLLECTION_LABELS[collection],
+    title: entry.data.title,
+    href: isDraft ? null : `/${collection}/#${entry.id}`,
     isDraft,
-    date: entry.data.date ?? null,
-    dateLabel: entry.data.date ? formatCompactDate(entry.data.date) : '未设置日期',
-    shortDateLabel: formatShortDate(entry.data.date ?? null)
+    date: entry.data.date,
+    dateLabel: formatCompactDate(entry.data.date),
+    shortDateLabel: formatShortDate(entry.data.date)
   };
 };
 
 const buildRecentPublications = (source: RecentSource): AdminOverviewRecentPublication[] =>
   [
-    ...source.essays.map((entry) => getRecentEssayPublication(entry)),
+    ...source.blogs.map((entry) => getRecentBlogPublication(entry)),
+    ...source.projects.map((entry) => getRecentAnchorPublication(entry, 'projects')),
     ...source.bits.map((entry) => getRecentBitsPublication(entry, source.bitsHrefById)),
-    ...source.memos.map((entry) => getRecentMemoPublication(entry))
+    ...source.devlogs.map((entry) => getRecentAnchorPublication(entry, 'devlog'))
   ]
-    .sort((left, right) => orderByNullableDateDesc(left.date, right.date))
+    .sort((left, right) => compareByNullableDateDesc(left.date, right.date))
     .slice(0, RECENT_LIMIT);
 
 const getLatestUpdate = (source: AdminOverviewPublicSource): AdminOverviewStats['lastUpdate'] => {
   const candidates = [
-    ...source.essays.map((entry) => ({
+    ...source.blogs.map((entry) => ({
       date: entry.data.date,
       dateLabel: formatCompactDateUtc(entry.data.date)
+    })),
+    ...source.projects.map((entry) => ({
+      date: entry.data.date,
+      dateLabel: formatCompactDate(entry.data.date)
     })),
     ...source.bits.map((entry) => ({
       date: entry.data.date,
       dateLabel: formatCompactDate(entry.data.date)
     })),
-    ...source.memos
-      .filter((entry) => entry.data.date)
-      .map((entry) => ({
-        date: entry.data.date as Date,
-        dateLabel: formatCompactDate(entry.data.date as Date)
-      }))
-  ].sort((left, right) => orderByNullableDateDesc(left.date, right.date));
+    ...source.devlogs.map((entry) => ({
+      date: entry.data.date,
+      dateLabel: formatCompactDate(entry.data.date)
+    }))
+  ].sort((left, right) => compareByNullableDateDesc(left.date, right.date));
 
   const latest = candidates[0];
   return latest ? { date: latest.date, dateLabel: latest.dateLabel } : null;
 };
 
 const buildCollectionShares = (source: AdminOverviewPublicSource): AdminOverviewCollectionShare[] => {
-  const total = source.essays.length + source.bits.length + source.memos.length;
+  const total = source.blogs.length + source.projects.length + source.bits.length + source.devlogs.length;
   const counts: Record<AdminOverviewCollectionKey, number> = {
-    essay: source.essays.length,
+    blog: source.blogs.length,
+    projects: source.projects.length,
     bits: source.bits.length,
-    memo: source.memos.length
+    devlog: source.devlogs.length
   };
 
   return (Object.keys(counts) as AdminOverviewCollectionKey[]).map((key) => {
@@ -362,16 +374,20 @@ export const formatAdminOverviewWordMetric = (wordCount: number): { value: strin
 };
 
 const buildAdminOverviewWordCount = (source: AdminOverviewPublicSource): number =>
-  source.essays.reduce(
-    (total, entry) => total + countAdminOverviewTextWords(getEssayDerivedText(entry).plainText),
+  source.blogs.reduce(
+    (total, entry) => total + countAdminOverviewTextWords(getBlogDerivedText(entry).plainText),
+    0
+  )
+  + source.projects.reduce(
+    (total, entry) => total + countAdminOverviewTextWords(entry.bodyText ?? ''),
     0
   )
   + source.bits.reduce(
     (total, entry) => total + countAdminOverviewTextWords(getBitsDerivedText(entry).plainText),
     0
   )
-  + source.memos.reduce(
-    (total, entry) => total + countAdminOverviewTextWords(getMemoDerivedText(entry).plainText),
+  + source.devlogs.reduce(
+    (total, entry) => total + countAdminOverviewTextWords(entry.bodyText ?? ''),
     0
   );
 
@@ -407,12 +423,12 @@ const getHostTargetLabel = (env: Record<string, string | undefined>): string => 
 const formatBuildDateLabel = (date: Date): string => formatDateTime(date);
 
 const buildWritingActivity = (
-  essays: readonly EssayEntry[],
+  blogs: readonly BlogEntry[],
   bits: readonly BitsEntry[],
   now: Date = new Date()
 ): AdminOverviewActivityDay[] => {
   const datedEntries = [
-    ...essays.map((entry) => entry.data.date),
+    ...blogs.map((entry) => entry.data.date),
     ...bits.map((entry) => entry.data.date)
   ];
   if (datedEntries.length === 0) return [];
@@ -438,7 +454,7 @@ const buildWritingActivity = (
   });
 };
 
-export const buildAdminOverviewSystemStatus = (
+const buildAdminOverviewSystemStatus = (
   activity: readonly AdminOverviewActivityDay[],
   options: Pick<AdminOverviewDataOptions, 'env' | 'isDev' | 'now'>
 ): AdminOverviewSystemStatus => {
@@ -480,11 +496,11 @@ export const buildAdminOverviewPublicSummary = (
   source: AdminOverviewPublicSource,
   options: AdminOverviewPublicSummaryOptions = {}
 ): AdminOverviewPublicSummary => {
-  const topTags = collectTagSummary(source.archiveEssays);
+  const topTags = collectTagSummary(source.archiveblogs);
 
   return {
     stats: {
-      publishedCount: source.essays.length + source.bits.length + source.memos.length,
+      publishedCount: source.blogs.length + source.projects.length + source.bits.length + source.devlogs.length,
       tagCount: topTags.length,
       wordCount: buildAdminOverviewWordCount(source),
       lastUpdate: getLatestUpdate(source)
@@ -496,7 +512,7 @@ export const buildAdminOverviewPublicSummary = (
       count: tag.count,
       href: getTagPath('archive', tag.key)
     })),
-    writingActivity: buildWritingActivity(source.essays, source.bits, options.now),
+    writingActivity: buildWritingActivity(source.blogs, source.bits, options.now),
     recentPublications: buildRecentPublications(source)
   };
 };
@@ -509,10 +525,16 @@ export const buildAdminOverviewMaintainerSummary = (
 
   const collectionDrafts: AdminOverviewCollectionDraftSummary[] = [
     {
-      key: 'essay',
-      label: COLLECTION_LABELS.essay,
-      draftCount: getCollectionDraftCount(source.essays),
-      totalCount: source.essays.length
+      key: 'blog',
+      label: COLLECTION_LABELS.blog,
+      draftCount: getCollectionDraftCount(source.blogs),
+      totalCount: source.blogs.length
+    },
+    {
+      key: 'projects',
+      label: COLLECTION_LABELS.projects,
+      draftCount: getCollectionDraftCount(source.projects),
+      totalCount: source.projects.length
     },
     {
       key: 'bits',
@@ -521,16 +543,17 @@ export const buildAdminOverviewMaintainerSummary = (
       totalCount: source.bits.length
     },
     {
-      key: 'memo',
-      label: COLLECTION_LABELS.memo,
-      draftCount: getCollectionDraftCount(source.memos),
-      totalCount: source.memos.length
+      key: 'devlog',
+      label: COLLECTION_LABELS.devlog,
+      draftCount: getCollectionDraftCount(source.devlogs),
+      totalCount: source.devlogs.length
     }
   ];
   const recentPublications = buildRecentPublications({
-    essays: source.essays,
+    blogs: source.blogs,
+    projects: source.projects,
     bits: source.bits,
-    memos: source.memos,
+    devlogs: source.devlogs,
     bitsHrefById
   });
 
@@ -542,24 +565,27 @@ export const buildAdminOverviewMaintainerSummary = (
   };
 };
 
-export const loadAdminOverviewSource = async (
+const loadAdminOverviewSource = async (
   options: AdminOverviewSourceOptions
 ): Promise<AdminOverviewSource> => {
   const includeDraft = options.includeMaintainer;
-  const [sourceEssays, sourceBits, sourceMemos] = await Promise.all([
-    getSortedEssays({ includeDraft }),
+  const [sourceblogs, sourceProjects, sourceBits, sourceDevlogs] = await Promise.all([
+    getSortedblogs({ includeDraft }),
+    getPublishedCollection('projects', { includeDraft, orderBy: orderByEntryDateDesc }) as Promise<AdminOverviewListEntry[]>,
     getSortedBits({ includeDraft }),
-    getPublished('memo', { includeDraft, orderBy: orderByMemoDate })
+    getPublishedCollection('devlog', { includeDraft, orderBy: orderByEntryDateDesc }) as Promise<AdminOverviewListEntry[]>
   ]);
-  const essays = filterPublishedEntries(sourceEssays);
+  const blogs = filterPublishedEntries(sourceblogs);
+  const projects = filterPublishedEntries(sourceProjects);
   const bits = filterPublishedEntries(sourceBits);
-  const memos = filterPublishedEntries(sourceMemos);
+  const devlogs = filterPublishedEntries(sourceDevlogs);
 
   const publicSource: AdminOverviewPublicSource = {
-    essays,
-    archiveEssays: filterArchiveEssays(essays),
+    blogs,
+    archiveblogs: blogs.filter(isVisibleBlogEntry),
+    projects,
     bits,
-    memos,
+    devlogs,
     bitsHrefById: buildAdminOverviewBitsHrefById(bits)
   };
 
@@ -573,9 +599,10 @@ export const loadAdminOverviewSource = async (
   return {
     public: publicSource,
     maintainer: {
-      essays: sourceEssays,
+      blogs: sourceblogs,
+      projects: sourceProjects,
       bits: sourceBits,
-      memos: sourceMemos
+      devlogs: sourceDevlogs
     }
   };
 };

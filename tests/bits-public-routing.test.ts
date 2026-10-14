@@ -20,9 +20,10 @@ const item = (
 describe('bits public routing', () => {
   it('builds stable in-site page paths and anchors', () => {
     expect(getBitAnchorId('bits-2026-05-05-1200')).toBe('bit-bits-2026-05-05-1200');
+    // 服务端分页取消：所有页码都解析到唯一的 /bits/ 列表页。
     expect(getBitsPagePath(1)).toBe('/bits/');
     expect(getBitsPagePath(0)).toBe('/bits/');
-    expect(getBitsPagePath(2)).toBe('/bits/page/2/');
+    expect(getBitsPagePath(2)).toBe('/bits/');
   });
 
   it('orders published bits by date desc and id asc', () => {
@@ -40,17 +41,18 @@ describe('bits public routing', () => {
     ]);
   });
 
-  it('builds published href maps with page boundaries and without deployment base', () => {
+  it('builds published href maps without deployment base and skips drafts', () => {
     const hrefById = buildPublishedBitsHrefMap([
       item('draft-latest', '2026-05-05T12:00:00.000Z', true),
       item('published-c', '2026-05-04T12:00:00.000Z'),
       item('published-a', '2026-05-04T12:00:00.000Z'),
       item('published-b', '2026-05-03T12:00:00.000Z')
-    ], 2);
+    ]);
 
     expect(hrefById.get('draft-latest')).toBeUndefined();
     expect(hrefById.get('published-a')).toBe('/bits/#bit-published-a');
     expect(hrefById.get('published-c')).toBe('/bits/#bit-published-c');
-    expect(hrefById.get('published-b')).toBe('/bits/page/2/#bit-published-b');
+    // 服务端分页取消后所有锚点都指向 /bits/。
+    expect(hrefById.get('published-b')).toBe('/bits/#bit-published-b');
   });
 });

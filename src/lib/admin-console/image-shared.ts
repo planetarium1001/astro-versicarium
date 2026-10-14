@@ -19,6 +19,7 @@ import {
 } from './image-browse';
 import {
   AdminImageError,
+  IMAGE_LOCAL_EXT_RE,
   getAdminImageFieldAllowedOrigins,
   getAdminImageCompatibleFieldValues,
   getAdminImageFieldSortRank,
@@ -38,6 +39,7 @@ import {
   toSafeHttpUrl
 } from '../../utils/format';
 import {
+  getMimeTypeFromFileName,
   listAdminCloudStorageImages,
   type AdminImageCloudListItem
 } from './image-cloud-storage';
@@ -69,15 +71,15 @@ export type {
   AdminImageMetaInput
 } from './image-params';
 
-export type AdminImageOwnerOption = {
+type AdminImageOwnerOption = {
   value: string;
   label: string;
   count: number;
 };
 
-export type AdminImageBrowseGroupOption = AdminImageBrowseFilterOption;
+type AdminImageBrowseGroupOption = AdminImageBrowseFilterOption;
 
-export type AdminImageBrowseSubgroupOption = AdminImageBrowseFilterOption;
+type AdminImageBrowseSubgroupOption = AdminImageBrowseFilterOption;
 
 export type AdminImageBrowseIndexItem = {
   path: string;
@@ -114,9 +116,9 @@ export type AdminImageListItem = {
   previewSrc: string | null;
 };
 
-export type AdminImageListResult = {
+type AdminImageListResult = {
   field: AdminImageFieldContext | null;
-  directory: AdminImageDirectory;
+  directory: string;
   owner: string;
   ownerOptions: AdminImageOwnerOption[];
   scope: AdminImageScopeKey | '';
@@ -131,7 +133,7 @@ export type AdminImageListResult = {
   items: AdminImageListItem[];
 };
 
-export type AdminImageMetaResult = {
+type AdminImageMetaResult = {
   kind: 'local' | 'remote';
   path: string | null;
   value: string;
@@ -189,15 +191,15 @@ type AdminImageShortCacheEntry<T> = {
   value: T;
 };
 
-const IMAGE_LOCAL_EXT_RE = /\.(?:avif|gif|jpe?g|png|svg|webp)$/i;
 const MARKDOWN_EXT_RE = /\.(?:md|mdx)$/i;
 const RELATIVE_CONTENT_ASSET_RE = /!\[[^\]]*]\(([^)]+)\)|<img[^>]+src=["']([^"']+)["']/g;
 const ADMIN_IMAGE_SHORT_CACHE_TTL_MS = 3_000;
 const ADMIN_IMAGE_SHORT_CACHE_MAX_ENTRIES = 32;
 const CONTENT_COLLECTION_LABELS = {
-  essay: '随笔',
-  bits: '絮语',
-  memo: '小记'
+  blog: '博客',
+  projects: '项目',
+  bits: '动态',
+  devlog: '更新'
 } as const;
 const OWNER_PATH_SEPARATORS = ['/', '.', '-', '_'] as const;
 const ADMIN_IMAGE_SCAN_ROOTS = [
@@ -222,19 +224,14 @@ const ADMIN_IMAGE_SCAN_ROOTS = [
   pathSegments: readonly string[];
 }[];
 
-const MIME_BY_EXT: Record<string, string> = {
-  '.avif': 'image/avif',
-  '.gif': 'image/gif',
-  '.jpeg': 'image/jpeg',
-  '.jpg': 'image/jpeg',
-  '.png': 'image/png',
-  '.svg': 'image/svg+xml',
-  '.webp': 'image/webp'
-};
+/**
+ * 站点级插画统一放在 `public/images/pages/**`，以维持「一级目录 === collection 名」的不变量；
+ * 旧前缀不再作为落点，但保留三个入口以便存量图片仍能归到对应子分组。
+ */
 const ADMIN_IMAGE_PAGE_ALLOWLIST = [
-  { prefix: 'public/images/archive/', subgroup: 'archive', label: 'Archive' },
-  { prefix: 'public/images/home/', subgroup: 'home', label: 'Home' },
-  { prefix: 'public/images/about/', subgroup: 'about', label: 'About' }
+  { prefix: 'public/images/pages/archive/', subgroup: 'archive', label: 'Archive' },
+  { prefix: 'public/images/pages/home/', subgroup: 'home', label: 'Home' },
+  { prefix: 'public/images/pages/about/', subgroup: 'about', label: 'About' }
 ] as const;
 
 const ADMIN_IMAGE_ASSET_SUBGROUP_LABELS = {
@@ -256,7 +253,8 @@ const adminImageInspectionMetaPendingLoads = new Map<string, Promise<AdminImageI
 const adminImageScopeIndexCache = new Map<string, AdminImageShortCacheEntry<AdminImageScopeIndex>>();
 const adminImageScopeIndexPendingLoads = new Map<string, Promise<AdminImageScopeIndex>>();
 
-const getProjectRoot = (): string => process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
+export const getProjectRoot = (): string =>
+  process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
 const toAbsoluteAssetPath = (assetPath: string): string => path.join(getProjectRoot(), ...assetPath.split('/'));
 const getAdminImageCacheKey = (...parts: string[]): string => `${getProjectRoot()}::${parts.join('::')}`;
 
@@ -323,9 +321,6 @@ const getPreviewSrcFromPath = (assetPath: string): string | null => {
   }
   return null;
 };
-
-const getMimeType = (assetPath: string): string | null =>
-  MIME_BY_EXT[path.extname(assetPath).toLowerCase()] ?? null;
 
 const isImageFile = (name: string): boolean => IMAGE_LOCAL_EXT_RE.test(name);
 
@@ -485,8 +480,35 @@ const resolveAssetOwner = (
   return matched[0]?.owner ?? null;
 };
 
+/**
+ * 从 public 路径反推 collection + slug，替代只认内容目录的 `resolveAssetOwner`。
+ * `public/images/` 满足「一级目录 === collection 名」的不变量，因此反推可靠；
+ * `public/images/pages/**` 是站点级插画，没有 collection/slug，返回 null。
+ */
+const resolvePublicImageContentRef = (
+  assetPath: string
+): { collection: ContentCollectionKey; slug: string } | null => {
+  if (!assetPath.startsWith('public/images/')) return null;
+  const segments = assetPath.slice('public/images/'.length).split('/').filter(Boolean);
+  if (segments.length < 3) return null;
+  const [collection, slug] = segments;
+  if (!collection || !slug) return null;
+  if (collection === 'pages' || collection === 'site') return null;
+  if (!(collection in CONTENT_COLLECTION_LABELS)) return null;
+  return { collection: collection as ContentCollectionKey, slug };
+};
+
+/** 反推出的展示标签，例如 `博客 · 2026-04-26-theme-console-配置指南`。 */
+const getPublicImageContentLabel = (
+  assetPath: string
+): string | null => {
+  const ref = resolvePublicImageContentRef(assetPath);
+  if (!ref) return null;
+  return `${CONTENT_COLLECTION_LABELS[ref.collection]} · ${ref.slug}`;
+};
+
 const resolveImageScanTargets = (
-  directory: AdminImageDirectory
+  directory: string
 ): Array<{ origin: AdminImageOrigin; rootPath: string }> => {
   const projectRoot = getProjectRoot();
   if (!directory) {
@@ -516,7 +538,7 @@ const getOriginSortRank = (assetPath: string): number => {
 };
 
 const listAdminImageAssets = async (
-  directory: AdminImageDirectory,
+  directory: string,
   contentOwners?: readonly AdminImageContentOwner[]
 ): Promise<AdminImageAssetRecord[]> => {
   const projectRoot = getProjectRoot();
@@ -540,7 +562,16 @@ const listAdminImageAssets = async (
             const relativePath = path.relative(projectRoot, filePath).replace(/\\/g, '/');
             const matchedOwner = origin === 'src/content'
               ? resolveAssetOwner(relativePath, resolvedContentOwners)
-              : null;
+              : origin === 'public'
+                ? (() => {
+                    const ref = resolvePublicImageContentRef(relativePath);
+                    if (!ref) return null;
+                    return {
+                      value: `public:${ref.collection}:${ref.slug}`,
+                      label: getPublicImageContentLabel(relativePath) ?? ref.slug
+                    };
+                  })()
+                : null;
 
             return {
               path: relativePath,
@@ -585,9 +616,17 @@ const isSystemAssetPath = (assetPath: string): boolean => {
   return SYSTEM_ASSET_FILE_PATTERNS.some((pattern) => pattern.test(fileName));
 };
 
+/** 从路径里取出第一段作为子分组（projects/devlog 用 entryId 当子分组）。 */
+const getEntryIdBrowseSubgroup = (assetPath: string, prefixes: readonly string[]): string => {
+  const prefix = prefixes.find((candidate) => assetPath.startsWith(candidate));
+  if (!prefix) return '';
+  return (assetPath.slice(prefix.length).split('/', 1)[0] ?? '').trim();
+};
+
 const getBitsBrowseSubgroup = (assetPath: string): { browseSubgroup: string; browseSubgroupLabel: string | null } => {
-  const relativePath = assetPath.startsWith('public/bits/')
-    ? assetPath.slice('public/bits/'.length)
+  // bits 落点是 public/images/bits/<slug>/
+  const relativePath = assetPath.startsWith('public/images/bits/')
+    ? assetPath.slice('public/images/bits/'.length)
     : assetPath.startsWith('src/content/bits/')
       ? assetPath.slice('src/content/bits/'.length)
       : '';
@@ -629,29 +668,44 @@ const resolveBrowseMeta = (record: AdminImageAssetRecord): AdminImageAssetBrowse
     };
   }
 
-  if (record.path.startsWith('src/content/essay/')) {
+  if (record.path.startsWith('src/content/blog/') || record.path.startsWith('public/images/blog/')) {
     return {
-      browseGroup: 'essay',
-      browseGroupLabel: ADMIN_IMAGE_BROWSE_GROUP_LABELS.essay,
-      browseSubgroup: record.owner ?? '',
+      browseGroup: 'blog',
+      browseGroupLabel: ADMIN_IMAGE_BROWSE_GROUP_LABELS.blog,
+      // 子分组统一用 entryId：owner 形如 `public:blog:<slug>`，与 projects/devlog 的裸 slug 不一致
+      browseSubgroup: getEntryIdBrowseSubgroup(record.path, [
+        'src/content/blog/',
+        'public/images/blog/'
+      ]),
       browseSubgroupLabel: record.ownerLabel,
       preferredValue,
       hiddenFromBrowse: false
     };
   }
 
-  if (record.path.startsWith('src/content/memo/') || record.path.startsWith('public/images/memo/')) {
+  if (record.path.startsWith('src/content/projects/') || record.path.startsWith('public/images/projects/')) {
     return {
-      browseGroup: 'memo',
-      browseGroupLabel: ADMIN_IMAGE_BROWSE_GROUP_LABELS.memo,
-      browseSubgroup: '',
+      browseGroup: 'projects',
+      browseGroupLabel: ADMIN_IMAGE_BROWSE_GROUP_LABELS.projects,
+      browseSubgroup: getEntryIdBrowseSubgroup(record.path, ['src/content/projects/', 'public/images/projects/']),
       browseSubgroupLabel: null,
       preferredValue,
       hiddenFromBrowse: false
     };
   }
 
-  if (record.path.startsWith('src/content/bits/') || record.path.startsWith('public/bits/')) {
+  if (record.path.startsWith('src/content/devlog/') || record.path.startsWith('public/images/devlog/')) {
+    return {
+      browseGroup: 'devlog',
+      browseGroupLabel: ADMIN_IMAGE_BROWSE_GROUP_LABELS.devlog,
+      browseSubgroup: getEntryIdBrowseSubgroup(record.path, ['src/content/devlog/', 'public/images/devlog/']),
+      browseSubgroupLabel: null,
+      preferredValue,
+      hiddenFromBrowse: false
+    };
+  }
+
+  if (record.path.startsWith('src/content/bits/') || record.path.startsWith('public/images/bits/')) {
     const bitsSubgroup = getBitsBrowseSubgroup(record.path);
     return {
       browseGroup: 'bits',
@@ -1030,7 +1084,7 @@ export const readAdminLocalImageInspectionMeta = async (assetPath: string): Prom
         width,
         height,
         size: fileStat.size,
-        mimeType: getMimeType(assetPath)
+        mimeType: getMimeTypeFromFileName(assetPath)
       };
     }
   );
@@ -1225,6 +1279,7 @@ export const listAdminImageItems = async ({
   page = 1,
   limit = 20
 }: Partial<AdminImageListRequest> = {}): Promise<AdminImageListResult> => {
+  const requestedDirectory = directory;
   const normalizedQuery = query.trim();
   const normalizedOrigin = getAdminImageFieldAllowedOrigins(field).includes(origin as AdminImageOrigin)
     ? origin
@@ -1340,7 +1395,8 @@ export const listAdminImageItems = async ({
 
   return {
     field,
-    directory,
+    // 回显调用方请求的目录（可能是已知前缀的子目录，如 public/images/bits）。
+    directory: requestedDirectory,
     owner: normalizedOwner,
     ownerOptions,
     scope: '',

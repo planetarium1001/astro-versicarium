@@ -1,17 +1,17 @@
-export type AdminContentCollectionKey = 'essay' | 'bits' | 'memo' | 'about';
+export type AdminContentCollectionKey = 'blog' | 'projects' | 'bits' | 'devlog' | 'about';
 
-export type AdminContentFixedPageCapability = {
+type AdminContentFixedPageCapability = {
   entryId: 'index';
   sourcePath: string;
 };
 
-export type AdminContentCollectionCapability = {
+type AdminContentCollectionCapability = {
   collection: AdminContentCollectionKey;
   label: string;
   consoleSectionHref: string;
   fixedPage: AdminContentFixedPageCapability | null;
   visible: boolean;
-  // Entry API write contract; active editor UI exposure is still controlled by writable.
+  // 条目 API 的写盘能力；编辑器 UI 是否暴露仍由 writable 控制
   entryWritable: boolean;
   writable: boolean;
   exportable: boolean;
@@ -29,13 +29,19 @@ export type AdminContentCollectionCapability = {
   deleteUnsupportedReason: string | null;
 };
 
-export const ADMIN_CONTENT_COLLECTION_KEYS = ['essay', 'bits', 'memo', 'about'] as const satisfies readonly AdminContentCollectionKey[];
+export const ADMIN_CONTENT_COLLECTION_KEYS = [
+  'blog',
+  'projects',
+  'bits',
+  'devlog',
+  'about'
+] as const satisfies readonly AdminContentCollectionKey[];
 
-export const ADMIN_CONTENT_COLLECTION_CAPABILITIES = {
-  essay: {
-    collection: 'essay',
-    label: '随笔',
-    consoleSectionHref: '/essay/',
+const ADMIN_CONTENT_COLLECTION_CAPABILITIES = {
+  blog: {
+    collection: 'blog',
+    label: '博客',
+    consoleSectionHref: '/blog/',
     fixedPage: null,
     visible: true,
     entryWritable: true,
@@ -54,9 +60,31 @@ export const ADMIN_CONTENT_COLLECTION_CAPABILITIES = {
     readonlyReason: null,
     deleteUnsupportedReason: null
   },
+  projects: {
+    collection: 'projects',
+    label: '项目',
+    consoleSectionHref: '/projects/',
+    fixedPage: null,
+    visible: true,
+    entryWritable: true,
+    writable: true,
+    exportable: true,
+    deletable: true,
+    draftStatus: true,
+    create: true,
+    multiEntry: true,
+    articleFilters: true,
+    pagination: true,
+    bodySearch: true,
+    bodyImageUpload: true,
+    imageUpload: true,
+    imagePicker: true,
+    readonlyReason: null,
+    deleteUnsupportedReason: null
+  },
   bits: {
     collection: 'bits',
-    label: '絮语',
+    label: '动态',
     consoleSectionHref: '/bits/',
     fixedPage: null,
     visible: true,
@@ -76,30 +104,27 @@ export const ADMIN_CONTENT_COLLECTION_CAPABILITIES = {
     readonlyReason: null,
     deleteUnsupportedReason: null
   },
-  memo: {
-    collection: 'memo',
-    label: '小记',
-    consoleSectionHref: '/memo/',
-    fixedPage: {
-      entryId: 'index',
-      sourcePath: 'src/content/memo/index.md'
-    },
+  devlog: {
+    collection: 'devlog',
+    label: '更新',
+    consoleSectionHref: '/devlog/',
+    fixedPage: null,
     visible: true,
     entryWritable: true,
     writable: true,
     exportable: true,
-    deletable: false,
-    draftStatus: false,
-    create: false,
-    multiEntry: false,
-    articleFilters: false,
-    pagination: false,
+    deletable: true,
+    draftStatus: true,
+    create: true,
+    multiEntry: true,
+    articleFilters: true,
+    pagination: true,
     bodySearch: true,
     bodyImageUpload: true,
     imageUpload: true,
-    imagePicker: false,
+    imagePicker: true,
     readonlyReason: null,
-    deleteUnsupportedReason: 'memo 是固定单页内容，不支持从 Content Console 删除'
+    deleteUnsupportedReason: null
   },
   about: {
     collection: 'about',
@@ -141,9 +166,8 @@ export type AdminContentBodyImageUploadCollectionKey = CollectionKeysWithCapabil
 export type AdminContentImageUploadCollectionKey = CollectionKeysWithCapability<'imageUpload'>;
 export type AdminContentDeletableCollectionKey = CollectionKeysWithCapability<'deletable'>;
 export type AdminContentExportableCollectionKey = CollectionKeysWithCapability<'exportable'>;
-export type AdminContentDraftStatusCollectionKey = CollectionKeysWithCapability<'draftStatus'>;
+type AdminContentDraftStatusCollectionKey = CollectionKeysWithCapability<'draftStatus'>;
 export type AdminContentCreatableCollectionKey = CollectionKeysWithCapability<'create'>;
-
 export const ADMIN_CONTENT_WRITE_COLLECTION_KEYS = ADMIN_CONTENT_COLLECTION_KEYS
   .filter((collection): collection is AdminContentWriteCollectionKey =>
     ADMIN_CONTENT_COLLECTION_CAPABILITIES[collection].writable);
@@ -167,10 +191,6 @@ export const ADMIN_CONTENT_DELETABLE_COLLECTION_KEYS = ADMIN_CONTENT_COLLECTION_
 export const ADMIN_CONTENT_EXPORTABLE_COLLECTION_KEYS = ADMIN_CONTENT_COLLECTION_KEYS
   .filter((collection): collection is AdminContentExportableCollectionKey =>
     ADMIN_CONTENT_COLLECTION_CAPABILITIES[collection].exportable);
-
-export const ADMIN_CONTENT_DRAFT_STATUS_COLLECTION_KEYS = ADMIN_CONTENT_COLLECTION_KEYS
-  .filter((collection): collection is AdminContentDraftStatusCollectionKey =>
-    ADMIN_CONTENT_COLLECTION_CAPABILITIES[collection].draftStatus);
 
 export const ADMIN_CONTENT_CREATABLE_COLLECTION_KEYS = ADMIN_CONTENT_COLLECTION_KEYS
   .filter((collection): collection is AdminContentCreatableCollectionKey =>

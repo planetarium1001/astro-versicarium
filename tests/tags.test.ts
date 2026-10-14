@@ -59,8 +59,9 @@ describe('tags', () => {
       count: 1
     });
     expect(filterEntriesByTag(entries, 'astro-build')).toEqual([entries[0]]);
-    expect(getTagPath('archive', 'Astro Build')).toBe('/archive/tag/astro-build/');
-    expect(getTagPath('archive', 'Astro Build', 3)).toBe('/archive/tag/astro-build/page/3/');
+    // 静态标签页已删除：所有标签路径都回落到列表页入口。
+    expect(getTagPath('archive', 'Astro Build')).toBe('/archive/');
+    expect(getTagPath('archive', 'Astro Build', 3)).toBe('/archive/');
     expect(getTagPath('archive', '???')).toBe('/archive/');
   });
 });

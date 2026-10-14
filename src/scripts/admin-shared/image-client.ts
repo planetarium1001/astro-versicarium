@@ -27,7 +27,7 @@ export type AdminImageClientMeta = {
   previewSrc: string | null;
 };
 
-export type AdminImageListPage<TItem> = {
+type AdminImageListPage<TItem> = {
   items: TItem[];
   page: number;
   totalPages: number;
@@ -76,7 +76,7 @@ export const formatAdminImageMetaSummary = (
   return `${originLabel} · 尺寸未知 · ${sizeLabel}`;
 };
 
-export const getAdminImageResponseErrors = (payload: unknown): string[] =>
+const getAdminImageResponseErrors = (payload: unknown): string[] =>
   isRecord(payload) && Array.isArray(payload.errors)
     ? payload.errors.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
     : [];
@@ -101,7 +101,7 @@ const parseAdminImageClientItem = (item: unknown): AdminImageClientItem => {
   return item;
 };
 
-export const isAdminImageClientMeta = (meta: unknown): meta is AdminImageClientMeta =>
+const isAdminImageClientMeta = (meta: unknown): meta is AdminImageClientMeta =>
   isRecord(meta)
   && (meta.kind === 'local' || meta.kind === 'remote')
   && isNullableString(meta.path)

@@ -26,6 +26,7 @@ import {
   ADMIN_NAV_ORNAMENT_DEFAULT,
   ADMIN_OVERVIEW_HIDDEN_MESSAGE_DEFAULT,
   ADMIN_SIDEBAR_DIVIDER_DEFAULT,
+  ADMIN_SITE_TITLE_PERCENT_DEFAULT,
   ADMIN_SOCIAL_PRESET_ORDER_DEFAULT,
   ADMIN_TYPOGRAPHY_DEFAULT,
   ADMIN_VIEW_STATS_PV_LABEL_DEFAULT,
@@ -39,7 +40,7 @@ import {
 
 export type EditableSettings = ThemeSettingsEditablePayload['settings'];
 export type EditableCustomSocialItem = EditableSettings['site']['socialLinks']['custom'][number];
-export type EditableNavItem = EditableSettings['shell']['nav'][number];
+type EditableNavItem = EditableSettings['shell']['nav'][number];
 export type SocialPresetOrder = Record<SiteSocialPresetId, number>;
 
 type Query = <T extends Element>(parent: ParentNode, selector: string) => T | null;
@@ -65,6 +66,12 @@ type FormCodecContext = {
   inputSiteTitle: HTMLInputElement;
   inputSiteDescription: HTMLTextAreaElement;
   inputSiteDefaultLocale: HTMLInputElement;
+  inputSiteTitleMaxPercent: HTMLInputElement;
+  inputPageListRssEnabled: HTMLInputElement;
+  inputPageListRssBlog: HTMLInputElement;
+  inputPageListRssBits: HTMLInputElement;
+  inputPageListRssArchive: HTMLInputElement;
+  pageListRssGroupEl: HTMLElement;
   inputSiteFooterStartYear: HTMLInputElement;
   inputSiteFooterShowCurrentYear: HTMLInputElement;
   inputSiteFooterCopyright: HTMLInputElement;
@@ -95,14 +102,16 @@ type FormCodecContext = {
   inputHomeIntroMoreLinkPrimary: HTMLSelectElement;
   inputHomeIntroMoreLinkSecondaryEnabled: HTMLInputElement;
   inputHomeIntroMoreLinkSecondary: HTMLSelectElement;
-  inputPageEssayTitle: HTMLInputElement;
-  inputPageEssaySubtitle: HTMLInputElement;
+  inputPageBlogTitle: HTMLInputElement;
+  inputPageBlogSubtitle: HTMLInputElement;
+  inputPageProjectsTitle: HTMLInputElement;
+  inputPageProjectsSubtitle: HTMLInputElement;
   inputPageArchiveTitle: HTMLInputElement;
   inputPageArchiveSubtitle: HTMLInputElement;
   inputPageBitsTitle: HTMLInputElement;
   inputPageBitsSubtitle: HTMLInputElement;
-  inputPageMemoTitle: HTMLInputElement;
-  inputPageMemoSubtitle: HTMLInputElement;
+  inputPageDevlogTitle: HTMLInputElement;
+  inputPageDevlogSubtitle: HTMLInputElement;
   inputPageAboutTitle: HTMLInputElement;
   inputPageAboutSubtitle: HTMLInputElement;
   inputArticleMetaShowDate: HTMLInputElement;
@@ -202,6 +211,12 @@ export const createFormCodec = ({
   inputSiteTitle,
   inputSiteDescription,
   inputSiteDefaultLocale,
+  inputSiteTitleMaxPercent,
+  inputPageListRssEnabled,
+  inputPageListRssBlog,
+  inputPageListRssBits,
+  inputPageListRssArchive,
+  pageListRssGroupEl,
   inputSiteFooterStartYear,
   inputSiteFooterShowCurrentYear,
   inputSiteFooterCopyright,
@@ -232,14 +247,16 @@ export const createFormCodec = ({
   inputHomeIntroMoreLinkPrimary,
   inputHomeIntroMoreLinkSecondaryEnabled,
   inputHomeIntroMoreLinkSecondary,
-  inputPageEssayTitle,
-  inputPageEssaySubtitle,
+  inputPageBlogTitle,
+  inputPageBlogSubtitle,
+  inputPageProjectsTitle,
+  inputPageProjectsSubtitle,
   inputPageArchiveTitle,
   inputPageArchiveSubtitle,
   inputPageBitsTitle,
   inputPageBitsSubtitle,
-  inputPageMemoTitle,
-  inputPageMemoSubtitle,
+  inputPageDevlogTitle,
+  inputPageDevlogSubtitle,
   inputPageAboutTitle,
   inputPageAboutSubtitle,
   inputArticleMetaShowDate,
@@ -421,6 +438,18 @@ export const createFormCodec = ({
     viewStatsPreviewFooterEl.textContent = footer;
   };
 
+  /**
+   * 总开关关掉时三个页面各自的勾选框没有意义，置灰并加 `aria-disabled`
+   * （与「启用双链接」那一套一致）。
+   */
+  const syncListRssControls = (): void => {
+    const enabled = Boolean(inputPageListRssEnabled.checked);
+    for (const input of [inputPageListRssBlog, inputPageListRssBits, inputPageListRssArchive]) {
+      input.disabled = !enabled;
+    }
+    pageListRssGroupEl.setAttribute('aria-disabled', String(!enabled));
+  };
+
   const syncHomeIntroLinkControls = (): void => {
     const primary = getSelectedHomeIntroLink(inputHomeIntroMoreLinkPrimary, defaultPrimaryHomeIntroLink);
     const hasSecondary = Boolean(inputHomeIntroMoreLinkSecondaryEnabled.checked);
@@ -566,7 +595,7 @@ export const createFormCodec = ({
   const collectSettings = (): EditableSettings => {
     const nav = getNavRows().map((row, index): EditableNavItem => {
       const idRaw = row.getAttribute('data-nav-id')?.trim() ?? '';
-      const id = isAdminNavId(idRaw) ? idRaw : ADMIN_NAV_IDS[index] ?? 'essay';
+      const id = isAdminNavId(idRaw) ? idRaw : ADMIN_NAV_IDS[index] ?? 'blog';
       const labelInput = query<HTMLInputElement>(row, '[data-nav-field="label"]');
       const ornamentInput = query<HTMLInputElement>(row, '[data-nav-field="ornament"]');
       const orderInput = query<HTMLInputElement>(row, '[data-nav-field="order"]');
@@ -606,6 +635,8 @@ export const createFormCodec = ({
         title: inputSiteTitle.value.trim(),
         description: normalizeMultiline(inputSiteDescription.value).trim(),
         defaultLocale: inputSiteDefaultLocale.value.trim(),
+        /* 窄屏站点标题宽度百分比（页脚年份后面的设置） */
+        titleMaxPercent: parseInteger(inputSiteTitleMaxPercent.value) ?? ADMIN_SITE_TITLE_PERCENT_DEFAULT,
         footer: {
           startYear: parseInteger(inputSiteFooterStartYear.value) ?? footerStartYearMax,
           showCurrentYear: Boolean(inputSiteFooterShowCurrentYear.checked),
@@ -658,9 +689,20 @@ export const createFormCodec = ({
         heroImageAlt: showHero ? normalizeHeroImageAlt(inputHeroImageAlt.value) : ADMIN_HERO_IMAGE_ALT_DEFAULT
       },
       page: {
-        essay: {
-          title: normalizeOptionalSingleLine(inputPageEssayTitle.value),
-          subtitle: normalizeOptionalSingleLine(inputPageEssaySubtitle.value)
+        /* 列表页描述行的 RSS 开关（总开关加三个页面各自可勾） */
+        listRss: {
+          enabled: Boolean(inputPageListRssEnabled.checked),
+          blog: Boolean(inputPageListRssBlog.checked),
+          bits: Boolean(inputPageListRssBits.checked),
+          archive: Boolean(inputPageListRssArchive.checked)
+        },
+        blog: {
+          title: normalizeOptionalSingleLine(inputPageBlogTitle.value),
+          subtitle: normalizeOptionalSingleLine(inputPageBlogSubtitle.value)
+        },
+        projects: {
+          title: normalizeOptionalSingleLine(inputPageProjectsTitle.value),
+          subtitle: normalizeOptionalSingleLine(inputPageProjectsSubtitle.value)
         },
         archive: {
           title: normalizeOptionalSingleLine(inputPageArchiveTitle.value),
@@ -674,9 +716,9 @@ export const createFormCodec = ({
             avatar: inputPageBitsAuthorAvatar.value.trim()
           }
         },
-        memo: {
-          title: normalizeOptionalSingleLine(inputPageMemoTitle.value),
-          subtitle: normalizeOptionalSingleLine(inputPageMemoSubtitle.value)
+        devlog: {
+          title: normalizeOptionalSingleLine(inputPageDevlogTitle.value),
+          subtitle: normalizeOptionalSingleLine(inputPageDevlogSubtitle.value)
         },
         about: {
           title: normalizeOptionalSingleLine(inputPageAboutTitle.value),
@@ -731,6 +773,12 @@ export const createFormCodec = ({
     inputSiteTitle.value = settings.site.title || '';
     inputSiteDescription.value = settings.site.description || '';
     inputSiteDefaultLocale.value = settings.site.defaultLocale || '';
+    inputSiteTitleMaxPercent.value = String(settings.site.titleMaxPercent ?? ADMIN_SITE_TITLE_PERCENT_DEFAULT);
+    inputPageListRssEnabled.checked = settings.page.listRss.enabled !== false;
+    inputPageListRssBlog.checked = settings.page.listRss.blog !== false;
+    inputPageListRssBits.checked = settings.page.listRss.bits !== false;
+    inputPageListRssArchive.checked = settings.page.listRss.archive !== false;
+    syncListRssControls();
     inputSiteFooterStartYear.value = String(settings.site.footer?.startYear ?? '');
     inputSiteFooterShowCurrentYear.checked = Boolean(settings.site.footer?.showCurrentYear);
     inputSiteFooterCopyright.value = settings.site.footer?.copyright || '';
@@ -774,14 +822,16 @@ export const createFormCodec = ({
       introMoreLinks[1] || getFallbackSecondaryIntroLink(primaryIntroLink);
     syncHomeIntroLinkControls();
     refreshHomeIntroPreview();
-    inputPageEssayTitle.value = settings.page.essay?.title || '';
-    inputPageEssaySubtitle.value = settings.page.essay?.subtitle || '';
+    inputPageBlogTitle.value = settings.page.blog?.title || '';
+    inputPageBlogSubtitle.value = settings.page.blog?.subtitle || '';
+    inputPageProjectsTitle.value = settings.page.projects?.title || '';
+    inputPageProjectsSubtitle.value = settings.page.projects?.subtitle || '';
     inputPageArchiveTitle.value = settings.page.archive?.title || '';
     inputPageArchiveSubtitle.value = settings.page.archive?.subtitle || '';
     inputPageBitsTitle.value = settings.page.bits?.title || '';
     inputPageBitsSubtitle.value = settings.page.bits?.subtitle || '';
-    inputPageMemoTitle.value = settings.page.memo?.title || '';
-    inputPageMemoSubtitle.value = settings.page.memo?.subtitle || '';
+    inputPageDevlogTitle.value = settings.page.devlog?.title || '';
+    inputPageDevlogSubtitle.value = settings.page.devlog?.subtitle || '';
     inputPageAboutTitle.value = settings.page.about?.title || '';
     inputPageAboutSubtitle.value = settings.page.about?.subtitle || '';
     inputPageBitsAuthorName.value = settings.page.bits?.defaultAuthor?.name || '';
@@ -820,7 +870,7 @@ export const createFormCodec = ({
     const navMap = new Map<SidebarNavId, EditableNavItem>(settings.shell.nav.map((item) => [item.id, item]));
     getNavRows().forEach((row, index) => {
       const rawId = row.getAttribute('data-nav-id')?.trim() ?? '';
-      const id = isAdminNavId(rawId) ? rawId : ADMIN_NAV_IDS[index] ?? 'essay';
+      const id = isAdminNavId(rawId) ? rawId : ADMIN_NAV_IDS[index] ?? 'blog';
       const current = navMap.get(id);
       const labelInput = query<HTMLInputElement>(row, '[data-nav-field="label"]');
       const ornamentInput = query<HTMLInputElement>(row, '[data-nav-field="ornament"]');
@@ -844,6 +894,7 @@ export const createFormCodec = ({
     syncAdminOverviewControls,
     syncSidebarActionControls,
     syncHomeIntroLinkControls,
+    syncListRssControls,
     syncHeroControls,
     refreshFooterPreview,
     refreshFilingsPreview,

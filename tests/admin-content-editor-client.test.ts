@@ -4,7 +4,7 @@ import {
   renderContentPreview,
   saveContentEntry
 } from '../src/components/admin/editor/shared/content-editor-client';
-import type { AdminBitsEditorValues, AdminEssayEditorValues } from '../src/lib/admin-console/content-shared';
+import type { AdminBitsEditorValues, AdminBlogEditorValues } from '../src/lib/admin-console/content-shared';
 
 const bitsValues: AdminBitsEditorValues = {
   title: 'Bit',
@@ -17,15 +17,14 @@ const bitsValues: AdminBitsEditorValues = {
   imagesText: ''
 };
 
-const essayValues: AdminEssayEditorValues = {
-  title: 'New Essay',
+const BlogValues: AdminBlogEditorValues = {
+  title: 'New blog',
   description: '',
   date: '2026-06-08',
   publishedAt: '',
   updatedAt: '',
   tagsText: '',
   draft: true,
-  archive: true,
   slug: '',
   cover: '',
   badge: ''
@@ -44,21 +43,21 @@ describe('content editor client', () => {
           changed: true,
           written: true,
           changedFields: ['entry'],
-          relativePath: 'src/content/essay/new-essay.md',
-          editHref: '/admin/content/essay/_edit/new-essay/'
+          relativePath: 'src/content/blog/new-blog.md',
+          editHref: '/admin/content/blog/_edit/new-blog/'
         },
-        editHref: '/admin/content/essay/_edit/new-essay/',
+        editHref: '/admin/content/blog/_edit/new-blog/',
         payload: {
-          collection: 'essay',
-          entryId: 'new-essay',
-          publicEntryId: 'new-essay',
-          defaultPublicSlug: 'new-essay',
+          collection: 'blog',
+          entryId: 'new-blog',
+          publicEntryId: 'new-blog',
+          defaultPublicSlug: 'new-blog',
           revision: 'rev',
-          relativePath: 'src/content/essay/new-essay.md',
+          relativePath: 'src/content/blog/new-blog.md',
           writable: true,
           readonlyReason: null,
           bodyText: '\n',
-          values: essayValues
+          values: BlogValues
         }
       }), {
         status: 200,
@@ -68,19 +67,19 @@ describe('content editor client', () => {
 
     const outcome = await createContentEntry({
       endpoint: '/api/admin/content/create/',
-      collection: 'essay',
-      entryId: 'new-essay',
-      frontmatter: essayValues,
+      collection: 'blog',
+      entryId: 'new-blog',
+      frontmatter: BlogValues,
       fetchImpl
     });
 
     expect(requested.body).toEqual({
-      collection: 'essay',
-      entryId: 'new-essay',
-      frontmatter: essayValues
+      collection: 'blog',
+      entryId: 'new-blog',
+      frontmatter: BlogValues
     });
-    expect(outcome.editHref).toBe('/admin/content/essay/_edit/new-essay/');
-    expect(outcome.payload?.collection).toBe('essay');
+    expect(outcome.editHref).toBe('/admin/content/blog/_edit/new-blog/');
+    expect(outcome.payload?.collection).toBe('blog');
   });
 
   it('sends bits create payloads without client entry ids', async () => {
@@ -186,61 +185,6 @@ describe('content editor client', () => {
       entryId: 'index',
       revision: 'rev',
       body: 'About body'
-    });
-  });
-
-  it('sends body-only payloads for memo saves', async () => {
-    const requested = {
-      body: null as unknown
-    };
-    const fetchImpl = (async (_input: RequestInfo | URL, init?: RequestInit) => {
-      requested.body = JSON.parse(String(init?.body ?? '{}')) as unknown;
-      return new Response(JSON.stringify({
-        ok: true,
-        result: {
-          changed: true,
-          written: true,
-          changedFields: ['body'],
-          relativePath: 'src/content/memo/index.md'
-        },
-        payload: {
-          collection: 'memo',
-          entryId: 'index',
-          publicEntryId: 'index',
-          defaultPublicSlug: 'index',
-          revision: 'next-rev',
-          relativePath: 'src/content/memo/index.md',
-          writable: true,
-          readonlyReason: null,
-          bodyText: 'Memo body',
-          values: {
-            title: 'Memo',
-            subtitle: '',
-            date: '',
-            draft: false,
-            slug: ''
-          }
-        }
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }) as typeof fetch;
-
-    await saveContentEntry({
-      endpoint: '/api/admin/content/entry/',
-      collection: 'memo',
-      entryId: 'index',
-      revision: 'rev',
-      body: 'Memo body',
-      fetchImpl
-    });
-
-    expect(requested.body).toEqual({
-      collection: 'memo',
-      entryId: 'index',
-      revision: 'rev',
-      body: 'Memo body'
     });
   });
 

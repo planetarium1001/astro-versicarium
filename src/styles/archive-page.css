@@ -1,0 +1,78 @@
+/* archive-page.css — /archive/ 全站时间线（一级胶囊 + 年月分组，含窄屏）。
+   一级胶囊条的样式在共享层 components/scope-pills.css。 */
+@import "./components/scope-pills.css";
+
+.archive-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.archive-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.archive-group__label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.archive-timeline__list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 时间线只显示日期与标题 */
+.archive-timeline__row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px;
+  padding: 7px 0;
+}
+
+.archive-timeline__date {
+  /* 日期不用 --faint（亮暗都太淡），改用项目卡胶囊的文字色 --muted */
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.archive-timeline__title {
+  color: var(--text);
+  font-size: 15px;
+  text-decoration: none;
+  min-width: 0;
+  /* 标题允许换行，不截断 */
+  overflow-wrap: anywhere;
+}
+
+/**
+ * 更新（devlog）行的「项目名: 」前缀。项目名与更新标题同属一个链接，
+ * 悬停时必须整体变成同一高亮色，因此不设 color，直接继承 .archive-timeline__title 的颜色。
+ */
+.archive-timeline__project {
+  color: inherit;
+}
+
+.archive-timeline__title:hover,
+.archive-timeline__title:focus-visible {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* ---------------- <=640px：日期列收窄（胶囊收窄见 scope-pills.css） ---------------- */
+
+@media (max-width: 640px) {
+  .archive-timeline__row {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 10px;
+  }
+}

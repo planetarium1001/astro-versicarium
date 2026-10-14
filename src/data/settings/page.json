@@ -1,23 +1,33 @@
 {
-  "essay": {
-    "title": "随笔",
-    "subtitle": "随笔与杂记"
+  "listRss": {
+    "enabled": false,
+    "blog": true,
+    "bits": true,
+    "archive": true
+  },
+  "blog": {
+    "title": "博客",
+    "subtitle": "散者归之，各归其地"
+  },
+  "projects": {
+    "title": "项目",
+    "subtitle": "散者归之，各归其地"
   },
   "archive": {
     "title": "归档",
-    "subtitle": null
+    "subtitle": "散者归之，各归其地 · 全站时间线"
   },
   "bits": {
-    "title": "絮语",
+    "title": "动态",
     "subtitle": "生活不只是长篇",
     "defaultAuthor": {
       "name": "Whono",
       "avatar": "author/avatar.webp"
     }
   },
-  "memo": {
-    "title": null,
-    "subtitle": null
+  "devlog": {
+    "title": "更新",
+    "subtitle": "逐条记录项目的每一次改动"
   },
   "about": {
     "title": "关于",

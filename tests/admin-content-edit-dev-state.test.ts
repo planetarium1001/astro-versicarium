@@ -5,32 +5,33 @@ import type {
   AdminContentEditorOutlineRegistration,
   AdminContentEditorStyleSlot
 } from '../src/components/admin/admin-content-editor-registry';
-import type {
-  AdminAboutEditorPayload,
-  AdminBitsEditorPayload,
-  AdminEssayEditorPayload,
-  AdminMemoEditorPayload
+import { isAdminContentWorkspaceEditorPayload } from '../src/components/admin/admin-content-edit-dev-state';
+import {
+  ADMIN_CONTENT_WRITE_COLLECTION_KEYS,
+  type AdminAboutEditorPayload,
+  type AdminBitsEditorPayload,
+  type AdminBlogEditorPayload
 } from '../src/lib/admin-console/content-shared';
+import { getAdminContentCollectionCapability } from '../src/lib/admin-console/content-collections';
 
-const essayPayload: AdminEssayEditorPayload = {
-  collection: 'essay',
-  entryId: 'essay-entry',
-  publicEntryId: 'essay-entry',
-  defaultPublicSlug: 'essay-entry',
-  revision: 'essay-rev',
-  relativePath: 'src/content/essay/essay-entry.md',
+const BlogPayload: AdminBlogEditorPayload = {
+  collection: 'blog',
+  entryId: 'blog-entry',
+  publicEntryId: 'blog-entry',
+  defaultPublicSlug: 'blog-entry',
+  revision: 'blog-rev',
+  relativePath: 'src/content/blog/blog-entry.md',
   writable: true,
   readonlyReason: null,
-  bodyText: 'Essay body',
+  bodyText: 'blog body',
   values: {
-    title: 'Essay title',
+    title: 'blog title',
     description: '',
     date: '2026-06-01',
     publishedAt: '',
     updatedAt: '',
     tagsText: '',
     draft: false,
-    archive: true,
     slug: '',
     cover: '',
     badge: ''
@@ -59,25 +60,6 @@ const bitsPayload: AdminBitsEditorPayload = {
   }
 };
 
-const memoPayload: AdminMemoEditorPayload = {
-  collection: 'memo',
-  entryId: 'index',
-  publicEntryId: 'index',
-  defaultPublicSlug: 'index',
-  revision: 'memo-rev',
-  relativePath: 'src/content/memo/index.md',
-  writable: true,
-  readonlyReason: null,
-  bodyText: 'Memo body',
-  values: {
-    title: 'Memo title',
-    subtitle: '',
-    date: '',
-    draft: false,
-    slug: ''
-  }
-};
-
 const aboutPayload: AdminAboutEditorPayload = {
   collection: 'about',
   entryId: 'index',
@@ -92,11 +74,11 @@ const aboutPayload: AdminAboutEditorPayload = {
 };
 
 const outlineFixture: AdminContentEditorOutlines = {
-  essayOutlineItems: [
+  BlogOutlineItems: [
     {
-      entryId: 'essay-entry',
-      title: 'Essay title',
-      editHref: '/admin/content/essay/_edit/essay-entry/',
+      entryId: 'blog-entry',
+      title: 'blog title',
+      editHref: '/admin/content/blog/_edit/blog-entry/',
       dateLabel: '2026-06-01',
       sourceError: null
     }
@@ -166,19 +148,12 @@ describe('admin content edit dev state', () => {
   });
 
   it.each([
-    ['essay', essayPayload, [
+    ['blog', BlogPayload, [
       'article',
       'adminContentEditor',
       'adminContentEditorFrontmatter',
       'adminContentEditorImageInsert',
       'adminContentEditorGalleryInsert'
-    ]],
-    ['memo', memoPayload, [
-      'article',
-      'memo',
-      'adminContentEditor',
-      'adminContentEditorMemo',
-      'adminContentEditorImageInsert'
     ]],
     ['about', aboutPayload, ['about', 'adminContentEditor', 'adminContentEditorAbout']]
   ] as const)('uses %s registry style slots', async (_collection, payload, expectedSlots) => {
@@ -201,5 +176,21 @@ describe('admin content edit dev state', () => {
       'admin-shell.css',
       ...expectedSlots.map((slot) => `${slot}.css`)
     ]);
+  });
+  // loadAdminContentEditDevState 的默认读取路径经过「工作区载荷集合白名单」，
+  // 只注入 readPayload 的用例无法发现 projects/devlog 漏加白名单，
+  // 而 DEV 打开这两个集合的编辑页会直接抛错。这里断言白名单覆盖全部 entryWritable 集合。
+  it('covers every entry-writable collection in the workspace payload whitelist', () => {
+    const entryWritable = ADMIN_CONTENT_WRITE_COLLECTION_KEYS.filter(
+      (collection) => getAdminContentCollectionCapability(collection).entryWritable
+    );
+
+    expect(entryWritable).toEqual(['blog', 'projects', 'bits', 'devlog', 'about']);
+    for (const collection of entryWritable) {
+      expect(
+        isAdminContentWorkspaceEditorPayload({ collection } as never),
+        `${collection} 必须被工作区载荷白名单覆盖`
+      ).toBe(true);
+    }
   });
 });

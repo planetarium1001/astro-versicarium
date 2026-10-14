@@ -1,14 +1,14 @@
 import type { AdminSettingsExportBundle } from '../../lib/admin-console/settings-data';
 
-export type AdminDataBootstrap = {
+type AdminDataBootstrap = {
   revision: string;
   exportEndpoint: string;
   importEndpoint: string;
 };
 
-export type WriteGroup = 'site' | 'shell' | 'home' | 'page' | 'ui';
+type WriteGroup = 'site' | 'shell' | 'home' | 'page' | 'ui';
 
-export type WriteFieldChangeKind = 'added' | 'removed' | 'updated';
+type WriteFieldChangeKind = 'added' | 'removed' | 'updated';
 
 export type WriteFieldChange = {
   path: string;

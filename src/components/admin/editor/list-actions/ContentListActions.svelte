@@ -3,7 +3,9 @@ import { onMount, tick } from 'svelte';
 import type {
   AdminBitsEditorValues,
   AdminContentEditorPayload,
-  AdminEssayEditorValues
+  AdminBlogEditorValues,
+  AdminDevlogEditorValues,
+  AdminProjectsEditorValues
 } from '../../../../lib/admin-console/content-editor-payload';
 import {
   isAdminContentDeletableCollectionKey,
@@ -25,7 +27,8 @@ import {
 } from '../../../../scripts/admin-content/details-menu';
 import { createWithBase } from '../../../../utils/format';
 import {
-  ESSAY_PUBLIC_SLUG_RE,
+  BLOG_PUBLIC_SLUG_RE,
+  buildContentEntryId,
   contentSourceEntryIdToPublicEntryId,
   flattenEntryIdToSlug
 } from '../../../../utils/slug-rules';
@@ -40,12 +43,35 @@ import {
 import type { AdminStatusFeedbackOptions, StatusState } from './content-action-feedback';
 import { dispatchAdminContentStatus } from './content-action-status-events';
 import { createContentEntry, saveContentEntry } from '../shared/content-editor-client';
-import { isBitsEditorValues, isEssayEditorValues } from '../shared/content-editor-adapters';
+import { isBitsEditorValues, isBlogEditorValues } from '../shared/content-editor-adapters';
 
 type DialogMode = 'edit' | 'create';
-type ContentInfoCollection = Extract<AdminContentDeletableCollectionKey, 'essay' | 'bits'>;
-type ContentInfoFrontmatter = AdminEssayEditorValues | AdminBitsEditorValues;
+type ContentInfoCollection = Extract<
+  AdminContentDeletableCollectionKey,
+  'blog' | 'projects' | 'bits' | 'devlog'
+>;
+type ContentInfoFrontmatter =
+  | AdminBlogEditorValues
+  | AdminProjectsEditorValues
+  | AdminBitsEditorValues
+  | AdminDevlogEditorValues;
 type ContentInfoPayload = Extract<AdminContentEditorPayload, { collection: ContentInfoCollection }>;
+
+/**
+ * 新建触发属性。不要加入 `data-admin-content-bits-create-action`：bits 由
+ * BitsCreateAction.svelte 独占，两套 document 级 click 处理器匹配同一属性时会同时弹窗。
+ */
+const CREATE_TRIGGER_SELECTOR = [
+  '[data-admin-content-create-action]',
+  '[data-admin-content-projects-create-action]',
+  '[data-admin-content-devlog-create-action]'
+].join(', ');
+
+/** SSR 会给所有 create 按钮写 `disabled`，这里要按集合分别解除。 */
+const ALL_CREATE_TRIGGER_SELECTOR = [
+  CREATE_TRIGGER_SELECTOR,
+  '[data-admin-content-bits-create-action]'
+].join(', ');
 
 type Props = {
   base?: string;
@@ -63,7 +89,7 @@ let dialogMode = $state<DialogMode>('edit');
 let busy = $state(false);
 let loadingEntry = $state(false);
 let loadRequestId = 0;
-let selectedCollection = $state<ContentInfoCollection>('essay');
+let selectedCollection = $state<ContentInfoCollection>('blog');
 let selectedEntryId = $state('');
 let selectedDefaultPublicSlug = $state('');
 let createEntryId = $state('');
@@ -74,7 +100,7 @@ let frontmatter = $state<ContentInfoFrontmatter | null>(null);
 let issues = $state<AdminContentIssue[]>([]);
 let errors = $state<string[]>([]);
 
-const createEmptyFrontmatter = (): AdminEssayEditorValues => ({
+const createEmptyFrontmatter = (): AdminBlogEditorValues => ({
   title: '',
   description: '',
   date: '',
@@ -82,13 +108,12 @@ const createEmptyFrontmatter = (): AdminEssayEditorValues => ({
   updatedAt: '',
   tagsText: '',
   draft: false,
-  archive: true,
   slug: '',
   cover: '',
   badge: ''
 });
 
-const createNewEssayFrontmatter = (): AdminEssayEditorValues => {
+const createNewBlogFrontmatter = (): AdminBlogEditorValues => {
   const now = new Date();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
@@ -98,6 +123,30 @@ const createNewEssayFrontmatter = (): AdminEssayEditorValues => {
     draft: true
   };
 };
+
+const createEmptyProjectsFrontmatter = (): AdminProjectsEditorValues => ({
+  title: '',
+  subtitle: '',
+  description: '',
+  type: '',
+  tagsText: '',
+  icon: '',
+  repo: '',
+  repoLabel: '',
+  demo: '',
+  demoLabel: '',
+  date: '',
+  draft: false
+});
+
+const createEmptyDevlogFrontmatter = (): AdminDevlogEditorValues => ({
+  title: '',
+  date: '',
+  project: '',
+  kind: '',
+  description: '',
+  draft: false
+});
 
 const createEmptyBitsFrontmatter = (): AdminBitsEditorValues => ({
   title: '',
@@ -110,8 +159,27 @@ const createEmptyBitsFrontmatter = (): AdminBitsEditorValues => ({
   imagesText: ''
 });
 
-const createEmptyInfoFrontmatter = (collection: ContentInfoCollection): ContentInfoFrontmatter =>
-  collection === 'bits' ? createEmptyBitsFrontmatter() : createEmptyFrontmatter();
+const createEmptyInfoFrontmatter = (collection: ContentInfoCollection): ContentInfoFrontmatter => {
+  if (collection === 'bits') return createEmptyBitsFrontmatter();
+  if (collection === 'projects') return createEmptyProjectsFrontmatter();
+  if (collection === 'devlog') return createEmptyDevlogFrontmatter();
+  return createEmptyFrontmatter();
+};
+
+const createNewInfoFrontmatter = (collection: ContentInfoCollection): ContentInfoFrontmatter => {
+  const now = new Date();
+  const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const empty = createEmptyInfoFrontmatter(collection);
+  // 新建一律先落成草稿（与 blog 既有行为一致）。
+  return { ...empty, date, draft: true } as ContentInfoFrontmatter;
+};
+
+const CREATE_DIALOG_TITLES: Record<ContentInfoCollection, string> = {
+  blog: '新建文章',
+  projects: '新建项目',
+  bits: '新建动态',
+  devlog: '新建更新'
+};
 
 const cloneInfoFrontmatter = <Values extends ContentInfoFrontmatter>(value: Values): Values => ({ ...value });
 
@@ -122,7 +190,7 @@ const isEqualInfoFrontmatter = (
   JSON.stringify(left) === JSON.stringify(right);
 
 const isContentInfoCollection = (value: string): value is ContentInfoCollection =>
-  value === 'essay' || value === 'bits';
+  value === 'blog' || value === 'projects' || value === 'bits' || value === 'devlog';
 
 const dirty = $derived(!isEqualInfoFrontmatter(frontmatter, baselineFrontmatter));
 const canSave = $derived(
@@ -147,11 +215,11 @@ const getShortDateSlugPart = (date: string): string => {
 };
 
 const getCreateSlugFallbackPlaceholder = (): string =>
-  `essay-${getShortDateSlugPart(frontmatter?.date ?? '')}-xxxx`;
+  `blog-${getShortDateSlugPart(frontmatter?.date ?? '')}-xxxx`;
 
 const getCreateSlugPlaceholderPreview = (): string => {
   const candidate = flattenEntryIdToSlug(contentSourceEntryIdToPublicEntryId(createEntryId) || createEntryId);
-  return ESSAY_PUBLIC_SLUG_RE.test(candidate) ? candidate : getCreateSlugFallbackPlaceholder();
+  return BLOG_PUBLIC_SLUG_RE.test(candidate) ? candidate : getCreateSlugFallbackPlaceholder();
 };
 
 const getCreateSlugPlaceholder = (): string =>
@@ -180,15 +248,21 @@ const setStatus = (
   dispatchAdminContentStatus(state, text, options);
 };
 
-const deriveEssayEntryIdFromTitle = (title: string): string => {
+/**
+ * 新条目的源文件名固定为 `YYYY-MM-DD-title`。这里用 buildContentEntryId 而非
+ * contentSourceEntryIdToPublicEntryId：后者基于 github-slugger，对 CJK 与连续标点
+ * 会留下成串连字符。日期缺失时用当天，避免文件名缺少日期前缀。
+ */
+const deriveCreateEntryId = (date: string, title: string): string => {
   const trimmed = title.trim();
   if (!trimmed) return '';
-  return contentSourceEntryIdToPublicEntryId(trimmed) || 'untitled';
+  const parsed = new Date(`${date.trim()}T00:00:00Z`);
+  return buildContentEntryId(Number.isNaN(parsed.valueOf()) ? new Date() : parsed, trimmed);
 };
 
 const syncCreateEntryIdFromTitle = () => {
   if (dialogMode !== 'create' || createEntryIdEdited || !frontmatter) return;
-  createEntryId = deriveEssayEntryIdFromTitle(frontmatter.title);
+  createEntryId = deriveCreateEntryId(frontmatter.date, frontmatter.title);
 };
 
 const updateCreateEntryId = (value: string) => {
@@ -219,19 +293,19 @@ const closeDialog = () => {
   open = false;
 };
 
-const openCreateDialog = async (trigger: HTMLElement) => {
+const openCreateDialog = async (trigger: HTMLElement, collection: ContentInfoCollection) => {
   if (busy) {
     errors = [];
     setStatus('warn', '操作进行中');
     return;
   }
 
-  const nextFrontmatter = createNewEssayFrontmatter();
+  const nextFrontmatter = createNewInfoFrontmatter(collection);
   dialogMode = 'create';
   busy = false;
   loadingEntry = false;
   open = false;
-  selectedCollection = 'essay';
+  selectedCollection = collection;
   selectedEntryId = '';
   selectedDefaultPublicSlug = '';
   createEntryId = '';
@@ -295,7 +369,7 @@ const getInfoPayload = (
 ): ContentInfoPayload | null => {
   const entryPayload = getPayloadEditorPayload(payload);
   if (!entryPayload || entryPayload.collection !== collection || entryPayload.entryId !== entryId) return null;
-  if (!isEssayEditorValues(entryPayload.values) && !isBitsEditorValues(entryPayload.values)) return null;
+  if (!isBlogEditorValues(entryPayload.values) && !isBitsEditorValues(entryPayload.values)) return null;
   return entryPayload;
 };
 
@@ -380,24 +454,20 @@ const saveEditor = async () => {
   setStatus('loading', '正在保存');
 
   try {
-    let saveOutcome: Awaited<ReturnType<typeof saveContentEntry>> | null = null;
-    if (collection === 'essay' && isEssayEditorValues(frontmatter)) {
-      saveOutcome = await saveContentEntry({
+    const saveCollection = collection === 'blog' && isBlogEditorValues(frontmatter)
+      ? 'blog'
+      : collection === 'bits' && isBitsEditorValues(frontmatter)
+        ? 'bits'
+        : null;
+    const saveOutcome = saveCollection
+      ? await saveContentEntry({
         endpoint,
-        collection: 'essay',
+        collection: saveCollection,
         entryId: selectedEntryId,
         revision,
         frontmatter
-      });
-    } else if (collection === 'bits' && isBitsEditorValues(frontmatter)) {
-      saveOutcome = await saveContentEntry({
-        endpoint,
-        collection: 'bits',
-        entryId: selectedEntryId,
-        revision,
-        frontmatter
-      });
-    }
+      })
+      : null;
 
     if (!saveOutcome) {
       errors = [];
@@ -420,7 +490,7 @@ const saveEditor = async () => {
     const result = saveOutcome.result;
     const latestValues = saveOutcome.latestValues;
     let nextFrontmatter: ContentInfoFrontmatter | null = null;
-    if (collection === 'essay' && isEssayEditorValues(latestValues)) {
+    if (collection === 'blog' && isBlogEditorValues(latestValues)) {
       nextFrontmatter = latestValues;
     } else if (collection === 'bits' && isBitsEditorValues(latestValues)) {
       nextFrontmatter = latestValues;
@@ -449,22 +519,22 @@ const saveEditor = async () => {
 };
 
 const saveCreate = async () => {
-  if (!frontmatter || busy || !isEssayEditorValues(frontmatter)) return;
-  const createFrontmatter = frontmatter;
+  if (!frontmatter || busy) return;
+  const createFrontmatter = { ...frontmatter, draft: true } as ContentInfoFrontmatter;
+  frontmatter = createFrontmatter;
 
   busy = true;
   issues = [];
   errors = [];
-  createFrontmatter.draft = true;
   setStatus('loading', '正在创建');
 
   try {
     const outcome = await createContentEntry({
       endpoint: createEndpoint,
-      collection: 'essay',
+      collection: selectedCollection,
       entryId: createEntryId,
       frontmatter: createFrontmatter
-    });
+    } as Parameters<typeof createContentEntry>[0]);
 
     if (!outcome.responseOk || !outcome.payloadOk || !outcome.editHref) {
       issues = outcome.issues;
@@ -600,10 +670,14 @@ const deleteEntry = async (trigger: HTMLElement) => {
 const handleClick = (event: MouseEvent) => {
   if (!(event.target instanceof Element)) return;
 
-  const createTrigger = event.target.closest<HTMLElement>('[data-admin-content-create-action]');
+  const createTrigger = event.target.closest<HTMLElement>(CREATE_TRIGGER_SELECTOR);
   if (createTrigger) {
     event.preventDefault();
-    void openCreateDialog(createTrigger);
+    const requestedCollection = createTrigger.dataset.createCollection?.trim() ?? 'blog';
+    void openCreateDialog(
+      createTrigger,
+      isContentInfoCollection(requestedCollection) ? requestedCollection : 'blog'
+    );
     return;
   }
 
@@ -637,7 +711,7 @@ onMount(() => {
 });
 
 $effect(() => {
-  document.querySelectorAll<HTMLButtonElement>('[data-admin-content-create-action]').forEach((button) => {
+  document.querySelectorAll<HTMLButtonElement>(ALL_CREATE_TRIGGER_SELECTOR).forEach((button) => {
     button.disabled = busy;
   });
   document.querySelectorAll<HTMLButtonElement>('[data-admin-content-delete-action]').forEach((button) => {
@@ -677,7 +751,11 @@ $effect(() => {
     entryId={dialogMode === 'create' ? createEntryId : selectedEntryId}
     showEntryId={dialogMode === 'create'}
     {slugPlaceholder}
-    dialogTitle={dialogMode === 'create' ? '新建文章' : selectedCollection === 'bits' ? '修改信息' : '文章信息'}
+    dialogTitle={dialogMode === 'create'
+      ? CREATE_DIALOG_TITLES[selectedCollection]
+      : selectedCollection === 'bits'
+        ? '修改信息'
+        : '条目信息'}
     fieldsAriaLabel={selectedCollection === 'bits' ? '标题、摘要与作者' : '随笔字段'}
     {bitsDefaultAuthor}
     fieldScope={selectedCollection === 'bits' ? 'bits-summary' : 'all'}

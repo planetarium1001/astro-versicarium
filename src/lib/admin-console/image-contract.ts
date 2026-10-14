@@ -1,14 +1,24 @@
 export type AdminImageOrigin = 'public' | 'src/assets' | 'src/content' | 'cloud';
-export type AdminImageBrowseGroup = 'all' | 'essay' | 'bits' | 'memo' | 'assets' | 'pages' | 'cloud' | 'uncategorized';
+export type AdminImageBrowseGroup =
+  | 'all'
+  | 'blog'
+  | 'projects'
+  | 'bits'
+  | 'devlog'
+  | 'assets'
+  | 'pages'
+  | 'cloud'
+  | 'uncategorized';
 export type AdminImageScopeKey = 'recent';
 
 export const ADMIN_IMAGE_DEFAULT_LIST_LIMIT = 20;
 
 export const ADMIN_IMAGE_BROWSE_GROUP_LABELS = {
   all: '全部',
-  essay: '随笔',
-  bits: 'Bits',
-  memo: 'Memo',
+  blog: '博客',
+  projects: '项目',
+  bits: '动态',
+  devlog: '更新',
   assets: '配置素材',
   pages: '页面插图',
   cloud: '云端图片',
@@ -17,9 +27,10 @@ export const ADMIN_IMAGE_BROWSE_GROUP_LABELS = {
 
 export const ADMIN_IMAGE_BROWSE_GROUP_ORDER = [
   'all',
-  'essay',
+  'blog',
+  'projects',
   'bits',
-  'memo',
+  'devlog',
   'assets',
   'pages',
   'cloud',

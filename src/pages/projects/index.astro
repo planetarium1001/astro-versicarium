@@ -1,0 +1,158 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { createWithBase, getVisibleProjects } from '../../lib/content';
+import { getThemeSettings } from '../../lib/theme-settings';
+import { joinPageSubtitleText } from '../../utils/format';
+import { render } from 'astro:content';
+import type { AstroComponentFactory } from 'astro/runtime/server/index.js';
+import '../../styles/projects-page.css';
+
+const items = await getVisibleProjects();
+const base = import.meta.env.BASE_URL ?? '/';
+const withBase = createWithBase(base);
+const {
+  settings: { page }
+} = getThemeSettings();
+
+const pageTitleText = page.projects.title || '项目';
+const subtitleText = joinPageSubtitleText(page.projects.subtitle, `共 ${items.length} 个项目`);
+const pageDescription = joinPageSubtitleText(
+  `${pageTitleText}列表`,
+  page.projects.subtitle,
+  `共 ${items.length} 个项目`
+) ?? `${pageTitleText}列表`;
+
+type ProjectCard = {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  type: string | null;
+  icon: string | null;
+  repo: string | null;
+  repoLabel: string;
+  demo: string | null;
+  demoLabel: string;
+  hasBody: boolean;
+  Content: AstroComponentFactory | null;
+};
+
+const cards: ProjectCard[] = await Promise.all(
+  items.map(async (entry): Promise<ProjectCard> => {
+    const hasBody = (entry.body ?? '').trim().length > 0;
+    const Content = hasBody ? (await render(entry)).Content : null;
+    return {
+      id: entry.id,
+      title: entry.data.title,
+      subtitle: entry.data.subtitle?.trim() || null,
+      description: entry.data.description?.trim() || null,
+      type: entry.data.type?.trim() || null,
+      icon: entry.data.icon?.trim() || null,
+      repo: entry.data.repo?.trim() || null,
+      repoLabel: entry.data.repoLabel?.trim() || '仓库',
+      demo: entry.data.demo?.trim() || null,
+      demoLabel: entry.data.demoLabel?.trim() || '演示',
+      hasBody,
+      Content
+    };
+  })
+);
+---
+
+<BaseLayout title={pageTitleText} description={pageDescription} bodyClass="projects-page">
+  <div class="page-header">
+    <div class="page-heading">
+      <h1 class="page-title">{pageTitleText}</h1>
+      {subtitleText ? <span class="page-subtitle">{subtitleText}</span> : null}
+    </div>
+  </div>
+
+  <div class="project-grid">
+    {cards.map((card) => (
+      <article
+        class="project-card"
+        id={card.id}
+        data-project-card
+        data-project-id={card.id}
+      >
+        <button
+          class="project-card__main"
+          type="button"
+          data-project-open
+          data-project-dialog={`project-dialog-${card.id}`}
+          aria-haspopup="dialog"
+          aria-label={`查看项目：${card.title}`}
+        >
+          {card.icon ? (
+            <span class="project-card__icon">
+              <img src={withBase(card.icon)} alt="" loading="lazy" decoding="async" />
+            </span>
+          ) : null}
+          <span class="project-card__body">
+            <span class="project-card__title-row">
+              {card.type ? <span class="badge">{card.type}</span> : null}
+              <span class="project-card__title">{card.title}</span>
+            </span>
+            {card.subtitle ? <span class="project-card__subtitle">{card.subtitle}</span> : null}
+            {card.description ? <span class="project-card__description">{card.description}</span> : null}
+          </span>
+        </button>
+
+        {(card.repo || card.demo) ? (
+          <div class="project-card__links">
+            {card.repo ? (
+              <a class="project-card__link" href={card.repo} rel="noopener noreferrer" target="_blank">{card.repoLabel}</a>
+            ) : null}
+            {card.demo ? (
+              <a class="project-card__link" href={card.demo} rel="noopener noreferrer" target="_blank">{card.demoLabel}</a>
+            ) : null}
+          </div>
+        ) : null}
+      </article>
+    ))}
+  </div>
+
+  {cards.map((card) => (
+    <dialog
+      class="project-dialog"
+      id={`project-dialog-${card.id}`}
+      data-project-dialog-panel
+      aria-labelledby={`project-dialog-title-${card.id}`}
+    >
+      <div class="project-dialog__inner">
+        <div class="project-dialog__handle" aria-hidden="true"></div>
+        <div class="project-dialog__head">
+          <div class="project-dialog__title-wrap">
+            <div class="project-dialog__title-row">
+              {card.type ? <span class="badge">{card.type}</span> : null}
+              <h2 class="project-dialog__title" id={`project-dialog-title-${card.id}`} tabindex="-1">{card.title}</h2>
+            </div>
+            {card.subtitle ? <p class="project-dialog__subtitle">{card.subtitle}</p> : null}
+          </div>
+          <button class="project-dialog__close" type="button" data-project-close aria-label={`关闭 ${card.title}`}>✕</button>
+        </div>
+        <div class="project-dialog__content">
+          {card.hasBody && card.Content ? (
+            <div class="prose project-dialog__prose"><card.Content /></div>
+          ) : (
+            <p class="project-dialog__fallback">{card.description ?? '暂无描述。'}</p>
+          )}
+        </div>
+        {(card.repo || card.demo) ? (
+          <div class="project-dialog__links">
+            {card.repo ? (
+              <a class="project-card__link" href={card.repo} rel="noopener noreferrer" target="_blank">{card.repoLabel}</a>
+            ) : null}
+            {card.demo ? (
+              <a class="project-card__link" href={card.demo} rel="noopener noreferrer" target="_blank">{card.demoLabel}</a>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </dialog>
+  ))}
+
+  <script>
+    import '../../scripts/projects-dialog.ts';
+  </script>
+</BaseLayout>

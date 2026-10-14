@@ -1,8 +1,6 @@
 # 取数脚本编写提示词
 
-把本文件整体复制给大模型，替换最后一节「我的统计服务」后即可使用。模型能读文件时，让它先读 `src/scripts/view-stats.ts`、`src/lib/view-stats.ts` 与 README 的「浏览数据（PV / UV）」一节。
-
----
+把本文件整体复制给大模型，替换最后一节「我的统计服务」后即可使用。模型能读文件时，让它先读 `src/scripts/view-stats.ts`、`src/lib/view-stats.ts` 与 [analytics.md](analytics.md)。
 
 ## 任务
 
@@ -25,8 +23,8 @@
 
 ```html
 <span class="meta-line__item view-stats" data-view-stats
-      data-view-scope="article" data-view-path="/archive/hello/"
-      data-view-route="/archive/hello/" data-view-title="Hello">
+      data-view-scope="article" data-view-path="/blog/hello/"
+      data-view-route="/blog/hello/" data-view-title="Hello">
   <span class="view-stats__item" data-view-stat="pv" hidden>
     <span class="view-stats__label">浏览</span>
     <span class="view-stats__value" data-view-stat-value></span>
@@ -37,7 +35,7 @@
 
 | 属性 | 含义 |
 | --- | --- |
-| `data-view-scope` | 页面类型：`article` / `archive` / `bits` / `memo` / `essay` / `about` / `home` |
+| `data-view-scope` | 页面类型：`article` / `home` / `blog` / `archive` / `projects` / `bits` / `devlog` / `about` |
 | `data-view-path` | `Astro.url.pathname`，含部署 base，与统计服务记录的 URL 一致 |
 | `data-view-route` | 去掉 base 的逻辑路由 |
 | `data-view-title` | 剥掉标签的纯文本标题 |

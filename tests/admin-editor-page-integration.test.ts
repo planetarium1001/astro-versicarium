@@ -60,7 +60,7 @@ describe('admin editor page integration', () => {
   const createWindowRef = () => ({
     listeners: new Map<string, EventListener>(),
     location: {
-      href: 'http://localhost/admin/content/essay/_edit/demo/'
+      href: 'http://localhost/admin/content/blog/_edit/demo/'
     },
     addEventListener: vi.fn(function (
       this: WindowRefStub,

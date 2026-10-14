@@ -98,8 +98,12 @@ const listenSystemThemeChange = (listener: () => void) => {
   legacyColorSchemeMq.addListener?.(listener);
 };
 
-// 主题切换涟漪：新主题快照以点击处为圆心用 clip-path 展开；
-// 不支持 startViewTransition 或偏好减少动效时直接切换。
+/**
+ * 主题切换涟漪：按目标主题分类方向。切到亮色时新快照从点击处向四周扩散
+ * （`::view-transition-new(root)` 的 clip 从 0 圆放大到整屏）；切到暗色时反过来，从四周向
+ * 点击处收敛，用旧快照收缩（`::view-transition-old(root)` 的 clip 从整屏收到 0 圆）。
+ * 不支持 `startViewTransition` 或偏好减少动效时直接切换。
+ */
 type ViewTransitionLike = { ready: Promise<void> };
 type StartViewTransitionLike = (callback: () => void) => ViewTransitionLike;
 
@@ -131,7 +135,16 @@ const resolveRippleOrigin = (event: MouseEvent) => {
   return { x: window.innerWidth / 2, y: 0 };
 };
 
-const applyThemeWithRipple = (event: MouseEvent, apply: () => void) => {
+/**
+ * 涟漪方向写在 `<html>` 上的标记（`data-theme-ripple`）。两个方向需要不同的层叠顺序，
+ * 只改 clip-path 是不够的：
+ * - `expand`（切到亮色）：动画 `::view-transition-new(root)`，新快照在上；
+ * - `converge`（切到暗色）：动画 `::view-transition-old(root)`，旧快照必须压在新快照之上，
+ *   否则旧快照被裁掉的过程根本看不见（样式见 `global.css` 的 `[data-theme-ripple]` 规则）。
+ */
+const RIPPLE_ATTR = 'themeRipple';
+
+const applyThemeWithRipple = (event: MouseEvent, apply: () => void, targetTheme: Theme) => {
   const startViewTransition = getStartViewTransition();
   if (!startViewTransition || prefersReducedMotion()) {
     apply();
@@ -143,25 +156,50 @@ const applyThemeWithRipple = (event: MouseEvent, apply: () => void) => {
     Math.max(x, window.innerWidth - x),
     Math.max(y, window.innerHeight - y)
   );
+  const center = `${x}px ${y}px`;
+  const circle = (r: number) => `circle(${Math.ceil(r)}px at ${center})`;
+
+  // 亮色 = 扩散（新快照从小圆放大）；暗色 = 收敛（旧快照从整屏收到点击处）
+  const expanding = targetTheme === 'light';
+  root.dataset[RIPPLE_ATTR] = expanding ? 'expand' : 'converge';
+
+  /**
+   * 过渡期间冻结滚动条配色。
+   *
+   * View Transition 只拍内容区的快照，滚动条由浏览器自己画：`color-scheme` 一变，
+   * 浏览器立刻把滚动条重画成新主题（暗到亮时最右侧会先跳成亮色），看起来像涟漪漏了一块。
+   * 这里在过渡期间把 `color-scheme` 钉在旧主题上，动画结束后撤掉内联值交还 CSS。
+   */
+  const previousScheme = root.dataset.theme === 'dark' ? 'dark' : 'light';
+  const inlineColorScheme = root.style.colorScheme;
+  root.style.colorScheme = previousScheme;
+
+  const clearRippleFlag = () => {
+    delete root.dataset[RIPPLE_ATTR];
+    if (inlineColorScheme) root.style.colorScheme = inlineColorScheme;
+    else root.style.removeProperty('color-scheme');
+  };
 
   const transition = startViewTransition(apply);
   transition.ready
     .then(() => {
-      document.documentElement.animate(
+      const animation = document.documentElement.animate(
         {
-          clipPath: [
-            `circle(0px at ${x}px ${y}px)`,
-            `circle(${Math.ceil(radius)}px at ${x}px ${y}px)`
-          ]
+          clipPath: expanding
+            ? [circle(0), circle(radius)]
+            : [circle(radius), circle(0)]
         },
         {
           duration: RIPPLE_DURATION_MS,
           easing: RIPPLE_EASING,
-          pseudoElement: '::view-transition-new(root)'
+          pseudoElement: expanding
+            ? '::view-transition-new(root)'
+            : '::view-transition-old(root)'
         }
       );
+      animation.finished.then(clearRippleFlag, clearRippleFlag);
     })
-    .catch(() => {});
+    .catch(clearRippleFlag);
 };
 
 const initTheme = () => {
@@ -169,14 +207,15 @@ const initTheme = () => {
   themeBtn?.addEventListener('click', (event) => {
     const nextMode = getNextThemeMode(activeThemeMode);
     const apply = () => setThemeMode(nextMode);
+    const nextTheme = resolveTheme(nextMode);
 
     // 解析后主题未变（如浅色 → 跟随系统且系统为浅色）时不跑涟漪
-    if (resolveTheme(nextMode) === resolveTheme(activeThemeMode)) {
+    if (nextTheme === resolveTheme(activeThemeMode)) {
       apply();
       return;
     }
 
-    applyThemeWithRipple(event, apply);
+    applyThemeWithRipple(event, apply, nextTheme);
   });
 
   const syncSystemTheme = () => {

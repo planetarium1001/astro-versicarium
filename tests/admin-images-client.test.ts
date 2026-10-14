@@ -152,6 +152,36 @@ describe('admin-images/data', () => {
     expect(localOnlyHtml).not.toContain('admin-images-browser__source-heading');
   });
 
+  // 详情面板的重命名入口只给带 `images/` 公开路径的本地图片（云端图没有本地文件可改），
+  // 按钮必须带 `data-rename-path` / `data-rename-file-name`，客户端按这两个属性提交。
+
+  it('详情面板：本地图片有「重命名」入口，云端图片没有', () => {
+    const renderFor = (item: AdminImageListItem) => {
+      const detailEl = { hidden: true, innerHTML: '' } as unknown as HTMLElement;
+      renderDetail({
+        detailEl,
+        item,
+        detailMeta: null,
+        detailError: null,
+        detailLoading: false,
+        copyIcon: '',
+        linkIcon: '',
+        eyeIcon: '',
+        renameIcon: '<svg data-test-rename></svg>',
+        largeFileThreshold: 500 * 1024
+      });
+      return detailEl.innerHTML;
+    };
+
+    const localHtml = renderFor(createBrowseItem('public', 'public/images/blog/demo/cover.png'));
+    expect(localHtml).toContain('data-rename-path="images/blog/demo/cover.png"');
+    expect(localHtml).toContain('data-rename-file-name="cover.png"');
+    expect(localHtml).toContain('data-test-rename');
+
+    const cloudHtml = renderFor(createBrowseItem('cloud', 'https://cdn.example.test/x.png'));
+    expect(cloudHtml).not.toContain('data-rename-path');
+  });
+
   it('does not double-encode an already encoded cloud key in Markdown references', () => {
     const detailEl = { hidden: true, innerHTML: '' } as unknown as HTMLElement;
     const cloudItem = createBrowseItem(
@@ -178,6 +208,7 @@ describe('admin-images/data', () => {
       copyIcon: '',
       linkIcon: '',
       eyeIcon: '',
+      renameIcon: '',
       largeFileThreshold: 500 * 1024
     });
 
@@ -192,7 +223,7 @@ describe('admin-images/data', () => {
     const cloudListItem = {
       ...createBrowseItem(
         'cloud',
-        'https://cdn.example.test/uploads/essay/guide/cloud-shot.webp'
+        'https://cdn.example.test/uploads/blog/guide/cloud-shot.webp'
       ),
       size: 2048,
       mimeType: 'image/webp'

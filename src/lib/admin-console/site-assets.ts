@@ -103,7 +103,7 @@ export const uploadAdminSiteFavicon = async ({
 }: {
   slot: AdminSiteFaviconUploadSlot;
   file: File;
-  /** 当前 settings 已引用的 favicon public 路径（/images/site/**），替换时跳过删除。 */
+  /** 当前 settings 已引用的 favicon public 路径（/images/site/ 下），替换时跳过删除。 */
   referencedPaths?: readonly (string | null)[];
 }): Promise<AdminSiteFaviconUploadResult> => {
   assertFaviconUploadFile(file);

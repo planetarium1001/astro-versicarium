@@ -1,9 +1,9 @@
 import { toSafeHttpUrl } from '../../../../utils/format';
 import type {
-  EssayGalleryBlockDraft,
-  EssayGalleryColumnMode,
-  EssayGalleryImageDraft
-} from '../../../../lib/admin-console/essay-gallery-blocks';
+  BlogGalleryBlockDraft,
+  BlogGalleryColumnMode,
+  BlogGalleryImageDraft
+} from '../../../../lib/admin-console/blog-gallery-blocks';
 import type { MarkdownInsertPlacement } from '../markdown/markdown-tools';
 import {
   escapeHtmlAttribute,
@@ -13,13 +13,13 @@ import {
 
 export const GALLERY_IMAGE_SOURCE_ERROR = '请输入 https:// 图片链接或本地图片路径';
 
-export type GalleryColumnMode = EssayGalleryColumnMode;
+export type GalleryColumnMode = BlogGalleryColumnMode;
 
-export type GalleryImageDraft = EssayGalleryImageDraft;
+export type GalleryImageDraft = BlogGalleryImageDraft;
 
-export type GalleryBlockDraft = EssayGalleryBlockDraft;
+export type GalleryBlockDraft = BlogGalleryBlockDraft;
 
-export type GalleryInsertText = {
+type GalleryInsertText = {
   text: string;
   placement: MarkdownInsertPlacement;
 };
@@ -61,7 +61,7 @@ export const normalizeGalleryImageSource = (value: string): string | null => {
 const getGalleryClassName = (columns: GalleryColumnMode): string =>
   columns === 'default' ? 'gallery' : `gallery ${columns}`;
 
-export const createGalleryBlock = ({ columns, items }: GalleryBlockDraft): string => {
+const createGalleryBlock = ({ columns, items }: GalleryBlockDraft): string => {
   const lines = [`<ul class="${escapeHtmlAttribute(getGalleryClassName(columns))}">`];
 
   for (const item of items) {

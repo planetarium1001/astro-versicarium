@@ -39,6 +39,10 @@ export const bindAdminThemeFieldEvents = ({
   const {
     form,
     adminActionsSentinel,
+    inputPageListRssEnabled,
+    inputPageListRssBlog,
+    inputPageListRssBits,
+    inputPageListRssArchive,
     inputSiteFooterStartYear,
     inputSiteFooterShowCurrentYear,
     inputSiteFooterCopyright,
@@ -73,6 +77,7 @@ export const bindAdminThemeFieldEvents = ({
     syncAdminOverviewControls,
     syncSidebarActionControls,
     syncHomeIntroLinkControls,
+    syncListRssControls,
     syncHeroControls,
     refreshFooterPreview,
     refreshFilingsPreview,
@@ -126,6 +131,14 @@ export const bindAdminThemeFieldEvents = ({
     syncHomeIntroLinkControls();
     refreshDirty();
   });
+  inputPageListRssEnabled.addEventListener('change', () => {
+    syncListRssControls();
+    refreshDirty();
+  });
+  for (const input of [inputPageListRssBlog, inputPageListRssBits, inputPageListRssArchive]) {
+    input.addEventListener('change', () => refreshDirty());
+  }
+
   inputHomeIntroMoreLinkSecondaryEnabled.addEventListener('change', () => {
     syncHomeIntroLinkControls();
     refreshDirty();

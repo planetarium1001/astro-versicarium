@@ -34,6 +34,9 @@ import {
   ADMIN_SOCIAL_ORDER_MAX,
   ADMIN_SOCIAL_ORDER_MIN,
   ADMIN_SOCIAL_PRESET_IDS,
+  ADMIN_SITE_TITLE_PERCENT_DEFAULT,
+  ADMIN_SITE_TITLE_PERCENT_MAX,
+  ADMIN_SITE_TITLE_PERCENT_MIN,
   canonicalizeAdminThemeSettings,
   createAdminWritableThemeSettingsGroups,
   fillAdminThemeSettingsGroupCompatibilityDefaults,
@@ -56,18 +59,27 @@ import {
   normalizeAdminSocialIconKey,
 } from './admin-console/theme-shared';
 
-export type SettingSource = 'new' | 'legacy' | 'default';
+type SettingSource = 'new' | 'legacy' | 'default';
 
-export type SidebarNavId = 'essay' | 'bits' | 'memo' | 'archive' | 'about';
-export type PageId = 'essay' | 'archive' | 'bits' | 'memo' | 'about';
+export type SidebarNavId = 'blog' | 'projects' | 'bits' | 'devlog' | 'archive' | 'about';
 export type HeroPresetId = 'default' | 'none';
 export type SidebarDividerVariant = 'default' | 'subtle' | 'none';
 // ThemeFontId 从字体注册表条目 id 派生：添加字体只需在 registry.ts 增加条目，无需改这里。
 export type { ThemeFontId } from './fonts/registry';
 export type TypographyRole = 'readable' | 'copy' | 'mono' | 'brand';
-export type HomeIntroLinkKey = 'archive' | 'essay' | 'bits' | 'memo' | 'about' | 'tag';
+export type HomeIntroLinkKey =
+  | 'archive'
+  | 'blog'
+  | 'projects'
+  | 'bits'
+  | 'devlog'
+  | 'about'
+  /** 直达归档页的标签选择器（作用域默认「全部」，可再切到博客） */
+  | 'tag'
+  /** 直达博客列表页的标签选择器 */
+  | 'blogTag';
 export type SiteSocialPresetId = 'github' | 'x' | 'email';
-export type SiteSocialKind = 'preset' | 'custom';
+type SiteSocialKind = 'preset' | 'custom';
 export type SiteSocialIconKey =
   | 'github'
   | 'x'
@@ -82,7 +94,7 @@ export type SiteSocialIconKey =
   | 'linkedin'
   | 'website';
 
-export interface SidebarNavItem {
+interface SidebarNavItem {
   id: SidebarNavId;
   label: string;
   ornament: string | null;
@@ -90,13 +102,21 @@ export interface SidebarNavItem {
   order: number;
 }
 
-export interface SiteFooterSettings {
+export interface ListRssSettings {
+  /** 总开关：关掉后三个列表页一起隐藏。 */
+  enabled: boolean;
+  blog: boolean;
+  bits: boolean;
+  archive: boolean;
+}
+
+interface SiteFooterSettings {
   startYear: number;
   showCurrentYear: boolean;
   copyright: string;
 }
 
-export interface SiteSocialCustomItem {
+interface SiteSocialCustomItem {
   id: string;
   label: string;
   href: string;
@@ -121,7 +141,7 @@ export interface ResolvedSocialItem {
   order: number;
 }
 
-export interface SiteSocialLinks {
+interface SiteSocialLinks {
   github: string | null;
   x: string | null;
   email: string | null;
@@ -130,27 +150,27 @@ export interface SiteSocialLinks {
   resolvedSocialItems: ResolvedSocialItem[];
 }
 
-export interface SiteAdminOverviewSettings {
+interface SiteAdminOverviewSettings {
   publicVisible: boolean;
   hiddenMessage: string;
 }
 
 export type { SiteFaviconSlot } from '../utils/format';
 
-export interface SiteFaviconSettings {
+interface SiteFaviconSettings {
   svg: string | null;
   png: string | null;
   appleTouchIcon: string | null;
 }
 
-export interface SiteFaviconLink {
+interface SiteFaviconLink {
   rel: 'icon' | 'apple-touch-icon';
   href: string;
   type?: string;
   sizes?: string;
 }
 
-export interface SiteFilingSettings {
+interface SiteFilingSettings {
   number: string | null;
   link: string | null;
 }
@@ -162,10 +182,15 @@ export interface SiteFilingsSettings {
   };
 }
 
-export interface SiteSettings {
+interface SiteSettings {
   title: string;
   description: string;
   defaultLocale: string;
+  /**
+   * 窄屏顶栏里站点标题可渲染宽度的上限（占页面宽度的百分比）。
+   * 默认 35%，范围 10–100，由后台「主题 → 站点设置」维护。
+   */
+  titleMaxPercent: number;
   footer: SiteFooterSettings;
   filings: SiteFilingsSettings;
   adminOverview: SiteAdminOverviewSettings;
@@ -173,13 +198,13 @@ export interface SiteSettings {
   socialLinks: SiteSocialLinks;
 }
 
-export interface ShellSettings {
+interface ShellSettings {
   brandTitle: string;
   quote: string;
   nav: SidebarNavItem[];
 }
 
-export interface HomeSettings {
+interface HomeSettings {
   introLead: string;
   introMore: string;
   introMoreLinks: HomeIntroLinkKey[];
@@ -190,28 +215,33 @@ export interface HomeSettings {
   heroImageAlt: string;
 }
 
-export interface PageHeadingSettings {
+interface PageHeadingSettings {
   title: string | null;
   subtitle: string | null;
 }
 
-export interface MemoPageSettings extends PageHeadingSettings {}
-
-export interface BitsDefaultAuthorSettings {
+interface BitsDefaultAuthorSettings {
   name: string;
   avatar: string;
 }
 
-export interface BitsPageSettings extends PageHeadingSettings {
+interface BitsPageSettings extends PageHeadingSettings {
   defaultAuthor: BitsDefaultAuthorSettings;
 }
 
-export interface PageSettings {
-  essay: PageHeadingSettings;
+interface PageSettings {
+  blog: PageHeadingSettings;
+  projects: PageHeadingSettings;
   archive: PageHeadingSettings;
   bits: BitsPageSettings;
-  memo: MemoPageSettings;
+  devlog: PageHeadingSettings;
   about: PageHeadingSettings;
+  /**
+   * 列表页描述行里的 RSS 链接开关（后台「内页设置 → RSS 订阅」）：
+   * `enabled` 是总开关，其余三个页面各自可单独勾选、互不干扰。
+   * 侧栏的 RSS 按钮由 `ui.sidebarActions.showRssLink` 单独控制。
+   */
+  listRss: ListRssSettings;
 }
 
 export interface ArticleMetaSettings {
@@ -222,9 +252,9 @@ export interface ArticleMetaSettings {
   showReadingTime: boolean;
 }
 
-export type ArticleMetaDisplayContext = 'home' | 'list' | 'detail';
+type ArticleMetaDisplayContext = 'home' | 'list' | 'detail';
 
-export interface SidebarActionsSettings {
+interface SidebarActionsSettings {
   showRssLink: boolean;
   showThemeToggle: boolean;
   showAdminEntry: boolean;
@@ -237,7 +267,7 @@ export interface TypographySettings {
   brand: ThemeFontId;
 }
 
-export interface FloatStackSettings {
+interface FloatStackSettings {
   showResumeReading: boolean;
   showScrollTop: boolean;
 }
@@ -251,7 +281,7 @@ export interface ViewStatsSettings {
   onIndexPages: boolean;
 }
 
-export interface UiSettings {
+interface UiSettings {
   codeBlock: {
     showLineNumbers: boolean;
   };
@@ -268,7 +298,7 @@ export interface UiSettings {
   typography: TypographySettings;
 }
 
-export interface ThemeSettings {
+interface ThemeSettings {
   site: SiteSettings;
   shell: ShellSettings;
   home: HomeSettings;
@@ -276,7 +306,7 @@ export interface ThemeSettings {
   ui: UiSettings;
 }
 
-export interface ThemeSettingsSources {
+interface ThemeSettingsSources {
   site: {
     title: SettingSource;
     description: SettingSource;
@@ -318,16 +348,18 @@ export interface ThemeSettingsSources {
     heroImageAlt: SettingSource;
   };
   page: {
-    essayTitle: SettingSource;
-    essaySubtitle: SettingSource;
+    BlogTitle: SettingSource;
+    BlogSubtitle: SettingSource;
+    projectsTitle: SettingSource;
+    projectsSubtitle: SettingSource;
     archiveTitle: SettingSource;
     archiveSubtitle: SettingSource;
     bitsTitle: SettingSource;
     bitsSubtitle: SettingSource;
     bitsDefaultAuthorName: SettingSource;
     bitsDefaultAuthorAvatar: SettingSource;
-    memoTitle: SettingSource;
-    memoSubtitle: SettingSource;
+    devlogTitle: SettingSource;
+    devlogSubtitle: SettingSource;
     aboutTitle: SettingSource;
     aboutSubtitle: SettingSource;
   };
@@ -364,12 +396,12 @@ const ARTICLE_META_TAG_LIMITS: Record<ArticleMetaDisplayContext, number> = {
   detail: 3
 };
 
-export interface ThemeSettingsResolved {
+interface ThemeSettingsResolved {
   settings: ThemeSettings;
   sources: ThemeSettingsSources;
 }
 
-export interface EditableSiteSocialLinks {
+interface EditableSiteSocialLinks {
   github: string | null;
   x: string | null;
   email: string | null;
@@ -377,7 +409,7 @@ export interface EditableSiteSocialLinks {
   custom: SiteSocialCustomItem[];
 }
 
-export interface EditableSiteSettings extends Omit<SiteSettings, 'socialLinks'> {
+interface EditableSiteSettings extends Omit<SiteSettings, 'socialLinks'> {
   socialLinks: EditableSiteSocialLinks;
 }
 
@@ -413,7 +445,7 @@ export interface ThemeSettingsEditableErrorState {
   diagnostics: ThemeSettingsReadDiagnostic[];
 }
 
-export type ThemeSettingsEditableState =
+type ThemeSettingsEditableState =
   | {
       ok: true;
       payload: ThemeSettingsEditablePayload;
@@ -446,21 +478,21 @@ export const getThemeSettingsDir = (): string => resolveInternalThemeSettingsDir
 export const getThemeSettingsFilePath = (group: ThemeSettingsFileGroup): string =>
   join(getThemeSettingsDir(), getAdminThemeSettingsGroupFileName(group));
 
-export const getThemeSettingsRelativePath = (group: ThemeSettingsFileGroup): string => SETTINGS_RELATIVE_PATHS[group];
-
 const THEME_SETTINGS_INVALID_MESSAGE =
   '检测到 settings JSON 配置文件损坏，Theme Console 已停止读取并禁止保存，请先修复对应文件后再重试';
 
 const LEGACY_INTRO_LEAD =
-  '这是一个开源写作主题与示例内容库:包含 随笔/essay、小记/memo、归档/archive 与 絮语/bits，使用与配置请见 README 。';
+  '这是一个开源写作主题与示例内容库:包含 随笔/blog、归档/archive 与 絮语/bits，使用与配置请见 README 。';
 const LEGACY_INTRO_MORE = '更多文章请访问';
-const LEGACY_ESSAY_TITLE = '随笔';
+const LEGACY_BLOG_TITLE = '随笔';
 const LEGACY_ARCHIVE_TITLE = '归档';
-const LEGACY_ESSAY_SUBTITLE = '随笔与杂记';
+const LEGACY_BLOG_SUBTITLE = '随笔与杂记';
 const LEGACY_BITS_TITLE = '絮语';
 const LEGACY_BITS_SUBTITLE = '生活不只是长篇';
+const LEGACY_PROJECTS_TITLE = '项目';
+const LEGACY_DEVLOG_TITLE = '更新';
 const LEGACY_ABOUT_TITLE = '关于';
-const LEGACY_QUOTE = 'A minimal Astro theme\nfor essays, notes, and docs.\nDesigned for reading,\nopen-source.';
+const LEGACY_QUOTE = 'A minimal Astro theme\nfor blogs, notes, and docs.\nDesigned for reading,\nopen-source.';
 const LEGACY_FOOTER_START_YEAR = 2025;
 const LEGACY_FOOTER_SHOW_CURRENT_YEAR = true;
 const LEGACY_FOOTER_COPYRIGHT = 'Whono · Theme Demo · by cxro';
@@ -478,11 +510,12 @@ const LEGACY_SOCIAL_LINKS: SiteSocialLinks = {
   resolvedSocialItems: []
 };
 const LEGACY_NAV: SidebarNavItem[] = [
-  { id: 'essay', label: '随笔', ornament: ADMIN_NAV_ORNAMENT_DEFAULT, visible: true, order: 1 },
-  { id: 'bits', label: '絮语', ornament: ADMIN_NAV_ORNAMENT_DEFAULT, visible: true, order: 2 },
-  { id: 'memo', label: '小记', ornament: ADMIN_NAV_ORNAMENT_DEFAULT, visible: true, order: 3 },
-  { id: 'archive', label: '归档', ornament: ADMIN_NAV_ORNAMENT_DEFAULT, visible: true, order: 4 },
-  { id: 'about', label: '关于', ornament: ADMIN_NAV_ORNAMENT_DEFAULT, visible: true, order: 5 }
+  { id: 'blog', label: '博客', ornament: ADMIN_NAV_ORNAMENT_DEFAULT, visible: true, order: 1 },
+  { id: 'projects', label: '项目', ornament: ADMIN_NAV_ORNAMENT_DEFAULT, visible: true, order: 2 },
+  { id: 'bits', label: '动态', ornament: ADMIN_NAV_ORNAMENT_DEFAULT, visible: true, order: 3 },
+  { id: 'devlog', label: '更新', ornament: ADMIN_NAV_ORNAMENT_DEFAULT, visible: true, order: 4 },
+  { id: 'archive', label: '归档', ornament: ADMIN_NAV_ORNAMENT_DEFAULT, visible: true, order: 5 },
+  { id: 'about', label: '关于', ornament: ADMIN_NAV_ORNAMENT_DEFAULT, visible: true, order: 6 }
 ];
 const LEGACY_NAV_ORDER = new Map<SidebarNavId, number>(LEGACY_NAV.map((item) => [item.id, item.order]));
 
@@ -517,6 +550,7 @@ const DEFAULT_SITE: SiteSettings = {
   title: 'Whono',
   description: '一个 Astro 主题的展示站：轻量、可维护、可复用。',
   defaultLocale: 'zh-CN',
+  titleMaxPercent: ADMIN_SITE_TITLE_PERCENT_DEFAULT,
   footer: {
     startYear: LEGACY_FOOTER_START_YEAR,
     showCurrentYear: LEGACY_FOOTER_SHOW_CURRENT_YEAR,
@@ -563,9 +597,13 @@ const DEFAULT_HOME: HomeSettings = {
 };
 
 const DEFAULT_PAGE: PageSettings = {
-  essay: {
-    title: LEGACY_ESSAY_TITLE,
-    subtitle: LEGACY_ESSAY_SUBTITLE
+  blog: {
+    title: LEGACY_BLOG_TITLE,
+    subtitle: LEGACY_BLOG_SUBTITLE
+  },
+  projects: {
+    title: LEGACY_PROJECTS_TITLE,
+    subtitle: '散者归之，各归其地'
   },
   archive: {
     title: LEGACY_ARCHIVE_TITLE,
@@ -579,13 +617,19 @@ const DEFAULT_PAGE: PageSettings = {
       avatar: 'author/avatar.webp'
     }
   },
-  memo: {
-    title: null,
-    subtitle: null
+  devlog: {
+    title: LEGACY_DEVLOG_TITLE,
+    subtitle: '逐条记录项目的每一次改动'
   },
   about: {
     title: LEGACY_ABOUT_TITLE,
     subtitle: null
+  },
+  listRss: {
+    enabled: true,
+    blog: true,
+    bits: true,
+    archive: true
   }
 };
 
@@ -628,7 +672,7 @@ const DEFAULT_UI: UiSettings = {
   }
 };
 
-const NAV_IDS: ReadonlySet<SidebarNavId> = new Set(['essay', 'bits', 'memo', 'archive', 'about']);
+const NAV_IDS: ReadonlySet<SidebarNavId> = new Set(['blog', 'projects', 'bits', 'devlog', 'archive', 'about']);
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const GITHUB_HOSTS = ['github.com'];
 const X_HOSTS = ['x.com', 'twitter.com'];
@@ -644,9 +688,10 @@ const PRESET_SOCIAL_ITEMS: readonly {
 ];
 
 const SIDEBAR_HREFS: Record<SidebarNavId, string> = {
-  essay: '/essay/',
+  blog: '/blog/',
+  projects: '/projects/',
   bits: '/bits/',
-  memo: '/memo/',
+  devlog: '/devlog/',
   archive: '/archive/',
   about: '/about/'
 };
@@ -707,6 +752,18 @@ const asFooterStartYear = (value: unknown): number | undefined => {
   if (next === undefined) return undefined;
   const currentYear = new Date().getFullYear();
   return next >= 1900 && next <= currentYear ? next : undefined;
+};
+
+/**
+ * 窄屏站点标题宽度百分比（`site.titleMaxPercent`）。
+ * 非整数 / 越界一律视为「没配」，由默认值兜底（后台表单会给出校验提示）。
+ */
+const asSiteTitlePercent = (value: unknown): number | undefined => {
+  const next = asInteger(value);
+  if (next === undefined) return undefined;
+  return next >= ADMIN_SITE_TITLE_PERCENT_MIN && next <= ADMIN_SITE_TITLE_PERCENT_MAX
+    ? next
+    : undefined;
 };
 
 const asPresetSocialOrderValue = (value: unknown): number | undefined => {
@@ -1230,11 +1287,19 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
   const siteFaviconJson = isRecord(siteJson?.favicon) ? siteJson.favicon : undefined;
   const siteSocialLinksJson = isRecord(siteJson?.socialLinks) ? siteJson.socialLinks : undefined;
   const siteSocialPresetOrderJson = isRecord(siteSocialLinksJson?.presetOrder) ? siteSocialLinksJson.presetOrder : undefined;
-  const pageEssayJson = isRecord(pageJson?.essay) ? pageJson.essay : undefined;
+  const pageListRssJson = isRecord(pageJson?.listRss) ? pageJson.listRss : undefined;
+  const resolveListRss = (key: keyof ListRssSettings) =>
+    resolveValue(asBoolean(pageListRssJson?.[key]), undefined, DEFAULT_PAGE.listRss[key]);
+  const listRssEnabled = resolveListRss('enabled');
+  const listRssBlog = resolveListRss('blog');
+  const listRssBits = resolveListRss('bits');
+  const listRssArchive = resolveListRss('archive');
+  const pageBlogJson = isRecord(pageJson?.blog) ? pageJson.blog : undefined;
+  const pageProjectsJson = isRecord(pageJson?.projects) ? pageJson.projects : undefined;
   const pageArchiveJson = isRecord(pageJson?.archive) ? pageJson.archive : undefined;
   const pageBitsJson = isRecord(pageJson?.bits) ? pageJson.bits : undefined;
   const pageBitsDefaultAuthorJson = isRecord(pageBitsJson?.defaultAuthor) ? pageBitsJson.defaultAuthor : undefined;
-  const pageMemoJson = isRecord(pageJson?.memo) ? pageJson.memo : undefined;
+  const pageDevlogJson = isRecord(pageJson?.devlog) ? pageJson.devlog : undefined;
   const pageAboutJson = isRecord(pageJson?.about) ? pageJson.about : undefined;
 
   const title = resolveValue(
@@ -1266,6 +1331,11 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
     asBoolean(siteFooterJson?.showCurrentYear),
     LEGACY_FOOTER_SHOW_CURRENT_YEAR,
     DEFAULT_SITE.footer.showCurrentYear
+  );
+  const siteTitlePercent = resolveValue(
+    asSiteTitlePercent(siteJson?.titleMaxPercent),
+    undefined,
+    DEFAULT_SITE.titleMaxPercent
   );
   const adminOverviewPublicVisible = resolveValue(
     asBoolean(siteAdminOverviewJson?.publicVisible),
@@ -1410,15 +1480,25 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
     DEFAULT_HOME.heroImageAlt
   );
 
-  const essayTitle = resolveValue(
-    asNullableString(pageEssayJson?.title),
+  const BlogTitle = resolveValue(
+    asNullableString(pageBlogJson?.title),
     undefined,
-    DEFAULT_PAGE.essay.title
+    DEFAULT_PAGE.blog.title
   );
-  const essaySubtitle = resolveValue(
-    asNullableString(pageEssayJson?.subtitle),
-    LEGACY_ESSAY_SUBTITLE,
-    DEFAULT_PAGE.essay.subtitle
+  const BlogSubtitle = resolveValue(
+    asNullableString(pageBlogJson?.subtitle),
+    LEGACY_BLOG_SUBTITLE,
+    DEFAULT_PAGE.blog.subtitle
+  );
+  const projectsTitle = resolveValue(
+    asNullableString(pageProjectsJson?.title),
+    undefined,
+    DEFAULT_PAGE.projects.title
+  );
+  const projectsSubtitle = resolveValue<string | null>(
+    asNullableString(pageProjectsJson?.subtitle),
+    undefined,
+    DEFAULT_PAGE.projects.subtitle
   );
   const archiveTitle = resolveValue(
     asNullableString(pageArchiveJson?.title),
@@ -1450,15 +1530,15 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
     asBitsAvatarPath(legacySite.authorAvatar),
     DEFAULT_PAGE.bits.defaultAuthor.avatar
   );
-  const memoSubtitle = resolveValue<string | null>(
-    asNullableString(pageMemoJson?.subtitle),
+  const devlogTitle = resolveValue(
+    asNullableString(pageDevlogJson?.title),
     undefined,
-    DEFAULT_PAGE.memo.subtitle
+    DEFAULT_PAGE.devlog.title
   );
-  const memoTitle = resolveValue<string | null>(
-    asNullableString(pageMemoJson?.title),
+  const devlogSubtitle = resolveValue<string | null>(
+    asNullableString(pageDevlogJson?.subtitle),
     undefined,
-    DEFAULT_PAGE.memo.title
+    DEFAULT_PAGE.devlog.subtitle
   );
   const aboutTitle = resolveValue(
     asNullableString(pageAboutJson?.title),
@@ -1623,6 +1703,7 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         title: title.value,
         description: description.value,
         defaultLocale: defaultLocale.value,
+        titleMaxPercent: siteTitlePercent.value,
         footer: {
           startYear: footerStartYear.value,
           showCurrentYear: footerShowCurrentYear.value,
@@ -1673,9 +1754,13 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         heroImageAlt: heroImageAlt.value
       },
       page: {
-        essay: {
-          title: essayTitle.value,
-          subtitle: essaySubtitle.value
+        blog: {
+          title: BlogTitle.value,
+          subtitle: BlogSubtitle.value
+        },
+        projects: {
+          title: projectsTitle.value,
+          subtitle: projectsSubtitle.value
         },
         archive: {
           title: archiveTitle.value,
@@ -1689,13 +1774,19 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
             avatar: bitsDefaultAuthorAvatar.value
           }
         },
-        memo: {
-          title: memoTitle.value,
-          subtitle: memoSubtitle.value
+        devlog: {
+          title: devlogTitle.value,
+          subtitle: devlogSubtitle.value
         },
         about: {
           title: aboutTitle.value,
           subtitle: aboutSubtitle.value
+        },
+        listRss: {
+          enabled: listRssEnabled.value,
+          blog: listRssBlog.value,
+          bits: listRssBits.value,
+          archive: listRssArchive.value
         }
       },
       ui: {
@@ -1782,16 +1873,18 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         heroImageAlt: heroImageAlt.source
       },
       page: {
-        essayTitle: essayTitle.source,
-        essaySubtitle: essaySubtitle.source,
+        BlogTitle: BlogTitle.source,
+        BlogSubtitle: BlogSubtitle.source,
+        projectsTitle: projectsTitle.source,
+        projectsSubtitle: projectsSubtitle.source,
         archiveTitle: archiveTitle.source,
         archiveSubtitle: archiveSubtitle.source,
         bitsTitle: bitsTitle.source,
         bitsSubtitle: bitsSubtitle.source,
         bitsDefaultAuthorName: bitsDefaultAuthorName.source,
         bitsDefaultAuthorAvatar: bitsDefaultAuthorAvatar.source,
-        memoTitle: memoTitle.source,
-        memoSubtitle: memoSubtitle.source,
+        devlogTitle: devlogTitle.source,
+        devlogSubtitle: devlogSubtitle.source,
         aboutTitle: aboutTitle.source,
         aboutSubtitle: aboutSubtitle.source
       },
@@ -1857,6 +1950,7 @@ const buildEditableThemeSettingsSnapshot = (
       title: resolved.settings.site.title,
       description: resolved.settings.site.description,
       defaultLocale: resolved.settings.site.defaultLocale,
+      titleMaxPercent: resolved.settings.site.titleMaxPercent,
       footer: {
         ...resolved.settings.site.footer
       },
@@ -1888,7 +1982,9 @@ const buildEditableThemeSettingsSnapshot = (
       introMoreLinks: cloneHomeIntroLinks(resolved.settings.home.introMoreLinks)
     },
     page: {
-      essay: { ...resolved.settings.page.essay },
+      listRss: { ...resolved.settings.page.listRss },
+      blog: { ...resolved.settings.page.blog },
+      projects: { ...resolved.settings.page.projects },
       archive: { ...resolved.settings.page.archive },
       bits: {
         title: resolved.settings.page.bits.title,
@@ -1897,7 +1993,7 @@ const buildEditableThemeSettingsSnapshot = (
           ...resolved.settings.page.bits.defaultAuthor
         }
       },
-      memo: { ...resolved.settings.page.memo },
+      devlog: { ...resolved.settings.page.devlog },
       about: { ...resolved.settings.page.about }
     },
     ui: {

@@ -2,7 +2,7 @@
  * 初始化 Admin rail 模式下的公开导航浮层。
  * 公开页面会通过 Admin body class 与 rail DOM 双重判断快速退出。
  */
-export function initPublicNavPopover() {
+function initPublicNavPopover() {
   if (!document.body.classList.contains('admin-page')) return;
 
   const details = document.querySelector<HTMLDetailsElement>('.sidebar .public-nav-group');

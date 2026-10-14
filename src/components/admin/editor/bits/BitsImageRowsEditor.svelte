@@ -616,7 +616,7 @@ onMount(() => {
               class="admin-btn admin-btn--secondary admin-content-image-row__action"
               type="button"
               disabled={rowDisabled}
-              title="上传到 public/bits/"
+              title="上传到 public/images/bits/<slug>/"
               onclick={() => document.getElementById(`admin-bits-image-${index}-upload`)?.click()}
             >
               <AdminEditorIcon name="upload" size={14} strokeWidth={2} class="admin-icon" />

@@ -5,7 +5,8 @@ import AdminReadonlyNotice from '../../../components/admin/AdminReadonlyNotice.a
 import AdminShell from '../../../components/admin/AdminShell.astro';
 import {
   ADMIN_IMAGE_LIST_API_PATH,
-  ADMIN_IMAGE_META_API_PATH
+  ADMIN_IMAGE_META_API_PATH,
+  ADMIN_IMAGE_RENAME_API_PATH
 } from '../../../lib/admin-console/admin-api-paths';
 import {
   invalidateAdminImageCaches,
@@ -76,6 +77,7 @@ const bootstrapText = imagesDevState
   ? JSON.stringify({
       listEndpoint: withBase(ADMIN_IMAGE_LIST_API_PATH),
       metaEndpoint: withBase(ADMIN_IMAGE_META_API_PATH),
+      renameEndpoint: withBase(ADMIN_IMAGE_RENAME_API_PATH),
       initialState: {
         scope: selectedScope,
         group: selectedGroup,
@@ -274,6 +276,7 @@ const bootstrapText = imagesDevState
             <span data-icon="copy"><AdminIcon name="copy" size={15} /></span>
             <span data-icon="link"><AdminIcon name="link" size={15} /></span>
             <span data-icon="eye"><AdminIcon name="eye" size={15} /></span>
+            <span data-icon="pencil"><AdminIcon name="pencil" size={15} /></span>
           </div>
 
           <div id="admin-images-bootstrap" hidden>{bootstrapText}</div>

@@ -61,7 +61,7 @@ export const isAdminEditorRecoveryError = (value: unknown): boolean => {
     && EDITOR_MODULE_PATTERNS.some((pattern) => text.includes(pattern));
 };
 
-export const shouldShowAdminEditorRecovery = (documentRoot: Document = document): boolean =>
+const shouldShowAdminEditorRecovery = (documentRoot: Document = document): boolean =>
   Boolean(documentRoot.querySelector('[data-admin-editor-recovery]'))
   && !documentRoot.querySelector('.admin-editor-shell');
 

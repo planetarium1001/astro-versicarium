@@ -1,22 +1,21 @@
 import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
-import { ESSAY_PUBLIC_SLUG_RE } from './utils/slug-rules';
+import { BLOG_PUBLIC_SLUG_RE } from './utils/slug-rules';
 import { normalizeBitsAvatarPath } from './utils/format';
-import { parseEssayDateInput, parseEssayPublishedAtInput } from './utils/date-only';
+import { parseBlogDateInput, parseBlogPublishedAtInput } from './utils/date-only';
 import { normalizeBitsImageSource } from './lib/bits-image-source';
 
 const slugRule = z
   .string()
-  .regex(ESSAY_PUBLIC_SLUG_RE, 'slug must be lowercase kebab-case');
+  .regex(BLOG_PUBLIC_SLUG_RE, 'slug must be lowercase kebab-case（允许 CJK）');
 
-const essayBaseFields = {
+const BlogBaseFields = {
   title: z.string(),
   description: z.string().optional(),
   date: z.unknown(),
   tags: z.array(z.string()).default([]),
   draft: z.boolean().default(false),
-  archive: z.boolean().default(true),
   publishedAt: z.unknown().optional(),
   updatedAt: z.unknown().optional(),
   // Optional custom permalink. If present, it overrides the default public slug
@@ -24,14 +23,14 @@ const essayBaseFields = {
   slug: slugRule.optional()
 };
 
-const essayShape = {
-  ...essayBaseFields,
+const BlogShape = {
+  ...BlogBaseFields,
   cover: z.string().optional(),
   badge: z.string().optional()
 };
 
-const essaySchema = z.object(essayShape).transform((data, ctx) => {
-  const dateResult = parseEssayDateInput(data.date);
+const BlogSchema = z.object(BlogShape).transform((data, ctx) => {
+  const dateResult = parseBlogDateInput(data.date);
   if (!dateResult) {
     ctx.addIssue({
       code: 'custom',
@@ -46,7 +45,7 @@ const essaySchema = z.object(essayShape).transform((data, ctx) => {
     publishedAtInput != null &&
     !(typeof publishedAtInput === 'string' && publishedAtInput.trim() === '');
   const publishedAt = hasExplicitPublishedAt
-    ? parseEssayPublishedAtInput(publishedAtInput)
+    ? parseBlogPublishedAtInput(publishedAtInput)
     : dateResult.publishedAt;
 
   if (hasExplicitPublishedAt && !publishedAt) {
@@ -62,7 +61,7 @@ const essaySchema = z.object(essayShape).transform((data, ctx) => {
     data.updatedAt != null &&
     !(typeof data.updatedAt === 'string' && data.updatedAt.trim() === '');
   const updatedAtInput = data.updatedAt;
-  const updatedAtResult = hasExplicitUpdatedAt ? parseEssayDateInput(updatedAtInput) : null;
+  const updatedAtResult = hasExplicitUpdatedAt ? parseBlogDateInput(updatedAtInput) : null;
 
   if (hasExplicitUpdatedAt && !updatedAtResult) {
     ctx.addIssue({
@@ -132,9 +131,9 @@ const bitsAuthor = z.object({
   avatar: bitsAuthorAvatar.optional()
 });
 
-const essay = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/essay' }),
-  schema: essaySchema
+const blog = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/blog' }),
+  schema: BlogSchema
 });
 
 const bits = defineCollection({
@@ -154,14 +153,51 @@ const bits = defineCollection({
   })
 });
 
-const memo = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/memo' }),
+const httpsUrl = z
+  .string()
+  .superRefine((value, ctx) => {
+    if (!/^https:\/\/[^\s]+$/.test(value.trim())) {
+      ctx.addIssue({
+        code: 'custom',
+        message: '链接必须是 https:// 开头的绝对 URL'
+      });
+    }
+  });
+
+const projects = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/projects' }),
   schema: z.object({
-    title: z.string().optional(),
+    title: z.string(),
     subtitle: z.string().optional(),
-    date: z.coerce.date().optional(),
-    draft: z.boolean().default(false),
-    slug: z.string().optional()
+    description: z.string().optional(),
+    // type 完全开放：写什么显示什么，渲染为标题前小胶囊。
+    type: z.string().optional(),
+    tags: z.array(z.string()).default([]),
+    icon: z.string().optional(),
+    repo: httpsUrl.optional(),
+    repoLabel: z.string().optional(),
+    demo: httpsUrl.optional(),
+    demoLabel: z.string().optional(),
+    date: z.coerce.date(),
+    draft: z.boolean().default(false)
+  })
+});
+
+const devlog = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/devlog' }),
+  schema: z.object({
+    title: z.string(),
+    date: z.coerce.date(),
+    // project 为自由字符串，不做链接。
+    project: z.string(),
+    // kind 完全开放（建议 feature / fix / improvement / breaking / docs）。
+    kind: z.string().optional(),
+    description: z.string().optional(),
+    /**
+     * 没有 links 字段：外链写进正文 markdown（末尾一行 `[文字](https://…)`），
+     * 便于整条内容直接粘贴到 GitHub release 或 commit。渲染时末尾的纯链接行右对齐。
+     */
+    draft: z.boolean().default(false)
   })
 });
 
@@ -170,4 +206,4 @@ const about = defineCollection({
   schema: z.looseObject({})
 });
 
-export const collections = { essay, bits, memo, about };
+export const collections = { blog, projects, bits, devlog, about };

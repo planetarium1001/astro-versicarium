@@ -36,6 +36,8 @@ const getImageFetchPriority = (prioritize: boolean) => (prioritize ? 'high' : un
   data-bit
   data-bit-key={bitEntry.id}
   data-slug={card.slug}
+  data-entry-item
+  data-entry-year={String(bitEntry.data.date.getFullYear())}
 >
   <div class="bit-author">
     <div class={`avatar${card.authorAvatar ? ' avatar--image' : ' is-fallback'}`} aria-hidden="true">

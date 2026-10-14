@@ -93,8 +93,8 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.admin-field--memo > .admin-field__control,
-.admin-field--memo > .admin-title-pair {
+.admin-field--about > .admin-field__control,
+.admin-field--about > .admin-title-pair {
   max-width: calc((100% - var(--admin-grid-column-gap)) / 2);
 }
 
@@ -435,6 +435,45 @@
   transform: translate(-50%, 0);
 }
 
+/**
+ * 页脚那一行 = [页脚年份] [窄屏站点标题宽度] [页脚版权文案]。
+ * space-between 均分两段空隙；空间不足时版权先换行（它是唯一带 flex-basis 的宽格子），
+ * 此时行里只剩年份与宽度，margin-left: auto 把宽度格子顶到页面右端；
+ * 再不够时宽度格子自己换行。
+ */
+.admin-footer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px var(--admin-grid-column-gap);
+}
+
+.admin-footer-row__cell {
+  min-width: 0;
+}
+
+.admin-footer-row__cell--year {
+  flex: 0 0 auto;
+}
+
+.admin-footer-row__cell--percent {
+  flex: 0 0 auto;
+  /* 版权换行后只剩它和年份，顶到行右端 */
+  margin-left: auto;
+}
+
+.admin-footer-row__cell--copyright {
+  /* 宽格子：空间不足时先换行 */
+  flex: 0 1 260px;
+}
+
+/* 百分比输入框不需要那么长 */
+.admin-field__control--percent {
+  width: 84px;
+  text-align: center;
+}
+
 .admin-year-range {
   display: inline-grid;
   grid-template-columns: 104px auto 104px auto;
@@ -609,7 +648,7 @@
   box-shadow: var(--admin-focus-shadow);
 }
 
-/* 卡片内容默认浅灰、选中恢复正文色：详情行已移除，选中态由卡片自身（边框/底色/文字色）表达。 */
+/* 卡片内容默认浅灰、选中恢复正文色；选中态由卡片自身的边框/底色/文字色表达 */
 .admin-font-card__preview {
   color: var(--muted);
   font-size: 19px;
@@ -627,7 +666,7 @@
   text-overflow: ellipsis;
 }
 
-/* 来源说明：纯文字弱化展示，与上方字体名左对齐。 */
+/* 来源说明：纯文字弱化展示，与上方字体名左对齐 */
 .admin-font-card__badge {
   max-width: 100%;
   color: var(--faint);
@@ -832,10 +871,13 @@
   margin-right: 4px;
 }
 
+/**
+ * 候选文案新增「#博客标签」/「#归档标签」后字符变多，92px 会截断文字，放宽到 116px。
+ */
 .admin-inline-builder__select {
-  flex: 0 0 92px;
-  width: 92px !important;
-  min-width: 92px;
+  flex: 0 0 116px;
+  width: 116px !important;
+  min-width: 116px;
   padding-left: 0;
   padding-right: 0;
   text-align: center;
@@ -1157,8 +1199,8 @@
     grid-template-columns: 1fr;
   }
 
-  .admin-field--memo > .admin-field__control,
-  .admin-field--memo > .admin-title-pair {
+  .admin-field--about > .admin-field__control,
+  .admin-field--about > .admin-title-pair {
     max-width: none;
   }
 

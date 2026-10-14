@@ -16,14 +16,14 @@ export type EditorImageUploadResult = {
   mimeType: string | null;
 };
 
-export type EditorImageUploadInput = {
+type EditorImageUploadInput = {
   uploadEndpoint: string;
   collection: AdminContentImageUploadCollectionKey;
   entryId: string;
   file: File;
 };
 
-export type EditorImageUploadResponse =
+type EditorImageUploadResponse =
   | {
       ok: true;
       result: EditorImageUploadResult;
@@ -90,17 +90,13 @@ export const uploadContentEditorImage = async ({
   }
 };
 
-export const uploadEssayEditorImage = (
+export const uploadBlogEditorImage = (
   input: Omit<EditorImageUploadInput, 'collection'>
 ): Promise<EditorImageUploadResponse> =>
-  uploadContentEditorImage({ ...input, collection: 'essay' });
+  uploadContentEditorImage({ ...input, collection: 'blog' });
 
 export const uploadBitsEditorImage = (
   input: Omit<EditorImageUploadInput, 'collection'>
 ): Promise<EditorImageUploadResponse> =>
   uploadContentEditorImage({ ...input, collection: 'bits' });
 
-export const uploadMemoEditorImage = (
-  input: Omit<EditorImageUploadInput, 'collection'>
-): Promise<EditorImageUploadResponse> =>
-  uploadContentEditorImage({ ...input, collection: 'memo' });

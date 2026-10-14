@@ -69,8 +69,11 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const hasOwn = (value: Record<string, unknown>, key: string): boolean =>
   Object.prototype.hasOwnProperty.call(value, key);
 
-const isFrontmatterWriteCollection = (collection: string): collection is 'essay' | 'bits' =>
-  collection === 'essay' || collection === 'bits';
+/** 有 frontmatter 字段袋的集合（about 是纯正文集合）。 */
+const isFrontmatterWriteCollection = (
+  collection: string
+): collection is 'blog' | 'projects' | 'bits' | 'devlog' =>
+  collection === 'blog' || collection === 'projects' || collection === 'bits' || collection === 'devlog';
 
 const extractWriteInput = (body: unknown): WriteInput => {
   if (!isRecord(body)) {
@@ -119,12 +122,6 @@ const extractWriteInput = (body: unknown): WriteInput => {
 
   if (rawCollection === 'about' && !hasBody) {
     const message = 'about 保存请求缺少 body 字段';
-    errors.push(message);
-    issues.push({ path: 'body', message });
-  }
-
-  if (rawCollection === 'memo' && !hasBody) {
-    const message = 'memo 保存请求缺少 body 字段';
     errors.push(message);
     issues.push({ path: 'body', message });
   }

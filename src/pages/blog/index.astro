@@ -1,0 +1,12 @@
+---
+import BlogPageView from '../../components/BlogPageView.astro';
+import { getVisibleblogs } from '../../lib/content';
+
+/**
+ * 取消服务端分页：SSR 输出全部条目（保 SEO 与无 JS 可用性），
+ * 筛选与分页由 scripts/entry-search.ts 在已渲染的 DOM 上完成（沿用 hidden 机制，不从 JSON 渲染列表）。
+ */
+const visibleblogs = await getVisibleblogs();
+---
+
+<BlogPageView items={visibleblogs} resultCount={visibleblogs.length} />

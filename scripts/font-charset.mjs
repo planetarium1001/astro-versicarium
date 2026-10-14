@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
+import { collectSourceFiles } from './collect-source-files.mjs';
 
 const ROOT = process.cwd();
 const OUTPUT_PATH = path.join(ROOT, 'tools', 'charset-common.txt');
@@ -21,17 +22,15 @@ const EXTRA_CHARS = [
 ].join('');
 
 const SOURCE_DIRS = [
-  { dir: path.join(ROOT, 'src', 'content'), exts: new Set(['.md']) },
-  { dir: path.join(ROOT, 'src', 'pages'), exts: new Set(['.astro']) },
-  { dir: path.join(ROOT, 'src', 'components'), exts: new Set(['.astro']) },
-  { dir: path.join(ROOT, 'src', 'layouts'), exts: new Set(['.astro']) },
+  { dir: 'src/content', exts: ['.md'] },
+  { dir: 'src/pages', exts: ['.astro'] },
+  { dir: 'src/components', exts: ['.astro'] },
+  { dir: 'src/layouts', exts: ['.astro'] },
   // Theme Console 可编辑文案（brandTitle/quote/导航 label/页面标题等）也会用公开字体渲染。
-  { dir: path.join(ROOT, 'src', 'data', 'settings'), exts: new Set(['.json']) }
+  { dir: 'src/data/settings', exts: ['.json'] }
 ];
 
-const SOURCE_FILES = [
-  path.join(ROOT, 'site.config.mjs')
-];
+const SOURCE_FILES = ['site.config.mjs'];
 
 const charset = new Set();
 
@@ -41,39 +40,8 @@ const addText = (text) => {
   }
 };
 
-const walk = async (dir, exts, results) => {
-  const entries = await fs.readdir(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      await walk(fullPath, exts, results);
-      continue;
-    }
-    if (exts.has(path.extname(entry.name))) {
-      results.push(fullPath);
-    }
-  }
-};
-
-const collectFiles = async () => {
-  const files = [];
-  for (const source of SOURCE_DIRS) {
-    try {
-      await walk(source.dir, source.exts, files);
-    } catch (_) {
-      // Ignore missing directories to keep the script portable.
-    }
-  }
-  for (const filePath of SOURCE_FILES) {
-    try {
-      await fs.access(filePath);
-      files.push(filePath);
-    } catch (_) {
-      // Ignore missing files to keep the script portable.
-    }
-  }
-  return files;
-};
+const collectFiles = () =>
+  collectSourceFiles(ROOT, { dirs: SOURCE_DIRS, files: SOURCE_FILES });
 
 const main = async () => {
   try {

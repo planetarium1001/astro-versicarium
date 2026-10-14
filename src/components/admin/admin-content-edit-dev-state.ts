@@ -38,19 +38,29 @@ type LoadAdminContentEditDevStateInput = {
   loadOutlines?: LoadOutlines;
 };
 
-export type AdminContentEditDevState = {
+type AdminContentEditDevState = {
   payload: AdminContentWorkspaceEditorPayload;
   outlines: AdminContentEditorOutlines;
   stylesHref: string[];
 };
 
-const isAdminContentWorkspaceEditorPayload = (
+/**
+ * 工作区编辑器覆盖的集合；新增集合必须同时出现在这里，
+ * 否则 DEV 下打开该集合的编辑页会抛错。
+ */
+const WORKSPACE_EDITOR_COLLECTIONS = [
+  'blog',
+  'projects',
+  'bits',
+  'devlog',
+  'about'
+] as const satisfies readonly AdminContentWorkspaceEditorPayload['collection'][];
+
+/** 白名单判定，供回归测试断言集合覆盖。 */
+export const isAdminContentWorkspaceEditorPayload = (
   payload: AdminContentEditorPayload
 ): payload is AdminContentWorkspaceEditorPayload =>
-  payload.collection === 'essay'
-  || payload.collection === 'bits'
-  || payload.collection === 'memo'
-  || payload.collection === 'about';
+  (WORKSPACE_EDITOR_COLLECTIONS as readonly string[]).includes(payload.collection);
 
 const readAdminContentWorkspaceEditorPayload: ReadEditorPayload = async (collection, entryId) => {
   const payload = await readAdminContentEntryEditorPayload(collection, entryId);

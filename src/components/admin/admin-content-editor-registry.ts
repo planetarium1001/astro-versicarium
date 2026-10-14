@@ -5,8 +5,9 @@ import type { AdminAboutEditorPayload } from '../../lib/admin-console/content-ab
 import {
   type AdminBitsEditorPayload,
   type AdminContentWorkspaceEditorPayload,
-  type AdminEssayEditorPayload,
-  type AdminMemoEditorPayload
+  type AdminBlogEditorPayload,
+  type AdminDevlogEditorPayload,
+  type AdminProjectsEditorPayload,
 } from '../../lib/admin-console/content-editor-payload';
 import type { BitsCardAuthorInput } from '../../lib/bits-card-view-model';
 import {
@@ -14,12 +15,11 @@ import {
   loadAdminContentSourceManifest
 } from '../../lib/admin-console/content-source-index';
 import type { BitsEditorIslandProps } from './editor/bits/bits-editor-island-props';
-import type { EssayEditorShellProps } from './editor/essay/editor-shell-props';
+import type { BlogEditorShellProps } from './editor/blog/editor-shell-props';
 import type {
-  EditorOutlineEssaySourceItem,
+  EditorOutlineBlogSourceItem,
   EditorOutlineListSourceItem
 } from './editor/markdown/editor-outline-helpers';
-import type { MemoEditorIslandProps } from './editor/fixed-page/memo-editor-island-props';
 import type { AboutEditorIslandProps } from './editor/fixed-page/about-editor-island-props';
 
 type WithBase = (path: string) => string;
@@ -39,31 +39,28 @@ export type AdminContentEditorStyleSlot =
   | 'adminContentEditorFrontmatter'
   | 'adminContentEditorGalleryInsert'
   | 'adminContentEditorImageInsert'
-  | 'adminContentEditorMemo'
   | 'adminImageShared'
   | 'about'
-  | 'article'
-  | 'memo';
+  | 'article';
 
-export type AdminContentEditorOutlineKind = 'none' | 'essay' | 'list';
+type AdminContentEditorOutlineKind = 'none' | 'blog' | 'list';
 
-export type AdminContentEditorInfoTrigger = {
+type AdminContentEditorInfoTrigger = {
   attribute: 'data-admin-article-info-trigger' | 'data-admin-bits-info-trigger';
   label: string;
   panelId: string;
 };
 
-export type AdminContentEditorIslandKey = 'essay' | 'bits' | 'memo' | 'about';
+export type AdminContentEditorIslandKey = 'blog' | 'projects' | 'bits' | 'devlog' | 'about';
 
 export type AdminContentEditorOutlines = {
-  essayOutlineItems: EditorOutlineEssaySourceItem[];
+  BlogOutlineItems: EditorOutlineBlogSourceItem[];
   bitsOutlineItems: EditorOutlineListSourceItem[];
 };
 
-export type AdminContentEditorIslandProps =
-  | EssayEditorShellProps
+type AdminContentEditorIslandProps =
+  | BlogEditorShellProps
   | BitsEditorIslandProps
-  | MemoEditorIslandProps
   | AboutEditorIslandProps;
 
 type BuildBaseIslandPropsInput<Payload extends AdminContentWorkspaceEditorPayload> = {
@@ -72,8 +69,8 @@ type BuildBaseIslandPropsInput<Payload extends AdminContentWorkspaceEditorPayloa
   returnHref: string;
 };
 
-type BuildEssayIslandPropsInput = BuildBaseIslandPropsInput<AdminEssayEditorPayload> & {
-  essayOutlineItems: EditorOutlineEssaySourceItem[];
+type BuildBlogIslandPropsInput = BuildBaseIslandPropsInput<AdminBlogEditorPayload> & {
+  BlogOutlineItems: EditorOutlineBlogSourceItem[];
   initialArticleInfoOpen: boolean;
 };
 
@@ -82,19 +79,20 @@ type BuildBitsIslandPropsInput = BuildBaseIslandPropsInput<AdminBitsEditorPayloa
   bitsOutlineItems: EditorOutlineListSourceItem[];
 };
 
-type BuildMemoIslandPropsInput = BuildBaseIslandPropsInput<AdminMemoEditorPayload>;
 type BuildAboutIslandPropsInput = BuildBaseIslandPropsInput<AdminAboutEditorPayload>;
 
 type BuildIslandPropsInput<Payload extends AdminContentWorkspaceEditorPayload> =
-  Payload extends AdminEssayEditorPayload
-    ? BuildEssayIslandPropsInput
-    : Payload extends AdminBitsEditorPayload
-      ? BuildBitsIslandPropsInput
-      : Payload extends AdminAboutEditorPayload
-        ? BuildAboutIslandPropsInput
-        : BuildMemoIslandPropsInput;
+  Payload extends AdminBlogEditorPayload
+    ? BuildBlogIslandPropsInput
+    : Payload extends AdminProjectsEditorPayload
+      ? BuildBlogIslandPropsInput
+      : Payload extends AdminBitsEditorPayload
+        ? BuildBitsIslandPropsInput
+        : Payload extends AdminDevlogEditorPayload
+          ? BuildBlogIslandPropsInput
+          : BuildAboutIslandPropsInput;
 
-export type AdminContentEditorPageRegistration<
+type AdminContentEditorPageRegistration<
   Collection extends AdminContentWriteCollectionKey = AdminContentWriteCollectionKey,
   Payload extends AdminContentWorkspaceEditorPayload = AdminContentWorkspaceEditorPayload
 > = {
@@ -128,11 +126,6 @@ const loadAboutStylesHref = async (): Promise<string> => {
   return aboutStylesHref;
 };
 
-const loadMemoStylesHref = async (): Promise<string> => {
-  const { default: memoStylesHref } = await import('../../styles/memo.css?url');
-  return memoStylesHref;
-};
-
 const loadAdminImageSharedStylesHref = async (): Promise<string> => {
   const { default: adminImageSharedStylesHref } = await import('../../styles/components/admin/images/shared.css?url');
   return adminImageSharedStylesHref;
@@ -151,17 +144,14 @@ const STYLE_SLOT_LOADERS = {
     (await import('../../styles/components/admin/content/edit-gallery-insert.css?url')).default,
   adminContentEditorImageInsert: async () =>
     (await import('../../styles/components/admin/content/edit-image-insert.css?url')).default,
-  adminContentEditorMemo: async () =>
-    (await import('../../styles/components/admin/content/edit-memo.css?url')).default,
   adminImageShared: loadAdminImageSharedStylesHref,
   about: loadAboutStylesHref,
-  article: loadArticleStylesHref,
-  memo: loadMemoStylesHref
+  article: loadArticleStylesHref
 } as const satisfies Record<AdminContentEditorStyleSlot, () => Promise<string>>;
 
-export const ADMIN_CONTENT_EDITOR_BASE_STYLE_SLOTS = ['adminContentEditor'] as const satisfies readonly AdminContentEditorStyleSlot[];
+const ADMIN_CONTENT_EDITOR_BASE_STYLE_SLOTS = ['adminContentEditor'] as const satisfies readonly AdminContentEditorStyleSlot[];
 
-export const loadAdminContentEditorStyleSlot = async (
+const loadAdminContentEditorStyleSlot = async (
   slot: AdminContentEditorStyleSlot
 ): Promise<string> =>
   STYLE_SLOT_LOADERS[slot]();
@@ -177,13 +167,13 @@ export const loadAdminContentEditorBaseStyleHrefs = async (
 ): Promise<string[]> =>
   loadAdminContentEditorStyleHrefs(ADMIN_CONTENT_EDITOR_BASE_STYLE_SLOTS, loadStyleSlot);
 
-const loadEssayOutlineItems = async (withBase: WithBase): Promise<EditorOutlineEssaySourceItem[]> => {
+const loadBlogOutlineItems = async (withBase: WithBase): Promise<EditorOutlineBlogSourceItem[]> => {
   const manifest = await loadAdminContentSourceManifest();
-  return (await loadAdminContentSourceIndex(manifest, 'essay'))
+  return (await loadAdminContentSourceIndex(manifest, 'blog'))
     .map((item) => ({
       entryId: item.id,
       title: item.title,
-      editHref: withBase(getAdminContentEntryEditHref('essay', item.id)),
+      editHref: withBase(getAdminContentEntryEditHref('blog', item.id)),
       dateLabel: item.dateLabel,
       sourceError: item.sourceError
     }));
@@ -202,7 +192,7 @@ const loadBitsOutlineItems = async (withBase: WithBase): Promise<EditorOutlineLi
 };
 
 export const createEmptyAdminContentEditorOutlines = (): AdminContentEditorOutlines => ({
-  essayOutlineItems: [],
+  BlogOutlineItems: [],
   bitsOutlineItems: []
 });
 
@@ -210,16 +200,16 @@ export const loadAdminContentEditorOutlines = async (
   registration: AdminContentEditorOutlineRegistration,
   withBase: WithBase
 ): Promise<AdminContentEditorOutlines> => {
-  if (registration.outlineKind === 'essay') {
+  if (registration.outlineKind === 'blog') {
     return {
-      essayOutlineItems: await loadEssayOutlineItems(withBase),
+      BlogOutlineItems: await loadBlogOutlineItems(withBase),
       bitsOutlineItems: []
     };
   }
 
   if (registration.outlineKind === 'list') {
     return {
-      essayOutlineItems: [],
+      BlogOutlineItems: [],
       bitsOutlineItems: await loadBitsOutlineItems(withBase)
     };
   }
@@ -227,13 +217,14 @@ export const loadAdminContentEditorOutlines = async (
   return createEmptyAdminContentEditorOutlines();
 };
 
-const buildEssayEditorIslandProps = ({
+const buildBlogEditorIslandProps = ({
   payload,
   endpoints,
   returnHref,
-  essayOutlineItems,
+  BlogOutlineItems,
   initialArticleInfoOpen
-}: BuildEssayIslandPropsInput): EssayEditorShellProps => ({
+}: BuildBlogIslandPropsInput): BlogEditorShellProps => ({
+  collection: 'blog',
   ...endpoints,
   returnHref,
   entryId: payload.entryId,
@@ -242,7 +233,7 @@ const buildEssayEditorIslandProps = ({
   revision: payload.revision,
   initialFrontmatter: payload.values,
   initialBody: payload.bodyText,
-  essayOutlineItems,
+  BlogOutlineItems,
   initialArticleInfoOpen
 });
 
@@ -265,22 +256,6 @@ const buildBitsEditorIslandProps = ({
   bitsOutlineItems
 });
 
-const buildMemoEditorIslandProps = ({
-  payload,
-  endpoints,
-  returnHref
-}: BuildMemoIslandPropsInput): MemoEditorIslandProps => ({
-  endpoint: endpoints.endpoint,
-  exportEndpoint: endpoints.exportEndpoint,
-  previewEndpoint: endpoints.previewEndpoint,
-  imageUploadEndpoint: endpoints.imageUploadEndpoint,
-  returnHref,
-  entryId: payload.entryId,
-  revision: payload.revision,
-  initialFrontmatter: payload.values,
-  initialBody: payload.bodyText
-});
-
 const buildAboutEditorIslandProps = ({
   payload,
   endpoints,
@@ -296,11 +271,11 @@ const buildAboutEditorIslandProps = ({
 });
 
 const CONTENT_EDITOR_PAGE_REGISTRY = {
-  essay: {
-    collection: 'essay',
-    workspaceClassName: 'admin-content-edit-page--essay',
+  blog: {
+    collection: 'blog',
+    workspaceClassName: 'admin-content-edit-page--blog',
     articleClassName: 'admin-content-editor--svelte',
-    island: 'essay',
+    island: 'blog',
     styleSlots: [
       'article',
       'adminContentEditor',
@@ -308,15 +283,15 @@ const CONTENT_EDITOR_PAGE_REGISTRY = {
       'adminContentEditorImageInsert',
       'adminContentEditorGalleryInsert'
     ],
-    outlineKind: 'essay',
+    outlineKind: 'blog',
     infoTrigger: {
       attribute: 'data-admin-article-info-trigger',
       label: '修改信息',
       panelId: 'admin-editor-frontmatter-panel'
     },
-    usesImagePicker: getAdminContentCollectionCapability('essay').imagePicker,
+    usesImagePicker: getAdminContentCollectionCapability('blog').imagePicker,
     resolveReturnHref: ({ withBase }) => withBase('/admin/content/'),
-    buildIslandProps: buildEssayEditorIslandProps
+    buildIslandProps: buildBlogEditorIslandProps
   },
   bits: {
     collection: 'bits',
@@ -339,23 +314,49 @@ const CONTENT_EDITOR_PAGE_REGISTRY = {
     resolveReturnHref: ({ collectionHref }) => collectionHref,
     buildIslandProps: buildBitsEditorIslandProps
   },
-  memo: {
-    collection: 'memo',
-    workspaceClassName: 'admin-content-edit-page--memo',
-    articleClassName: 'admin-content-editor--memo',
-    island: 'memo',
+  projects: {
+    collection: 'projects',
+    workspaceClassName: 'admin-content-edit-page--projects',
+    articleClassName: 'admin-content-editor--projects',
+    island: 'projects',
     styleSlots: [
       'article',
-      'memo',
       'adminContentEditor',
-      'adminContentEditorMemo',
-      'adminContentEditorImageInsert'
+      'adminContentEditorFrontmatter',
+      'adminContentEditorImageInsert',
+      'adminContentEditorGalleryInsert'
     ],
-    outlineKind: 'none',
-    infoTrigger: null,
-    usesImagePicker: getAdminContentCollectionCapability('memo').imagePicker,
+    outlineKind: 'list',
+    infoTrigger: {
+      attribute: 'data-admin-article-info-trigger',
+      label: '修改信息',
+      panelId: 'admin-editor-frontmatter-panel'
+    },
+    usesImagePicker: getAdminContentCollectionCapability('projects').imagePicker,
     resolveReturnHref: ({ collectionHref }) => collectionHref,
-    buildIslandProps: buildMemoEditorIslandProps
+    buildIslandProps: buildBlogEditorIslandProps
+  },
+  devlog: {
+    collection: 'devlog',
+    workspaceClassName: 'admin-content-edit-page--devlog',
+    articleClassName: 'admin-content-editor--devlog',
+    island: 'devlog',
+    styleSlots: [
+      'article',
+      'adminContentEditor',
+      'adminContentEditorFrontmatter',
+      'adminContentEditorImageInsert',
+      'adminContentEditorGalleryInsert'
+    ],
+    outlineKind: 'list',
+    infoTrigger: {
+      attribute: 'data-admin-article-info-trigger',
+      label: '修改信息',
+      panelId: 'admin-editor-frontmatter-panel'
+    },
+    usesImagePicker: getAdminContentCollectionCapability('devlog').imagePicker,
+    resolveReturnHref: ({ collectionHref }) => collectionHref,
+    buildIslandProps: buildBlogEditorIslandProps
   },
   about: {
     collection: 'about',
@@ -401,14 +402,30 @@ export const buildAdminContentEditorIslandProps = ({
   outlines: AdminContentEditorOutlines;
   initialArticleInfoOpen: boolean;
 }): AdminContentEditorIslandProps => {
-  if (payload.collection === 'essay') {
-    return CONTENT_EDITOR_PAGE_REGISTRY.essay.buildIslandProps({
+  if (payload.collection === 'blog') {
+    return CONTENT_EDITOR_PAGE_REGISTRY.blog.buildIslandProps({
       payload,
       endpoints,
       returnHref,
-      essayOutlineItems: outlines.essayOutlineItems,
+      BlogOutlineItems: outlines.BlogOutlineItems,
       initialArticleInfoOpen
     });
+  }
+
+  if (payload.collection === 'projects' || payload.collection === 'devlog') {
+    return {
+      collection: payload.collection,
+      ...endpoints,
+      returnHref,
+      entryId: payload.entryId,
+      relativePath: payload.relativePath,
+      defaultPublicSlug: payload.defaultPublicSlug,
+      revision: payload.revision,
+      initialFrontmatter: payload.values,
+      initialBody: payload.bodyText,
+      BlogOutlineItems: outlines.BlogOutlineItems,
+      initialArticleInfoOpen
+    };
   }
 
   if (payload.collection === 'bits') {
@@ -421,15 +438,7 @@ export const buildAdminContentEditorIslandProps = ({
     });
   }
 
-  if (payload.collection === 'about') {
-    return CONTENT_EDITOR_PAGE_REGISTRY.about.buildIslandProps({
-      payload,
-      endpoints,
-      returnHref
-    });
-  }
-
-  return CONTENT_EDITOR_PAGE_REGISTRY.memo.buildIslandProps({
+  return CONTENT_EDITOR_PAGE_REGISTRY.about.buildIslandProps({
     payload,
     endpoints,
     returnHref

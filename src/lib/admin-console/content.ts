@@ -20,28 +20,30 @@ import { getBitAnchorId } from '../bits-public-routing';
 import { getTagKeys, isRoutableTagKey, toTagKey } from '../tags';
 import { tokenizeSearchQuery } from '../../utils/format';
 import { getAdminContentCollectionCapability } from './content-collections';
+import { normalizeOptionalText } from './content-entry-utils';
+import { compareByNullableDateDesc } from './content-shared';
 
 export type AdminContentDraftFilter = 'all' | 'draft' | 'published';
 export type AdminContentSortKey = 'recent' | 'title';
-export type AdminContentConsoleMode = 'overview' | 'search' | 'collection' | 'entry';
+type AdminContentConsoleMode = 'overview' | 'search' | 'collection' | 'entry';
 
 export type AdminContentIndexItem = AdminContentSourceIndexItem & {
   collectionLabel: string;
 };
 
-export type AdminContentFilterOption = {
+type AdminContentFilterOption = {
   value: string;
   label: string;
   count: number;
 };
 
-export type AdminContentScopeOption = {
+type AdminContentScopeOption = {
   value: AdminContentScopeKey;
   label: string;
   count: number;
 };
 
-export type AdminContentCollectionSection = {
+type AdminContentCollectionSection = {
   collection: AdminContentCollectionKey;
   collectionLabel: string;
   totalCount: number;
@@ -49,7 +51,7 @@ export type AdminContentCollectionSection = {
   items: AdminContentIndexItem[];
 };
 
-export type AdminContentFilterState = {
+type AdminContentFilterState = {
   collection: AdminContentScopeKey;
   query: string;
   queryTokens: string[];
@@ -61,14 +63,14 @@ export type AdminContentFilterState = {
   page: number;
 };
 
-export type AdminContentFilterHrefUpdates = {
+type AdminContentFilterHrefUpdates = {
   collection?: AdminContentScopeKey;
   draft?: AdminContentDraftFilter;
   sort?: AdminContentSortKey;
   year?: string | number | null;
 };
 
-export type AdminContentPagination = {
+type AdminContentPagination = {
   page: number;
   pageSize: number;
   totalItems: number;
@@ -77,7 +79,7 @@ export type AdminContentPagination = {
   hasNext: boolean;
 };
 
-export type AdminContentConsolePageData = {
+type AdminContentConsolePageData = {
   mode: AdminContentConsoleMode;
   collection: AdminContentScopeKey;
   collectionLabel: string;
@@ -142,9 +144,6 @@ const normalizePositiveInteger = (value: string | null): number | null => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 };
 
-const normalizeOptionalText = (value: string | null | undefined): string =>
-  typeof value === 'string' ? value.trim() : '';
-
 const normalizePageNumber = (value: string | null): number => {
   const normalized = normalizeOptionalText(value);
   if (!/^[1-9]\d*$/.test(normalized)) return 1;
@@ -154,13 +153,6 @@ const normalizePageNumber = (value: string | null): number => {
 const normalizeAdminContentTagFilter = (value: string | null): string => {
   const key = toTagKey(normalizeOptionalText(value));
   return isRoutableTagKey(key) ? key : '';
-};
-
-const orderByNullableDateDesc = (left: Date | null, right: Date | null): number => {
-  if (left && right) return right.valueOf() - left.valueOf();
-  if (left) return -1;
-  if (right) return 1;
-  return 0;
 };
 
 const buildYearOptions = (items: readonly AdminContentIndexItem[]): AdminContentFilterOption[] => {
@@ -232,7 +224,7 @@ const getAdminContentVisibleCollections = (collection: AdminContentScopeKey): re
 
 const orderAdminContentItemsByRecent = (items: readonly AdminContentIndexItem[]): AdminContentIndexItem[] =>
   items.slice().sort((left, right) => {
-    const dateOrder = orderByNullableDateDesc(left.date, right.date);
+    const dateOrder = compareByNullableDateDesc(left.date, right.date);
     if (dateOrder !== 0) return dateOrder;
     const collectionOrder = (COLLECTION_ORDER.get(left.collection) ?? 0) - (COLLECTION_ORDER.get(right.collection) ?? 0);
     if (collectionOrder !== 0) return collectionOrder;
@@ -483,10 +475,6 @@ export const getAdminContentConsolePageData = async (
 export const getAdminContentPublicFallbackLabel = (item: AdminContentIndexItem): string => {
   if (item.isDraft) {
     return 'draft 条目默认不暴露公开页';
-  }
-
-  if (item.collection === 'memo') {
-    return 'memo 当前使用固定公开路由 /memo/';
   }
 
   if (item.collection === 'about') {

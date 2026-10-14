@@ -186,6 +186,7 @@ export const parseBootstrap = (text: string): AdminImageBootstrap | null => {
       !isRecord(payload)
       || typeof payload.listEndpoint !== 'string'
       || typeof payload.metaEndpoint !== 'string'
+      || (payload.renameEndpoint != null && typeof payload.renameEndpoint !== 'string')
       || !isRecord(payload.initialState)
     ) {
       return null;
@@ -206,6 +207,7 @@ export const parseBootstrap = (text: string): AdminImageBootstrap | null => {
     return {
       listEndpoint: payload.listEndpoint,
       metaEndpoint: payload.metaEndpoint,
+      renameEndpoint: typeof payload.renameEndpoint === 'string' ? payload.renameEndpoint : '',
       initialState: {
         scope: initialScope,
         group: isAdminImageBrowseGroup(normalizedGroup) ? normalizedGroup : DEFAULT_GROUP,

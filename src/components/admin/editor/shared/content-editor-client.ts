@@ -2,7 +2,9 @@ import type {
   AdminBitsEditorValues,
   AdminContentEditorValues,
   AdminContentEditorPayload,
-  AdminEssayEditorValues
+  AdminBlogEditorValues,
+  AdminDevlogEditorValues,
+  AdminProjectsEditorValues
 } from '../../../../lib/admin-console/content-editor-payload';
 import type { AdminContentCollectionKey } from '../../../../lib/admin-console/content-collections';
 import type { AdminContentDeletableCollectionKey } from '../../../../lib/admin-console/content-delete-contract';
@@ -51,10 +53,15 @@ type ContentEditorSaveBaseInput = {
   fetchImpl?: FetchLike;
 };
 
-export type ContentEditorSaveInput = ContentEditorSaveBaseInput & (
+type ContentEditorSaveInput = ContentEditorSaveBaseInput & (
   | {
-      collection: 'essay';
-      frontmatter: AdminEssayEditorValues;
+      collection: 'blog';
+      frontmatter: AdminBlogEditorValues;
+      body?: string;
+    }
+  | {
+      collection: 'projects';
+      frontmatter: AdminProjectsEditorValues;
       body?: string;
     }
   | {
@@ -63,8 +70,9 @@ export type ContentEditorSaveInput = ContentEditorSaveBaseInput & (
       body?: string;
     }
   | {
-      collection: 'memo';
-      body: string;
+      collection: 'devlog';
+      frontmatter: AdminDevlogEditorValues;
+      body?: string;
     }
   | {
       collection: 'about';
@@ -72,13 +80,13 @@ export type ContentEditorSaveInput = ContentEditorSaveBaseInput & (
     }
 );
 
-export type ContentEditorSaveOutcome = ContentEditorRequestOutcome & {
+type ContentEditorSaveOutcome = ContentEditorRequestOutcome & {
   result: AdminContentWriteResult | null;
   latestValues: AdminContentEditorValues | null;
   latestBody: string | null;
 };
 
-export type ContentEditorPreviewInput = {
+type ContentEditorPreviewInput = {
   endpoint: string;
   collection: AdminContentCollectionKey;
   entryId: string;
@@ -87,12 +95,12 @@ export type ContentEditorPreviewInput = {
   fetchImpl?: FetchLike;
 };
 
-export type ContentEditorPreviewOutcome = Omit<ContentEditorRequestOutcome, 'revision' | 'issues'> & {
+type ContentEditorPreviewOutcome = Omit<ContentEditorRequestOutcome, 'revision' | 'issues'> & {
   issues: AdminContentIssue[];
   result: AdminContentPreviewResult | null;
 };
 
-export type ContentEditorDeleteInput = {
+type ContentEditorDeleteInput = {
   endpoint: string;
   collection: AdminContentDeletableCollectionKey;
   entryId: string;
@@ -101,26 +109,41 @@ export type ContentEditorDeleteInput = {
   fetchImpl?: FetchLike;
 };
 
-export type ContentEditorDeleteOutcome = ContentEditorRequestOutcome & {
+type ContentEditorDeleteOutcome = ContentEditorRequestOutcome & {
   result: AdminContentDeleteResult | null;
 };
 
-export type ContentEditorCreateInput = {
+type ContentEditorCreateInput = {
   endpoint: string;
   fetchImpl?: FetchLike;
 } & (
   | {
-      collection: 'essay';
+      collection: 'blog';
       entryId: string;
-      frontmatter: AdminEssayEditorValues;
+      frontmatter: AdminBlogEditorValues;
+    }
+  | {
+      collection: 'projects';
+      entryId: string;
+      frontmatter: AdminProjectsEditorValues;
+    }
+  | {
+      collection: 'devlog';
+      entryId: string;
+      frontmatter: AdminDevlogEditorValues;
     }
   | {
       collection: 'bits';
       frontmatter: Pick<AdminBitsEditorValues, 'date'>;
     }
+  | {
+      collection: 'about';
+      entryId?: never;
+      frontmatter?: never;
+    }
 );
 
-export type ContentEditorCreateOutcome = Omit<ContentEditorRequestOutcome, 'revision'> & {
+type ContentEditorCreateOutcome = Omit<ContentEditorRequestOutcome, 'revision'> & {
   result: AdminContentWriteResult | null;
   payload: AdminContentEditorPayload | null;
   editHref: string | null;
@@ -141,14 +164,17 @@ const buildContentWriteEndpoint = (endpoint: string, dryRun: boolean): string =>
   return url.toString();
 };
 
-const buildContentWriteRequestBody = (input: ContentEditorSaveInput): Record<string, unknown> => {
+/** 供回归测试直接断言请求体形态。 */
+export const buildContentWriteRequestBody = (input: ContentEditorSaveInput): Record<string, unknown> => {
   const requestBody: Record<string, unknown> = {
     collection: input.collection,
     entryId: input.entryId,
     revision: input.revision
   };
 
-  if (input.collection === 'essay' || input.collection === 'bits') {
+  // 所有「有 frontmatter 字段袋」的集合都要带上它，否则服务端会以
+  // 「frontmatter 必须是对象」拒绝（about 是纯正文集合，没有 frontmatter）。
+  if (input.collection !== 'about' && 'frontmatter' in input) {
     requestBody.frontmatter = input.frontmatter;
   }
   if ('body' in input) {
@@ -252,7 +278,9 @@ export const createContentEntry = async (input: ContentEditorCreateInput): Promi
     collection,
     frontmatter
   };
-  if (collection === 'essay') {
+  // blog / projects / devlog 都是「按文件名建条目」的集合，都需要 entryId；
+  // bits 的 entryId 由服务端按日期推导，about 是固定单页、不可创建。
+  if (collection === 'blog' || collection === 'projects' || collection === 'devlog') {
     requestBody.entryId = input.entryId;
   }
 

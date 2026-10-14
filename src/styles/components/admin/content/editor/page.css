@@ -61,8 +61,7 @@ body.admin-page--content-editor .admin-content-edit-page--workspace,
 body.admin-page--content-editor .admin-content-editor--workspace,
 body.admin-page--content-editor [data-admin-content-editor-island],
 body.admin-page--content-editor [data-admin-bits-editor-island],
-body.admin-page--content-editor [data-admin-bits-editor-workspace],
-body.admin-page--content-editor [data-admin-memo-editor-workspace] {
+body.admin-page--content-editor [data-admin-bits-editor-workspace] {
   min-height: 0;
   height: 100%;
   max-width: none;

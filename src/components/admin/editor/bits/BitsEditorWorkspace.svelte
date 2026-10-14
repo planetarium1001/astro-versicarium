@@ -194,8 +194,8 @@ const shell = createEditorShellController({
   displayPreferenceStorageKey: ADMIN_EDITOR_DISPLAY_PREFERENCE_STORAGE_KEY,
   sidePanelPreferenceStorageKey: BITS_EDITOR_SIDE_PANEL_PREFERENCE_STORAGE_KEY,
   readAdminDefaults: readDevAdminEditorDefaults,
-  initialOutlineTab: 'essays',
-  normalizeOutlineTab: createFixedOutlineTabNormalizer('essays')
+  initialOutlineTab: 'blogs',
+  normalizeOutlineTab: createFixedOutlineTabNormalizer('blogs')
 });
 let toolbarCommand = $state<MarkdownToolbarCommand | null>(null);
 let outlineJumpCommand = $state<MarkdownOutlineJumpCommand | null>(null);

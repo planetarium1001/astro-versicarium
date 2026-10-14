@@ -395,6 +395,7 @@ export const renderDetail = ({
   copyIcon,
   linkIcon,
   eyeIcon,
+  renameIcon,
   largeFileThreshold
 }: {
   detailEl: HTMLElement;
@@ -405,6 +406,7 @@ export const renderDetail = ({
   copyIcon: string;
   linkIcon: string;
   eyeIcon: string;
+  renameIcon: string;
   largeFileThreshold: number;
 }) => {
   if (!item) {
@@ -444,6 +446,11 @@ export const renderDetail = ({
   const fieldCopyLabel = hasPreferredValue ? '可用值' : '文件路径';
   const markdownRef = getMarkdownReference(item);
   const previewSrc = detailMeta?.previewSrc ?? item.previewSrc;
+  /** 本地图片的公开路径（`images/...`）；云端产物是绝对 URL → 空串（不可重命名）。 */
+  const renamePath = (() => {
+    const normalized = item.path.replace(/^\/+/, '').replace(/^public\//, '');
+    return normalized.startsWith('images/') ? normalized : '';
+  })();
 
   detailEl.hidden = false;
   detailEl.innerHTML = `
@@ -519,6 +526,24 @@ export const renderDetail = ({
               浏览器新标签中打开
             </a>`
         : ''}
+          ${
+            /* 重命名（仅本地图片）：改名会同步改写内容里的引用，因此只给有本地公开路径的
+               条目提供入口 —— 本地产物的 `path` 是 `public/images/...`，云端产物是
+               `https://...`（没有本地文件可改）。传给接口前去掉 `public/` 前缀，
+               与 `listAdminImageItems` 的落点口径一致。 */
+            renamePath
+              ? `<button
+            class="admin-btn admin-btn--ghost"
+            type="button"
+            data-rename-path="${escapeHtml(renamePath)}"
+            data-rename-file-name="${escapeHtml(item.fileName)}"
+            title="重命名图片（会同步改写内容里的引用）"
+          >
+            ${renameIcon}
+            重命名
+          </button>`
+              : ''
+          }
         </div>
       </div>
     </div>

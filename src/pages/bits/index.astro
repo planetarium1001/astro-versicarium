@@ -1,18 +1,9 @@
 ---
 import BitsPageView from '../../components/BitsPageView.astro';
-import { getBitsPageData, getBitsPagePath } from '../../lib/bits';
-import { PAGE_SIZE_BITS } from '../../../site.config.mjs';
+import { getBitsPageData } from '../../lib/bits';
 
-const currentPage = 1;
-const { items, yearOptions, totalCount, totalPages } = await getBitsPageData(currentPage, PAGE_SIZE_BITS);
+/** 服务端分页已取消：SSR 渲染全部条目。 */
+const { items, yearOptions, totalCount } = await getBitsPageData();
 ---
 
-<BitsPageView
-  items={items}
-  resultCount={totalCount}
-  currentPage={currentPage}
-  totalPages={totalPages}
-  yearOptions={yearOptions}
-  prevPath={null}
-  nextPath={totalPages > 1 ? getBitsPagePath(currentPage + 1) : null}
-/>
+<BitsPageView items={items} resultCount={totalCount} yearOptions={yearOptions} />

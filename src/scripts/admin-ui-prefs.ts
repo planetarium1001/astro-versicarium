@@ -228,7 +228,7 @@ const bindDetailsPopoverClose = (details: HTMLDetailsElement) => {
   });
 };
 
-export function initAdminUiPrefs() {
+function initAdminUiPrefs() {
   if (!document.body.classList.contains('admin-page')) return;
 
   const root = document.documentElement;

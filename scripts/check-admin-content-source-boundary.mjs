@@ -19,11 +19,11 @@ const forbiddenResolvedModules = new Map([
 const forbiddenSourcePatterns = [
   {
     label: 'astro content entry type',
-    pattern: /\b(?:EssayEntry|BitsEntry|MemoEntry|CollectionEntry)\b/gu
+    pattern: /\b(?:BitsEntry|CollectionEntry)\b/gu
   },
   {
     label: 'public content query',
-    pattern: /\b(?:getSortedEssays|getSortedBits|getPublished|getEssayDerivedText|getBitsDerivedText|getMemoDerivedText|getEssaySlug|getBitSlug)\b/gu
+    pattern: /\b(?:getSortedblogs|getSortedBits|getPublished|getBitsDerivedText|getBitSlug)\b/gu
   }
 ];
 

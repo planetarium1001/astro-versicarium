@@ -43,8 +43,8 @@ describe('bits queries', () => {
     ];
     getCollectionMock.mockResolvedValue(entries as never);
 
-    const index = await getBitsSearchIndex(2);
-    const hrefById = buildPublishedBitsHrefMap(entries.map(toRoutingItem), 2);
+    const index = await getBitsSearchIndex();
+    const hrefById = buildPublishedBitsHrefMap(entries.map(toRoutingItem));
 
     expect(index.map((item) => item.key)).toEqual(['newer', 'same-day-a', 'same-day-z']);
     expect(index.map((item) => item.href)).toEqual(index.map((item) => hrefById.get(item.key)));

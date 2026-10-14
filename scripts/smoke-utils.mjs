@@ -1,5 +1,4 @@
 import { readFile } from 'node:fs/promises';
-import { createServer } from 'node:net';
 import path from 'node:path';
 
 const distDir = path.resolve('dist');
@@ -9,6 +8,7 @@ const ADMIN_OVERVIEW_HEADER_PATTERN = new RegExp([
   '<span\\b(?=[^>]*\\bclass="[^"]*\\bpage-subtitle\\b[^"]*")[^>]*>\\s*站点概览\\s*</span>'
 ].join('\\s*'));
 const ADMIN_ROUTE_NAV_PATTERN = /<nav\b(?=[^>]*\bclass=(["'])[^"']*\badmin-route-nav\b[^"']*\1)[^>]*>/;
+
 export const DEV_ADMIN_UI_PREFERENCE_MARKERS = [
   'data-admin-sidebar-nav',
   'data-admin-nav-switcher',
@@ -32,8 +32,6 @@ export const expect = (condition, message) => {
     process.exit(1);
   }
 };
-
-export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const readSmokeFixtureHtml = async (label) => {
   try {
@@ -59,7 +57,8 @@ export const reportSmokeCheckResult = (label, failedIds) => {
   process.exit(1);
 };
 
-export const assertStaticUnsupportedApiShell = (label, body, expectedPath) => {
+// 静态构建下这些 API 路由不产出 JSON，只产出重定向壳或 404 页。
+const assertStaticUnsupportedApiShell = (label, body, expectedPath) => {
   const expectedRedirectText = `Redirecting to: ${expectedPath}`;
   const normalizedBody = body.trim();
   const looksLikeNotFoundShell =
@@ -86,13 +85,6 @@ export const assertNoAdminRouteNav = (label, body) => {
   );
 };
 
-export const assertHasAdminRouteNav = (label, body) => {
-  expect(
-    ADMIN_ROUTE_NAV_PATTERN.test(body),
-    `${label} is missing admin route tabs in dev`
-  );
-};
-
 export const assertNoDevAdminUiPreferenceChrome = (label, body) => {
   for (const marker of DEV_ADMIN_UI_PREFERENCE_MARKERS) {
     expect(
@@ -100,17 +92,6 @@ export const assertNoDevAdminUiPreferenceChrome = (label, body) => {
       `${label} should not expose DEV-only admin UI preference marker: ${marker}`
     );
   }
-};
-
-export const assertAdminOverviewSectionOrder = (label, body) => {
-  const recentIndex = body.indexOf('id="admin-overview-recent"');
-  const activityIndex = body.indexOf('id="admin-overview-activity"');
-  expect(recentIndex !== -1, `${label} is missing the recent publications section anchor`);
-  expect(activityIndex !== -1, `${label} is missing the writing activity section anchor`);
-  expect(
-    recentIndex < activityIndex,
-    `${label} should render recent publications before writing activity`
-  );
 };
 
 const assertAdminApiStaticShell = (label, body, expectedPath, leakedMarkers) => {
@@ -176,105 +157,3 @@ export const assertAdminPreviewStaticShell = (label, body, expectedPath = '/api/
     '"elapsedMs"'
   ]);
 };
-
-export const assertAdminSettingsStaticResponse = (label, response, expectedPath = '/api/admin/settings/') => {
-  expect(
-    !response.contentType.toLowerCase().includes('application/json'),
-    `${label} unexpectedly returned JSON in production preview`
-  );
-  assertAdminSettingsStaticShell(label, response.body, expectedPath);
-};
-
-export const assertAdminContentStaticResponse = (
-  label,
-  response,
-  expectedPath = '/api/admin/content/entry/'
-) => {
-  expect(
-    !response.contentType.toLowerCase().includes('application/json'),
-    `${label} unexpectedly returned JSON in production preview`
-  );
-  assertAdminContentStaticShell(label, response.body, expectedPath);
-};
-
-export const assertAdminImageStaticResponse = (label, response, expectedPath) => {
-  expect(
-    !response.contentType.toLowerCase().includes('application/json'),
-    `${label} unexpectedly returned JSON in production preview`
-  );
-  assertAdminImageStaticShell(label, response.body, expectedPath);
-};
-
-export const assertAdminImageUploadStaticResponse = (
-  label,
-  response,
-  expectedPath = '/api/admin/images/upload/'
-) => {
-  expect(
-    !response.contentType.toLowerCase().includes('application/json'),
-    `${label} unexpectedly returned JSON in production preview`
-  );
-  assertAdminImageUploadStaticShell(label, response.body, expectedPath);
-};
-
-export const assertAdminPreviewStaticResponse = (label, response, expectedPath = '/api/admin/preview/') => {
-  expect(
-    !response.contentType.toLowerCase().includes('application/json'),
-    `${label} unexpectedly returned JSON in production preview`
-  );
-  assertAdminPreviewStaticShell(label, response.body, expectedPath);
-};
-
-export const waitForHttpReady = async (url, options = {}) => {
-  const { attempts = 50, intervalMs = 200 } = options;
-
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    try {
-      const response = await fetch(url);
-      if (response.ok) {
-        return;
-      }
-    } catch {}
-
-    if (attempt === attempts - 1) {
-      throw new Error(`Timed out waiting for ${url}`);
-    }
-
-    await sleep(intervalMs);
-  }
-};
-
-const resolveListeningPort = (server) => {
-  const address = server.address();
-  return address && typeof address === 'object' ? address.port : 0;
-};
-
-export const findAvailablePort = (host, preferredPort = 0) =>
-  new Promise((resolve, reject) => {
-    const listen = (port) => {
-      const probe = createServer();
-      probe.unref();
-
-      probe.once('error', (error) => {
-        probe.close(() => {});
-        if ((error?.code === 'EADDRINUSE' || error?.code === 'EACCES') && port !== 0) {
-          listen(0);
-          return;
-        }
-        reject(error);
-      });
-
-      probe.listen({ host, port }, () => {
-        const availablePort = resolveListeningPort(probe);
-        probe.close((closeError) => {
-          if (closeError) {
-            reject(closeError);
-            return;
-          }
-          resolve(availablePort);
-        });
-      });
-    };
-
-    listen(preferredPort);
-  });

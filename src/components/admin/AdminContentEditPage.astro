@@ -45,9 +45,6 @@ const base = import.meta.env.BASE_URL ?? '/';
 const withBase = createWithBase(base);
 const { settings } = getThemeSettings();
 const bitsDefaultAuthor = settings.page.bits.defaultAuthor;
-const DEFAULT_MEMO_TITLE = '生活小记';
-const resolveMemoDisplayText = (settingValue: string | null, frontmatterValue: string, fallback: string): string =>
-  settingValue ?? (frontmatterValue || fallback);
 const { default: adminShellStylesHref } = await import('../../styles/components/admin/shell.css?url');
 const contentEditDevState = shouldShowContentConsole
   ? await loadAdminContentEditDevState({
@@ -76,9 +73,6 @@ const contentEditorBodyClass = shouldUseEditorPageLayout ? 'admin-page--content-
 const adminEditorRecoveryScriptHref = isDev && shouldUseEditorPageLayout
   ? (await import('../../scripts/admin-content/editor-recovery.ts?url')).default
   : null;
-const memoPublicTitle = workspaceEditorPayload?.collection === 'memo'
-  ? resolveMemoDisplayText(settings.page.memo.title, workspaceEditorPayload.values.title, DEFAULT_MEMO_TITLE)
-  : DEFAULT_MEMO_TITLE;
 const editorEndpoints = {
   endpoint: withBase(ADMIN_CONTENT_ENTRY_API_PATH),
   exportEndpoint: withBase(ADMIN_CONTENT_EXPORT_API_PATH),
@@ -105,11 +99,9 @@ const contentConsoleSubtitle = selectedEntryEditorPayload
   ? `${selectedEntryEditorPayload.collection} · 内容编辑`
   : '内容编辑';
 const selectedEntryTitle = selectedEntryEditorPayload
-  ? selectedEntryEditorPayload.collection === 'memo'
-    ? memoPublicTitle
-    : selectedEntryEditorPayload.collection === 'about'
-      ? '关于'
-      : selectedEntryEditorPayload.values.title
+  ? selectedEntryEditorPayload.collection === 'about'
+    ? '关于'
+    : selectedEntryEditorPayload.values.title
   : '';
 const selectedEntryDescription = selectedEntryEditorPayload && 'description' in selectedEntryEditorPayload.values
   ? selectedEntryEditorPayload.values.description
@@ -117,16 +109,6 @@ const selectedEntryDescription = selectedEntryEditorPayload && 'description' in 
 const editTitle = selectedEntryEditorPayload
   ? selectedEntryTitle || selectedEntryDescription || selectedEntryEditorPayload.entryId
   : entryId;
-const getReadonlyValue = (value: string): string => value || '(未设置)';
-const memoReadonlyRows = workspaceEditorPayload?.collection === 'memo'
-  ? [
-      { label: 'memo.title', value: getReadonlyValue(workspaceEditorPayload.values.title) },
-      { label: 'memo.subtitle', value: getReadonlyValue(workspaceEditorPayload.values.subtitle) },
-      { label: 'memo.date', value: getReadonlyValue(workspaceEditorPayload.values.date) },
-      { label: 'memo.slug', value: getReadonlyValue(workspaceEditorPayload.values.slug) },
-      { label: 'memo.draft', value: workspaceEditorPayload.values.draft ? 'true' : 'false' }
-    ]
-  : [];
 const infoTrigger = shouldUseEditorPageLayout ? editorRegistration?.infoTrigger : null;
 ---
 
@@ -320,16 +302,6 @@ const infoTrigger = shouldUseEditorPageLayout ? editorRegistration?.infoTrigger 
                     <p class="admin-content-copy">{selectedEntryEditorPayload.readonlyReason}</p>
                   </div>
                 </div>
-                <dl class="admin-data-meta admin-content-detail-meta">
-                  {
-                    memoReadonlyRows.map((row) => (
-                      <>
-                        <dt class="admin-data-meta__label">{row.label}</dt>
-                        <dd class="admin-data-meta__value">{row.value}</dd>
-                      </>
-                    ))
-                  }
-                </dl>
               </article>
             )
           }

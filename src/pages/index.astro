@@ -7,7 +7,7 @@ import {
   ADMIN_HOME_INTRO_LINK_DEFAULT,
   getAdminHomeIntroLinkOption
 } from '../lib/admin-console/theme-shared';
-import { getEssayDerivedText, getEssaySlug, getVisibleEssays } from '../lib/content';
+import { getBlogDerivedText, getBlogSlug, getVisibleblogs } from '../lib/content';
 import { getThemeFontRegistryEntry, getThemeFontStack } from '../lib/fonts/registry';
 import { getThemeSettings, getVisibleArticleMetaTags } from '../lib/theme-settings';
 import { createWithBase } from '../utils/format';
@@ -34,7 +34,7 @@ const resolvedIntroMoreLinks = (introMoreLinks.length ? introMoreLinks : [...ADM
   (linkKey) => getAdminHomeIntroLinkOption(linkKey)
 );
 
-const latest = (await getVisibleEssays()).slice(0, 12);
+const latest = (await getVisibleblogs()).slice(0, 12);
 
 type HomeHeadCriticalFontFace = {
   family: 'LXGW WenKai Lite' | 'Noto Serif SC';
@@ -129,14 +129,26 @@ const homeHeadCriticalCss = [
   --accent: #b91c1c;
   --code-header-bg: #f2f2f0;
   --panel: var(--code-header-bg);
-  --max: 900px;
   --sidebar-padding-block: 52px;
-  --sidebar-padding-inline: 18px;
+  /* 与 global.css 的间距 token 一致；改动后跑 check:home-critical-css */
+  --scrollbar-gutter-inline: 15px;
+  --page-inline: 26px;
+  --sidebar-padding-inline: 15px;
   /* 首屏 CSS 在 global.css 之后，同优先级会覆盖真实样式；改动后跑 check:home-critical-css */
   --sidebar: 224px;
   --tap-min-h: 44px;
-  --pad-x: 48px;
+  --pad-x: 29px;
+  --public-content-padding-inline: 29px;
+  --public-sidebar-inline-size: 224px;
+  --layout-divider-inline-size: 1px;
+  /* 内容铺满壳层后，后台编辑器预览的正文可读宽度退化为「视口 − 侧栏 − 竖线 − 两侧内边距」。 */
+  --article-readable-inline-size: calc(
+    100vw - var(--public-sidebar-inline-size) - var(--layout-divider-inline-size) -
+      var(--public-content-padding-inline) - var(--public-content-padding-inline)
+  );
   --card-pad: 12px 14px;
+  --quote-pad: 1rem;
+  --header-gap: 12px;
   --font-readable: ${homeCriticalFontStacks.readable};
   --font-copy: ${homeCriticalFontStacks.copy};
   --font-brand: ${homeCriticalFontStacks.brand};
@@ -223,7 +235,8 @@ a {
   min-height: 100vh;
   display: grid;
   grid-template-columns: var(--sidebar) 1px 1fr;
-  max-width: clamp(1100px, 94vw, 1440px);
+  /* 壳层外边距，必须与 layout.css 一致，否则首屏会跳一下 */
+  padding-inline: var(--page-inline);
   margin: 0 auto;
 }
 
@@ -406,7 +419,6 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
 }
 
 .content__inner {
-  max-width: var(--max);
   margin-inline: auto;
   display: flex;
   flex-direction: column;
@@ -545,6 +557,9 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
     color-scheme: light;
     --sidebar: 1fr;
     --tap-min-h: 44px;
+    /* 窄屏收掉壳层外边距（与 global.css 的窄屏覆写一致） */
+    --page-inline: 0px;
+    --sidebar-padding-inline: 18px;
     --pad-x: 20px;
     --card-pad: 10px 12px;
     --quote-pad: 0.85rem;
@@ -687,11 +702,11 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
   }
 
   .nav {
-    gap: 8px 10px;
+    gap: 8px 8px;
   }
 
   .nav a {
-    padding: 6px 8px;
+    padding: 6px 7px;
     font-size: 15px;
   }
 
@@ -699,6 +714,19 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
     padding: calc(4px + env(safe-area-inset-top)) calc(var(--pad-x) + env(safe-area-inset-right))
       calc(36px + env(safe-area-inset-bottom)) calc(var(--pad-x) + env(safe-area-inset-left));
   }
+
+/* <=360px：与 src/styles/components/layout.css 的同一档保持一致，
+   否则 320px 下六项导航会折成 5+1（快照位于 global.css 之后会覆盖真实样式）。 */
+@media (max-width: 360px) {
+  .nav {
+    gap: 8px 6px;
+  }
+
+  .nav a {
+    padding: 6px 6px;
+    font-size: 14px;
+  }
+}
 }
 `
 ].join('\n\n');
@@ -746,8 +774,8 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
 
   <div class="list">
     {latest.map((entry) => {
-      const slug = getEssaySlug(entry);
-      const href = withBase(`/archive/${slug}/`);
+      const slug = getBlogSlug(entry);
+      const href = withBase(`/blog/${slug}/`);
       const visibleTags = getVisibleArticleMetaTags(entry.data.tags, 'home');
       return (
         <EntryListItem
@@ -757,7 +785,7 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
           updatedAt={entry.data.updatedAt}
           visibleTags={visibleTags}
           articleMetaSettings={articleMeta}
-          excerpt={getEssayDerivedText(entry).excerpt}
+          excerpt={getBlogDerivedText(entry).excerpt}
         />
       );
     })}

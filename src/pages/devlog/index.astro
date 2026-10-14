@@ -1,0 +1,163 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TagFilterHeader from '../../components/TagFilterHeader.astro';
+import { getVisibleDevlogs } from '../../lib/content';
+import { getThemeSettings } from '../../lib/theme-settings';
+import { joinPageSubtitleText, formatISODateUtc } from '../../utils/format';
+import { hasTrailingLinkLine } from '../../lib/devlog-links';
+import { render } from 'astro:content';
+import type { AstroComponentFactory } from 'astro/runtime/server/index.js';
+import '../../styles/devlog-page.css';
+
+/**
+ * `/devlog/` 更新列表：时间线虚线贯通行首，无卡片边框，间距紧凑。
+ * 行内展开面板由 devlog-drawer.ts 驱动；正文 markdown 末尾的纯链接段落右对齐
+ * （见 src/lib/devlog-links.ts）。
+ * 「项目」筛选取值域 = 去重后的 project 字段，不含 kind；
+ * 交互复用 TagFilterHeader 的 tag dialog 样式，单选，选中即收敛可见条目。
+ */
+const items = await getVisibleDevlogs();
+const {
+  settings: { page }
+} = getThemeSettings();
+
+const pageTitleText = page.devlog.title || '更新';
+const subtitleText = joinPageSubtitleText(page.devlog.subtitle, `共 ${items.length} 条更新`);
+const pageDescription = joinPageSubtitleText(
+  `${pageTitleText}列表`,
+  page.devlog.subtitle,
+  `共 ${items.length} 条更新`
+) ?? `${pageTitleText}列表`;
+
+type DevlogRow = {
+  id: string;
+  title: string;
+  dateLabel: string;
+  project: string;
+  kind: string | null;
+  description: string | null;
+  hasBody: boolean;
+  /** 正文末尾是纯链接行，面板里把最后一个段落右对齐成链接行 */
+  hasTrailingLinks: boolean;
+  Content: AstroComponentFactory | null;
+};
+
+const rows: DevlogRow[] = await Promise.all(
+  items.map(async (entry): Promise<DevlogRow> => {
+    const body = entry.body ?? '';
+    const hasBody = body.trim().length > 0;
+    const Content = hasBody ? (await render(entry)).Content : null;
+    return {
+      id: entry.id,
+      title: entry.data.title,
+      dateLabel: formatISODateUtc(entry.data.date),
+      project: entry.data.project,
+      kind: entry.data.kind?.trim() || null,
+      description: entry.data.description?.trim() || null,
+      hasBody,
+      hasTrailingLinks: hasTrailingLinkLine(body),
+      Content
+    };
+  })
+);
+
+/** 「项目」筛选取值域 = 去重后的 project 值，不含 kind；沿用内容顺序（已按日期倒序），不额外排序。 */
+const projectValues = Array.from(
+  new Set(items.map((item) => (item.data.project ?? '').trim()).filter(Boolean))
+);
+const projectOptions = projectValues.map((value) => ({
+  key: value,
+  label: value,
+  href: `/devlog/?project=${encodeURIComponent(value)}`,
+  count: items.filter((item) => item.data.project === value).length
+}));
+---
+
+<BaseLayout title={pageTitleText} description={pageDescription} bodyClass="devlog-page">
+  <TagFilterHeader
+    showSearch={true}
+    searchPlaceholder="搜索：标题 / 摘要 / 项目"
+    showRss={false}
+    showModeToggle={false}
+    itemNoun="项目"
+    optionPrefix=""
+    allOptionLabel="全部"
+    optionsAriaLabel={`按项目筛选${pageTitleText}`}
+    pageTitleText={pageTitleText}
+    subtitleText={subtitleText}
+    pickerHref="/devlog/?picker=project"
+    rssHref="/blog/rss.xml"
+    searchAriaLabel={`搜索${pageTitleText}`}
+    dialogTitleId="devlog-project-dialog-title"
+    fallbackListId="devlog-project-fallback"
+    tagOptions={projectOptions}
+  />
+
+  <div class="devlog-list" data-devlog-list>
+    {rows.map((row) => (
+      <article
+        class="devlog-row"
+        id={row.id}
+        data-devlog-row
+        data-devlog-id={row.id}
+        data-devlog-project={row.project}
+        data-devlog-kind={row.kind ?? ''}
+      >
+        <button
+          class="devlog-row__toggle"
+          type="button"
+          data-devlog-toggle
+          aria-expanded="false"
+          aria-controls={`devlog-panel-${row.id}`}
+        >
+          <span class="devlog-row__date">{row.dateLabel}</span>
+          <span class="devlog-row__project">{row.project}</span>
+          {row.kind ? <span class="devlog-row__kind">{row.kind}</span> : null}
+          <span class="devlog-row__headline">
+            <span class="devlog-row__title">{row.title}</span>
+            {row.description ? <span class="devlog-row__description">{row.description}</span> : null}
+          </span>
+          {/* 右侧只留展开/收起图标，状态由按钮自身的 aria-expanded 表达，图标 aria-hidden */}
+          <span class="devlog-row__action" aria-hidden="true">
+            <span class="devlog-row__caret"></span>
+          </span>
+        </button>
+
+        <div class="devlog-panel" id={`devlog-panel-${row.id}`} data-devlog-panel hidden>
+          <div class="devlog-panel__inner">
+            {row.hasBody && row.Content ? (
+              <>
+                {/*
+                  列表内摘要被省略号截断或被窄屏隐藏时，展开正文顶部单独显示完整摘要。
+                  显隐由 devlog-drawer.ts 判定（它才知道摘要是否被截断），这里先渲染成 hidden。
+                */}
+                {row.description ? (
+                  <p class="devlog-panel__summary" data-devlog-panel-summary hidden>{row.description}</p>
+                ) : null}
+                <div
+                  class:list={[
+                    'prose',
+                    'devlog-panel__prose',
+                    row.hasTrailingLinks && 'devlog-panel__prose--tail-links'
+                  ]}
+                >
+                  <row.Content />
+                </div>
+              </>
+            ) : (
+              <p class="devlog-panel__fallback">{row.description ?? '暂无正文。'}</p>
+            )}
+          </div>
+        </div>
+      </article>
+    ))}
+  </div>
+
+  <script>
+    // 加载顺序：摘要策略先定（它决定展开面板是否要多显示一行完整摘要），
+    // 再由抽屉接管展开与锚点，最后是筛选。
+    import '../../scripts/devlog-excerpts.ts';
+    import '../../scripts/devlog-drawer.ts';
+    import '../../scripts/devlog-filter.ts';
+  </script>
+</BaseLayout>

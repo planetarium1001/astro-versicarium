@@ -1,5 +1,4 @@
 import { readFile, stat } from 'node:fs/promises';
-import { PAGE_SIZE_BITS } from '../../../site.config.mjs';
 import { deriveMarkdownText, truncateText } from '../../utils/excerpt';
 import {
   buildSearchHaystack,
@@ -7,7 +6,7 @@ import {
   formatISODate,
   formatISODateUtc
 } from '../../utils/format';
-import { parseEssayDateInput } from '../../utils/date-only';
+import { parseBlogDateInput } from '../../utils/date-only';
 import {
   contentSourceEntryIdToPublicEntryId,
   flattenEntryIdToSlug
@@ -31,12 +30,15 @@ import {
   parseMarkdownFrontmatterDocument,
   splitMarkdownFrontmatter
 } from './frontmatter';
+import { getStringArray } from './content-editor-payload';
+import { isRecord, normalizeOptionalText } from './content-entry-utils';
+import { compareByNullableDateDesc } from './content-shared';
 
 // Admin Content 列表跟随 src/content.config.ts 当前 glob 边界：仅索引 .md。
 const ADMIN_CONTENT_SOURCE_INDEX_EXT_RE = /\.md$/i;
 // 故意不与公开模块共享：Admin 与公开搜索语义未来可能分化。
 const MAX_SEARCH_INDEX_TEXT = 600;
-const ESSAY_EXCERPT_LIMIT = 120;
+const BLOG_EXCERPT_LIMIT = 120;
 const BITS_EXCERPT_LIMIT = 180;
 const UNTITLED_VALUE = '(未设置)';
 const SOURCE_ERROR_DATE_LABEL = '源文件异常';
@@ -44,7 +46,7 @@ const SOURCE_ERROR_DATE_LABEL = '源文件异常';
 export type AdminContentSourceManifest = Record<AdminContentCollectionKey, string[]>;
 export type AdminContentSourceCountMap = Record<AdminContentCollectionKey, number>;
 
-export type AdminContentSourceBodyDerived = {
+type AdminContentSourceBodyDerived = {
   plainText: string;
   excerpt: string;
   text: string;
@@ -101,24 +103,10 @@ type SourceDateMeta = {
   year: number | null;
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const normalizeOptionalText = (value: unknown): string =>
-  typeof value === 'string' ? value.trim() : '';
-
 const normalizeFieldValue = (value: unknown, fallback = UNTITLED_VALUE): string => {
   const normalized = normalizeOptionalText(value);
   return normalized || fallback;
 };
-
-const getStringArray = (value: unknown): string[] =>
-  Array.isArray(value)
-    ? value
-      .filter((item): item is string => typeof item === 'string')
-      .map((item) => item.trim())
-      .filter(Boolean)
-    : [];
 
 const parseDateTimeInput = (value: unknown): Date | null => {
   if (value instanceof Date) {
@@ -135,7 +123,7 @@ const getUnsetSourceDateMeta = (): SourceDateMeta => ({
   year: null
 });
 
-const getEssaySourceDateMeta = (date: Date | null): SourceDateMeta =>
+const getBlogSourceDateMeta = (date: Date | null): SourceDateMeta =>
   date
     ? {
       label: formatISODateUtc(date),
@@ -147,14 +135,6 @@ const getBitsSourceDateMeta = (date: Date | null): SourceDateMeta =>
   date
     ? {
       label: formatDateTime(date),
-      year: date.getFullYear()
-    }
-    : getUnsetSourceDateMeta();
-
-const getMemoSourceDateMeta = (date: Date | null): SourceDateMeta =>
-  date
-    ? {
-      label: formatISODate(date),
       year: date.getFullYear()
     }
     : getUnsetSourceDateMeta();
@@ -197,7 +177,7 @@ const buildBodyDerived = (bodyText: string, excerptLimit: number): AdminContentS
 };
 
 const getBodyExcerptLimit = (collection: AdminContentCollectionKey): number =>
-  collection === 'bits' ? BITS_EXCERPT_LIMIT : ESSAY_EXCERPT_LIMIT;
+  collection === 'bits' ? BITS_EXCERPT_LIMIT : BLOG_EXCERPT_LIMIT;
 
 const mergeSourceError = (...messages: Array<string | null | undefined>): string | null => {
   const normalized = messages
@@ -232,29 +212,29 @@ const createBaseItem = (
   ...values
 });
 
-const createEssaySourceIndexItem: FrontmatterAdapter = (record) => {
+const createBlogSourceIndexItem: FrontmatterAdapter = (record) => {
   const frontmatter = record.frontmatter;
   const hasSourceError = record.sourceError !== null;
   const title = normalizeFieldValue(frontmatter.title, record.entryId);
-  const dateResult = parseEssayDateInput(frontmatter.date);
+  const dateResult = parseBlogDateInput(frontmatter.date);
   const date = dateResult?.date ?? null;
-  const { label, year } = getEssaySourceDateMeta(date);
+  const { label, year } = getBlogSourceDateMeta(date);
   const tags = getStringArray(frontmatter.tags);
   const explicitSlug = normalizeOptionalText(frontmatter.slug);
   const slug = explicitSlug || flattenEntryIdToSlug(record.publicEntryId);
   const bodyDerived = getBodyDerived(record);
   const sourceError = mergeSourceError(
     record.sourceError,
-    !hasSourceError && !normalizeOptionalText(frontmatter.title) ? 'essay.title 缺失或不是字符串' : null,
-    !hasSourceError && !dateResult ? 'essay.date 缺失或格式无效' : null
+    !hasSourceError && !normalizeOptionalText(frontmatter.title) ? 'blog.title 缺失或不是字符串' : null,
+    !hasSourceError && !dateResult ? 'blog.date 缺失或格式无效' : null
   );
 
   return createBaseItem(record, {
     title,
     slug,
-    publicHref: frontmatter.draft === true ? null : `/archive/${slug}/`,
+    publicHref: frontmatter.draft === true ? null : `/blog/${slug}/`,
     isDraft: frontmatter.draft === true,
-    archive: frontmatter.archive !== false,
+    archive: null,
     date,
     dateLabel: hasSourceError ? SOURCE_ERROR_DATE_LABEL : label,
     year,
@@ -319,40 +299,6 @@ const createBitsSourceIndexItem: FrontmatterAdapter = (record, context) => {
   });
 };
 
-const createMemoSourceIndexItem: FrontmatterAdapter = (record) => {
-  const frontmatter = record.frontmatter;
-  const hasSourceError = record.sourceError !== null;
-  const title = normalizeFieldValue(frontmatter.title, record.entryId);
-  const date = parseDateTimeInput(frontmatter.date);
-  const { label, year } = getMemoSourceDateMeta(date);
-  const slug = normalizeOptionalText(frontmatter.slug) || null;
-  const subtitle = normalizeOptionalText(frontmatter.subtitle);
-  const bodyDerived = getBodyDerived(record);
-  const sourceError = record.sourceError;
-
-  return createBaseItem(record, {
-    title,
-    slug,
-    publicHref: frontmatter.draft === true ? null : '/memo/',
-    isDraft: frontmatter.draft === true,
-    archive: null,
-    date,
-    dateLabel: hasSourceError ? SOURCE_ERROR_DATE_LABEL : label,
-    year,
-    tags: [],
-    searchHaystack: buildSearchHaystack([
-      title,
-      record.entryId,
-      record.publicEntryId,
-      slug,
-      subtitle,
-      bodyDerived?.text,
-      sourceError
-    ]),
-    sourceError
-  });
-};
-
 const createAboutSourceIndexItem: FrontmatterAdapter = (record) => {
   const bodyDerived = getBodyDerived(record);
   const sourceError = record.sourceError;
@@ -381,10 +327,97 @@ const createAboutSourceIndexItem: FrontmatterAdapter = (record) => {
   });
 };
 
+/** projects：锚点式公开路由 `/projects/#<entryId>`，没有详情页。 */
+const createProjectsSourceIndexItem: FrontmatterAdapter = (record) => {
+  const frontmatter = record.frontmatter;
+  const hasSourceError = record.sourceError !== null;
+  const title = normalizeFieldValue(frontmatter.title, record.entryId);
+  const date = parseDateTimeInput(frontmatter.date);
+  const { label, year } = getFileSourceDateMeta(date);
+  const type = normalizeOptionalText(frontmatter.type);
+  const description = normalizeOptionalText(frontmatter.description);
+  const subtitle = normalizeOptionalText(frontmatter.subtitle);
+  const tags = getStringArray(frontmatter.tags);
+  const bodyDerived = getBodyDerived(record);
+  const sourceError = mergeSourceError(
+    record.sourceError,
+    !hasSourceError && !normalizeOptionalText(frontmatter.title) ? 'projects.title 缺失或不是字符串' : null,
+    !hasSourceError && !date ? 'projects.date 缺失或格式无效' : null
+  );
+
+  return createBaseItem(record, {
+    title,
+    slug: record.publicEntryId,
+    publicHref: frontmatter.draft === true ? null : `/projects/#${record.entryId}`,
+    isDraft: frontmatter.draft === true,
+    archive: null,
+    date,
+    dateLabel: hasSourceError ? SOURCE_ERROR_DATE_LABEL : label,
+    year,
+    tags,
+    searchHaystack: buildSearchHaystack([
+      title,
+      subtitle,
+      description,
+      type,
+      record.entryId,
+      record.publicEntryId,
+      tags,
+      bodyDerived?.text,
+      sourceError
+    ]),
+    sourceError
+  });
+};
+
+/** devlog：锚点式公开路由 `/devlog/#<entryId>`，没有详情页。 */
+const createDevlogSourceIndexItem: FrontmatterAdapter = (record) => {
+  const frontmatter = record.frontmatter;
+  const hasSourceError = record.sourceError !== null;
+  const title = normalizeFieldValue(frontmatter.title, record.entryId);
+  const date = parseDateTimeInput(frontmatter.date);
+  const { label, year } = getFileSourceDateMeta(date);
+  const project = normalizeOptionalText(frontmatter.project);
+  const kind = normalizeOptionalText(frontmatter.kind);
+  const description = normalizeOptionalText(frontmatter.description);
+  const tags = [project, kind].filter((value): value is string => Boolean(value));
+  const bodyDerived = getBodyDerived(record);
+  const sourceError = mergeSourceError(
+    record.sourceError,
+    !hasSourceError && !normalizeOptionalText(frontmatter.title) ? 'devlog.title 缺失或不是字符串' : null,
+    !hasSourceError && !date ? 'devlog.date 缺失或格式无效' : null,
+    !hasSourceError && !project ? 'devlog.project 缺失或不是字符串' : null
+  );
+
+  return createBaseItem(record, {
+    title,
+    slug: record.publicEntryId,
+    publicHref: frontmatter.draft === true ? null : `/devlog/#${record.entryId}`,
+    isDraft: frontmatter.draft === true,
+    archive: null,
+    date,
+    dateLabel: hasSourceError ? SOURCE_ERROR_DATE_LABEL : label,
+    year,
+    tags,
+    searchHaystack: buildSearchHaystack([
+      title,
+      project,
+      kind,
+      description,
+      record.entryId,
+      record.publicEntryId,
+      bodyDerived?.text,
+      sourceError
+    ]),
+    sourceError
+  });
+};
+
 const FRONTMATTER_ADAPTERS: Record<AdminContentCollectionKey, FrontmatterAdapter> = {
-  essay: createEssaySourceIndexItem,
+  blog: createBlogSourceIndexItem,
+  projects: createProjectsSourceIndexItem,
   bits: createBitsSourceIndexItem,
-  memo: createMemoSourceIndexItem,
+  devlog: createDevlogSourceIndexItem,
   about: createAboutSourceIndexItem
 };
 
@@ -473,19 +506,12 @@ const buildBitsHrefMap = (records: readonly SourceRecord[]): Map<string, string>
     });
   }
 
-  return buildPublishedBitsHrefMap(routingItems, PAGE_SIZE_BITS);
-};
-
-const orderByNullableDateDesc = (left: Date | null, right: Date | null): number => {
-  if (left && right) return right.valueOf() - left.valueOf();
-  if (left) return -1;
-  if (right) return 1;
-  return 0;
+  return buildPublishedBitsHrefMap(routingItems);
 };
 
 const orderSourceIndexItemsByRecent = <T extends AdminContentSourceIndexItem>(items: readonly T[]): T[] =>
   items.slice().sort((left, right) => {
-    const dateOrder = orderByNullableDateDesc(left.date, right.date);
+    const dateOrder = compareByNullableDateDesc(left.date, right.date);
     if (dateOrder !== 0) return dateOrder;
     return left.id.localeCompare(right.id, 'en');
   });

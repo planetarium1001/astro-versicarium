@@ -26,6 +26,7 @@ export type AdminIconName =
   | 'monitor'
   | 'palette'
   | 'panels-top-left'
+  | 'pencil'
   | 'plus'
   | 'refresh'
   | 'scan'

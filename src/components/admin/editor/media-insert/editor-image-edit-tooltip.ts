@@ -9,7 +9,7 @@ import {
   findEditableGalleryBlockAroundSelection,
   type EditableGalleryBlock
 } from './editor-gallery-blocks';
-import { resolveNearbyImageSearchChars } from '../../../../lib/admin-console/essay-image-blocks';
+import { resolveNearbyImageSearchChars } from '../../../../lib/admin-console/blog-image-blocks';
 import type { EditorTextSelection } from '../markdown/editor-markdown-transforms';
 
 type ImageEditTooltipOptions = {

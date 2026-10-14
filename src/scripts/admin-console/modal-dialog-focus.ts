@@ -1,11 +1,11 @@
-export type ModalDialogFocusController = {
+type ModalDialogFocusController = {
   captureReturnFocus: (target?: Element | null) => void;
   focusInitial: () => void;
   handleKeydown: (event: KeyboardEvent) => void;
   restoreFocus: () => void;
 };
 
-export type ModalDialogFocusControllerOptions = {
+type ModalDialogFocusControllerOptions = {
   getDialog: () => HTMLElement | null;
   getInitialFocus?: () => HTMLElement | null;
   onClose: () => void;

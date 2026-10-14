@@ -11,7 +11,10 @@ export type TagSummary = {
   count: number;
 };
 
-export type TagScope = 'archive';
+type TagScope = 'archive';
+
+/** 归档页一级胶囊的作用域。 */
+type ArchiveScopeId = 'all' | 'blog' | 'projects' | 'devlog';
 
 const SPACE_RE = /\s+/g;
 const TAG_KEY_RE = /[\s/\\?#%]+/g;
@@ -113,10 +116,26 @@ export function collectTagSummary<T extends TagContainer>(entries: readonly T[])
   });
 }
 
-export function hasTagKey(tags: readonly string[] | null | undefined, key: string): boolean {
+/**
+ * 归档页的 tag dialog 作用域跟随一级胶囊：用自定义取标签函数收集某一集合的标签摘要，
+ * 避免为 devlog 造一个假的标签字段。`_scope` 当前不参与计算。
+ */
+export function collectTagScopedSummary<T extends { id?: string }>(
+  _scope: ArchiveScopeId,
+  entries: readonly T[],
+  getTags: (entry: T) => readonly string[] | null | undefined
+): TagSummary[] {
+  const containers: TagContainer[] = entries.map((entry) => ({
+    ...(entry.id === undefined ? {} : { id: entry.id }),
+    data: { tags: [...(getTags(entry) ?? [])] }
+  }));
+  return collectTagSummary(containers);
+}
+
+const hasTagKey = (tags: readonly string[] | null | undefined, key: string): boolean => {
   if (!isRoutableTagKey(key)) return false;
   return getTagKeys(tags).includes(key);
-}
+};
 
 export function filterEntriesByTag<T extends TagContainer>(entries: readonly T[], key: string): T[] {
   if (!isRoutableTagKey(key)) return [];
@@ -129,8 +148,7 @@ export function findTagSummary(tagSummaries: readonly TagSummary[], rawKey: stri
   return tagSummaries.find((tagSummary) => tagSummary.key === key) ?? null;
 }
 
-export function getTagPath(scope: TagScope, rawKey: string, page = 1): string {
-  const key = toTagKey(rawKey);
-  if (!isRoutableTagKey(key)) return `/${scope}/`;
-  return page <= 1 ? `/${scope}/tag/${key}/` : `/${scope}/tag/${key}/page/${page}/`;
+/** 静态标签页已删除，筛选完全在客户端完成，因此不生成标签路由，只回到列表页入口。 */
+export function getTagPath(scope: TagScope, _rawKey?: string, _page = 1): string {
+  return `/${scope}/`;
 }
