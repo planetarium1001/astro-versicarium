@@ -21,6 +21,12 @@
   max-height: 260px;
 }
 
+/* 悬停反馈：只改背景，取值与列表页卡片的悬停底色一致。 */
+.project-card:hover,
+.project-card:focus-within {
+  background: var(--code-header-bg);
+}
+
 .project-card__main {
   display: flex;
   gap: 12px;
@@ -105,29 +111,6 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-.project-card__links {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: auto;
-}
-
-/* 链接是独立元素：点击不触发弹窗 */
-.project-card__link {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--accent);
-  text-decoration: none;
-  min-height: var(--tap-min-h);
-  display: inline-flex;
-  align-items: center;
-}
-
-.project-card__link:hover,
-.project-card__link:focus-visible {
-  text-decoration: underline;
 }
 
 /* ---------------- 弹窗（>=641px：居中，横屏宽、竖屏长） ---------------- */
@@ -269,12 +252,6 @@
 .project-dialog__fallback {
   margin: 0;
   color: var(--muted);
-}
-
-.project-dialog__links {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
 }
 
 /* ---------------- <=640px：底部抽屉 ---------------- */

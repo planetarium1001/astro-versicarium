@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { hasTrailingLinkLine } from '../src/lib/devlog-links';
 import { renderFixturePage } from './fixture-page';
 
 /**
@@ -371,18 +370,21 @@ describe('/devlog/ 的「项目」筛选与行内展开', () => {
     ).toBe('未找到匹配内容');
   });
 
-  it('正文末尾的纯链接行被标记为右对齐链接行（markdown 化后仍是原文）', async () => {
+  it('正文末尾的链接组渲染成独立链接行，正文里不再重复出现链接', async () => {
     await loadPage();
 
-    const prose = document.querySelector<HTMLElement>('.devlog-panel__prose');
-    expect(prose, '面板里应有正文容器').not.toBeNull();
-    expect(
-      prose!.classList.contains('devlog-panel__prose--tail-links'),
-      '末尾纯链接行应给正文容器加上 tail-links 标记'
-    ).toBe(true);
-    // 最后一段是链接行（右对齐由 CSS 负责）
-    const lastParagraph = prose!.querySelector('p:last-child')!;
-    expect(lastParagraph.querySelectorAll('a').length).toBeGreaterThan(0);
+    const row = rows().find((item) => item.querySelector('.devlog-panel__prose .trailing-links'));
+    expect(row, '至少一条更新应带末尾链接行').toBeDefined();
+
+    const prose = row!.querySelector<HTMLElement>('.devlog-panel__prose')!;
+    const linkRow = prose.querySelector<HTMLElement>('.trailing-links')!;
+    expect(linkRow, '链接行使用共享的 .trailing-links 标记').not.toBeNull();
+    expect(linkRow.parentElement).toBe(prose);
+    // 正文 markdown 里已剥离链接组：链接只出现在链接行里
+    const anchors = Array.from(prose.querySelectorAll('a'));
+    expect(anchors.length).toBeGreaterThan(0);
+    expect(anchors.every((anchor) => linkRow.contains(anchor)), '正文与链接行不应重复渲染链接').toBe(true);
+    expect(linkRow.textContent ?? '').not.toContain('·');
   });
 
   // 摘要策略是全局一刀切：只要有一条摘要会被页面宽度压缩，就整体回退到不显示摘要，
@@ -555,15 +557,5 @@ describe('/devlog/ 的「项目」筛选与行内展开', () => {
     for (const row of descriptionRows()) {
       expect(row.querySelector<HTMLElement>('[data-devlog-panel-summary]')!.hidden).toBe(false);
     }
-  });
-
-  it('链接行判定：只认「独立成段的纯链接行」', () => {
-    expect(hasTrailingLinkLine('正文\n\n[仓库](https://example.com/repo)')).toBe(true);
-    expect(hasTrailingLinkLine('正文\n\n[a](https://a.com) · [b](https://b.com)')).toBe(true);
-    expect(hasTrailingLinkLine('正文\n\n见 [仓库](https://example.com/repo) 说明')).toBe(false);
-    // 链接行后还有正文 → 不是末尾链接行
-    expect(hasTrailingLinkLine('[仓库](https://example.com/repo)\n\n正文继续')).toBe(false);
-    expect(hasTrailingLinkLine('正文\n[仓库](https://example.com/repo)')).toBe(false);
-    expect(hasTrailingLinkLine('')).toBe(false);
   });
 });

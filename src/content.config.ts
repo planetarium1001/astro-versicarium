@@ -153,17 +153,6 @@ const bits = defineCollection({
   })
 });
 
-const httpsUrl = z
-  .string()
-  .superRefine((value, ctx) => {
-    if (!/^https:\/\/[^\s]+$/.test(value.trim())) {
-      ctx.addIssue({
-        code: 'custom',
-        message: '链接必须是 https:// 开头的绝对 URL'
-      });
-    }
-  });
-
 const projects = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/projects' }),
   schema: z.object({
@@ -172,12 +161,11 @@ const projects = defineCollection({
     description: z.string().optional(),
     // type 完全开放：写什么显示什么，渲染为标题前小胶囊。
     type: z.string().optional(),
-    tags: z.array(z.string()).default([]),
     icon: z.string().optional(),
-    repo: httpsUrl.optional(),
-    repoLabel: z.string().optional(),
-    demo: httpsUrl.optional(),
-    demoLabel: z.string().optional(),
+    /**
+     * 没有 tags 与 repo/demo：仓库、演示等外链统一写在正文末尾的链接组里
+     * （见 src/lib/trailing-links.ts），列表卡片与弹窗渲染成右对齐链接行。
+     */
     date: z.coerce.date(),
     draft: z.boolean().default(false)
   })
@@ -194,8 +182,9 @@ const devlog = defineCollection({
     kind: z.string().optional(),
     description: z.string().optional(),
     /**
-     * 没有 links 字段：外链写进正文 markdown（末尾一行 `[文字](https://…)`），
-     * 便于整条内容直接粘贴到 GitHub release 或 commit。渲染时末尾的纯链接行右对齐。
+     * 没有 links 字段：外链写进正文 markdown 末尾的链接组（可多行 `[文字](https://…)`），
+     * 便于整条内容直接粘贴到 GitHub release 或 commit。渲染时由共享的末尾链接机制
+     * 解析成右对齐链接行（见 src/lib/trailing-links.ts）。
      */
     draft: z.boolean().default(false)
   })

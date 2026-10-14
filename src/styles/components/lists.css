@@ -235,10 +235,11 @@
   transition: color 0.2s ease;
 }
 
-/* 卡片任意位置悬停都算标题悬停（整块可点） */
-.list-item__title:hover,
-.list-item--link:hover .list-item__title {
-  color: #b88f8f;
+/* 只在标题文字上悬停时高亮，配色与下划线对齐归档时间线的悬停样式；
+   卡片悬停只改背景，不连带改变标题。 */
+.list-item__title:hover {
+  color: var(--accent);
+  text-decoration: underline;
 }
 
 .list-item__meta {

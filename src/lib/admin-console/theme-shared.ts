@@ -186,6 +186,15 @@ const ADMIN_FOOTER_COPYRIGHT_MAX_LENGTH = 120;
 export const ADMIN_SITE_TITLE_PERCENT_DEFAULT = 35;
 export const ADMIN_SITE_TITLE_PERCENT_MIN = 10;
 export const ADMIN_SITE_TITLE_PERCENT_MAX = 100;
+/**
+ * 页面外缘间隙（内容盒到浏览器边缘的视觉距离，px）。
+ * 默认与下限都是 32：再小会让右下角浮动列与正文的净空不足（几何下限 30），上限 160。
+ */
+export const ADMIN_SITE_PAGE_GAP_DEFAULT = 32;
+export const ADMIN_SITE_PAGE_GAP_MIN = 32;
+export const ADMIN_SITE_PAGE_GAP_MAX = 160;
+/** 「页面外缘间隙」的提示文案，与表单校验共用。 */
+export const ADMIN_SITE_PAGE_GAP_HINT = `（px，最小 ${ADMIN_SITE_PAGE_GAP_MIN}；仅 901px 以上生效）`;
 export const ADMIN_OVERVIEW_HIDDEN_MESSAGE_DEFAULT = '作者暂未公开此页面。';
 export const ADMIN_OVERVIEW_HIDDEN_MESSAGE_MAX_LENGTH = 120;
 
@@ -385,6 +394,12 @@ const clampSiteTitlePercent = (value: number | null): number => {
   return Math.min(Math.max(value, ADMIN_SITE_TITLE_PERCENT_MIN), ADMIN_SITE_TITLE_PERCENT_MAX);
 };
 
+/** 页面外缘间隙：缺失 / 非法 → 默认 32，越界夹取到 32–160。 */
+const clampSitePageGap = (value: number | null): number => {
+  if (value === null) return ADMIN_SITE_PAGE_GAP_DEFAULT;
+  return Math.min(Math.max(value, ADMIN_SITE_PAGE_GAP_MIN), ADMIN_SITE_PAGE_GAP_MAX);
+};
+
 const defaultNormalizeCustomSocialLabel = (value: unknown): string => normalizeTrimmed(value);
 
 const cloneCustomItems = (
@@ -556,6 +571,10 @@ export const canonicalizeAdminThemeSettings = (
        * 窄屏站点标题宽度百分比。非法 / 缺失 / 越界都回落到默认 35%，并夹取到 10–100。
        */
       titleMaxPercent: clampSiteTitlePercent(parseInteger(site.titleMaxPercent as string | number | null | undefined)),
+      /**
+       * 页面外缘间隙。非法 / 缺失 / 越界都回落到默认 32，并夹取到 32–160。
+       */
+      pageGapPx: clampSitePageGap(parseInteger(site.pageGapPx as string | number | null | undefined)),
       adminOverview: {
         publicVisible: typeof adminOverview.publicVisible === 'boolean' ? adminOverview.publicVisible : true,
         hiddenMessage: normalizeSingleLine(
@@ -714,6 +733,7 @@ export const createAdminWritableThemeSettingsGroups = (
     description: settings.site.description,
     defaultLocale: settings.site.defaultLocale,
     titleMaxPercent: settings.site.titleMaxPercent,
+    pageGapPx: settings.site.pageGapPx,
     footer: {
       ...settings.site.footer
     },
@@ -829,6 +849,18 @@ export const validateAdminThemeSettings = (
     pushIssue(
       'site.titleMaxPercent',
       `站点标题宽度百分比必须在 ${ADMIN_SITE_TITLE_PERCENT_MIN}–${ADMIN_SITE_TITLE_PERCENT_MAX} 之间`
+    );
+  }
+
+  if (!Number.isInteger(settings.site.pageGapPx)) {
+    pushIssue('site.pageGapPx', '页面外缘间隙必须是整数');
+  } else if (
+    settings.site.pageGapPx < ADMIN_SITE_PAGE_GAP_MIN ||
+    settings.site.pageGapPx > ADMIN_SITE_PAGE_GAP_MAX
+  ) {
+    pushIssue(
+      'site.pageGapPx',
+      `页面外缘间隙必须在 ${ADMIN_SITE_PAGE_GAP_MIN}–${ADMIN_SITE_PAGE_GAP_MAX} 之间`
     );
   }
 

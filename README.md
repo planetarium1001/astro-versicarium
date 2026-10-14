@@ -75,7 +75,7 @@ npm run preview   # 预览构建结果
 
 | 文件 | 内容 |
 | --- | --- |
-| `site.json` | 站点标题与描述、页脚版权、备案信息、favicon、社交链接、后台概览可见性 |
+| `site.json` | 站点标题与描述、站点语言、页脚版权、备案信息、favicon、社交链接、后台概览可见性、窄屏标题宽度上限、页面外缘间隙 |
 | `shell.json` | 侧栏站点名、引用文案、导航项（标签、装饰符、顺序、可见性） |
 | `home.json` | 首页引导语、更多入口、Hero 图 |
 | `page.json` | 各列表页标题与副标题、动态页默认作者、列表页 RSS 开关 |
@@ -139,9 +139,11 @@ npm run preview   # 预览构建结果
 | 集合 | frontmatter |
 | --- | --- |
 | `bits` | `title?`、`description?`、`date`、`tags`、`draft`、`slug?`、`images[]`（`src`、`width?`、`height?`、`alt?`）、`author?`（`name?`、`avatar?`） |
-| `projects` | `title`、`subtitle?`、`description?`、`type?`、`tags`、`icon?`、`repo?`、`repoLabel?`、`demo?`、`demoLabel?`、`date`、`draft` |
+| `projects` | `title`、`subtitle?`、`description?`、`type?`、`icon?`、`date`、`draft` |
 | `devlog` | `title`、`date`、`project`、`kind?`、`description?`、`draft` |
 | `about` | 无约束，正文写在 `index.md` |
+
+`projects` 与 `devlog` 共用「末尾链接」写法：正文与链接之间留一个空行，末尾连续若干行每行只写 markdown 链接，可一行多个，用空白或 `·|、,，/` 分隔。渲染时链接组落在正文下一行并右对齐，链接之间只留间隔，不输出 `·` 等分隔符。摘要派生，以及归档与后台的检索文本，都先用剥离链接组后的正文生成，链接组也不会在正文里重复出现。博客不使用这套写法，正文中间的链接仍按普通 markdown 渲染。
 
 图片放在 `public/` 下（如 `public/images/blog/<slug>/a.webp`），正文写 `/images/blog/<slug>/a.webp`；动态的 `images[].src` 与 `author.avatar` 不带前导斜杠、也不带 `public/`（如 `author/avatar.webp`）。博客详情页的 `slug` 默认为文件名去掉 `YYYY-MM-DD-` 前缀后的部分，可用 frontmatter 的 `slug` 覆盖；文件名规范见 [docs/development.md](docs/development.md)。
 
@@ -232,6 +234,7 @@ npm run check
 | --- | --- | --- |
 | 侧栏宽度与内外边距 | `--sidebar`、`--public-sidebar-inline-size`、`--sidebar-padding-block`、`--sidebar-padding-inline` | `src/styles/global.css` |
 | 壳层与正文宽度 | `--layout-shell-max-inline-size`、`--max` | `src/styles/global.css` |
+| 页面外缘间隙（内容盒到浏览器边缘，后台可配，默认 32，范围 32–160） | `site.pageGapPx`、`--page-gap-inline`、`--page-inline` | `src/data/settings/site.json`、`src/layouts/BaseLayout.astro` |
 | 目录列宽与出现门槛 | `--article-toc-inline-size`、`--article-toc-handle-column`、`@media (min-width: 1280px / 1024px)` | `src/styles/components/article-toc.css` |
 | 目录跳转高亮的底色与时长 | `--prose-flash-bg`、`FLASH_DURATION_MS` | 同上、`src/scripts/article-toc.ts` |
 | 主题切换涟漪 | `RIPPLE_DURATION_MS`、`RIPPLE_EASING` | `src/scripts/sidebar-theme.ts` |

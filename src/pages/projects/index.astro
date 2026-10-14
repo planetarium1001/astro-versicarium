@@ -3,8 +3,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { createWithBase, getVisibleProjects } from '../../lib/content';
 import { getThemeSettings } from '../../lib/theme-settings';
 import { joinPageSubtitleText } from '../../utils/format';
-import { render } from 'astro:content';
-import type { AstroComponentFactory } from 'astro/runtime/server/index.js';
+import { deriveEntryDescription, renderEntryBody } from '../../lib/entry-body';
+import { renderTrailingLinksHtml, type TrailingLink } from '../../lib/trailing-links';
 import '../../styles/projects-page.css';
 
 const items = await getVisibleProjects();
@@ -29,31 +29,30 @@ type ProjectCard = {
   description: string | null;
   type: string | null;
   icon: string | null;
-  repo: string | null;
-  repoLabel: string;
-  demo: string | null;
-  demoLabel: string;
   hasBody: boolean;
-  Content: AstroComponentFactory | null;
+  /** 正文 html（含末尾链接行标记）；无正文时为空串 */
+  bodyHtml: string;
+  /** 末尾链接组，按书写顺序；卡片在摘要下一行单独渲染 */
+  links: TrailingLink[];
 };
 
 const cards: ProjectCard[] = await Promise.all(
   items.map(async (entry): Promise<ProjectCard> => {
-    const hasBody = (entry.body ?? '').trim().length > 0;
-    const Content = hasBody ? (await render(entry)).Content : null;
+    const body = entry.body ?? '';
+    const hasBody = body.trim().length > 0;
+    const { html, links } = hasBody
+      ? await renderEntryBody(body, base)
+      : { html: '', links: [] as TrailingLink[] };
     return {
       id: entry.id,
       title: entry.data.title,
       subtitle: entry.data.subtitle?.trim() || null,
-      description: entry.data.description?.trim() || null,
+      description: deriveEntryDescription(entry.data.description, body),
       type: entry.data.type?.trim() || null,
       icon: entry.data.icon?.trim() || null,
-      repo: entry.data.repo?.trim() || null,
-      repoLabel: entry.data.repoLabel?.trim() || '仓库',
-      demo: entry.data.demo?.trim() || null,
-      demoLabel: entry.data.demoLabel?.trim() || '演示',
       hasBody,
-      Content
+      bodyHtml: html,
+      links
     };
   })
 );
@@ -98,16 +97,8 @@ const cards: ProjectCard[] = await Promise.all(
           </span>
         </button>
 
-        {(card.repo || card.demo) ? (
-          <div class="project-card__links">
-            {card.repo ? (
-              <a class="project-card__link" href={card.repo} rel="noopener noreferrer" target="_blank">{card.repoLabel}</a>
-            ) : null}
-            {card.demo ? (
-              <a class="project-card__link" href={card.demo} rel="noopener noreferrer" target="_blank">{card.demoLabel}</a>
-            ) : null}
-          </div>
-        ) : null}
+        {/* 末尾链接组渲染在摘要下一行，与展开正文里的链接行共用同一套标记 */}
+        {card.links.length > 0 ? <Fragment set:html={renderTrailingLinksHtml(card.links)} /> : null}
       </article>
     ))}
   </div>
@@ -132,22 +123,12 @@ const cards: ProjectCard[] = await Promise.all(
           <button class="project-dialog__close" type="button" data-project-close aria-label={`关闭 ${card.title}`}>✕</button>
         </div>
         <div class="project-dialog__content">
-          {card.hasBody && card.Content ? (
-            <div class="prose project-dialog__prose"><card.Content /></div>
+          {card.hasBody && card.bodyHtml ? (
+            <div class="prose project-dialog__prose" set:html={card.bodyHtml} />
           ) : (
             <p class="project-dialog__fallback">{card.description ?? '暂无描述。'}</p>
           )}
         </div>
-        {(card.repo || card.demo) ? (
-          <div class="project-dialog__links">
-            {card.repo ? (
-              <a class="project-card__link" href={card.repo} rel="noopener noreferrer" target="_blank">{card.repoLabel}</a>
-            ) : null}
-            {card.demo ? (
-              <a class="project-card__link" href={card.demo} rel="noopener noreferrer" target="_blank">{card.demoLabel}</a>
-            ) : null}
-          </div>
-        ) : null}
       </div>
     </dialog>
   ))}

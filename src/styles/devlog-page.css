@@ -308,8 +308,8 @@
 
 /**
  * 首尾子元素 margin 归零（.prose p 默认上下各 12px）。
- * 选择器需带 .devlog-panel__inner 压过 .devlog-panel__prose--tail-links 的 margin-top: 4px，
- * 否则正文上边距会变成 9px。
+ * 选择器需带 .devlog-panel__inner：末尾链接行（.trailing-links）自带 margin-top，
+ * 否则正文与链接行之间会多出一段段间距。
  */
 .devlog-panel__inner .devlog-panel__prose > :first-child,
 .devlog-panel__inner .devlog-panel__prose > :last-child {
@@ -340,14 +340,6 @@
 
 .devlog-panel__summary[hidden] {
   display: none;
-}
-
-/* 正文 markdown 末尾的纯链接段落右对齐 */
-.devlog-panel__prose--tail-links > p:last-child {
-  margin-top: 4px;
-  text-align: right;
-  color: var(--muted);
-  font-size: 13px;
 }
 
 /* ---------------- <=900px：两行条目（meta + 箭头 / 标题 + 摘要） ---------------- */

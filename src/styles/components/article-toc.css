@@ -106,15 +106,25 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
 }
 
 :root {
+  /**
+   * 目录列左边界的锚点：距 ICB 右缘恒为该值，因此目录与正文的间隙不随「页面外缘间隙」变化。
+   * 实际列宽 = 该锚点 - --page-inline，使列右边界落在壳层内容盒右缘。
+   */
   --article-toc-inline-size: 260px;
   /**
    * 收起后只留把手宽度的窄轨，保证把手在壳层内可见。
    * 把手尺寸与右偏移跟悬浮列统一（--rail-action-size / --rail-action-offset，定义在 layout.css），
-   * 窄轨宽度 = 左右各一份偏移 + 把手本身。只把把手改大而不加宽窄轨会被 overflow: hidden 裁掉。
+   * 窄轨宽度 = 左右各一份偏移 + 把手本身。只把把手改大而不加宽窄轨，把手会溢出窄轨、
+   * 无法再与右下角浮动列落在同一条竖线上。
    */
   --article-toc-handle-column: calc(var(--rail-action-offset) * 2 + var(--rail-action-size));
-  /* 实际列宽：收起/入场时收窄，栅格规则统一引用 */
-  --article-toc-column: var(--article-toc-inline-size);
+  /**
+   * 实际列宽 = 文字区宽度 - --page-inline，收起/入场时收窄，栅格规则统一引用。
+   * 于是列右边界落在壳层内容盒右缘（距 ICB 右缘 --page-inline），
+   * 列左边界稳定在距 ICB 右缘 --article-toc-inline-size 处，不随「页面外缘间隙」变化；
+   * 目录与正文的间隙由正文左右内边距镜像决定，也保持不变。
+   */
+  --article-toc-column: calc(var(--article-toc-inline-size) - var(--page-inline));
 }
 
 /* 收起状态（article-toc.ts 切换并记忆）；data-toc-intro 是入场用的临时收起态 */
@@ -140,12 +150,25 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
   padding: var(--sidebar-padding-block) var(--rail-action-offset) 40px var(--rail-action-offset);
 }
 
-/* 把手与「本文目录」同行并贴行右端（即壳层右缘），收起/展开/入场都不位移 */
+/* 收起 / 入场态列宽已是把手列，表头不再需要向右补偿，否则把手会被推出 ICB 右缘 */
+:root[data-toc-collapsed='true'] .article-toc__rail-head,
+:root[data-toc-intro='true'] .article-toc__rail-head {
+  margin-right: 0;
+  padding-right: 0;
+}
+
+/**
+ * 把手与「本文目录」同行并贴行右端，收起/展开/入场都不位移：
+ * 表头向右补偿列宽里扣掉的 --page-inline（负右外边距），再用右内边距把把手压回
+ * 「距 ICB 右缘 --rail-action-offset」的竖线上（与右下角浮动列同线）。
+ */
 .article-toc__rail-head {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+  margin-right: calc(var(--page-inline) * -1);
+  padding-right: var(--rail-action-offset);
   margin-bottom: 10px;
 }
 
@@ -247,22 +270,21 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
   top: 0;
   align-self: start;
   /**
-   * 目录与正文的间隙：目录侧不留 --pad-x 左内边距，正文侧 --pad-x 减半（见下方 .content 规则），
-   * 实际间隙约 15px，校准基准是「本文目录」下第一级目录文字的最左端。右内边距取
-   * --rail-action-offset 并配负的右外边距，使把手右缘与浮动列按钮右缘（距 ICB 右缘
-   * --rail-action-offset）落在同一条竖线上。
+   * 目录与正文的间隙：目录侧不留水平内边距，正文侧保留 --pad-x，实际间隙就等于 --pad-x，
+   * 校准基准是「本文目录」下第一级目录文字的最左端。列宽已扣掉 --page-inline，
+   * 右边界因此贴在壳层内容盒右缘；把手位置由表头（.article-toc__rail-head）单独补偿。
    */
-  margin-right: calc(var(--page-inline) * -1);
-  padding: var(--sidebar-padding-block) var(--rail-action-offset) 40px 0;
-  /* 过渡期间裁掉外溢，避免内容溢出到正文上 */
-  overflow: hidden;
+  margin-right: 0;
+  padding: var(--sidebar-padding-block) 0 40px 0;
+  /* 表头需要向右溢出到 ICB 右缘，故不在本元素上裁切；横向裁切交给列表本体 */
+  overflow: visible;
   transition: opacity 260ms ease, visibility 0s linear 0s;
 }
 
-/* 目录列表过长时在列内滚动，把手不受影响 */
+/* 目录列表过长时在列内滚动，把手不受影响；横向仍裁在列内，避免过渡期溢出到正文上 */
 .article-toc__rail-body {
   max-height: calc(100vh - var(--sidebar-padding-block) - 40px);
-  overflow-y: auto;
+  overflow: hidden auto;
   transition: opacity 240ms ease 120ms, visibility 0s linear 0s;
 }
 

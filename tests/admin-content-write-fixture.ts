@@ -109,17 +109,15 @@ export const setupAdminContentWriteFixture = (): (() => string) => {
         'subtitle: Demo subtitle',
         'description: Demo description',
         'type: 开源',
-        'tags:',
-        '  - Astro',
-        'repo: https://example.com/repo',
-        'repoLabel: 仓库',
-        'demo: https://example.com/demo',
-        'demoLabel: 演示',
         'date: 2026-02-01',
         'draft: false',
         '---',
         '',
         'Project body',
+        '',
+        // 仓库/演示等外链写在正文末尾的链接组里，frontmatter 不再有 tags/repo/demo
+        '[仓库](https://example.com/repo)',
+        '[演示](https://example.com/demo)',
         ''
       ].join('\n'),
       'utf8'

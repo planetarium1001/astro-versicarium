@@ -34,6 +34,9 @@ import {
   ADMIN_SOCIAL_ORDER_MAX,
   ADMIN_SOCIAL_ORDER_MIN,
   ADMIN_SOCIAL_PRESET_IDS,
+  ADMIN_SITE_PAGE_GAP_DEFAULT,
+  ADMIN_SITE_PAGE_GAP_MAX,
+  ADMIN_SITE_PAGE_GAP_MIN,
   ADMIN_SITE_TITLE_PERCENT_DEFAULT,
   ADMIN_SITE_TITLE_PERCENT_MAX,
   ADMIN_SITE_TITLE_PERCENT_MIN,
@@ -191,6 +194,12 @@ interface SiteSettings {
    * 默认 35%，范围 10–100，由后台「主题 → 站点设置」维护。
    */
   titleMaxPercent: number;
+  /**
+   * 页面外缘间隙：内容盒到浏览器边缘的视觉距离（px）。
+   * 默认与下限 32，上限 160，由后台「主题 → 站点设置」维护；
+   * 渲染时换算成 --page-inline = 间隙 - SCROLLBAR_GUTTER_INLINE_PX，作为壳层的结束内边距。
+   */
+  pageGapPx: number;
   footer: SiteFooterSettings;
   filings: SiteFilingsSettings;
   adminOverview: SiteAdminOverviewSettings;
@@ -473,6 +482,12 @@ const resolveInternalThemeSettingsDirOverride = (): string | null => {
   return rawValue ? rawValue : null;
 };
 
+/**
+ * 滚动条槽宽，与 global.css 的 --scrollbar-gutter-inline 保持一致。
+ * 「页面外缘间隙」是内容盒到浏览器边缘的距离，布局按 --page-inline = 间隙 - 这一份换算。
+ */
+export const SCROLLBAR_GUTTER_INLINE_PX = 15;
+
 export const getThemeSettingsDir = (): string => resolveInternalThemeSettingsDirOverride() ?? DEFAULT_SETTINGS_DIR;
 
 export const getThemeSettingsFilePath = (group: ThemeSettingsFileGroup): string =>
@@ -551,6 +566,7 @@ const DEFAULT_SITE: SiteSettings = {
   description: '一个 Astro 主题的展示站：轻量、可维护、可复用。',
   defaultLocale: 'zh-CN',
   titleMaxPercent: ADMIN_SITE_TITLE_PERCENT_DEFAULT,
+  pageGapPx: ADMIN_SITE_PAGE_GAP_DEFAULT,
   footer: {
     startYear: LEGACY_FOOTER_START_YEAR,
     showCurrentYear: LEGACY_FOOTER_SHOW_CURRENT_YEAR,
@@ -762,6 +778,18 @@ const asSiteTitlePercent = (value: unknown): number | undefined => {
   const next = asInteger(value);
   if (next === undefined) return undefined;
   return next >= ADMIN_SITE_TITLE_PERCENT_MIN && next <= ADMIN_SITE_TITLE_PERCENT_MAX
+    ? next
+    : undefined;
+};
+
+/**
+ * 页面外缘间隙（`site.pageGapPx`）。
+ * 非整数 / 越界一律视为「没配」，由默认值兜底（后台表单会给出校验提示）。
+ */
+const asSitePageGap = (value: unknown): number | undefined => {
+  const next = asInteger(value);
+  if (next === undefined) return undefined;
+  return next >= ADMIN_SITE_PAGE_GAP_MIN && next <= ADMIN_SITE_PAGE_GAP_MAX
     ? next
     : undefined;
 };
@@ -1337,6 +1365,11 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
     undefined,
     DEFAULT_SITE.titleMaxPercent
   );
+  const sitePageGap = resolveValue(
+    asSitePageGap(siteJson?.pageGapPx),
+    undefined,
+    DEFAULT_SITE.pageGapPx
+  );
   const adminOverviewPublicVisible = resolveValue(
     asBoolean(siteAdminOverviewJson?.publicVisible),
     undefined,
@@ -1704,6 +1737,7 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         description: description.value,
         defaultLocale: defaultLocale.value,
         titleMaxPercent: siteTitlePercent.value,
+        pageGapPx: sitePageGap.value,
         footer: {
           startYear: footerStartYear.value,
           showCurrentYear: footerShowCurrentYear.value,
@@ -1951,6 +1985,7 @@ const buildEditableThemeSettingsSnapshot = (
       description: resolved.settings.site.description,
       defaultLocale: resolved.settings.site.defaultLocale,
       titleMaxPercent: resolved.settings.site.titleMaxPercent,
+      pageGapPx: resolved.settings.site.pageGapPx,
       footer: {
         ...resolved.settings.site.footer
       },

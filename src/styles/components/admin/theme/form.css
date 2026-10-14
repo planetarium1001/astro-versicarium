@@ -436,37 +436,9 @@
 }
 
 /**
- * 页脚那一行 = [页脚年份] [窄屏站点标题宽度] [页脚版权文案]。
- * space-between 均分两段空隙；空间不足时版权先换行（它是唯一带 flex-basis 的宽格子），
- * 此时行里只剩年份与宽度，margin-left: auto 把宽度格子顶到页面右端；
- * 再不够时宽度格子自己换行。
+ * 页脚与新增设置项直接放进 .admin-grid：四项各自占一格，与上方的站点标题、站点语言
+ * 共用同一套两列网格，列与列对齐；窄到 480px 时随 .admin-grid 一起并成一列。
  */
-.admin-footer-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px var(--admin-grid-column-gap);
-}
-
-.admin-footer-row__cell {
-  min-width: 0;
-}
-
-.admin-footer-row__cell--year {
-  flex: 0 0 auto;
-}
-
-.admin-footer-row__cell--percent {
-  flex: 0 0 auto;
-  /* 版权换行后只剩它和年份，顶到行右端 */
-  margin-left: auto;
-}
-
-.admin-footer-row__cell--copyright {
-  /* 宽格子：空间不足时先换行 */
-  flex: 0 1 260px;
-}
 
 /* 百分比输入框不需要那么长 */
 .admin-field__control--percent {
@@ -474,9 +446,16 @@
   text-align: center;
 }
 
+/* 间隙输入框与百分比输入框同宽 */
+.admin-field__control--page-gap {
+  width: 84px;
+  text-align: center;
+}
+
 .admin-year-range {
   display: inline-grid;
-  grid-template-columns: 104px auto 104px auto;
+  /* 两个年份输入框可收缩到 64px：网格一行两列时列宽有限，装不下时不能溢出到相邻列 */
+  grid-template-columns: minmax(64px, 104px) auto minmax(64px, 104px) auto;
   gap: 8px;
   align-items: center;
   width: max-content;
@@ -484,7 +463,8 @@
 }
 
 .admin-year-range > .admin-field__control {
-  width: 104px;
+  width: 100%;
+  min-width: 0;
   text-align: center;
 }
 

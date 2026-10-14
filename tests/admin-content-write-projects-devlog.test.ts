@@ -14,14 +14,16 @@ describe('admin content projects/devlog write contract', () => {
     const { POST } = await import('../src/pages/api/admin/content/entry');
 
     const current = await readAdminContentEntryEditorPayload('projects', 'demo-project');
+    // projects 已取消 tags/repo/repoLabel/demo/demoLabel：字段袋只剩基础字段。
+    expect(Object.keys(current.values).sort()).toEqual(
+      ['title', 'subtitle', 'description', 'type', 'icon', 'date', 'draft'].sort()
+    );
+
     const nextValues = {
       ...current.values,
       title: 'Edited Project',
       subtitle: 'Edited subtitle',
       type: '实验',
-      tagsText: 'Astro\n工程',
-      repoLabel: '',
-      demoLabel: '',
       date: '2026-02-03'
     };
 
@@ -40,39 +42,35 @@ describe('admin content projects/devlog write contract', () => {
     const payload = JSON.parse(await response.text());
     expect(payload.ok).toBe(true);
     expect(payload.result.changedFields).toEqual(
-      expect.arrayContaining(['title', 'subtitle', 'type', 'tags', 'repoLabel', 'demoLabel', 'date'])
+      expect.arrayContaining(['title', 'subtitle', 'type', 'date'])
+    );
+    expect(payload.result.changedFields).not.toEqual(
+      expect.arrayContaining(['tags', 'repo', 'repoLabel', 'demo', 'demoLabel'])
     );
 
     const saved = await readFile(path.join(getTempRoot(), 'src', 'content', 'projects', 'demo-project.md'), 'utf8');
     expect(saved).toContain('title: Edited Project');
     expect(saved).toContain('type: 实验');
     expect(saved).toContain('Project body');
-    // 清空的 Label 走 delete patch，不残留空字符串。
-    expect(saved).not.toContain('repoLabel:');
-    expect(saved).not.toContain('demoLabel:');
+    // 仓库/演示链接留在正文 markdown 的末尾链接组里，不写回 frontmatter
+    expect(saved).toContain('[仓库](https://example.com/repo)');
+    expect(saved).toContain('[演示](https://example.com/demo)');
+    const frontmatterText = /^---\n([\s\S]*?)\n---/.exec(saved)?.[1] ?? '';
+    for (const field of ['tags', 'repo', 'repoLabel', 'demo', 'demoLabel']) {
+      expect(frontmatterText).not.toMatch(new RegExp(`^${field}:`, 'm'));
+    }
   });
 
-  it('rejects non-https projects links before writing', async () => {
+  it('no longer exposes tags/repo/demo in the projects editor values', async () => {
     const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
-    const { POST } = await import('../src/pages/api/admin/content/entry');
 
     const current = await readAdminContentEntryEditorPayload('projects', 'demo-project');
-    const response = await POST({
-      request: createJsonRequest('http://127.0.0.1:4321/api/admin/content/entry', {
-        collection: 'projects',
-        entryId: 'demo-project',
-        revision: current.revision,
-        frontmatter: { ...current.values, repo: 'ftp://example.com/repo' },
-        body: current.bodyText
-      }),
-      url: new URL('http://127.0.0.1:4321/api/admin/content/entry')
-    } as never);
-
-    expect(response.status).toBe(400);
-    const payload = JSON.parse(await response.text());
-    expect(payload.issues).toEqual(
-      expect.arrayContaining([expect.objectContaining({ path: 'repo' })])
-    );
+    for (const field of ['tagsText', 'repo', 'repoLabel', 'demo', 'demoLabel']) {
+      expect(
+        Object.prototype.hasOwnProperty.call(current.values, field),
+        `${field} 应已从 projects 字段袋移除`
+      ).toBe(false);
+    }
   });
 
   // devlog 已完全 markdown 化：外链写在正文里，frontmatter 不再有 links，
@@ -138,12 +136,7 @@ describe('client write request body for new collections', () => {
           subtitle: '',
           description: '',
           type: '',
-          tagsText: '',
           icon: '',
-          repo: '',
-          repoLabel: '',
-          demo: '',
-          demoLabel: '',
           date: '2026-02-01',
           draft: false
         }
@@ -185,12 +178,7 @@ describe('entry transport guards for new collections', () => {
           subtitle: '',
           description: '',
           type: '',
-          tagsText: '',
           icon: '',
-          repo: '',
-          repoLabel: '',
-          demo: '',
-          demoLabel: '',
           date: '2026-02-01',
           draft: false
         }

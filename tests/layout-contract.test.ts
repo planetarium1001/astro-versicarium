@@ -299,6 +299,91 @@ describe('窄屏站点标题宽度：后台百分比设置', () => {
   });
 });
 
+describe('页面外缘间隙：后台 px 设置', () => {
+  it('BaseLayout 把间隙与换算后的 --page-inline 写成 <html> 内联属性', async () => {
+    const [layout, globalCss, themeSettings] = await Promise.all([
+      read(BASE_LAYOUT_ASTRO),
+      read('src/styles/global.css'),
+      read('src/lib/theme-settings.ts')
+    ]);
+
+    // 内联的是解析后的数值（不在 CSS 里写 calc）：内联优先级高于 :root 与首屏 critical 快照
+    expect(layout).toContain('settings.site.pageGapPx');
+    expect(layout).toContain('--page-gap-inline: ${sitePageGapPx}px');
+    expect(layout).toContain('--page-inline: ${pageInlinePx}px');
+    expect(layout).toContain('const pageInlinePx = sitePageGapPx - SCROLLBAR_GUTTER_INLINE_PX');
+    // 槽宽常量在共享的设置模块里只定义一次，注释指向 CSS token；公开布局不依赖后台模块
+    expect(themeSettings).toContain('SCROLLBAR_GUTTER_INLINE_PX = 15');
+    expect(themeSettings).toContain('--scrollbar-gutter-inline');
+    expect(layout).not.toContain('admin-console/theme-shared');
+    expect(globalCss).toMatch(/--scrollbar-gutter-inline:\s*15px/);
+    // 窄屏把两侧内边距都覆写到 body，后代以 body 为准（内联的 html 值不参与）
+    expect(globalCss).toMatch(
+      /@media \(max-width: 900px\)[\s\S]*?body:not\(\.admin-page\)[\s\S]*?--page-gap-inline:\s*0px[\s\S]*?--page-inline:\s*0px/
+    );
+  });
+
+  it('几何守卫从构建页面的 <html> 内联属性读生效值，并断言 O == P - G', async () => {
+    const guard = await read('scripts/check-layout-geometry.mjs');
+
+    // 生效值在 <html style> 上：:root 与 critical 快照里的 --page-inline 只是默认值
+    expect(guard).toContain('readHtmlInlineVariables');
+    expect(guard).toContain("path.join(root, 'dist', 'index.html')");
+    expect(guard).toContain("'--page-gap-inline'");
+    expect(guard).toMatch(/near\(O,\s*pageGap - gutter\)/);
+    // G4 的把手内边距随结构移到目录表头
+    expect(guard).toContain("bySelector.get('.article-toc__rail-head')");
+    // G2 比的是内容盒两侧的视觉间隙（起始内边距 == 结束内边距 + 槽宽）
+    expect(guard).toMatch(/const rightInset = shellPadEnd \+ gutter;/);
+  });
+
+  it('壳层起始内边距取视觉间隙、结束内边距扣掉滚动条槽', async () => {
+    const [layoutCss, critical] = await Promise.all([
+      read('src/styles/components/layout.css'),
+      read('src/pages/index.astro')
+    ]);
+
+    // 两侧都用 --page-inline 会让内容盒右缘比左缘多出一个槽的距离
+    const shell = /padding-inline:\s*var\(--page-gap-inline\)\s*var\(--page-inline\);/g;
+    expect(layoutCss.match(shell), '公开壳层与后台壳层都要按起始/结束分别取值').toHaveLength(2);
+    // 首屏快照必须同形，否则首屏会跳一下
+    expect(critical).toContain('padding-inline: var(--page-gap-inline) var(--page-inline);');
+  });
+});
+
+describe('文章目录列：右边界跟随页面外缘间隙', () => {
+  it('列宽 = 文字区宽度 - --page-inline，补偿移到表头且收起态抵消', async () => {
+    const css = await read('src/styles/components/article-toc.css');
+
+    // 「文字区宽度」与「列宽」是两个变量：列右边界落在壳层内容盒右缘，左边界不随间隙变化
+    expect(css).toMatch(/--article-toc-inline-size:\s*260px/);
+    expect(css).toMatch(
+      /--article-toc-column:\s*calc\(var\(--article-toc-inline-size\) - var\(--page-inline\)\)/
+    );
+
+    // 补偿从列移到表头：列本身不再用负右外边距，右内边距归 0
+    const rail = /^\.article-toc--rail\s*\{([^}]*)\}/m.exec(css)?.[1] ?? '';
+    expect(rail, '需要 .article-toc--rail 规则').not.toBe('');
+    expect(rail).toMatch(/margin-right:\s*0/);
+    expect(rail).toMatch(/padding:\s*var\(--sidebar-padding-block\) 0 40px 0/);
+
+    const head = /^\.article-toc__rail-head\s*\{([^}]*)\}/m.exec(css)?.[1] ?? '';
+    expect(head, '需要 .article-toc__rail-head 规则').not.toBe('');
+    expect(head).toMatch(/margin-right:\s*calc\(var\(--page-inline\) \* -1\)/);
+    expect(head).toMatch(/padding-right:\s*var\(--rail-action-offset\)/);
+
+    // 收起 / 入场态抵消表头补偿，把手位置与今天一致
+    expect(css).toMatch(
+      /:root\[data-toc-collapsed='true'\] \.article-toc__rail-head,[\s\S]*?:root\[data-toc-intro='true'\] \.article-toc__rail-head\s*\{[^}]*margin-right:\s*0[^}]*padding-right:\s*0/
+    );
+    // 收起态列宽与 1024–1280 的占位规则保持不变
+    expect(css).toMatch(/--article-toc-column:\s*var\(--article-toc-handle-column\)/);
+    expect(css).toMatch(
+      /@media \(min-width: 1024px\) and \(max-width: 1279\.98px\)[\s\S]*?minmax\(0, 1fr\)\s*\n?\s*0px;/
+    );
+  });
+});
+
 describe('主题涟漪：按目标主题分类方向', () => {
   it('亮色从点击处扩散、暗色从四周向点击处收敛', async () => {
     const [script, globalCss] = await Promise.all([
@@ -342,29 +427,57 @@ describe('blog 列表卡：tag 可悬停点击', () => {
   });
 });
 
-describe('后台页脚那一行的排版', () => {
-  it('页脚年份 / 窄屏站点标题宽度 / 页脚版权文案同一行，空隙均分', async () => {
+describe('后台设置行的排版', () => {
+  it('页脚四项与站点标题、站点语言共用同一套两列网格，顺序为页脚信息在上', async () => {
     const [section, form] = await Promise.all([
       read('src/components/admin/AdminSiteSection.astro'),
       read('src/styles/components/admin/theme/form.css')
     ]);
 
-    // 三个格子在同一个 flex 行里，顺序 = 年份 → 宽度 → 版权
-    const row = /<div class="admin-field admin-field--full admin-footer-row">([\s\S]*?)<\/div>\n/.exec(section)?.[1] ?? '';
-    expect(row, '需要 admin-footer-row').not.toBe('');
-    const order = ['--year', '--percent', '--copyright'].map((suffix) => row.indexOf(suffix));
-    expect(order.every((index) => index >= 0)).toBe(true);
-    expect(order[0]).toBeLessThan(order[1]!);
-    expect(order[1]).toBeLessThan(order[2]!);
+    // 四项与「站点标题 / 站点语言」写法逐字一致：都是 .admin-grid 的直接子项，因此列与列对齐
+    const gridField = (main: string) =>
+      new RegExp(
+        `\\n {4}<label class="admin-field">\\n {6}<span class="admin-label">\\n {8}<span class="admin-label__main">${main}</span>`
+      ).test(section);
+    for (const main of [
+      '站点标题',
+      '站点语言',
+      '页脚年份',
+      '页脚版权文案',
+      '窄屏站点标题宽度',
+      '页面外缘间隙'
+    ]) {
+      expect(gridField(main), `${main} 应是 .admin-grid 的直接子项`).toBe(true);
+    }
+    expect(section).not.toContain('admin-footer-row');
+    // 页脚预览跨两列
+    expect(section).toMatch(/\n {4}<div class="admin-field admin-field--full">\n {6}<p id="site-footer-preview"/);
 
-    const rowCss = /\.admin-footer-row\s*\{([^}]*)\}/.exec(form)?.[1] ?? '';
-    expect(rowCss).toMatch(/justify-content:\s*space-between/);
-    expect(rowCss).toMatch(/flex-wrap:\s*wrap/);
-    // 版权先换行；宽度格子被顶到行右端（`margin-left: auto`）
-    expect(form).toMatch(/\.admin-footer-row__cell--copyright\s*\{[^}]*flex:\s*0 1 260px/);
-    expect(form).toMatch(/\.admin-footer-row__cell--percent\s*\{[^}]*margin-left:\s*auto/);
-    // 百分比输入框很短
+    // 顺序：页脚年份 → 页脚版权文案 → 页脚预览 → 窄屏站点标题宽度 → 页面外缘间隙
+    const order = [
+      'id="site-footer-start-year"',
+      'id="site-footer-copyright"',
+      'id="site-footer-preview"',
+      'id="site-title-max-percent"',
+      'id="site-page-gap-px"'
+    ].map((token) => section.indexOf(token));
+    expect(order.every((index) => index >= 0), '四项与页脚预览都要在标记里').toBe(true);
+    for (let index = 1; index < order.length; index += 1) {
+      expect(order[index - 1], `${order[index - 1]} 应排在 ${order[index]} 之前`).toBeLessThan(order[index]!);
+    }
+
+    // 新字段的标签与提示：提示走 TS 常量，避免把非子集字符写进模板
+    expect(section).toContain('页面外缘间隙');
+    expect(section).toContain('{ADMIN_SITE_PAGE_GAP_HINT}');
+    const themeShared = await read('src/lib/admin-console/theme-shared.ts');
+    expect(themeShared).toContain('（px，最小 ${ADMIN_SITE_PAGE_GAP_MIN}；仅 901px 以上生效）');
+
+    // 两列均分来自 .admin-grid，旧的行内 flex 排版与格子类不再保留
+    expect(form).not.toContain('admin-footer-row');
+    expect(form).toMatch(/\.admin-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+    // 百分比与间隙输入框都很短
     expect(form).toMatch(/\.admin-field__control--percent\s*\{[^}]*width:\s*84px/);
+    expect(form).toMatch(/\.admin-field__control--page-gap\s*\{[^}]*width:\s*84px/);
   });
 });
 

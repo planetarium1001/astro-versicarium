@@ -1,0 +1,41 @@
+/* trailing-links.css — 正文末尾链接组的统一链接行。
+   项目卡片/弹窗、更新展开面板与后台预览共用同一份规则：右对齐、
+   按书写顺序排列，链接之间只留等距间隔，不输出 · 等分隔符。 */
+
+.trailing-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* 正文区域内自带段落间距（.prose p 的同名声明特异性更高，这里显式覆盖）。 */
+.prose .trailing-links {
+  margin: 12px 0 0;
+}
+
+.trailing-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-min-h);
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* 覆盖正文里无类名链接的默认虚线下划线（.content__inner p a 特异性更高）。 */
+.content__inner .trailing-links a,
+.prose .trailing-links a {
+  border-bottom: 1px solid transparent;
+}
+
+.content__inner .trailing-links a:hover,
+.content__inner .trailing-links a:focus-visible,
+.prose .trailing-links a:hover,
+.prose .trailing-links a:focus-visible {
+  border-bottom-color: currentColor;
+}

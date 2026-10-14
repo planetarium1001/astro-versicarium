@@ -4,19 +4,18 @@ import TagFilterHeader from '../../components/TagFilterHeader.astro';
 import { getVisibleDevlogs } from '../../lib/content';
 import { getThemeSettings } from '../../lib/theme-settings';
 import { joinPageSubtitleText, formatISODateUtc } from '../../utils/format';
-import { hasTrailingLinkLine } from '../../lib/devlog-links';
-import { render } from 'astro:content';
-import type { AstroComponentFactory } from 'astro/runtime/server/index.js';
+import { deriveEntryDescription, renderEntryBody } from '../../lib/entry-body';
 import '../../styles/devlog-page.css';
 
 /**
  * `/devlog/` 更新列表：时间线虚线贯通行首，无卡片边框，间距紧凑。
- * 行内展开面板由 devlog-drawer.ts 驱动；正文 markdown 末尾的纯链接段落右对齐
- * （见 src/lib/devlog-links.ts）。
+ * 行内展开面板由 devlog-drawer.ts 驱动；正文末尾的链接组由共享的末尾链接机制
+ * 解析并渲染成右对齐链接行（见 src/lib/trailing-links.ts）。
  * 「项目」筛选取值域 = 去重后的 project 字段，不含 kind；
  * 交互复用 TagFilterHeader 的 tag dialog 样式，单选，选中即收敛可见条目。
  */
 const items = await getVisibleDevlogs();
+const base = import.meta.env.BASE_URL ?? '/';
 const {
   settings: { page }
 } = getThemeSettings();
@@ -37,26 +36,24 @@ type DevlogRow = {
   kind: string | null;
   description: string | null;
   hasBody: boolean;
-  /** 正文末尾是纯链接行，面板里把最后一个段落右对齐成链接行 */
-  hasTrailingLinks: boolean;
-  Content: AstroComponentFactory | null;
+  /** 正文 html（含末尾链接行标记）；无正文时为空串 */
+  bodyHtml: string;
 };
 
 const rows: DevlogRow[] = await Promise.all(
   items.map(async (entry): Promise<DevlogRow> => {
     const body = entry.body ?? '';
     const hasBody = body.trim().length > 0;
-    const Content = hasBody ? (await render(entry)).Content : null;
+    const { html } = hasBody ? await renderEntryBody(body, base) : { html: '' };
     return {
       id: entry.id,
       title: entry.data.title,
       dateLabel: formatISODateUtc(entry.data.date),
       project: entry.data.project,
       kind: entry.data.kind?.trim() || null,
-      description: entry.data.description?.trim() || null,
+      description: deriveEntryDescription(entry.data.description, body),
       hasBody,
-      hasTrailingLinks: hasTrailingLinkLine(body),
-      Content
+      bodyHtml: html
     };
   })
 );
@@ -125,7 +122,7 @@ const projectOptions = projectValues.map((value) => ({
 
         <div class="devlog-panel" id={`devlog-panel-${row.id}`} data-devlog-panel hidden>
           <div class="devlog-panel__inner">
-            {row.hasBody && row.Content ? (
+            {row.hasBody && row.bodyHtml ? (
               <>
                 {/*
                   列表内摘要被省略号截断或被窄屏隐藏时，展开正文顶部单独显示完整摘要。
@@ -134,15 +131,7 @@ const projectOptions = projectValues.map((value) => ({
                 {row.description ? (
                   <p class="devlog-panel__summary" data-devlog-panel-summary hidden>{row.description}</p>
                 ) : null}
-                <div
-                  class:list={[
-                    'prose',
-                    'devlog-panel__prose',
-                    row.hasTrailingLinks && 'devlog-panel__prose--tail-links'
-                  ]}
-                >
-                  <row.Content />
-                </div>
+                <div class="prose devlog-panel__prose" set:html={row.bodyHtml} />
               </>
             ) : (
               <p class="devlog-panel__fallback">{row.description ?? '暂无正文。'}</p>

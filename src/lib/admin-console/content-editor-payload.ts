@@ -52,12 +52,7 @@ export type AdminProjectsEditorValues = {
   subtitle: string;
   description: string;
   type: string;
-  tagsText: string;
   icon: string;
-  repo: string;
-  repoLabel: string;
-  demo: string;
-  demoLabel: string;
   date: string;
   draft: boolean;
 };
@@ -240,12 +235,7 @@ const toProjectsEditorValues = (state: AdminContentSourceState): AdminProjectsEd
     subtitle: normalizeOptionalText(frontmatter.subtitle),
     description: normalizeOptionalText(frontmatter.description),
     type: normalizeOptionalText(frontmatter.type),
-    tagsText: getStringArray(frontmatter.tags).join('\n'),
     icon: normalizeOptionalText(frontmatter.icon),
-    repo: normalizeOptionalText(frontmatter.repo),
-    repoLabel: normalizeOptionalText(frontmatter.repoLabel),
-    demo: normalizeOptionalText(frontmatter.demo),
-    demoLabel: normalizeOptionalText(frontmatter.demoLabel),
     date: getDateString(frontmatter, 'date', ''),
     draft: frontmatter.draft === true
   };

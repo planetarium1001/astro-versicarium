@@ -26,6 +26,7 @@ import {
   ADMIN_NAV_ORNAMENT_DEFAULT,
   ADMIN_OVERVIEW_HIDDEN_MESSAGE_DEFAULT,
   ADMIN_SIDEBAR_DIVIDER_DEFAULT,
+  ADMIN_SITE_PAGE_GAP_DEFAULT,
   ADMIN_SITE_TITLE_PERCENT_DEFAULT,
   ADMIN_SOCIAL_PRESET_ORDER_DEFAULT,
   ADMIN_TYPOGRAPHY_DEFAULT,
@@ -67,6 +68,7 @@ type FormCodecContext = {
   inputSiteDescription: HTMLTextAreaElement;
   inputSiteDefaultLocale: HTMLInputElement;
   inputSiteTitleMaxPercent: HTMLInputElement;
+  inputSitePageGapPx: HTMLInputElement;
   inputPageListRssEnabled: HTMLInputElement;
   inputPageListRssBlog: HTMLInputElement;
   inputPageListRssBits: HTMLInputElement;
@@ -212,6 +214,7 @@ export const createFormCodec = ({
   inputSiteDescription,
   inputSiteDefaultLocale,
   inputSiteTitleMaxPercent,
+  inputSitePageGapPx,
   inputPageListRssEnabled,
   inputPageListRssBlog,
   inputPageListRssBits,
@@ -635,8 +638,10 @@ export const createFormCodec = ({
         title: inputSiteTitle.value.trim(),
         description: normalizeMultiline(inputSiteDescription.value).trim(),
         defaultLocale: inputSiteDefaultLocale.value.trim(),
-        /* 窄屏站点标题宽度百分比（页脚年份后面的设置） */
+        /* 窄屏站点标题宽度百分比（与页面外缘间隙同一行） */
         titleMaxPercent: parseInteger(inputSiteTitleMaxPercent.value) ?? ADMIN_SITE_TITLE_PERCENT_DEFAULT,
+        /* 页面外缘间隙（px，内容盒到浏览器边缘的距离） */
+        pageGapPx: parseInteger(inputSitePageGapPx.value) ?? ADMIN_SITE_PAGE_GAP_DEFAULT,
         footer: {
           startYear: parseInteger(inputSiteFooterStartYear.value) ?? footerStartYearMax,
           showCurrentYear: Boolean(inputSiteFooterShowCurrentYear.checked),
@@ -774,6 +779,7 @@ export const createFormCodec = ({
     inputSiteDescription.value = settings.site.description || '';
     inputSiteDefaultLocale.value = settings.site.defaultLocale || '';
     inputSiteTitleMaxPercent.value = String(settings.site.titleMaxPercent ?? ADMIN_SITE_TITLE_PERCENT_DEFAULT);
+    inputSitePageGapPx.value = String(settings.site.pageGapPx ?? ADMIN_SITE_PAGE_GAP_DEFAULT);
     inputPageListRssEnabled.checked = settings.page.listRss.enabled !== false;
     inputPageListRssBlog.checked = settings.page.listRss.blog !== false;
     inputPageListRssBits.checked = settings.page.listRss.bits !== false;

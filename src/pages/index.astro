@@ -132,7 +132,8 @@ const homeHeadCriticalCss = [
   --sidebar-padding-block: 52px;
   /* 与 global.css 的间距 token 一致；改动后跑 check:home-critical-css */
   --scrollbar-gutter-inline: 15px;
-  --page-inline: 26px;
+  --page-gap-inline: 32px;
+  --page-inline: 17px;
   --sidebar-padding-inline: 15px;
   /* 首屏 CSS 在 global.css 之后，同优先级会覆盖真实样式；改动后跑 check:home-critical-css */
   --sidebar: 224px;
@@ -235,8 +236,8 @@ a {
   min-height: 100vh;
   display: grid;
   grid-template-columns: var(--sidebar) 1px 1fr;
-  /* 壳层外边距，必须与 layout.css 一致，否则首屏会跳一下 */
-  padding-inline: var(--page-inline);
+  /* 与 layout.css 一致：起始留视觉间隙，结束扣掉滚动条槽，否则首屏会跳一下 */
+  padding-inline: var(--page-gap-inline) var(--page-inline);
   margin: 0 auto;
 }
 
@@ -558,6 +559,7 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
     --sidebar: 1fr;
     --tap-min-h: 44px;
     /* 窄屏收掉壳层外边距（与 global.css 的窄屏覆写一致） */
+    --page-gap-inline: 0px;
     --page-inline: 0px;
     --sidebar-padding-inline: 18px;
     --pad-x: 20px;

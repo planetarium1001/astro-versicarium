@@ -4,6 +4,10 @@ import AdminSiteSocialSection from './AdminSiteSocialSection.astro';
 import {
   ADMIN_FILINGS_NUMBER_MAX_LENGTH,
   ADMIN_OVERVIEW_HIDDEN_MESSAGE_MAX_LENGTH,
+  ADMIN_SITE_PAGE_GAP_DEFAULT,
+  ADMIN_SITE_PAGE_GAP_HINT,
+  ADMIN_SITE_PAGE_GAP_MAX,
+  ADMIN_SITE_PAGE_GAP_MIN,
   ADMIN_SITE_TITLE_PERCENT_DEFAULT,
   ADMIN_SITE_TITLE_PERCENT_MAX,
   ADMIN_SITE_TITLE_PERCENT_MIN
@@ -82,11 +86,10 @@ const filingFields: FilingField[] = [
       <textarea class="admin-field__control admin-field__control--singleline-textarea" id="site-description" rows="1"></textarea>
     </label>
     {/*
-      页脚年份、窄屏站点标题宽度、页脚版权文案同处一行，由 space-between 均分空隙；
-      空间不足时的换行顺序见 form.css 的 .admin-footer-row。
+      页脚信息在上，新增的窄屏站点标题宽度与页面外缘间隙在下。四项都是 .admin-grid 的直接子项，
+      与上方的站点标题、站点语言共用同一套两列网格，列与列对齐；页脚预览跨两列。
     */}
-    <div class="admin-field admin-field--full admin-footer-row">
-    <label class="admin-field admin-footer-row__cell admin-footer-row__cell--year">
+    <label class="admin-field">
       <span class="admin-label">
         <span class="admin-label__main">页脚年份</span>
         <span class="admin-label__hint">（结束年份自动拾取当前年）</span>
@@ -119,7 +122,18 @@ const filingFields: FilingField[] = [
         </label>
       </span>
     </label>
-    <label class="admin-field admin-footer-row__cell admin-footer-row__cell--percent">
+    <label class="admin-field">
+      <span class="admin-label">
+        <span class="admin-label__main">页脚版权文案</span>
+      </span>
+      <input class="admin-field__control" id="site-footer-copyright" type="text" autocomplete="off" aria-describedby="site-footer-preview" />
+    </label>
+    <div class="admin-field admin-field--full">
+      <p id="site-footer-preview" class="admin-help">
+        页脚预览：<code id="site-footer-preview-value">© {footerStartYearMax} Whono · Theme Demo · by cxro</code>
+      </p>
+    </div>
+    <label class="admin-field">
       <span class="admin-label">
         <span class="admin-label__main">窄屏站点标题宽度</span>
         <span class="admin-label__hint">（%，默认 {ADMIN_SITE_TITLE_PERCENT_DEFAULT}）</span>
@@ -135,18 +149,22 @@ const filingFields: FilingField[] = [
         placeholder={String(ADMIN_SITE_TITLE_PERCENT_DEFAULT)}
       />
     </label>
-    <label class="admin-field admin-footer-row__cell admin-footer-row__cell--copyright">
+    <label class="admin-field">
       <span class="admin-label">
-        <span class="admin-label__main">页脚版权文案</span>
+        <span class="admin-label__main">页面外缘间隙</span>
+        <span class="admin-label__hint">{ADMIN_SITE_PAGE_GAP_HINT}</span>
       </span>
-      <input class="admin-field__control" id="site-footer-copyright" type="text" autocomplete="off" aria-describedby="site-footer-preview" />
+      <input
+        class="admin-field__control admin-field__control--page-gap"
+        id="site-page-gap-px"
+        type="number"
+        min={ADMIN_SITE_PAGE_GAP_MIN}
+        max={ADMIN_SITE_PAGE_GAP_MAX}
+        step="1"
+        inputmode="numeric"
+        placeholder={String(ADMIN_SITE_PAGE_GAP_DEFAULT)}
+      />
     </label>
-    </div>
-    <div class="admin-field admin-field--full">
-      <p id="site-footer-preview" class="admin-help">
-        页脚预览：<code id="site-footer-preview-value">© {footerStartYearMax} Whono · Theme Demo · by cxro</code>
-      </p>
-    </div>
     <div class="admin-field admin-field--full">
       <div class="admin-label admin-label--split">
         <span class="admin-label__copy">

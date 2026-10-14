@@ -355,4 +355,37 @@ describe('theme-settings revision semantics', () => {
       delete process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT;
     }
   });
+
+  /**
+   * 页面外缘间隙 `site.pageGapPx`：后台设定的是内容盒到浏览器边缘的视觉距离（px，最小 32），
+   * 渲染期换算成 --page-inline = 间隙 - 滚动条槽宽。
+   */
+  it('reads the page gap with the default and drops non-integer / out-of-range values', async () => {
+    expect(getThemeSettings().settings.site.pageGapPx).toBe(32);
+
+    const settingsDir = await createTempSettingsFixture();
+    const sitePath = path.join(settingsDir, 'site.json');
+    const writeSiteJson = async (value: unknown) => {
+      const siteJson = JSON.parse(await readFile(sitePath, 'utf8')) as Record<string, unknown>;
+      if (value === undefined) delete siteJson.pageGapPx;
+      else siteJson.pageGapPx = value;
+      await writeFile(sitePath, `${JSON.stringify(siteJson, null, 2)}\n`, 'utf8');
+      resetThemeSettingsCache();
+    };
+
+    await writeSiteJson(undefined);
+    const withoutField = getThemeSettings();
+    expect(withoutField.settings.site.pageGapPx).toBe(32);
+
+    await writeSiteJson(80);
+    const configured = getThemeSettings();
+    expect(configured.settings.site.pageGapPx).toBe(80);
+    // 字段已接进可编辑快照，合法值不该被判成 schema-mismatch
+    expect(getThemeSettingsReadDiagnostics(configured)).toEqual([]);
+
+    for (const invalid of [31, 161, 32.5, 'abc']) {
+      await writeSiteJson(invalid);
+      expect(getThemeSettings().settings.site.pageGapPx).toBe(32);
+    }
+  });
 });

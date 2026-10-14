@@ -15,6 +15,7 @@ import {
   buildPublishedBitsHrefMap,
   type BitPublicOrderItem
 } from '../bits-public-routing';
+import { stripTrailingLinks } from '../trailing-links';
 import {
   ADMIN_CONTENT_COLLECTIONS,
   type AdminContentCollectionKey
@@ -175,6 +176,10 @@ const buildBodyDerived = (bodyText: string, excerptLimit: number): AdminContentS
     text: getSearchIndexText(plainText)
   };
 };
+
+/** projects / devlog 的末尾链接组属于链接行，不进入摘要派生与列表检索文本。 */
+const getBodyDerivedSource = (collection: AdminContentCollectionKey, bodyText: string): string =>
+  collection === 'projects' || collection === 'devlog' ? stripTrailingLinks(bodyText) : bodyText;
 
 const getBodyExcerptLimit = (collection: AdminContentCollectionKey): number =>
   collection === 'bits' ? BITS_EXCERPT_LIMIT : BLOG_EXCERPT_LIMIT;
@@ -337,7 +342,8 @@ const createProjectsSourceIndexItem: FrontmatterAdapter = (record) => {
   const type = normalizeOptionalText(frontmatter.type);
   const description = normalizeOptionalText(frontmatter.description);
   const subtitle = normalizeOptionalText(frontmatter.subtitle);
-  const tags = getStringArray(frontmatter.tags);
+  // projects 已取消 tags 字段：列表检索与标签筛选都不再暴露项目标签。
+  const tags: string[] = [];
   const bodyDerived = getBodyDerived(record);
   const sourceError = mergeSourceError(
     record.sourceError,
@@ -466,7 +472,7 @@ const readSourceRecord = async (
       sourceModifiedAt,
       sourceError: null,
       bodyText,
-      bodyDerived: buildBodyDerived(bodyText, getBodyExcerptLimit(collection))
+      bodyDerived: buildBodyDerived(getBodyDerivedSource(collection, bodyText), getBodyExcerptLimit(collection))
     };
   } catch (error) {
     const bodyText = '';
@@ -480,7 +486,7 @@ const readSourceRecord = async (
       ...(includeBody
         ? {
           bodyText,
-          bodyDerived: buildBodyDerived(bodyText, getBodyExcerptLimit(collection))
+          bodyDerived: buildBodyDerived(getBodyDerivedSource(collection, bodyText), getBodyExcerptLimit(collection))
         }
         : {})
     };

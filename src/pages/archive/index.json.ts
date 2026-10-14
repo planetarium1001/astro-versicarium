@@ -6,6 +6,7 @@ import {
   getVisibleProjects,
   getVisibleblogs
 } from '../../lib/content';
+import { stripTrailingLinks } from '../../lib/trailing-links';
 
 /**
  * `/archive/index.json` 覆盖 blog + projects + devlog 三个集合，
@@ -62,7 +63,8 @@ export const GET: APIRoute = async () => {
     slug: `projects:${entry.id}`,
     title: entry.data.title ?? '',
     description: entry.data.description ?? '',
-    tags: entry.data.tags ?? [],
+    // projects 已取消 tags 字段：归档的标签作用域不再暴露项目标签。
+    tags: [],
     text: [entry.data.subtitle, entry.data.description].filter(Boolean).join(' '),
     date: entry.data.date ? entry.data.date.toISOString() : null,
     href: `/projects/#${entry.id}`,
@@ -70,8 +72,8 @@ export const GET: APIRoute = async () => {
   }));
 
   const devlogItems = devlogs.map((entry): ArchiveIndexItem => {
-    // 外链写在正文 markdown 里，检索文本直接用正文，链接 URL 也顺带进入搜索词。
-    const bodyText = (entry.body ?? '').replace(/\s+/g, ' ').trim();
+    // 外链写在正文 markdown 末尾的链接组里；检索文本用去掉链接组的正文，避免链接文字污染。
+    const bodyText = stripTrailingLinks(entry.body ?? '').replace(/\s+/g, ' ').trim();
     return {
       kind: 'devlog',
       id: entry.id,

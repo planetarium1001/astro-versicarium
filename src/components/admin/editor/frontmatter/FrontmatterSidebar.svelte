@@ -569,24 +569,6 @@ const bitsAuthorAvatarFallback = $derived(
       {@render projectText('type', '类型（完全开放，如 开源 / 实验）')}
       {@render projectText('icon', '图标路径（可选，如 images/projects/demo/icon.webp）')}
 
-      <div class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('tags'))}>
-        <label class="admin-field__label" for="admin-projects-tags">标签</label>
-        <FrontmatterTagsInput
-          id="admin-projects-tags"
-          bind:value={value.tagsText}
-          {disabled}
-          invalid={Boolean(getIssue('tags'))}
-          ariaDescribedby={getFieldDescribedBy('tags')}
-          onDirty={onDirty}
-        />
-        <p id={getFieldIssueId('tags')} class="admin-content-editor__error" hidden={!getIssue('tags')}>{getIssue('tags')}</p>
-      </div>
-
-      {@render projectText('repo', '仓库链接（https://）')}
-      {@render projectText('repoLabel', '仓库文字（留空用「仓库」）')}
-      {@render projectText('demo', '演示链接（https://）')}
-      {@render projectText('demoLabel', '演示文字（留空用「演示」）')}
-
       <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('date'))}>
         <span class="admin-field__label">日期</span>
         <input

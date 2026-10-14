@@ -14,7 +14,6 @@ import {
   type AdminBlogFrontmatter,
   type AdminBlogPublicSlugUsage,
   parseAdminBlogEditorInput,
-  parseTagsText,
   validateBlogPublicSlug
 } from './content-blog-frontmatter';
 import type { AdminContentValidationIssue } from './content-entry-contract';
@@ -517,15 +516,10 @@ const buildTitleListContentCreatePlan = async (
     };
   }
 
-  const tags = collection === 'projects' && 'tagsText' in parsed.values
-    ? parseTagsText(parsed.values.tagsText)
-    : [];
-
   const frontmatter: Record<string, unknown> = {
     title,
     date: date.toISOString(),
-    draft: true,
-    ...(collection === 'projects' ? { tags } : {})
+    draft: true
   };
 
   return {

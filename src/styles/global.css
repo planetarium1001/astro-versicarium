@@ -10,6 +10,7 @@
 @import "./components/lists.css";
 @import "./components/entry-tags.css";
 @import "./components/view-stats.css";
+@import "./components/trailing-links.css";
 
 @font-face {
   font-family: "LXGW WenKai Lite";
@@ -131,13 +132,15 @@
   /* 前后台侧栏共用；内容宽度 = --sidebar - 2 * 内边距 */
   --sidebar-padding-block: 52px;
   /**
-   * 间距几何的硬约束，由 npm run check:layout-geometry 断言，改值必须继续成立：G1 nav gap(10)
-   * + dot(4) + sidebarPad == contentPad；G2 pageInline + sidebarPad == pageInline +
-   * scrollbarGutter；G3 floatRight >= scrollbarGutter；G4 floatRight == pageInline +
-   * railActionOffset。改值须同步 src/pages/index.astro 的 critical CSS 快照（check:home-critical-css）。
+   * 间距几何的硬约束，由 check:layout-geometry 断言：G1 nav gap + dot + sidebarPad == contentPad；
+   * G2 壳层起始内边距 == 结束内边距 + scrollbarGutter（内容盒左右视觉等距）；
+   * G3 悬浮列距 ICB 右缘 >= 4px；G4 悬浮列与目录把手同线。
+   * 改值须同步 src/pages/index.astro 的 critical CSS 快照（check:home-critical-css）。
    */
   --scrollbar-gutter-inline: 15px;
-  --page-inline: 26px;
+  /* 内容盒到浏览器边缘的视觉间隙：起始内边距直接取它，结束内边距再扣掉滚动条槽。 */
+  --page-gap-inline: 32px;
+  --page-inline: 17px;
   --sidebar-padding-inline: 15px;
   /* 壳层铺满视口，不设 max-inline-size。 */
   --layout-divider-inline-size: 1px;
@@ -365,6 +368,7 @@ hr {
      * 壳层外边距收回 0、侧栏内边距还原为桌面改造前的宽度，
      * 只有 >=901px 才走新的间距方案。
      */
+    --page-gap-inline: 0px;
     --page-inline: 0px;
     --sidebar-padding-inline: 18px;
     --pad-x: 20px;

@@ -13,12 +13,13 @@
 }
 
 /**
- * 公开站点壳层外边距：两侧各留 --page-inline，使「最左文字到视口左缘」与
- * 「内容盒右缘到视口右缘」视觉等距（右侧 15px 来自 html 的 scrollbar-gutter: stable）。
- * 后台壳层由 body.admin-page .shell 覆写，不受影响。
+ * 公开站点壳层外边距：视觉上两侧各留 --page-gap-inline。
+ * html 的 scrollbar-gutter: stable 把滚动条槽排除在 ICB 之外，结束侧（右）的内边距
+ * 因此要再扣掉槽宽，否则内容盒右缘会比左缘多出一个槽的距离。
+ * 后台壳层由 body.admin-page .shell 覆写，规则相同。
  */
 :where(body:not(.admin-page)) .shell {
-  padding-inline: var(--page-inline);
+  padding-inline: var(--page-gap-inline) var(--page-inline);
 }
 
 .divider {
@@ -590,10 +591,10 @@ body.admin-page .shell {
   grid-template-columns: var(--sidebar) 1px minmax(0, 1fr);
   max-width: 100vw;
 /**
- * 公开页与后台壳层共用同一套外边距 token，两侧各留 --page-inline；
- * 后台此前漏了同步，会与预览界面不统一。
+ * 公开页与后台壳层共用同一套外边距 token：起始留视觉间隙，结束扣掉滚动条槽，
+ * 两侧的视觉间隙因此相等；后台此前漏了同步，会与预览界面不统一。
  */
-  padding-inline: var(--page-inline);
+  padding-inline: var(--page-gap-inline) var(--page-inline);
 }
 
 body.admin-page .shell[data-sidebar-divider='none'] {
@@ -1407,11 +1408,11 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
   --rail-action-size: 34px;
   /**
    * 右缘距 ICB 右缘的统一偏移（浮动列按钮与目录把手共用，保证同一条竖线）。
-   * 偏移只能是这一份：position: fixed 相对 ICB，而正文右缘已含壳层 --page-inline，
-   * 多算一次会把 34px 按钮推进正文；14px 落在滚动条槽之外，与正文之间留 7px 净空。
+   * 偏移只能是这一份：position: fixed 相对 ICB，而正文右缘已含壳层内边距，
+   * 多算一次会把 34px 按钮推进正文；6px 让按钮贴着滚动条槽，与正文之间留 6px 净空。
    * G3/G4 与相交判定见 check-layout-geometry.mjs。
    */
-  --rail-action-offset: 14px;
+  --rail-action-offset: 6px;
 }
 
 /* 右下角常驻浮动按钮列（回到顶部 / 回到上次阅读位置 / 退出阅读）；

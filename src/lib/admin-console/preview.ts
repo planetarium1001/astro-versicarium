@@ -23,6 +23,11 @@ import {
 import { replaceAboutContactLinksPlaceholderHtml } from '../about-contact-links';
 import { getThemeSettings } from '../theme-settings';
 import {
+  parseTrailingLinks,
+  renderTrailingLinksHtml,
+  stripTrailingLinks
+} from '../trailing-links';
+import {
   resolveAdminContentEntrySourcePath
 } from './content-entry-source';
 import type { AdminContentCollectionKey } from './content-collections';
@@ -217,6 +222,10 @@ const createPreviewProcessor = (collection: AdminContentCollectionKey, sourceFil
 
 const roundElapsedMs = (value: number): number => Math.round(value * 10) / 10;
 
+/** 末尾链接组只属于 projects / devlog，blog 与 bits 的正文原样渲染。 */
+const usesTrailingLinks = (collection: AdminContentCollectionKey): boolean =>
+  collection === 'projects' || collection === 'devlog';
+
 export const renderAdminMarkdownPreview = async ({
   collection,
   entryId,
@@ -224,14 +233,18 @@ export const renderAdminMarkdownPreview = async ({
 }: AdminMarkdownPreviewInput): Promise<AdminMarkdownPreviewResult> => {
   const startedAt = performance.now();
   const sourceFilePath = entryId ? resolveAdminContentEntrySourcePath(collection, entryId) : null;
-  const previewProcessor = createPreviewProcessor(collection, sourceFilePath, source);
-  const file = await previewProcessor.process(source);
-  const html = collection === 'about'
+  // 与站点一致：先剥离末尾链接组再渲染正文，最后补上与站点相同的链接行标记。
+  const links = usesTrailingLinks(collection) ? parseTrailingLinks(source) : [];
+  const previewSource = links.length > 0 ? stripTrailingLinks(source) : source;
+  const previewProcessor = createPreviewProcessor(collection, sourceFilePath, previewSource);
+  const file = await previewProcessor.process(previewSource);
+  const bodyHtml = collection === 'about'
     ? replaceAboutContactLinksPlaceholderHtml(
         String(file),
         getThemeSettings().settings.site.socialLinks.resolvedSocialItems
       )
     : String(file);
+  const html = `${bodyHtml}${renderTrailingLinksHtml(links)}`;
 
   return {
     collection,

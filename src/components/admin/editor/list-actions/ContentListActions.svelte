@@ -129,12 +129,7 @@ const createEmptyProjectsFrontmatter = (): AdminProjectsEditorValues => ({
   subtitle: '',
   description: '',
   type: '',
-  tagsText: '',
   icon: '',
-  repo: '',
-  repoLabel: '',
-  demo: '',
-  demoLabel: '',
   date: '',
   draft: false
 });

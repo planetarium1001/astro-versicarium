@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 /**
- * check-layout-geometry —— 校验间距方案的几何不变量；取值分散在 dist CSS、页面内联 <style> 与
- * critical CSS 快照里，只读一处会得出错误结论。O = --page-inline，G = --scrollbar-gutter-inline。
- * G1 nav gap + dot + sidebarPad == contentPad；G2 O + sidebarPad == O + G；G3 floatRight >= 8px；
- * G4 floatRight == railActionOffset 且 rail padding-right == railActionOffset；G5 两行页头的 display:grid 未被更高特异度的 .page-heading 压回 flex。用法：`SITE_URL=... npm run build && node ./scripts/check-layout-geometry.mjs`
+ * 校验间距的几何不变量。取值来自 dist 的 CSS、页面内联 <style> 与 <html> 上的内联自定义属性，
+ * 只读一处会得出错误结论。O = --page-inline（结束内边距），G = --scrollbar-gutter-inline，
+ * P = --page-gap-inline（后台「页面外缘间隙」，同时是起始内边距）；不变量：G1 nav gap + dot +
+ * sidebarPad == contentPad；G2 起始内边距 == 结束内边距 + G；G3 悬浮列距 ICB 右缘 >= 4px；
+ * G4 悬浮列与目录把手同线、表头补偿 -O；G5 两行页头保持 display:grid；O == P - G。
+ * 用法：SITE_URL=... npm run build && node ./scripts/check-layout-geometry.mjs
  */
 
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import process from 'node:process';
 import {
   collectDistStyleSources,
@@ -16,13 +21,38 @@ import {
 const ROOT = process.cwd();
 const GUTTER = 15; // html { scrollbar-gutter: stable } 在桌面浏览器上的槽宽
 const TOLERANCE = 0.5;
-const MIN_RAIL_INSET = 8;
+const MIN_RAIL_INSET = 4; // 悬浮列右缘距 ICB 右缘的下限，再小就贴住滚动条槽
 const MIN_CLEARANCE = 4;
 
 const problems = [];
 const lines = [];
 
-// 求值：解析 var() 链、把 env(...) 视为 0、把 calc() 内的 px 项求和。返回 px 数字或 null。
+/**
+ * 读取构建页面 `<html>` 上的内联自定义属性（BaseLayout 写入的生效值）。
+ * 这里必须用内联属性：:root 与首页 critical CSS 快照里的 --page-inline 都只是默认值，
+ * 后台改过「页面外缘间隙」后，实际生效的是内联这一份。
+ */
+const readHtmlInlineVariables = async (root) => {
+  const pageFile = path.join(root, 'dist', 'index.html');
+  if (!existsSync(pageFile)) return null;
+
+  const html = await readFile(pageFile, 'utf8');
+  const style = /<html[^>]*\sstyle="([^"]*)"/i.exec(html)?.[1];
+  if (!style) return null;
+
+  const variables = new Map();
+  for (const declaration of style.split(';')) {
+    const separator = declaration.indexOf(':');
+    if (separator <= 0) continue;
+    const property = declaration.slice(0, separator).trim();
+    const value = declaration.slice(separator + 1).trim();
+    if (property.startsWith('--') && value) variables.set(property, value);
+  }
+  return variables;
+};
+
+// 求值：解析 var() 链、把 env(...) 视为 0、把 calc() 内的 px 项求和或按数字因子缩放。
+// 返回 px 数字或 null。
 const evaluatePx = (value, variables, depth = 0) => {
   if (!value || depth > 10) return null;
   let text = value.replace(/\s*!important\s*$/, '').trim();
@@ -36,6 +66,15 @@ const evaluatePx = (value, variables, depth = 0) => {
 
   const calc = /^calc\(([\s\S]*)\)$/.exec(text);
   if (calc) {
+    // 乘式（如 `var(--page-inline) * -1`，var() 已在上方展开）先整体求值：
+    // 交给下面的按 +- 切分会把负因子当成减法项而解析失败。
+    const product = /^([\s\S]+?)\s*\*\s*(-?\d+(?:\.\d+)?)$/.exec(calc[1].trim());
+    if (product) {
+      const base = evaluatePx(product[1], variables, depth + 1);
+      if (base === null) return null;
+      return base * Number(product[2]);
+    }
+
     let total = 0;
     let sawTerm = false;
     for (const term of calc[1].split(/(?=[+-])/)) {
@@ -82,8 +121,24 @@ const main = async () => {
     if (property.startsWith('--')) variables.set(property, value);
   }
 
+  // 内联属性优先级高于 :root 与首页 critical CSS 快照，用量到的生效值覆盖取值表。
+  const inlineVariables = await readHtmlInlineVariables(ROOT);
+  if (!inlineVariables) {
+    console.error(
+      '[check-layout-geometry] 未在 dist/index.html 的 <html> 上找到内联自定义属性，'
+      + '请先 `SITE_URL=... npm run build`。'
+    );
+    process.exit(1);
+  }
+  for (const name of ['--page-inline', '--page-gap-inline']) {
+    const value = inlineVariables.get(name);
+    if (value) variables.set(name, value);
+    else problems.push(`构建页面的 <html> 内联属性缺少 ${name}`);
+  }
+
   const readPx = (name) => evaluatePx(variables.get(name) ?? '', variables);
   const O = readPx('--page-inline');
+  const pageGap = readPx('--page-gap-inline');
   const gutter = readPx('--scrollbar-gutter-inline') ?? GUTTER;
   const sidebarPad = readPx('--sidebar-padding-inline');
   const contentPad = readPx('--public-content-padding-inline');
@@ -93,23 +148,32 @@ const main = async () => {
   const navGap = evaluatePx(bySelector.get('.nav a')?.get('gap') ?? '', variables);
   const dot = evaluatePx(bySelector.get('.nav .dot')?.get('width') ?? '', variables);
 
-  // 壳层外边距（公开站点；admin 有自己的壳层规则）
-  const shellPad = evaluatePx(
-    bySelector.get(':where(body:not(.admin-page)) .shell')?.get('padding-inline') ?? '',
+  // 壳层外边距（公开站点；admin 有自己的壳层规则）：起始 = 视觉间隙，结束 = 间隙 - 滚动条槽
+  const shellPadParts = (
+    bySelector.get(':where(body:not(.admin-page)) .shell')?.get('padding-inline') ?? ''
+  )
+    .split(/\s+/)
+    .filter(Boolean);
+  const [shellPadStart, shellPadEnd] = shellPadParts.map((part) => evaluatePx(part, variables));
+  const floatRight = evaluatePx(bySelector.get('.float-stack')?.get('right') ?? '', variables);
+  /**
+   * 把手位置由目录表头单独补偿：负的右外边距把表头推到 ICB 右缘，
+   * 右内边距再把把手压回 --rail-action-offset 的竖线（与右下角浮动列同线）。
+   */
+  const railHeadPadRight = evaluatePx(
+    bySelector.get('.article-toc__rail-head')?.get('padding-right') ?? '',
     variables
   );
-  const floatRight = evaluatePx(bySelector.get('.float-stack')?.get('right') ?? '', variables);
-  const railPadRight = (() => {
-    const padding = bySelector.get('.article-toc--rail')?.get('padding') ?? '';
-    const parts = padding.split(/\s+/);
-    // padding: block inline-end block-end inline-start
-    return parts.length === 4 ? evaluatePx(parts[1], variables) : null;
-  })();
+  const railHeadMarginRight = evaluatePx(
+    bySelector.get('.article-toc__rail-head')?.get('margin-right') ?? '',
+    variables
+  );
 
   lines.push(`[check-layout-geometry] 样式源 ${sources.length} 个`);
   lines.push(
-    `[check-layout-geometry] O(--page-inline)=${O} gutter=${gutter} sidebarPad=${sidebarPad}`
-    + ` contentPad=${contentPad} navGap=${navGap} dot=${dot} railOffset=${railOffset} railSize=${railSize}`
+    `[check-layout-geometry] O(--page-inline)=${O} P(--page-gap-inline)=${pageGap} gutter=${gutter}`
+    + ` sidebarPad=${sidebarPad} contentPad=${contentPad} navGap=${navGap} dot=${dot}`
+    + ` railOffset=${railOffset} railSize=${railSize}`
   );
 
   const requireNumber = (label, value) => {
@@ -122,15 +186,18 @@ const main = async () => {
 
   const ready = [
     requireNumber('--page-inline', O),
+    requireNumber('--page-gap-inline', pageGap),
     requireNumber('--scrollbar-gutter-inline', gutter),
     requireNumber('--sidebar-padding-inline', sidebarPad),
     requireNumber('--public-content-padding-inline', contentPad),
     requireNumber('--rail-action-offset', railOffset),
     requireNumber('.nav a gap', navGap),
     requireNumber('.nav .dot width', dot),
-    requireNumber('.shell padding-inline', shellPad),
+    requireNumber('.shell padding-inline（起始）', shellPadStart),
+    requireNumber('.shell padding-inline（结束）', shellPadEnd),
     requireNumber('.float-stack right', floatRight),
-    requireNumber('.article-toc--rail padding（右内边距）', railPadRight)
+    requireNumber('.article-toc__rail-head margin-right（负补偿）', railHeadMarginRight),
+    requireNumber('.article-toc__rail-head padding-right（把手内边距）', railHeadPadRight)
   ];
   if (ready.includes(false)) {
     console.error(lines.join('\n'));
@@ -152,13 +219,28 @@ const main = async () => {
     lines.push(`  ✓ G1 竖线两侧呼吸一致 = ${contentPad}px`);
   }
 
-  // G2：视口左右对称（最左文字到左缘 == 内容盒右缘到右缘）
-  const leftInset = O + sidebarPad;
-  const rightInset = O + gutter;
+  // G2：内容盒两侧的视觉间隙相等。起始内边距直接落在 ICB 左缘，结束内边距还要加上
+  // 被 scrollbar-gutter 排除在 ICB 之外的槽宽，两者必须相等。
+  const leftInset = shellPadStart;
+  const rightInset = shellPadEnd + gutter;
   if (!near(leftInset, rightInset)) {
-    problems.push(`G2 不成立：左 ${leftInset} != 右 ${rightInset}（差 ${(leftInset - rightInset).toFixed(1)}px）`);
+    problems.push(
+      `G2 不成立：内容盒左侧视觉间隙 ${leftInset} != 右侧 ${rightInset}`
+      + `（差 ${(leftInset - rightInset).toFixed(1)}px）`
+    );
   } else {
-    lines.push(`  ✓ G2 视口左右视觉对称 = ${leftInset}px`);
+    lines.push(`  ✓ G2 内容盒两侧视觉间隙相等 = ${leftInset}px`);
+  }
+
+  // 后台设定的是「内容盒到浏览器边缘」的视觉间隙 P，程序内换算成 O = P - 槽宽。
+  // 两份取值分别来自 <html> 内联属性与 CSS，任何一个被单独改动都会在这里失败。
+  if (!near(O, pageGap - gutter)) {
+    problems.push(
+      `页面外缘间隙换算不成立：--page-inline(${O}) != --page-gap-inline(${pageGap})`
+      + ` - --scrollbar-gutter-inline(${gutter})`
+    );
+  } else {
+    lines.push(`  ✓ 页面外缘间隙 = ${pageGap}px，换算 --page-inline = ${O}px（槽宽 ${gutter}px）`);
   }
 
   // G3：悬浮列右缘距 ICB 右缘必须为正且不太小，否则会被视口边缘与滚动条压住。
@@ -169,25 +251,38 @@ const main = async () => {
     lines.push(`  ✓ G3 悬浮列右缘距 ICB 右缘 ${floatRight}px（>= ${MIN_RAIL_INSET}px，不贴边）`);
   }
 
-  // G4：把手与悬浮列右缘都直接以「距 ICB 右缘」计量，目录列用 margin-right: -page-inline 抵消壳层内边距。
+  /**
+   * G4：把手与悬浮列右缘都直接以「距 ICB 右缘」计量。目录列右边界落在壳层内容盒右缘，
+   * 表头用 margin-right: -page-inline 补偿到 ICB 右缘，再用 padding-right: --rail-action-offset
+   * 把把手压回与悬浮列同一条竖线；补偿少一份或多一份都会在这里失败。
+   */
   if (!near(floatRight, railOffset)) {
     problems.push(`G4 不成立：悬浮列 right(${floatRight}) != railOffset(${railOffset})`);
   }
-  if (!near(railPadRight, railOffset)) {
-    problems.push(`G4 不成立：目录列右内边距(${railPadRight}) != railOffset(${railOffset})`);
+  if (!near(railHeadPadRight, railOffset)) {
+    problems.push(`G4 不成立：目录表头右内边距(${railHeadPadRight}) != railOffset(${railOffset})`);
   }
-  if (near(floatRight, railOffset) && near(railPadRight, railOffset)) {
+  if (!near(railHeadMarginRight, -O)) {
+    problems.push(`G4 不成立：目录表头右外边距(${railHeadMarginRight}) != -pageInline(${-O})`);
+  }
+  if (near(floatRight, railOffset) && near(railHeadPadRight, railOffset) && near(railHeadMarginRight, -O)) {
     lines.push(`  ✓ G4 目录把手与悬浮列右缘对齐（距内容盒右缘 ${railOffset}px）`);
   }
 
-  // 壳层外边距必须真的落在 --page-inline 上（两侧都加宽）
-  if (!near(shellPad, O)) {
-    problems.push(`壳层外边距不成立：.shell padding-inline(${shellPad}) != --page-inline(${O})`);
+  // 壳层外边距：起始取视觉间隙，结束取扣除滚动条槽后的值
+  if (!near(shellPadStart, pageGap)) {
+    problems.push(
+      `壳层外边距不成立：.shell padding-inline 起始(${shellPadStart}) != --page-gap-inline(${pageGap})`
+    );
+  } else if (!near(shellPadEnd, O)) {
+    problems.push(
+      `壳层外边距不成立：.shell padding-inline 结束(${shellPadEnd}) != --page-inline(${O})`
+    );
   } else {
-    lines.push(`  ✓ 壳层左右外边距 = --page-inline = ${O}px`);
+    lines.push(`  ✓ 壳层外边距：起始 ${shellPadStart}px、结束 ${shellPadEnd}px（视觉各 ${leftInset}px）`);
   }
-  if (O <= 0) {
-    problems.push('壳层外边距不成立：--page-inline 必须为正（两侧都要加宽）');
+  if (pageGap <= 0) {
+    problems.push('壳层外边距不成立：--page-gap-inline 必须为正（两侧都要加宽）');
   }
 
   // 悬浮列不能与正文文字相交。两者都换算到「距 ICB 右缘」参照系：
@@ -249,7 +344,7 @@ const main = async () => {
   }
 
   console.log(lines.join('\n'));
-  console.log('[check-layout-geometry] OK（G1–G5 + 壳层外边距全部成立）');
+  console.log('[check-layout-geometry] OK（G1–G5 + 壳层外边距 + 页面外缘间隙换算全部成立）');
 };
 
 await main();

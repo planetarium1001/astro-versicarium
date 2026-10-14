@@ -150,12 +150,7 @@ const isAdminProjectsEditorValues = (value: unknown): value is AdminProjectsEdit
   && typeof value.subtitle === 'string'
   && typeof value.description === 'string'
   && typeof value.type === 'string'
-  && typeof value.tagsText === 'string'
   && typeof value.icon === 'string'
-  && typeof value.repo === 'string'
-  && typeof value.repoLabel === 'string'
-  && typeof value.demo === 'string'
-  && typeof value.demoLabel === 'string'
   && typeof value.date === 'string'
   && typeof value.draft === 'boolean';
 

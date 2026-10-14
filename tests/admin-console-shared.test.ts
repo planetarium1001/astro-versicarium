@@ -382,6 +382,53 @@ describe('admin-console/shared：窄屏站点标题宽度百分比', () => {
 });
 
 /**
+ * 页面外缘间隙是内容盒到浏览器边缘的视觉距离（px，默认与下限都是 32，上限 160），
+ * 在单位层钉住默认值 / 夹取 / 校验。它最终决定 `<html>` 上的内边距。
+ */
+describe('admin-console/shared：页面外缘间隙', () => {
+  const baseSettings = () => structuredClone(getEditableThemeSettingsPayload().settings);
+
+  it('默认值 32，缺失时补齐', () => {
+    const payload = getEditableThemeSettingsPayload().settings;
+    expect(payload.site.pageGapPx).toBe(32);
+
+    const raw = baseSettings() as Record<string, any>;
+    delete raw.site.pageGapPx;
+    expect(canonicalizeAdminThemeSettings(raw).site.pageGapPx).toBe(32);
+  });
+
+  it('字符串数字会被规范化，越界会被夹取到 32–160', () => {
+    const raw = baseSettings() as Record<string, any>;
+    raw.site.pageGapPx = '80';
+    expect(canonicalizeAdminThemeSettings(raw).site.pageGapPx).toBe(80);
+
+    raw.site.pageGapPx = 31;
+    expect(canonicalizeAdminThemeSettings(raw).site.pageGapPx).toBe(32);
+
+    raw.site.pageGapPx = 400;
+    expect(canonicalizeAdminThemeSettings(raw).site.pageGapPx).toBe(160);
+
+    raw.site.pageGapPx = 'abc';
+    expect(canonicalizeAdminThemeSettings(raw).site.pageGapPx).toBe(32);
+  });
+
+  it('校验会拦住非整数与越界值', () => {
+    const raw = baseSettings() as Record<string, any>;
+    const ok = canonicalizeAdminThemeSettings(raw);
+    expect(validateAdminThemeSettings(ok).map((issue) => issue.path)).not.toContain('site.pageGapPx');
+
+    const tooSmall = { ...ok, site: { ...ok.site, pageGapPx: 20 } };
+    expect(validateAdminThemeSettings(tooSmall).map((issue) => issue.path)).toContain('site.pageGapPx');
+
+    const tooLarge = { ...ok, site: { ...ok.site, pageGapPx: 200 } };
+    expect(validateAdminThemeSettings(tooLarge).map((issue) => issue.path)).toContain('site.pageGapPx');
+
+    const notInteger = { ...ok, site: { ...ok.site, pageGapPx: 32.5 } };
+    expect(validateAdminThemeSettings(notInteger).map((issue) => issue.path)).toContain('site.pageGapPx');
+  });
+});
+
+/**
  * RSS 订阅设置：一个总开关（`enabled`）加 `/blog/` `/bits/` `/archive/` 三个互不干扰的页面开关。
  */
 describe('admin-console/shared：列表页 RSS 开关', () => {

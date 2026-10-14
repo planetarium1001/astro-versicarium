@@ -352,4 +352,33 @@ describe('admin preview api', () => {
     );
   });
 
+  // 预览必须与站点用同一套末尾链接标记：正文先剥离链接组，再补上 .trailing-links 链接行。
+  it('renders projects/devlog trailing links with the shared link-row markup', async () => {
+    const { renderAdminMarkdownPreview } = await import('../src/lib/admin-console/preview');
+    const source = ['正文。', '', '[仓库](https://example.com/repo)', '[演示](https://example.com/demo)'].join('\n');
+
+    for (const collection of ['projects', 'devlog'] as const) {
+      const result = await renderAdminMarkdownPreview({ collection, source });
+
+      expect(result.html).toContain(
+        '<p class="trailing-links"><a href="https://example.com/repo">仓库</a><a href="https://example.com/demo">演示</a></p>'
+      );
+      // 正文里不再重复渲染链接
+      expect(result.html.match(/<a /g)).toHaveLength(2);
+      expect(result.html).not.toContain('·');
+    }
+  });
+
+  it('keeps blog bodies free of trailing-link handling', async () => {
+    const { renderAdminMarkdownPreview } = await import('../src/lib/admin-console/preview');
+
+    const result = await renderAdminMarkdownPreview({
+      collection: 'blog',
+      source: ['正文。', '', '[仓库](https://example.com/repo)'].join('\n')
+    });
+
+    expect(result.html).not.toContain('trailing-links');
+    expect(result.html).toContain('<a href="https://example.com/repo">仓库</a>');
+  });
+
 });

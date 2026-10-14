@@ -482,8 +482,6 @@ const buildBlogWritePlan = async (
   };
 };
 
-const HTTPS_URL_RE = /^https:\/\/[^\s]+$/;
-
 const getCurrentOptionalText = (
   frontmatter: Record<string, unknown>,
   key: string
@@ -541,13 +539,6 @@ const buildProjectsWritePlan = (
   const title = values.title.trim();
   if (!title) issues.push(createIssue('title', 'frontmatter.title 不能为空'));
 
-  for (const field of ['repo', 'demo'] as const) {
-    const value = values[field].trim();
-    if (value && !HTTPS_URL_RE.test(value)) {
-      issues.push(createIssue(field, `frontmatter.${field} 必须是 https:// 开头的绝对 URL`));
-    }
-  }
-
   const date = parseProjectsOptionalDate(values.date, issues);
   if (issues.length > 0) {
     return { issues, changedFields: [], patches: [] };
@@ -558,12 +549,7 @@ const buildProjectsWritePlan = (
     { field: 'subtitle', path: ['subtitle'], currentValue: getCurrentOptionalText(frontmatter, 'subtitle'), nextValue: values.subtitle.trim() || undefined },
     { field: 'description', path: ['description'], currentValue: getCurrentOptionalText(frontmatter, 'description'), nextValue: values.description.trim() || undefined },
     { field: 'type', path: ['type'], currentValue: getCurrentOptionalText(frontmatter, 'type'), nextValue: values.type.trim() || undefined },
-    { field: 'tags', path: ['tags'], currentValue: getCurrentStringArrayValue(frontmatter, 'tags', []), nextValue: parseTagsText(values.tagsText) },
     { field: 'icon', path: ['icon'], currentValue: getCurrentOptionalText(frontmatter, 'icon'), nextValue: values.icon.trim() || undefined },
-    { field: 'repo', path: ['repo'], currentValue: getCurrentOptionalText(frontmatter, 'repo'), nextValue: values.repo.trim() || undefined },
-    { field: 'repoLabel', path: ['repoLabel'], currentValue: getCurrentOptionalText(frontmatter, 'repoLabel'), nextValue: values.repoLabel.trim() || undefined },
-    { field: 'demo', path: ['demo'], currentValue: getCurrentOptionalText(frontmatter, 'demo'), nextValue: values.demo.trim() || undefined },
-    { field: 'demoLabel', path: ['demoLabel'], currentValue: getCurrentOptionalText(frontmatter, 'demoLabel'), nextValue: values.demoLabel.trim() || undefined },
     { field: 'date', path: ['date'], currentValue: getCurrentTextValue(frontmatter, 'date', ''), nextValue: date?.toISOString() },
     { field: 'draft', path: ['draft'], currentValue: getCurrentBooleanValue(frontmatter, 'draft', false), nextValue: values.draft }
   ];
@@ -766,12 +752,7 @@ export const parseAdminProjectsEditorInput = (
       subtitle: getText('subtitle'),
       description: getText('description'),
       type: getText('type'),
-      tagsText: getText('tagsText'),
       icon: getText('icon'),
-      repo: getText('repo'),
-      repoLabel: getText('repoLabel'),
-      demo: getText('demo'),
-      demoLabel: getText('demoLabel'),
       date: getText('date'),
       draft: draft as boolean
     }
