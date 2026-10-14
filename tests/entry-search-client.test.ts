@@ -502,9 +502,16 @@ describe('entry-search 客户端行为', () => {
       .map((item) => item.slug)
       .sort();
     expect(expected.length).toBeGreaterThan(0);
-    expect(visibleSlugs().sort()).toEqual(expected);
-    // 标签按钮的选中态也要跟上
-    expect(tagButton(key)!.getAttribute('aria-pressed')).toBe('true');
+
+    // 首屏筛选要等 index.json 返回后才生效，断言必须等状态落定：
+    // 同步断言依赖微任务时序，在较慢的环境下会先于筛选完成而误报。
+    await vi.waitFor(
+      () => {
+        expect(visibleSlugs().sort()).toEqual(expected);
+        expect(tagButton(key)!.getAttribute('aria-pressed')).toBe('true');
+      },
+      { timeout: 3000 }
+    );
   });
 
   // dialog 不再有筛选搜索框；标题与标签胶囊之间是逻辑预览长胶囊，`+` / `/` 开关在其右侧。
