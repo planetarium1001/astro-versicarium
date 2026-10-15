@@ -1,13 +1,13 @@
 {
-  "title": "Astro Whono",
-  "description": "一个极简双栏 Astro 主题，用于个人写作与轻量内容发布。",
+  "title": "Astro Whono Tweaked",
+  "description": "基于 cxro/astro-whono 的极简双栏 Astro 主题模板，面向长文阅读做了增量改造。",
   "defaultLocale": "zh-CN",
   "titleMaxPercent": 35,
   "pageGapPx": 32,
   "footer": {
     "startYear": 2026,
     "showCurrentYear": true,
-    "copyright": "Astro Whono"
+    "copyright": "Astro Whono Tweaked"
   },
   "filings": {
     "icp": {
@@ -30,8 +30,8 @@
     "appleTouchIcon": null
   },
   "socialLinks": {
-    "github": "https://github.com/cxro/astro-whono",
-    "x": "https://twitter.com/yourname",
+    "github": "https://github.com/planetarium1001/astro-whono-tweaked",
+    "x": null,
     "email": "hello@example.com",
     "presetOrder": {
       "github": 1,
@@ -39,5 +39,6 @@
       "email": 3
     },
     "custom": []
-  }
+  },
+  "titleNarrow": null
 }

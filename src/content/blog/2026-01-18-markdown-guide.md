@@ -17,7 +17,7 @@ tags: [示例, Markdown]
 
 列表集合的正文末尾可以写一组链接，渲染为右对齐的链接行：
 
-[仓库](https://github.com/cxro/astro-whono) · [文档](https://docs.astro.build/)
+[仓库](https://github.com/planetarium1001/astro-whono-tweaked) · [文档](https://docs.astro.build/)
 
 ## 表格
 

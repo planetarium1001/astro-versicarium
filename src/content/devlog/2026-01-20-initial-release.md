@@ -11,4 +11,4 @@ description: 记录示例项目的第一条更新。
 - 建立基础结构
 - 补充校验脚本
 
-[仓库](https://github.com/cxro/astro-whono)
+[仓库](https://github.com/planetarium1001/astro-whono-tweaked)

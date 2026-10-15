@@ -1,5 +1,5 @@
 {
-  "brandTitle": "Astro Whono",
+  "brandTitle": "Astro Whono Tweaked",
   "quote": "一个极简双栏 Astro 主题。",
   "nav": [
     { "id": "blog", "label": "博客", "ornament": "·", "order": 1, "visible": true },

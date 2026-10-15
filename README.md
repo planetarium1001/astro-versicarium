@@ -2,6 +2,7 @@
 
 基于 [cxro/astro-whono](https://github.com/cxro/astro-whono) 的 Astro 博客主题模板，面向长文阅读做了增量改造：文章目录、右下角浮动操作列、阅读位置记忆、主题切换涟漪、浏览数据槽位与备案信息。主题结构、内容集合、后台与 Markdown 扩展沿用上游。
 
+- 本仓库：<https://github.com/planetarium1001/astro-whono-tweaked>
 - 示例站点：<https://planetarium1001.github.io/astro-whono-tweaked/>
 - 上游项目：<https://github.com/cxro/astro-whono>
 
@@ -121,13 +122,15 @@ npm run preview   # 预览构建结果
 
 | 文件 | 内容 |
 | --- | --- |
-| `site.json` | 站点标题与描述、站点语言、页脚版权、备案信息、favicon、社交链接、后台概览可见性、窄屏标题宽度上限、页面外缘间隙 |
+| `site.json` | 站点标题与窄屏标题、站点描述、站点语言、页脚版权、备案信息、favicon、社交链接、后台概览可见性、窄屏标题宽度上限、页面外缘间隙 |
 | `shell.json` | 侧栏站点名、引用文案、导航项（标签、装饰符、顺序、可见性） |
 | `home.json` | 首页引导语、更多入口、Hero 图 |
 | `page.json` | 各列表页标题与副标题、动态页默认作者、列表页 RSS 开关 |
 | `ui.json` | 代码块行号、阅读模式入口、浮动操作列、浏览数据、侧栏动作、文章元信息、侧栏分隔线、字体角色 |
 
 推荐用后台主题页（`/admin/theme/`）修改；直接编辑 JSON 同样有效，字段缺失时回落到默认值。开发环境下修改 `ui.json` 的字体需要重启。
+
+窄屏（≤ 900px）顶栏可以单独设置标题：`site.titleNarrow` 留空时与站点标题一致；`site.titleMaxPercent` 限制它在窄屏下的可渲染宽度。
 
 浏览数据（PV / UV）只渲染位置与样式，数字由站点自行接入；备案号默认不显示。两者的字段说明见 [docs/analytics.md](docs/analytics.md)。
 
@@ -226,6 +229,10 @@ npm run ci        # 等价于 verify，CI 使用
 | [docs/analytics.md](docs/analytics.md) | 浏览数据槽位契约、统计接入、备案字段 |
 | [docs/upstream.md](docs/upstream.md) | 与上游的关系、增量改造清单、同步上游的步骤 |
 | [docs/llm-view-stats-prompt.md](docs/llm-view-stats-prompt.md) | 浏览数据取数脚本的提示词模板 |
+
+## 致谢
+
+本仓库是对 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）的增量改造。上游的排版风格源自 [elizen/elizen-blog](https://github.com/elizen/elizen-blog)，其设计又继承自 Hugo 主题 [yihui/hugo-ivy](https://github.com/yihui/hugo-ivy)。
 
 ## 许可
 

@@ -8,4 +8,4 @@ date: 2026-01-08
 
 项目集合用于展示作品或长期维护的事项。卡片整块可点，弹窗内展示完整正文与链接。
 
-[仓库](https://github.com/cxro/astro-whono)
+[仓库](https://github.com/planetarium1001/astro-whono-tweaked)

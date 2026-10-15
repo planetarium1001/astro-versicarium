@@ -14,4 +14,4 @@ tags: [示例]
 - 卡片弹窗复用列表卡片的数据结构
 - 页脚备案信息默认不显示
 
-[仓库](https://github.com/cxro/astro-whono)
+[仓库](https://github.com/planetarium1001/astro-whono-tweaked)
