@@ -14,6 +14,8 @@
 
 `main` 不参与部署。`pages.yml` 固定在 `demo` 分支运行，工作流文件本身留在默认分支，因此仍可从 Actions 页面手动触发。
 
+改动方向是单向的：主题改动先在 `main` 完成，再同步到 `demo`。不要创建 `demo` 合并回 `main` 的请求——两个分支在内容、设置与测试快照上刻意不同，合并会把模板重新变成示例站，并在 `tests/fixtures/` 与 `theme.json` 上产生冲突。
+
 ## 使用方式
 
 ### 从模板创建
@@ -22,7 +24,7 @@
 
 之后通过 `npm run theme:update` 获取主题更新，无需共享 git 历史。
 
-### Fork 并追踪上游
+### Fork 本仓库
 
 Fork 本仓库后，`main` 与主题保持同源历史，可直接用 git 合并：
 
@@ -73,14 +75,14 @@ npm run preview   # 预览构建结果
 
 | 变量 | 作用 |
 | --- | --- |
-| `SITE_URL` | 站点 origin，用于 RSS、canonical、og 与 sitemap。为空时 RSS 回落到 `https://example.invalid`，canonical/og 省略，sitemap 不生成 |
+| `SITE_URL` | 站点 origin，用于 RSS、canonical、og 与 sitemap。为空时 RSS 回落到 `https://example.invalid`，canonical 与 og:url、og:image 省略，sitemap 不生成 |
 | `ASTRO_WHONO_BASE_PATH` | 部署子路径，默认 `/`。项目页部署在仓库子路径时由 Pages 工作流推导 |
 
-构建产物校验会断言 sitemap 存在，因此构建与 CI 必须提供 `SITE_URL`。
+产物校验会断言 sitemap 存在，因此 CI 与发布构建必须提供 `SITE_URL`；本地仅预览时可省略，代价是没有 sitemap，canonical 与 og 也会缺失。
 
 ### 站点常量
 
-`site.config.mjs` 定义站点标题、作者、描述与列表页每页条目数（`PAGE_SIZE_BLOG`、`PAGE_SIZE_BITS`、`PAGE_SIZE_ARCHIVE`）。服务端分页已取消，这三个值是前端每页条目数，由列表页写入 `[data-entry-filters][data-page-size]` 供客户端读取。
+`site.config.mjs` 提供站点标题、作者与描述的回退值（实际取值优先来自 `src/data/settings/`），并定义列表页每页条目数（`PAGE_SIZE_BLOG`、`PAGE_SIZE_BITS`、`PAGE_SIZE_ARCHIVE`）。服务端分页已取消，这三个值是前端每页条目数，由列表页写入 `[data-entry-filters][data-page-size]` 供客户端读取。
 
 ### 主题设置
 
