@@ -7,27 +7,27 @@
   },
   "blog": {
     "title": "博客",
-    "subtitle": "散者归之，各归其地"
+    "subtitle": "随笔与长文"
   },
   "projects": {
     "title": "项目",
-    "subtitle": "散者归之，各归其地"
+    "subtitle": "作品与长期维护的事项"
   },
   "archive": {
     "title": "归档",
-    "subtitle": "散者归之，各归其地 · 全站时间线"
+    "subtitle": "全站时间线"
   },
   "bits": {
     "title": "动态",
-    "subtitle": "生活不只是长篇",
+    "subtitle": "短内容与记录",
     "defaultAuthor": {
-      "name": "Whono",
+      "name": "Astro Whono",
       "avatar": "author/avatar.webp"
     }
   },
   "devlog": {
     "title": "更新",
-    "subtitle": "逐条记录项目的每一次改动"
+    "subtitle": "按项目记录的改动"
   },
   "about": {
     "title": "关于",

@@ -1,13 +1,12 @@
 {
-  "introLead": "这是一个开源写作主题与示例内容库：包含 博客/blog、归档/archive、动态/bits、更新/devlog 与 关于/about，使用与配置请见 README。",
-  "introMore": "更多文章请访问",
+  "introLead": "一个极简双栏 Astro 主题，包含博客、项目、动态、更新与关于五个内容集合。",
+  "introMore": "更多内容",
   "introMoreLinks": [
-    "tag",
-    "blogTag"
+    "blog"
   ],
   "showIntroLead": true,
   "showIntroMore": true,
   "heroPresetId": "default",
   "heroImageSrc": null,
-  "heroImageAlt": "Whono theme preview"
+  "heroImageAlt": "Astro Whono"
 }

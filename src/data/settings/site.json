@@ -1,13 +1,13 @@
 {
-  "title": "Astro Themes by Whono",
-  "description": "一个极简双栏 Astro 主题的展示站",
+  "title": "Astro Whono",
+  "description": "一个极简双栏 Astro 主题，用于个人写作与轻量内容发布。",
   "defaultLocale": "zh-CN",
   "titleMaxPercent": 35,
   "pageGapPx": 32,
   "footer": {
-    "startYear": 2025,
+    "startYear": 2026,
     "showCurrentYear": true,
-    "copyright": "Whono · Theme Demo · by cxro"
+    "copyright": "Astro Whono"
   },
   "filings": {
     "icp": {
@@ -21,7 +21,7 @@
     }
   },
   "adminOverview": {
-    "publicVisible": true,
+    "publicVisible": false,
     "hiddenMessage": "作者暂未公开此页面。"
   },
   "favicon": {
@@ -32,7 +32,7 @@
   "socialLinks": {
     "github": "https://github.com/cxro/astro-whono",
     "x": "https://twitter.com/yourname",
-    "email": "Astro@Whono.me",
+    "email": "hello@example.com",
     "presetOrder": {
       "github": 1,
       "x": 2,

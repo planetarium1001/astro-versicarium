@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { readFile } from 'node:fs/promises';
 import { createJsonRequest } from './admin-content-write-fixture';
 
 describe('admin preview api', () => {
@@ -191,24 +190,32 @@ describe('admin preview api', () => {
     expect(result.html).toContain(`<h2 data-admin-outline-key="${second!.key}">Same</h2>`);
   });
 
-  it('renders representative existing content structures', async () => {
+  it('renders representative content structures', async () => {
     const { renderAdminMarkdownPreview } = await import('../src/lib/admin-console/preview');
-    const { splitMarkdownFrontmatter } = await import('../src/lib/admin-console/frontmatter');
 
-    const markdownGuide = splitMarkdownFrontmatter(
-      await readFile('src/content/blog/2026-01-15-markdown-排版指南.md', 'utf8')
-    ).bodyText;
-
-    const markdownGuideResult = await renderAdminMarkdownPreview({
+    const result = await renderAdminMarkdownPreview({
       collection: 'blog',
-      source: markdownGuide
+      source: [
+        ':::note[提示块]',
+        '提示块正文。',
+        ':::',
+        '',
+        '```ts',
+        'const value = 1;',
+        '```',
+        '',
+        '<figure class="figure">',
+        '  <img src="/images/example.webp" alt="示例" />',
+        '  <figcaption class="figure-caption">图注。</figcaption>',
+        '</figure>'
+      ].join('\n')
     });
-    expect(markdownGuideResult.html).toContain('class="callout note"');
-    expect(markdownGuideResult.codeHighlight).toBe('shiki-rehype');
-    expect(markdownGuideResult.html).toContain('class="code-block"');
-    expect(markdownGuideResult.html).toContain('<code class="language-ts">');
-    expect(markdownGuideResult.html).toContain('<figure class="figure">');
-    expect(markdownGuideResult.elapsedMs).toBeGreaterThanOrEqual(0);
+    expect(result.html).toContain('class="callout note"');
+    expect(result.codeHighlight).toBe('shiki-rehype');
+    expect(result.html).toContain('class="code-block"');
+    expect(result.html).toContain('<code class="language-ts">');
+    expect(result.html).toContain('<figure class="figure">');
+    expect(result.elapsedMs).toBeGreaterThanOrEqual(0);
   });
 
   it('returns structured json errors for invalid inputs', async () => {
