@@ -1,8 +1,8 @@
 import { OP_CHAR, type ExpressionToken } from './tag-expression';
 
 /**
- * 页头筛选项控件：已选胶囊条、搜索面板开关、副标题计数。控件条是两行左对齐的一块，放在页面
- * 标题右边：第一行标签图标与已选胶囊，第二行「描述 · 共 N 篇 / 条」加「切换标签 / 清除筛选」。
+ * 页头筛选项控件：已选胶囊条、搜索面板开关、副标题计数。控件条两行左对齐放在标题右边：
+ * 第一行是标签图标与已选胶囊，第二行是「描述 · 共 N 篇 / 条」加「切换标签 / 清除筛选」。
  * 本模块只建节点、切布局、改文案，不绑事件；事件委托由调用方挂在 `[data-entry-tag-open]`
  * / `[data-entry-tag-remove]` / `[data-entry-tag-clear]` 上。
  */
@@ -70,7 +70,10 @@ const createSelectedChip = ({
   return chip;
 };
 
-/** 表达式里的运算符按钮：文案就是 `+` / `/`，点击改它右侧那一段的 op。 */
+/**
+ * 表达式里的运算符按钮：文案就是 `+` / `/`。
+ * 调用方保证 `segmentIndex` 指向该运算符右侧那一段。
+ */
 const createExpressionOpButton = (op: 'and' | 'or', segmentIndex: number): HTMLButtonElement => {
   const button = document.createElement('button');
   button.type = 'button';
@@ -165,8 +168,8 @@ export const createSelectedChipActions = (itemNoun: string): HTMLElement => {
  * 两行布局开关：`.page-heading--tag-bar` 让副标题缩进到第二列（与第一行胶囊左对齐），
  * 同时隐藏副标题里的 `#标签` 入口（改由「切换标签」接管）。
  *
- * `layout.css` 里这条 `display: grid` 曾被 `lists.css` 的 0,3,0 规则压回 flex，
- * `check:layout-geometry` 的 G5 专门盯这个不变量。
+ * 该类的 `display: grid` 会被 `lists.css` 的更高优先级规则压回 flex，
+ * 布局不变量由 `check:layout-geometry` 校验。
  */
 const syncSelectedChipLayout = (
   pageHeading: HTMLElement | null,
@@ -212,7 +215,7 @@ export const mountSelectedChipBar = (
 };
 
 /**
- * 摘掉动作按钮并回到单行页头布局；返回第一行控件条本身（不删除），
+ * 摘掉动作按钮并回到单行页头布局。返回第一行控件条本身（不删除），
  * 调用方可以给它播退场动画后再移除。
  */
 export const unmountSelectedChipBar = (host: SelectedChipHost): HTMLElement | null => {
@@ -226,7 +229,7 @@ export const unmountSelectedChipBar = (host: SelectedChipHost): HTMLElement | nu
 const SUBTITLE_COUNT_RE = /共\s*\d+\s*(?:篇|条)(内容|絮语|动态|文章|更新)?/;
 
 /**
- * 刷新副标题里的「共 N 篇 / 条」，单位与限定词沿用模板写法，其余文案原样保留。
+ * 刷新副标题里的「共 N 篇 / 条」：单位与限定词沿用模板写法，其余文案原样保留。
  * `count` 为 null 时恢复模板原文。
  */
 export const syncSubtitleCount = (
@@ -251,8 +254,8 @@ export const syncSubtitleCount = (
 };
 
 /**
- * 页头搜索面板的开合：同步 `is-open`、`aria-expanded` / `aria-hidden`
- * 与输入框是否能被 Tab 聚焦。
+ * 页头搜索面板的开合：同步 `is-open`、`aria-expanded` / `aria-hidden`，
+ * 以及输入框能否被 Tab 聚焦。
  */
 export const setSearchPanelOpen = (
   searchRoot: HTMLElement | null,

@@ -3,9 +3,8 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * 只能在单位层守住的布局与交互不变量：这些值改一个数字或改一处结构就会悄悄回退，
- * 而类型检查、构建与 DOM 断言都看不出来。jsdom 不做布局，端到端用例断言不了几何，
- * 因此按 article-toc-client.test.ts 的既有做法直接读样式与组件源码做契约断言。
+ * 只能在单位层守住的布局与交互不变量：类型检查、构建与 DOM 断言都覆盖不到。
+ * jsdom 不做布局，端到端用例断言不了几何，因此直接读样式与组件源码做契约断言。
  */
 
 const SRC = process.cwd();
@@ -72,7 +71,7 @@ describe('页头：标题 + 两行块（tag 行 / 描述行）', () => {
     expect(override).toMatch(/align-items:\s*center/);
     expect(override).toMatch(/row-gap:\s*0/);
     expect(override).toMatch(/column-gap:\s*10px/);
-    // G5 守卫按「特异度 + 顺序」判定，这条 0,4,0 必须排在文件里最后
+    // 该 0,4,0 规则按「特异度 + 顺序」生效，必须排在文件里最后
     expect(layout.lastIndexOf('.page-heading.page-heading--tag-bar')).toBeGreaterThan(
       layout.lastIndexOf('.page-heading--tag-slot:not(')
     );
@@ -149,7 +148,7 @@ describe('/devlog/：摘要全局一刀切', () => {
     expect(css).toMatch(
       /\.devlog-list\[data-devlog-excerpts='inline'\] \.devlog-panel__summary\s*\{[^}]*display:\s*none/
     );
-    // 上一轮的「容器查询逐条藏摘要」已经删掉（它会让标题也被压缩）
+    // 不得使用容器查询逐条隐藏摘要：会让标题一起被压缩
     expect(css).not.toContain('@container');
   });
 
@@ -209,7 +208,7 @@ describe('/devlog/：摘要一刀切的过渡', () => {
     expect(script).toMatch(/\[\{ height: `\$\{from\}px` \}, \{ height: `\$\{to\}px` \}\]/);
     // 摘要文本并行淡入
     expect(script).toMatch(/const fadeSummariesIn = /);
-    // 过渡整体比原来更长（原来 180ms）
+    // 过渡整体时长下限
     const fade = Number(/const FADE_MS = (\d+)/.exec(script)?.[1] ?? 0);
     const reflow = Number(/const REFLOW_MS = (\d+)/.exec(script)?.[1] ?? 0);
     expect(fade).toBeGreaterThanOrEqual(260);
@@ -222,7 +221,7 @@ describe('/devlog/：窄屏时间线与两行条目', () => {
     const css = await read(DEVLOG_CSS);
     const narrow = css.slice(css.indexOf('@media (max-width: 900px)'));
 
-    // 行的线与面板的线都不再被关掉（上一轮的「整块盖住」方案已推翻）
+    // 窄屏下行的线与面板的线都保持可见
     expect(narrow).not.toMatch(/\.devlog-row__toggle::before,[\s\S]{0,80}?display:\s*none/);
     expect(narrow).not.toContain('.devlog-list::before');
 
@@ -323,7 +322,7 @@ describe('页面外缘间隙：后台 px 设置', () => {
     );
   });
 
-  it('几何守卫从构建页面的 <html> 内联属性读生效值，并断言 O == P - G', async () => {
+  it('几何守卫从构建页面的 <html> 内联属性读生效值，并断言结束内边距 == 间隙 − 槽宽', async () => {
     const guard = await read('scripts/check-layout-geometry.mjs');
 
     // 生效值在 <html style> 上：:root 与 critical 快照里的 --page-inline 只是默认值
@@ -331,9 +330,9 @@ describe('页面外缘间隙：后台 px 设置', () => {
     expect(guard).toContain("path.join(root, 'dist', 'index.html')");
     expect(guard).toContain("'--page-gap-inline'");
     expect(guard).toMatch(/near\(O,\s*pageGap - gutter\)/);
-    // G4 的把手内边距随结构移到目录表头
+    // 把手内边距随结构移到目录表头
     expect(guard).toContain("bySelector.get('.article-toc__rail-head')");
-    // G2 比的是内容盒两侧的视觉间隙（起始内边距 == 结束内边距 + 槽宽）
+    // 比的是内容盒两侧的视觉间隙（起始内边距 == 结束内边距 + 槽宽）
     expect(guard).toMatch(/const rightInset = shellPadEnd \+ gutter;/);
   });
 
@@ -777,7 +776,7 @@ describe('归档 tag 的作用域与语义', () => {
     expect(indexJson).toMatch(/tags: \[entry\.data\.project\]/);
     expect(indexJson).not.toMatch(/tags: \[entry\.data\.project, entry\.data\.kind\]/);
 
-    // 项目档隐藏 tag 入口；更新档把入口与标题改成「项目」
+    // 项目档隐藏 tag 入口；更新档把入口与标题按作用域改成「项目」
     expect(scopeScript).toMatch(/TAG_TRIGGER\.hidden = isProjects/);
     expect(scopeScript).toMatch(/const noun = scope === 'devlog' \? '项目' : '标签'/);
     expect(scopeScript).toContain("ENTRY_ROOT.dataset.entryTagNoun = noun");
@@ -805,7 +804,7 @@ describe('归档的更新行补「项目名：」', () => {
 });
 
 describe('首页导语链接选项', () => {
-  it('标签选项改名为 #归档标签，且选择框加宽', async () => {
+  it('标签选项使用 #归档标签，且选择框加宽', async () => {
     const [shared, form] = await Promise.all([
       read('src/lib/admin-console/theme-shared.ts'),
       read('src/styles/components/admin/theme/form.css')

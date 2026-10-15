@@ -17,8 +17,8 @@ type ArchiveIndexItem = {
   id: string;
   key: string;
   /**
-   * 与 DOM 的 [data-entry-item][data-slug] 对齐的匹配键（= key）。
-   * entry-search.ts 用它与 DOM 的 data-slug 做集合匹配，缺了它标签筛选会失效。
+   * 与 DOM 的 [data-entry-item][data-slug] 对齐的匹配键（= key）；
+   * entry-search.ts 依赖它与 data-slug 做集合匹配。
    */
   slug: string;
   title: string;
@@ -63,7 +63,7 @@ export const GET: APIRoute = async () => {
     slug: `projects:${entry.id}`,
     title: entry.data.title ?? '',
     description: entry.data.description ?? '',
-    // projects 已取消 tags 字段：归档的标签作用域不再暴露项目标签。
+    // 项目集合无 tags 字段：归档不暴露项目标签。
     tags: [],
     text: [entry.data.subtitle, entry.data.description].filter(Boolean).join(' '),
     date: entry.data.date ? entry.data.date.toISOString() : null,

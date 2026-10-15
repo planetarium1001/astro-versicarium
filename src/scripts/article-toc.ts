@@ -85,7 +85,7 @@ const initArticleToc = () => {
     if (details?.open) details.open = false;
   };
 
-  /* 目标章节高亮：铺一层从标题到下一个同级/更高级标题的淡色带 */
+  /* 目标章节高亮：铺一层从标题到下一个同级/更高级标题的淡色带。 */
   const prose = document.querySelector<HTMLElement>('.prose');
   let activeFlash: HTMLElement | null = null;
 
@@ -135,11 +135,11 @@ const initArticleToc = () => {
 
       event.preventDefault();
       setActive(id);
-      // 先收起折叠目录再滚动，避免落点偏移
+      // 先收起折叠目录再滚动，避免落点偏移。
       closeInlineToc(link);
-      // 覆盖层随正文滚动，可在平滑滚动前铺好
+      // 覆盖层随正文滚动，可在平滑滚动前铺好。
       flashSection(heading);
-      // 通知浮动列把跳转前的位置入栈
+      // 通知浮动列把跳转前的位置入栈。
       window.dispatchEvent(new CustomEvent('astro-whono:reading-jump'));
 
       window.requestAnimationFrame(() => {
@@ -147,7 +147,7 @@ const initArticleToc = () => {
           behavior: prefersReducedMotion() ? 'auto' : 'smooth',
           block: 'start'
         });
-        // 聚焦标题，便于读屏落到该小节
+        // 聚焦标题，便于读屏落到该小节。
         if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
         heading.focus({ preventScroll: true });
         try {
@@ -157,7 +157,7 @@ const initArticleToc = () => {
     });
   });
 
-  /* 收起/展开：只切 <html> 状态位，列宽由 CSS 变量过渡 */
+  /* 收起/展开：只切 <html> 状态位，列宽由 CSS 变量过渡。 */
   const toggles = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-toc-toggle]'));
   const rootEl = document.documentElement;
 
@@ -189,13 +189,13 @@ const initArticleToc = () => {
     toggles.forEach((button) => {
       button.addEventListener('click', () => {
         setCollapsed(rootEl.dataset.tocCollapsed !== 'true', true);
-        // 列宽过渡约 520ms，结束后按新布局重新校准高亮
+        // 列宽过渡约 520ms，结束后按新布局重新校准高亮。
         window.setTimeout(requestUpdate, 600);
       });
     });
   }
 
-  // 带 hash 打开或切换 hash 时同样高亮
+  // 带 hash 打开或切换 hash 时同样高亮。
   const flashByHash = () => {
     if (window.location.hash.length <= 1) return;
     let id = window.location.hash.slice(1);
@@ -211,7 +211,7 @@ const initArticleToc = () => {
   flashByHash();
   window.addEventListener('hashchange', flashByHash);
 
-  /* 首屏入场：head 内联脚本先按收起态渲染，绘制完成后撤掉并展开 */
+  /* 首屏入场：head 内联脚本先按收起态渲染，绘制完成后撤掉并展开。 */
   if (rootEl.dataset.tocIntro === 'true') {
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
@@ -227,7 +227,7 @@ const initArticleToc = () => {
   window.addEventListener('resize', requestUpdate);
   window.addEventListener('astro-whono:reading-mode-change', () => {
     requestUpdate();
-    // 阅读模式列宽过渡约 520ms，结束后再校准一次
+    // 阅读模式列宽过渡约 520ms，结束后再校准一次。
     window.setTimeout(requestUpdate, 600);
   });
   update();

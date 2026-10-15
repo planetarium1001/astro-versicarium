@@ -30,28 +30,28 @@ export type EditorSidePanelPreference = {
   outlineActiveTab: EditorOutlineTab;
   syntaxOpen: boolean;
 };
-export type EditorRestoredPreferences = {
+type EditorRestoredPreferences = {
   layout: EditorLayoutMode | null;
   display: EditorDisplayPreference;
   sidePanel: EditorSidePanelPreference | null;
 };
-export type EditorSidePanelPreferenceNormalizer = (
+type EditorSidePanelPreferenceNormalizer = (
   preference: EditorSidePanelPreference
 ) => EditorSidePanelPreference;
-export type ReadRestoredEditorPreferencesOptions = {
+type ReadRestoredEditorPreferencesOptions = {
   layoutStorageKey: string;
   displayPreferenceStorageKey: string;
   sidePanelPreferenceStorageKey: string;
   adminDefaults: AdminEditorDefaults | null;
   normalizeSidePanelPreference?: EditorSidePanelPreferenceNormalizer;
 };
-export type EditorSidePanelState = {
+type EditorSidePanelState = {
   outlineOpen: boolean;
   syntaxOpen: boolean;
   syntaxMaximized: boolean;
   available: boolean;
 };
-export type EditorSidePanelStackedRatioBounds = {
+type EditorSidePanelStackedRatioBounds = {
   min: number;
   max: number;
 };
@@ -78,7 +78,7 @@ export const DEFAULT_EDITOR_DISPLAY_PREFERENCE: EditorDisplayPreference = {
 export const DEFAULT_EDITOR_LAYOUT_INTENT: EditorLayoutMode = 'split';
 // 940px 是双 pane 与工具按钮保持可读后的最低稳定宽度；CSS 只消费 data-effective-view。
 export const EDITOR_SPLIT_MIN_INLINE_SIZE = 940;
-export const EDITOR_OUTLINE_VISIBLE_MIN_INLINE_SIZE = {
+const EDITOR_OUTLINE_VISIBLE_MIN_INLINE_SIZE = {
   // 目录是辅助导航；split + both 下允许主工作区轻微压缩，低于可读宽度再收起。
   splitBoth: 996,
   // 单区/stacked 只有一个主要内容面板，可以比双栏模式更晚收起目录。
@@ -89,8 +89,8 @@ export const EDITOR_OUTLINE_TARGET_SCROLL_OFFSET_RATIO = 0.18;
 export const EDITOR_SINGLE_VIEW_RETURN_LABEL = '返回编辑与预览双区视图';
 export const DEFAULT_EDITOR_SIDE_PANEL_STACKED_RATIO = 45;
 export const EDITOR_SIDE_PANEL_STACKED_RATIO_STEP = 5;
-export const EDITOR_SIDE_PANEL_OUTLINE_MIN_BLOCK_SIZE = 120;
-export const EDITOR_SIDE_PANEL_SYNTAX_MIN_BLOCK_SIZE = 150;
+const EDITOR_SIDE_PANEL_OUTLINE_MIN_BLOCK_SIZE = 120;
+const EDITOR_SIDE_PANEL_SYNTAX_MIN_BLOCK_SIZE = 150;
 const EDITOR_SIDE_PANEL_STACKED_RATIO_MIN_PERCENT = 20;
 const EDITOR_SIDE_PANEL_STACKED_RATIO_MAX_PERCENT = 80;
 const PREVIEW_DEBOUNCE_TIERS: readonly [minLength: number, delayMs: number][] = [
@@ -174,7 +174,7 @@ export const markScrollElementScrolling = (
   );
 };
 
-export const getEditorOutlineMinInlineSize = (
+const getEditorOutlineMinInlineSize = (
   layout: EditorLayoutMode,
   viewMode: EditorViewMode
 ): number =>
@@ -199,7 +199,7 @@ export const isEditorOutlineAvailableForInlineSize = ({
   return !splitBothWouldBeCompact && inlineSize >= getEditorOutlineMinInlineSize(layout, viewMode);
 };
 
-export type EditorLayoutToggleIcon = 'columns-2' | 'rows-2' | 'undo-2';
+type EditorLayoutToggleIcon = 'columns-2' | 'rows-2' | 'undo-2';
 
 export const getEditorLayoutToggleLabel = ({
   splitBothIsCompact,
@@ -376,7 +376,7 @@ const isEditorSidePanelPreference = (value: unknown): value is EditorSidePanelPr
   );
 };
 
-export const readStoredEditorLayout = (storageKey: string): EditorLayoutMode | null => {
+const readStoredEditorLayout = (storageKey: string): EditorLayoutMode | null => {
   if (typeof window === 'undefined') return null;
   try {
     const storedLayout = window.localStorage.getItem(storageKey);

@@ -2,7 +2,7 @@
 // 公安备案号按「省简称 + 公网安备 + 6 位属地码 + 02 + 6 位顺序码」拼查询链接。
 
 export const ICP_FILING_DEFAULT_LINK = 'https://beian.miit.gov.cn/';
-export const POLICE_FILING_QUERY_PREFIX = 'https://beian.mps.gov.cn/#/query/webSearch?code=';
+const POLICE_FILING_QUERY_PREFIX = 'https://beian.mps.gov.cn/#/query/webSearch?code=';
 
 /** 公安备案号里 6 位属地码起算，短于该长度的数字串不视为编号 */
 const POLICE_FILING_CODE_RE = /\d{6,}/g;

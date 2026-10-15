@@ -84,8 +84,7 @@ const HOME_HEAD_CRITICAL_FONT_FACES = [
 ] as const satisfies readonly HomeHeadCriticalFontFace[];
 
 /* 首屏 critical CSS 只消费 readable/copy/brand 三个 role token（mono 首屏未用），
-   值经 getThemeFontStack 与全局解析一致；默认 @font-face 只保留被当前选择实际
-   引用的 family，非默认字体下不再声明（@font-face 本身不触发下载，纯去死字节）。 */
+   值经 getThemeFontStack 与全局解析一致；默认 @font-face 只为被当前选择引用的 family 声明。 */
 const homeCriticalFontStacks = {
   readable: getThemeFontStack(typography.readable),
   copy: getThemeFontStack(typography.copy),
@@ -717,8 +716,8 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
       calc(36px + env(safe-area-inset-bottom)) calc(var(--pad-x) + env(safe-area-inset-left));
   }
 
-/* <=360px：与 src/styles/components/layout.css 的同一档保持一致，
-   否则 320px 下六项导航会折成 5+1（快照位于 global.css 之后会覆盖真实样式）。 */
+  /* <=360px：与 layout.css 同一档保持一致，否则 320px 下六项导航折行
+     （快照位于 global.css 之后，会覆盖真实样式）。 */
 @media (max-width: 360px) {
   .nav {
     gap: 8px 6px;

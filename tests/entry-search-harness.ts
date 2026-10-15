@@ -13,10 +13,7 @@ export const PAGES = [
   { name: 'archive', html: 'archive-page.dev.html', index: 'archive-index.dev.json' }
 ] as const;
 
-export type FixturePage = (typeof PAGES)[number];
-export type EntrySearchIndexItem = { slug: string; tags: string[] };
-
-export const loadPage = async <T = EntrySearchIndexItem>(page: { html: string; index: string }) => {
+export const loadPage = async <T = { slug: string; tags: string[] }>(page: { html: string; index: string }) => {
   const [html, indexJson] = await Promise.all([
     readFile(fixturePath(page.html), 'utf8'),
     readFile(fixturePath(page.index), 'utf8')

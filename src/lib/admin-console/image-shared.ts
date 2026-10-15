@@ -225,8 +225,8 @@ const ADMIN_IMAGE_SCAN_ROOTS = [
 }[];
 
 /**
- * 站点级插画统一放在 `public/images/pages/**`，以维持「一级目录 === collection 名」的不变量；
- * 旧前缀不再作为落点，但保留三个入口以便存量图片仍能归到对应子分组。
+ * 站点级插画统一放在 `public/images/pages/**`，维持「一级目录 === collection 名」的不变量。
+ * 保留三个入口，存量图片仍能归到对应子分组。
  */
 const ADMIN_IMAGE_PAGE_ALLOWLIST = [
   { prefix: 'public/images/pages/archive/', subgroup: 'archive', label: 'Archive' },
@@ -481,8 +481,8 @@ const resolveAssetOwner = (
 };
 
 /**
- * 从 public 路径反推 collection + slug，替代只认内容目录的 `resolveAssetOwner`。
- * `public/images/` 满足「一级目录 === collection 名」的不变量，因此反推可靠；
+ * 从 public 路径反推 collection + slug。
+ * `public/images/` 满足「一级目录 === collection 名」的不变量，反推可靠；
  * `public/images/pages/**` 是站点级插画，没有 collection/slug，返回 null。
  */
 const resolvePublicImageContentRef = (

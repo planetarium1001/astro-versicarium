@@ -169,24 +169,15 @@ const getDisplayTags = (tags: string[]) => {
   };
 };
 
-const setVisibleStatus = (text: string) => {
-  if (!statusEl) return;
-  if (statusEl.textContent !== text) {
-    statusEl.textContent = text;
-  }
-};
-
-const setLiveStatus = (text: string) => {
-  if (!liveEl) return;
-  if (liveEl.textContent !== text) {
-    liveEl.textContent = text;
-  }
+const setTextIfChanged = (el: HTMLElement | null, text: string) => {
+  if (!el || el.textContent === text) return;
+  el.textContent = text;
 };
 
 /** `visible: false` = 只播报不占位（加载提示等）。 */
 const setStatus = (text: string, { visible = true }: { visible?: boolean } = {}) => {
-  setVisibleStatus(visible ? text : '');
-  setLiveStatus(text);
+  setTextIfChanged(statusEl, visible ? text : '');
+  setTextIfChanged(liveEl, text);
 };
 
 const formatResultsSummary = (count: number) => {
@@ -489,7 +480,6 @@ resultsListEl?.addEventListener('keydown', (event) => {
   input?.focus();
 });
 
-
 const initialState = readInitialState();
 if (input && initialState.query) {
   input.value = initialState.query;
@@ -497,9 +487,8 @@ if (input && initialState.query) {
 syncUrlState(initialState.query);
 
 /**
- * 年份胶囊声明年份后，搜索结果要落在同一年份内，否则「选了 2025 年却搜出 2026 年」
- * 这种组合看起来就是坏的。初始值也从 `?year=` 读一次：带 `?q=&year=` 直接打开时，
- * 事件可能早于本脚本的求值。
+ * 年份胶囊声明年份后，搜索结果必须落在同一年份内，否则会与列表可见性不一致。
+ * 初始值也从 `?year=` 读一次：带 `?q=&year=` 直接打开时，事件可能早于本脚本的求值。
  */
 const readYearParam = () => {
   const raw = (new URL(window.location.href).searchParams.get(QUERY_PARAM_YEAR) ?? '').trim();

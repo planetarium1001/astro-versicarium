@@ -55,8 +55,8 @@
 }
 
 /**
- * 更新（devlog）行的「项目名: 」前缀。项目名与更新标题同属一个链接，
- * 悬停时必须整体变成同一高亮色，因此不设 color，直接继承 .archive-timeline__title 的颜色。
+ * 更新（devlog）行的「项目名: 」前缀。前缀与标题同属一个链接，悬停须整体同一高亮色，
+ * 因此不设 color，继承 .archive-timeline__title。
  */
 .archive-timeline__project {
   color: inherit;
@@ -68,7 +68,7 @@
   text-decoration: underline;
 }
 
-/* ---------------- <=640px：日期列收窄（胶囊收窄见 scope-pills.css） ---------------- */
+/* <=640px：日期列收窄（胶囊收窄见 scope-pills.css） */
 
 @media (max-width: 640px) {
   .archive-timeline__row {

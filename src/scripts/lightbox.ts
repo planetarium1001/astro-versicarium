@@ -808,12 +808,8 @@ export const initArticleLightbox = (options: ArticleLightboxOptions = {}) => {
     if (!img) return;
     if (isTinyImage(img, minImageSize)) return;
 
-    if (trigger instanceof HTMLAnchorElement) {
-      if (event.metaKey || event.ctrlKey) return;
-      event.preventDefault();
-    } else {
-      event.preventDefault();
-    }
+    if (trigger instanceof HTMLAnchorElement && (event.metaKey || event.ctrlKey)) return;
+    event.preventDefault();
 
     openFromTrigger(trigger);
   });

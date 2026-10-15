@@ -1,5 +1,4 @@
 export function formatISODate(d: Date): string {
-  // yyyy-mm-dd
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
@@ -11,18 +10,6 @@ export function formatISODateUtc(d: Date): string {
   const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
   const dd = String(d.getUTCDate()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
-}
-
-export function formatMonthDay(d: Date): string {
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${mm}/${dd}`;
-}
-
-export function formatMonthDayUtc(d: Date): string {
-  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const dd = String(d.getUTCDate()).padStart(2, '0');
-  return `${mm}/${dd}`;
 }
 
 export function createWithBase(base: string) {
@@ -197,7 +184,6 @@ export function getSiteFilingIconLocalFilePath(value: string): string {
   return `public${value}`;
 }
 
-/* 图标尺寸不进 settings：上传时把 WxH 编进文件名，渲染期从路径解析 sizes，保持 schema 只存路径。 */
 export function getSiteFaviconSizesFromPath(value: string): string | null {
   const baseName = value.split('/').pop() ?? '';
   const match = baseName.match(/(?:^|[^0-9])(\d{2,4})x(\d{2,4})(?:[^0-9]|$)/);
@@ -310,41 +296,6 @@ export function createDebouncedAsyncRunner(
     schedule,
     cancel
   };
-}
-
-export function groupByYear<T>(items: T[], getDate: (item: T) => Date) {
-  const map = new Map<number, T[]>();
-  for (const it of items) {
-    const y = getDate(it).getFullYear();
-    const arr = map.get(y) ?? [];
-    arr.push(it);
-    map.set(y, arr);
-  }
-
-  // Return as array sorted by year desc.
-  return Array.from(map.entries())
-    .sort((a, b) => b[0] - a[0])
-    .map(([year, list]) => ({
-      year,
-      list: list.sort((a, b) => getDate(b).valueOf() - getDate(a).valueOf())
-    }));
-}
-
-export function groupByUtcYear<T>(items: T[], getDate: (item: T) => Date) {
-  const map = new Map<number, T[]>();
-  for (const it of items) {
-    const y = getDate(it).getUTCFullYear();
-    const arr = map.get(y) ?? [];
-    arr.push(it);
-    map.set(y, arr);
-  }
-
-  return Array.from(map.entries())
-    .sort((a, b) => b[0] - a[0])
-    .map(([year, list]) => ({
-      year,
-      list: list.sort((a, b) => getDate(b).valueOf() - getDate(a).valueOf())
-    }));
 }
 
 export function formatDateTime(d: Date): string {

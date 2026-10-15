@@ -93,11 +93,6 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.admin-field--about > .admin-field__control,
-.admin-field--about > .admin-title-pair {
-  max-width: calc((100% - var(--admin-grid-column-gap)) / 2);
-}
-
 .admin-field--sidebar-divider {
   align-content: start;
 }
@@ -436,8 +431,8 @@
 }
 
 /**
- * 页脚与新增设置项直接放进 .admin-grid：四项各自占一格，与上方的站点标题、站点语言
- * 共用同一套两列网格，列与列对齐；窄到 480px 时随 .admin-grid 一起并成一列。
+ * 页脚与新增设置项直接放进 .admin-grid：各占一格，与上方站点标题、站点语言共用同一套
+ * 两列网格；480px 以下随 .admin-grid 并成一列。
  */
 
 /* 百分比输入框不需要那么长 */
@@ -852,7 +847,7 @@
 }
 
 /**
- * 候选文案新增「#博客标签」/「#归档标签」后字符变多，92px 会截断文字，放宽到 116px。
+ * 候选文案为「#博客标签」/「#归档标签」时 92px 会截断，固定为 116px。
  */
 .admin-inline-builder__select {
   flex: 0 0 116px;
@@ -1177,11 +1172,6 @@
   .admin-hero-image,
   .admin-author-image {
     grid-template-columns: 1fr;
-  }
-
-  .admin-field--about > .admin-field__control,
-  .admin-field--about > .admin-title-pair {
-    max-width: none;
   }
 
   .admin-inline-builder {

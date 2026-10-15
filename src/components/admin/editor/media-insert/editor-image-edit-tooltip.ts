@@ -69,15 +69,10 @@ type NearbyMediaSearchContext = {
   offset: number;
 };
 
-const offsetImageBlock = (block: EditableImageBlock, offset: number): EditableImageBlock => ({
-  ...block,
-  range: {
-    from: block.range.from + offset,
-    to: block.range.to + offset
-  }
-});
-
-const offsetGalleryBlock = (block: EditableGalleryBlock, offset: number): EditableGalleryBlock => ({
+const offsetBlockRange = <Block extends EditableImageBlock | EditableGalleryBlock>(
+  block: Block,
+  offset: number
+): Block => ({
   ...block,
   range: {
     from: block.range.from + offset,
@@ -122,13 +117,13 @@ const findMediaBlockForState = (
       searchContext.selection
     );
     if (galleryBlock) {
-      return { type: 'gallery', block: offsetGalleryBlock(galleryBlock, searchContext.offset) };
+      return { type: 'gallery', block: offsetBlockRange(galleryBlock, searchContext.offset) };
     }
   }
 
   const imageBlock = findEditableImageBlockAtSelection(searchContext.source, searchContext.selection);
   return imageBlock
-    ? { type: 'image', block: offsetImageBlock(imageBlock, searchContext.offset) }
+    ? { type: 'image', block: offsetBlockRange(imageBlock, searchContext.offset) }
     : null;
 };
 

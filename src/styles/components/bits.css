@@ -1,6 +1,6 @@
 /* Bits
-   只包含 /bits/ 页面相关样式，避免干扰通用列表。
-*/
+   仅 /bits/ 页面相关样式，不干扰通用列表。
+ */
 
 @import "./bit-card.css";
 /* 年份胶囊复用 /archive/ 一级胶囊的共享样式 */
@@ -28,8 +28,8 @@
   --bits-control-h: 36px;
 }
 
-/* 年份胶囊落在工具栏第一列：共享样式的 margin-top 是给归档页标题下方留白的，
-   在工具栏里会凭空撑高整行（工具栏是 align-items: center 的 flex 行）。 */
+/* 年份胶囊位于工具栏第一列：共享样式的 margin-top 是给归档页标题留白的，
+   在 align-items: center 的工具栏里会凭空撑高整行。 */
 .bits-controls .bits-year-filter {
   margin-top: 0;
 }
@@ -177,10 +177,9 @@
 }
 
 /**
- * 列表间距改成容器 gap：原来靠 .bit-card 的 margin 与 :first-child 归零，
- * 但年份/标签筛选把 DOM 里第一张卡片 hidden 掉后，视觉上的第一张不再是 :first-child，
- * 于是保留 16px 上外边距，表现为切换年份后首张卡片与胶囊条的间隙突然变大。
- * flex gap 下 hidden（display: none）的卡片不占间隙，间距恒定。
+ * 列表间距用容器 gap：若由 .bit-card 的 margin 提供，年份 / 标签筛选会把 DOM 首张卡片
+ * hidden 掉，视觉首张不再是 :first-child，16px 上外边距保留，切换筛选后间隙突变。
+ * flex gap 下 hidden（display: none）的卡片不占间隙。
  */
 #bits-list {
   display: flex;

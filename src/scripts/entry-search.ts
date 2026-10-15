@@ -101,7 +101,7 @@ if (!root) {
     slug: (el.getAttribute('data-slug') || '').trim()
   }));
 
-  // ---- 客户端分页：服务端分页已取消，分页在已渲染 DOM 上完成 ----
+  // 客户端分页：服务端分页已取消，分页在已渲染 DOM 上完成。
   const pageSizeRaw = Number.parseInt((root.dataset.pageSize ?? '').trim(), 10);
   const pageSize = Number.isFinite(pageSizeRaw) && pageSizeRaw > 0 ? pageSizeRaw : items.length || 1;
   const paginationNav = document.querySelector<HTMLElement>('[data-entry-pagination]');
@@ -527,10 +527,7 @@ if (!root) {
     return '';
   };
 
-  /**
-   * 状态文案仍由 `TagFilterHeader` 的 `.page-subtitle` 承载（描述 + 共 N 篇），
-   * 控件条只按退化优先级补齐「已选标签胶囊 + 切换标签按钮」。
-   */
+  /** `TagFilterHeader` 的 `.page-subtitle` 承载状态文案（描述 + 共 N 篇），控件条只补已选胶囊与动作。 */
   /** 标签 key → 展示标签（优先取 dialog 里的标签文案，回退到 key）。 */
   const labelForTagKey = (key: string) => {
     const button = tagOptionButtons().find((item) => (item.dataset.entryTagKey ?? '').trim() === key);
@@ -644,12 +641,18 @@ if (!root) {
    * 第一行是标签胶囊与连接符，第二行是副标题加「切换标签 / 清除筛选」文字链接。
    * 两行左对齐成一块，放在页面标题右边。
    */
-  const pageHeading = pageTitleRow?.parentElement ?? null;
   const chipHost: SelectedChipHost = {
     titleRow: pageTitleRow,
     subtitle: pageSubtitle,
-    pageHeading,
+    pageHeading: pageTitleRow?.parentElement ?? null,
     tagTrigger
+  };
+
+  /** 同步选择器选中态 + URL + 页头控件条；所有会改动表达式的手势都走这里。 */
+  const syncTagState = () => {
+    syncTagSelectionUi();
+    syncTagUrl();
+    renderStatusBar();
   };
 
   const renderStatusBar = () => {
@@ -892,17 +895,11 @@ if (!root) {
 
     if (detail.clearTags !== false && hasAnyTag(tagExpression)) {
       tagExpression = createEmptyExpression();
-      syncTagSelectionUi();
-      syncTagUrl();
-      renderStatusBar();
+      syncTagState();
     }
 
-    if (
-      !hasAnyTag(tagExpression)
-      && (input?.value ?? '').trim() === ''
-      && activeScope === ''
-      && activeYear === null
-    ) {
+    const scopeFallback = !hasAnyTag(tagExpression) && (input?.value ?? '').trim() === '';
+    if (scopeFallback && activeScope === '' && activeYear === null) {
       if (instant) applyInstantItems(items.slice());
       else showAllItems();
       syncSections(false);
@@ -910,7 +907,7 @@ if (!root) {
       return;
     }
     // 作用域内没有标签/关键词时直接用 scopedItems，避免多走一次 index 请求
-    if (!hasAnyTag(tagExpression) && (input?.value ?? '').trim() === '') {
+    if (scopeFallback) {
       if (instant) applyInstantItems(scopedItems());
       else setFilteredItems(scopedItems());
       syncSections(true);
@@ -1022,9 +1019,7 @@ if (!root) {
     if (target.closest('[data-entry-tag-clear]')) {
       event.preventDefault();
       tagExpression = createEmptyExpression();
-      syncTagSelectionUi();
-      syncTagUrl();
-      renderStatusBar();
+      syncTagState();
       void applyFilter();
       return;
     }
@@ -1036,9 +1031,7 @@ if (!root) {
       const segmentIndex = Number.isFinite(rawIndex) ? rawIndex : 0;
       const currentOp: TagOp = isTagOp(opButton.dataset.entryTagOp) ? opButton.dataset.entryTagOp : 'and';
       tagExpression = setSegmentOp(tagExpression, segmentIndex, currentOp === 'and' ? 'or' : 'and');
-      syncTagSelectionUi();
-      syncTagUrl();
-      renderStatusBar();
+      syncTagState();
       void applyFilter();
       return;
     }
@@ -1048,9 +1041,7 @@ if (!root) {
     if (removeBtn && removeKey) {
       event.preventDefault();
       tagExpression = removeTag(tagExpression, removeKey);
-      syncTagSelectionUi();
-      syncTagUrl();
-      renderStatusBar();
+      syncTagState();
       void applyFilter();
     }
   });
@@ -1066,9 +1057,7 @@ if (!root) {
 
     tagExpression = toggleTag(tagExpression, key);
 
-    syncTagSelectionUi();
-    syncTagUrl();
-    renderStatusBar();
+    syncTagState();
     void applyFilter();
   });
 
@@ -1083,9 +1072,7 @@ if (!root) {
       const nextMode: TagOp = button.dataset.entryTagMode === 'or' ? 'or' : 'and';
       if (nextMode === getPendingOp(tagExpression)) return;
       tagExpression = switchPendingOp(tagExpression, nextMode);
-      syncTagSelectionUi();
-      syncTagUrl();
-      renderStatusBar();
+      syncTagState();
       void applyFilter();
     });
   });
@@ -1093,9 +1080,7 @@ if (!root) {
   /** 0 命中提示里的「切换到 /」：把最后一个非空段改成 OR。 */
   tagSwitchOrBtn?.addEventListener('click', () => {
     tagExpression = switchLastNonEmptySegmentToOr(tagExpression);
-    syncTagSelectionUi();
-    syncTagUrl();
-    renderStatusBar();
+    syncTagState();
     void applyFilter();
   });
 

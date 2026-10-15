@@ -1,7 +1,6 @@
 /**
  * projects / devlog 的正文渲染：先剥离末尾链接组，再用与站点一致的 markdown 处理器渲染，
- * 最后附加共享的链接行标记。项目卡片/弹窗、更新展开面板因此拿到同一套标记与 class，
- * 正文与链接行也不会重复出现链接。
+ * 最后附加共享的链接行标记。
  */
 import { createMarkdownProcessor } from '@astrojs/markdown-remark';
 import { createPublicMarkdownConfig } from '../plugins/markdown-pipeline.mjs';
@@ -46,8 +45,7 @@ export const renderEntryBody = async (
 };
 
 /**
- * 卡片与列表行的摘要：优先 frontmatter 的 description，缺失时从正文派生；
- * 派生前先去掉末尾链接组，避免链接文字进入摘要。
+ * 卡片与列表行的摘要：优先 frontmatter 的 description，缺失时从去除末尾链接组的正文派生。
  */
 export const deriveEntryDescription = (
   description: string | undefined,

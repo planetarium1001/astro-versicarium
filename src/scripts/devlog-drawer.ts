@@ -1,9 +1,11 @@
 import { canAnimate } from './visibility-fade';
 
 /**
- * `/devlog/` 抽屉展开与收缩：展开整行可点（按钮包住 meta 与标题），`aria-expanded` 跟随状态，
- * `#<entryId>` 锚点进入时自动展开对应条目。展开从 0 高度过渡到实测高度，收起反向过渡完再落
- * `hidden`；用实测高度而不是 `grid-template-rows: 0fr`，因为面板里有代码块与图片。
+ * `/devlog/` 抽屉展开与收缩：整行可点（按钮包住 meta 与标题），`aria-expanded` 跟随状态，
+ * `#<entryId>` 锚点进入时自动展开对应条目。
+ *
+ * 展开从 0 高度过渡到实测高度，收起反向过渡完再落 `hidden`。用实测高度而不是
+ * `grid-template-rows: 0fr`：面板里有代码块与图片。
  * reduced-motion 或环境没有 WAAPI（jsdom）时直接切换，不做动画。
  */
 const ROWS = Array.from(document.querySelectorAll<HTMLElement>('[data-devlog-row]'));
@@ -12,7 +14,7 @@ if (ROWS.length > 0) {
   const PANEL_MS = 240;
   const PANEL_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
-  /** 正在播放的高度动画（重复点击时先取消，避免两次动画叠出错误高度）。 */
+  /** 正在播放的高度动画；重复点击时先取消，避免两次动画叠出错误高度。 */
   const running = new WeakMap<HTMLElement, Animation>();
 
   const playHeight = (panel: HTMLElement, from: number, to: number): Promise<void> => {

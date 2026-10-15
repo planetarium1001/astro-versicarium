@@ -8,7 +8,7 @@ type BitRoutingOrderItem = Pick<BitPublicOrderItem, 'id' | 'date'>;
 
 export const getBitAnchorId = (key: string) => `bit-${key}`;
 
-/** 服务端分页已取消，`/bits/` 是唯一列表页，锚点直接落在该页。 */
+/** `/bits/` 是唯一列表页，锚点直接落在该页。 */
 export const getBitsPagePath = (_page: number = 1) => '/bits/';
 
 export const compareBitsForRouting = <T extends BitRoutingOrderItem>(left: T, right: T): number => {

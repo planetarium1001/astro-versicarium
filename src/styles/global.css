@@ -1,10 +1,6 @@
-/* global.css 为公开站点的共享样式入口，只负责 tokens/base 与跨页面公共规则。
-   公开页聚合入口分层如下：
-   - global.css：共享基础层 + layout/list 等跨页面公共规则
-   - home.css / about.css：页面私有规则
-   - article.css：正文页专用（prose / figure / callout / lightbox / code-block）
-   - bits-page.css：/bits/ 专用（bits / lightbox）
-   - admin/shell.css + Admin 路由私有样式：/admin 页面按需引入
+/* global.css：公开站点共享样式入口，只负责 tokens/base 与跨页面公共规则。
+   页面私有规则见 home.css / about.css；article.css 为正文页专用；
+   bits-page.css 为 /bits/ 专用；Admin 样式按路由单独引入。
    断点变量覆盖仅保留共享层变量与跨页面公共规则。 */
 @import "./components/layout.css";
 @import "./components/lists.css";
@@ -131,10 +127,11 @@
   --sidebar: 224px;
   /* 前后台侧栏共用；内容宽度 = --sidebar - 2 * 内边距 */
   --sidebar-padding-block: 52px;
-  /**
-   * 间距几何的硬约束，由 check:layout-geometry 断言：G1 nav gap + dot + sidebarPad == contentPad；
-   * G2 壳层起始内边距 == 结束内边距 + scrollbarGutter（内容盒左右视觉等距）；
-   * G3 悬浮列距 ICB 右缘 >= 4px；G4 悬浮列与目录把手同线。
+/**
+   * 间距几何硬约束，由 check-layout-geometry.mjs 断言：
+   * nav gap + dot + sidebarPad == contentPad；
+   * 壳层起始内边距 == 结束内边距 + scrollbarGutter；
+   * 悬浮列距视口右缘 >= 4px，且与目录把手同线。
    * 改值须同步 src/pages/index.astro 的 critical CSS 快照（check:home-critical-css）。
    */
   --scrollbar-gutter-inline: 15px;
@@ -147,9 +144,9 @@
   /* 壳层铺满视口，不设 max-inline-size。 */
   --layout-divider-inline-size: 1px;
   --public-sidebar-inline-size: 224px;
-  /**
-   * 内容侧水平内边距 = 侧栏导航文字到竖线的距离（G1：10 + 4 + 15 = 29），
-   * 使竖线两侧的呼吸一致：导航文字到竖线等于竖线到正文左缘。
+/**
+   * 内容侧水平内边距 = 侧栏导航文字到竖线的距离（10 + 4 + 15 = 29），
+   * 使竖线两侧留白一致。
    */
   --public-content-padding-inline: 29px;
   /* 后台编辑器预览的正文可读宽度：壳层与内容都铺满后，退化为「视口 − 侧栏 − 竖线 − 两侧内边距」。 */
@@ -192,9 +189,8 @@
 }
 
 /**
- * 涟漪方向按目标主题分类，两个方向需要不同的层叠顺序：默认（DOM 顺序）新快照在上，
- * 因此扩散只需动画新快照的 clip；收敛则要让旧快照从整屏收到点击点，
- * 旧快照必须被抬到新快照之上，否则裁掉它的过程看不见。
+ * 涟漪方向决定层叠顺序：默认新快照在上，扩散只需动画新快照的 clip；
+ * 收敛要让旧快照从整屏收到点击点，旧快照须抬到新快照之上。
  * data-theme-ripple 由 scripts/sidebar-theme.ts 在过渡期间挂在 <html> 上。
  */
 :root[data-theme-ripple='expand']::view-transition-new(root) {
@@ -243,9 +239,6 @@ html {
 }
 
 time,
-.page-meta,
-.list-item__meta,
-.archive-date,
 .bit-meta,
 .meta-line {
   font-family: var(--font-copy);
@@ -358,18 +351,16 @@ hr {
   margin-top: 6px;
 }
 
-/* 响应式 */
 /* 公开站点窄屏变量；AdminLayout 输出 body.admin-page 时不进入公开移动端壳层。 */
 @media (max-width: 900px) {
   body:not(.admin-page) {
     color-scheme: light;
     --sidebar: 1fr;
     --tap-min-h: 44px;
-    /**
-     * 窄屏是单列壳层，桌面那套「两侧留边 + 滚动条槽」的对称不适用：
-     * 壳层外边距收回 0、侧栏内边距还原为桌面改造前的宽度，
-     * 只有 >=901px 才走新的间距方案。
-     */
+  /**
+   * 窄屏为单列壳层，桌面的「两侧留边 + 滚动条槽」对称不适用：
+   * 壳层外边距与侧栏内边距改用窄屏值，>=901px 才走桌面间距方案。
+   */
     --page-gap-inline: 0px;
     --page-inline: 0px;
     --sidebar-padding-inline: 18px;

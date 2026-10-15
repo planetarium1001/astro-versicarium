@@ -1,6 +1,6 @@
 /* ArticleToc
-   负责文章目录：宽屏右侧常驻列（可收起）、窄屏正文顶部折叠列表、跳转高亮。
-*/
+   文章目录：宽屏右侧常驻列（可收起）、窄屏正文顶部折叠列表、跳转高亮。
+ */
 
 .article-toc {
   font-family: var(--font-copy);
@@ -107,22 +107,20 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
 
 :root {
   /**
-   * 目录列左边界的锚点：距 ICB 右缘恒为该值，因此目录与正文的间隙不随「页面外缘间隙」变化。
+   * 目录列左边界的锚点：距视口右缘恒为该值，目录与正文的间隙不随页面外缘间隙变化。
    * 实际列宽 = 该锚点 - --page-inline，使列右边界落在壳层内容盒右缘。
    */
   --article-toc-inline-size: 260px;
   /**
    * 收起后只留把手宽度的窄轨，保证把手在壳层内可见。
-   * 把手尺寸与右偏移跟悬浮列统一（--rail-action-size / --rail-action-offset，定义在 layout.css），
-   * 窄轨宽度 = 左右各一份偏移 + 把手本身。只把把手改大而不加宽窄轨，把手会溢出窄轨、
-   * 无法再与右下角浮动列落在同一条竖线上。
+   * 把手尺寸与偏移跟悬浮列统一（--rail-action-size / --rail-action-offset，见 layout.css）；
+   * 窄轨宽度 = 左右各一份偏移 + 把手本身，改大把手须同步加宽窄轨。
    */
   --article-toc-handle-column: calc(var(--rail-action-offset) * 2 + var(--rail-action-size));
   /**
-   * 实际列宽 = 文字区宽度 - --page-inline，收起/入场时收窄，栅格规则统一引用。
-   * 于是列右边界落在壳层内容盒右缘（距 ICB 右缘 --page-inline），
-   * 列左边界稳定在距 ICB 右缘 --article-toc-inline-size 处，不随「页面外缘间隙」变化；
-   * 目录与正文的间隙由正文左右内边距镜像决定，也保持不变。
+   * 实际列宽 = 文字区宽度 - --page-inline，收起 / 入场时收窄，栅格规则统一引用。
+   * 列右边界落在壳层内容盒右缘，左边界稳定在距视口右缘 --article-toc-inline-size 处，
+   * 不随页面外缘间隙变化。
    */
   --article-toc-column: calc(var(--article-toc-inline-size) - var(--page-inline));
 }
@@ -150,7 +148,7 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
   padding: var(--sidebar-padding-block) var(--rail-action-offset) 40px var(--rail-action-offset);
 }
 
-/* 收起 / 入场态列宽已是把手列，表头不再需要向右补偿，否则把手会被推出 ICB 右缘 */
+/* 收起 / 入场态列宽已是把手列，表头不再向右补偿，否则把手会被推出视口右缘 */
 :root[data-toc-collapsed='true'] .article-toc__rail-head,
 :root[data-toc-intro='true'] .article-toc__rail-head {
   margin-right: 0;
@@ -158,9 +156,9 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
 }
 
 /**
- * 把手与「本文目录」同行并贴行右端，收起/展开/入场都不位移：
- * 表头向右补偿列宽里扣掉的 --page-inline（负右外边距），再用右内边距把把手压回
- * 「距 ICB 右缘 --rail-action-offset」的竖线上（与右下角浮动列同线）。
+ * 把手与「本文目录」同行并贴行右端，收起 / 展开 / 入场都不位移：
+ * 用负右外边距补偿列宽里扣掉的 --page-inline，再用右内边距把把手压回
+ * 距视口右缘 --rail-action-offset 的竖线上（与右下角浮动列同线）。
  */
 .article-toc__rail-head {
   display: flex;
@@ -172,10 +170,9 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
   margin-bottom: 10px;
 }
 
-/* flex:1 + min-width:0：列变窄时标题缩到 0 宽，不挤走把手，也不需硬切 */
+/* 列变窄时标题缩到 0 宽，不挤走把手 */
 /**
- * 目录顶部「本文目录」的字号不得小于目录条目（.article-toc 为 13px），
- * 这里用 14px 作为这一块的小标题。
+ * 「本文目录」的字号不得小于目录条目（.article-toc 为 13px）。
  */
 .article-toc__title {
   flex: 1;
@@ -213,9 +210,9 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
 }
 
 /**
- * 目录开关图标用三条线段，在「≡（展开）」与「|||（收起）」之间做形变过渡：
+ * 目录开关图标用三条线段在「≡（展开）」与「|||（收起）」之间形变过渡：
  * 展开时三条 14×2 横线纵排（y 偏移 −4/0/+4），收起时三条 2×14 竖线横排（x 偏移 −4/0/+4）。
- * 两个状态的 transform 函数列表必须完全一致，width/height 与位移才能连续插值而不跳变。
+ * 两个状态的 transform 函数列表必须完全一致，width/height 与位移才能连续插值。
  */
 .article-toc__glyph {
   position: relative;
@@ -270,13 +267,12 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
   top: 0;
   align-self: start;
   /**
-   * 目录与正文的间隙：目录侧不留水平内边距，正文侧保留 --pad-x，实际间隙就等于 --pad-x，
-   * 校准基准是「本文目录」下第一级目录文字的最左端。列宽已扣掉 --page-inline，
-   * 右边界因此贴在壳层内容盒右缘；把手位置由表头（.article-toc__rail-head）单独补偿。
+   * 目录与正文的间隙：目录侧不留水平内边距，正文侧保留 --pad-x，实际间隙等于 --pad-x。
+   * 列宽已扣掉 --page-inline，右边界贴在壳层内容盒右缘；把手位置由表头单独补偿。
    */
   margin-right: 0;
   padding: var(--sidebar-padding-block) 0 40px 0;
-  /* 表头需要向右溢出到 ICB 右缘，故不在本元素上裁切；横向裁切交给列表本体 */
+  /* 表头需要向右溢出到视口右缘，故不在本元素上裁切；横向裁切交给列表本体 */
   overflow: visible;
   transition: opacity 260ms ease, visibility 0s linear 0s;
 }
@@ -325,10 +321,9 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
 }
 
 /**
- * 目录收起时让正文贴近右缘。收起态不再占 34px 的把手列，
- * 否则正文右内边距变成 --pad-x + 34px，与左侧的 26px 不对称。
- * 收起态把第 4 列压到 0（四列不变，宽度可平滑插值），
- * 把手改成绝对定位悬在原竖线上，与右下角浮动列同一条竖线。
+ * 目录收起时让正文贴近右缘：收起态不再占 34px 把手列，否则正文右内边距变成
+ * --pad-x + 34px，与左侧不对称。收起态把第 4 列压到 0（四列不变，宽度可平滑插值），
+ * 把手改为绝对定位悬在原竖线上。
  */
 @media (min-width: 1280px) {
   :root[data-toc-collapsed='true'] body.immersive-page .shell[data-toc='true'],
@@ -341,7 +336,7 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
   }
 
   /**
-   * 收起态的把手必须浮动（position: fixed，跟随滚动常驻），不能钉在文档顶部随页面滚走。
+   * 收起态的把手用 position: fixed，跟随滚动常驻，不随页面滚走。
    * 位置与右下角浮动列同一条竖线（--rail-action-offset）。
    */
   :root[data-toc-collapsed='true'] body.immersive-page .article-toc--rail {

@@ -3,9 +3,8 @@ import { readFile, readdir, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 /**
- * 图片重命名：只在原目录内改名，并同步改写全部内容源里的引用，否则图片立刻变成死链。
- * 替换采用「目录限定 + 文件名」的字面匹配而非全文正则，因为正文里不存在裸文件名引用，
- * 目录限定的串不会偶然出现；百分号编码变体一并覆盖。
+ * 图片重命名：只在原目录内改名，并同步改写全部内容源里的引用。
+ * 替换按「目录限定 + 文件名」字面匹配，同时覆盖百分号编码变体。
  */
 
 const IMAGE_EXTENSIONS: ReadonlySet<string> = new Set([
@@ -84,9 +83,8 @@ export const normalizeAdminImageRenamePath = (value: string): string => {
 };
 
 /**
- * 清洗用户输入的新文件名：允许 CJK，不允许路径分隔符 / `..` / 空名，
- * 扩展名必须是受支持的图片类型，避免把 .webp 改成 .txt 这类误操作。
- * 与原文件同目录，改名不移动位置。
+ * 清洗用户输入的新文件名：允许 CJK，不允许路径分隔符、`..` 与空名；
+ * 扩展名必须是受支持的图片类型，改名不移动位置。
  */
 export const sanitizeAdminImageRenameTarget = (value: string, currentFileName: string): string => {
   const trimmed = (value ?? '').normalize('NFKC').trim();
@@ -145,8 +143,8 @@ const collectAdminImageRenameSources = async (projectRoot?: string): Promise<str
 };
 
 /**
- * 重命名一张图片并同步改写全部引用。有意不做：覆盖已存在的目标文件（宁可报错）、
- * 跨目录移动（目录结构属于内容模型，由迁移脚本负责）、云端图片（没有本地路径可改）。
+ * 重命名一张图片并同步改写全部引用。
+ * 不覆盖已存在的目标文件，不跨目录移动，不处理云端图片。
  */
 export const renameAdminImage = async (
   input: { from: string; to: string },
@@ -181,7 +179,7 @@ export const renameAdminImage = async (
   const candidates: [pattern: string, next: string][] = [
     [`/${from}`, `/${to}`],
     [from, to],
-    // 百分号编码的写法（例如 `<source srcset>` 里被工具编码过的路径）要保持同样的风格
+    // 百分号编码的写法保持同样的风格
     [`/${encodedFrom}`, `/${encodedTo}`],
     [encodedFrom, encodedTo]
   ];

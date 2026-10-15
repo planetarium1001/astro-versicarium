@@ -1,11 +1,8 @@
 /* scope-pills.css — 一级胶囊条的共享样式（/archive/ 作用域胶囊、/bits/ 年份胶囊）。
-   参数逐行对齐原 /bits/ 年份筛选胶囊（见脚本里的 updateYearCursor / moveScopeCursor），
-   抽成共享层是为了避免两处各写一份而再次漂移。
    脚本按 data-* 钩子工作，不依赖类名：
    .scope-pills > .scope-pills__cursor（绝对定位滑块）+ button.scope-pills__item，
    第一项必须是「全部」。 */
 .scope-pills {
-  /* 原 --bits-year-filter-h / --archive-scope-h 同值 */
   --scope-pills-h: 34px;
   position: relative;
   display: inline-flex;
@@ -47,11 +44,9 @@
   opacity: 1;
 }
 
-  /**
-   * 暗色下滑块必须是深色浮起面：用「面板 + 少量白」，浅色文案在其上对比充足（约 7:1）。
-   * 原来是 color-mix(#fff 92%, var(--panel))，暗色下接近纯白，
-   * 而激活项文案是 --text，白底白字不可视。
-   */
+/**
+ * 暗色下滑块必须是深色浮起面：面板 + 少量白；激活项文案为 --text，纯白底不可视。
+ */
 :root[data-theme='dark'] .scope-pills__cursor {
   background: color-mix(in srgb, #fff 14%, var(--panel));
   box-shadow:
@@ -68,8 +63,7 @@
   flex: 0 0 auto;
   min-width: fit-content;
   /**
-   * 视觉高度 = calc(34px - 6px) = 28px，可点高度 44px 由 ::after 覆盖层撑出，
-   * 不占布局、不撑高胶囊条。
+   * 视觉高度 = calc(34px - 6px) = 28px，可点高度 44px 由 ::after 覆盖层撑出，不占布局。
    */
   height: calc(var(--scope-pills-h) - 6px);
   padding: 0 14px;
@@ -77,7 +71,7 @@
   border-radius: 999px;
   background: transparent;
   color: var(--faint);
-  /* 字号与字体照搬原年份胶囊：不额外指定字体族，跟随页面正文字体。 */
+  /* 不额外指定字体族，跟随页面正文字体 */
   font-size: 13px;
   line-height: 1;
   white-space: nowrap;
@@ -88,7 +82,7 @@
 }
 
 /**
- * 悬停只变色，不加底色（与原实现一致）。
+ * 悬停只变色，不加底色。
  */
 .scope-pills__item:hover,
 .scope-pills__item:focus-visible {
@@ -100,13 +94,13 @@
   font-weight: 600;
 }
 
-/* 「全部」激活时不加粗（与原实现的 --all 特例一致） */
+/* 「全部」激活时不加粗 */
 .scope-pills__item:first-of-type.is-active {
   font-weight: 400;
 }
 
-/* 触控热区：视觉 28px，可点 44px。check-touch-targets 按本伪元素判定 .scope-pills__item 的
-   有效触控高度；构建产物会把伪元素规范化为单冒号，功能不变。 */
+/* 触控热区：视觉 28px，可点 44px；check-touch-targets 按本伪元素判定 .scope-pills__item 的
+   有效触控高度。构建产物会把伪元素规范化为单冒号。 */
 .scope-pills__item::after {
   content: '';
   position: absolute;
@@ -123,9 +117,9 @@
   }
 }
 
-/* ---------------- <=640px ---------------- */
+/* <=640px */
 /**
- * 窄屏胶囊尺寸照搬原年份胶囊：字号 13px、左右内边距 12px、容器高度 34px。
+ * 窄屏胶囊：字号 13px、左右内边距 12px、容器高度 34px。
  */
 @media (max-width: 640px) {
   .scope-pills {

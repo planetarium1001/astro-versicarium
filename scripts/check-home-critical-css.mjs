@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-// 首页首屏 critical CSS（index.astro 的 homeHeadCriticalCss）是手写快照，
-// 且在 head 中位于 global.css 之后，同优先级声明会长期覆盖真实样式；
-// 与 src/styles 漂移就会出现「首页侧栏比文章页宽」这类只在首页复现的问题。
+// 首页首屏 critical CSS（index.astro 的 homeHeadCriticalCss）是手写快照，且在 head 中位于
+// global.css 之后，同优先级声明会长期覆盖真实样式，与 src/styles 漂移就会出现只在首页复现的问题。
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -24,7 +23,7 @@ const extractCriticalCss = (source) => {
 
 /**
  * 取某个选择器的规则体。
- * 必须带 `m` 且允许前导空白：媒体查询内的规则是缩进的，只匹配列 0 的选择器会误报缺失。
+ * 必须带 `m` 且允许前导空白：媒体查询内的规则是缩进的。
  */
 const blockBody = (css, selector) => {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -57,7 +56,7 @@ const compare = (label, snapshotValue, sourceValue, sourceFile) => {
 };
 
 const snapshotCss = extractCriticalCss(read(INDEX_PAGE));
-// 只取 @media 之前的桌面部分，避免匹配到移动端覆盖值
+// 只取 @media 之前的桌面部分
 const desktopSnapshot = snapshotCss.split('@media')[0];
 const globalCss = read(GLOBAL_CSS);
 const layoutCss = read(LAYOUT_CSS);
@@ -66,8 +65,7 @@ const snapshotRoot = blockBody(desktopSnapshot, ':root');
 const globalRoot = blockBody(globalCss, ':root');
 const layoutRoot = blockBody(layoutCss, ':root');
 
-// 壳层上限与内容 900px 上限已删除：两边都必须不存在这些声明，防止快照把上限抄回来
-// （critical CSS 位于 global.css 之后，抄回来会长期覆盖真实样式）。
+// 壳层上限与内容 900px 上限已删除：两边都必须不存在这些声明。
 const assertRemoved = (label, snapshotValue, sourceValue) => {
   if (snapshotValue !== null) problems.push(`快照仍保留应删除的 ${label}：${snapshotValue}`);
   if (sourceValue !== null) problems.push(`src/styles 仍保留应删除的 ${label}：${sourceValue}`);
@@ -154,8 +152,7 @@ const layoutSidebar = blockBody(layoutCss, '.sidebar');
 });
 
 // 快照在 global.css 之后内联输出，同优先级声明会长期覆盖真实样式，
-// 因此导航的窄屏尺寸必须与 layout.css 的对应断点逐字一致，
-// 否则 layout.css 新增的断点档会让首页在窄屏折行。
+// 因此导航的窄屏尺寸必须与 layout.css 的对应断点逐字一致。
 const MOBILE_NAV_TIERS = [
   { query: '@media (max-width: 640px)', gap: '8px 8px', padding: '6px 7px', fontSize: '15px' },
   { query: '@media (max-width: 360px)', gap: '8px 6px', padding: '6px 6px', fontSize: '14px' }

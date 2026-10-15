@@ -19,7 +19,7 @@ const walk = async (dir, exts, results) => {
   }
 };
 
-// 按 dirs/files 顺序收集文件；缺失的目录与文件跳过，便于脚本在部分 checkout 下可用。
+// 按 dirs/files 顺序收集文件；缺失的目录与文件跳过。
 // dirs: [{ dir, exts }]（相对 root 或绝对路径）；files: 相对 root 或绝对路径的可选单文件。
 export const collectSourceFiles = async (root, { dirs = [], files = [] } = {}) => {
   const results = [];

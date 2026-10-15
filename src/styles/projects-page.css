@@ -8,7 +8,7 @@
   align-items: stretch;
 }
 
-/* 多列时所有行等高：行高统一取最高卡片，卡片大小一致，不会出现某一行更高。 */
+/* 多列时所有行等高（行高取最高卡片） */
 @media (min-width: 641px) {
   .projects-page .project-grid {
     grid-auto-rows: 1fr;
@@ -25,18 +25,18 @@
   border-radius: 12px;
   background: var(--bg);
   min-width: 0;
-  /* 卡片高度上限，超出部分溢出省略；行高由栅格的 grid-auto-rows 统一。 */
+  /* 卡片高度上限，超出部分省略 */
   max-height: 320px;
   overflow: hidden;
 }
 
-/* 悬停反馈：只改背景，取值与列表页卡片的悬停底色一致。 */
+/* 悬停只改背景，取值与列表页卡片一致 */
 .project-card:hover,
 .project-card:focus-within {
   background: var(--code-header-bg);
 }
 
-/* 主按钮不用 flex 行：图标与展示图用浮动参与环绕，正文整体不再被推右。 */
+/* 图标与展示图用浮动参与环绕，不用 flex 行 */
 .project-card__main {
   display: block;
   width: 100%;
@@ -74,7 +74,6 @@
   margin-top: auto;
 }
 
-/* 头部两列：图标在左、标题块在右，两列顶部对齐 */
 .project-card__head {
   display: flex;
   align-items: flex-start;
@@ -156,7 +155,6 @@
 }
 
 .project-card__description {
-  /* 与副标题拉开距离 */
   margin-top: 10px;
   font-size: 13px;
   line-height: 1.6;
@@ -168,7 +166,7 @@
   overflow: hidden;
 }
 
-/* 展示图：左浮动贴卡片最左边，文字从它右侧开始并绕开它（类似 Word 的四周环绕）。 */
+/* 展示图左浮动，文字从右侧开始并绕开 */
 .project-card__image {
   float: left;
   width: min(168px, 44%);
@@ -187,7 +185,7 @@
   object-fit: cover;
 }
 
-/* ---------------- 弹窗（>=641px：居中，横屏宽、竖屏长） ---------------- */
+/* 弹窗（>=641px：居中，横屏宽、竖屏长） */
 
 .project-dialog {
   margin: auto;
@@ -239,8 +237,7 @@
 }
 
 /**
- * 弹窗里主次分明：标题、副标题、类型胶囊放大，正文压到标题以下
- * （见下面的 .project-dialog__prose）。
+ * 弹窗层级：标题、副标题、类型胶囊放大，正文小于标题（见 .project-dialog__prose）。
  */
 .project-dialog__title {
   margin: 0;
@@ -266,8 +263,8 @@
 }
 
 /**
- * 弹窗正文（含各级标题）都必须小于弹窗标题的 21px，否则正文里的一级标题会盖过标题本身。
- * 普通正文对齐描述字号 14.5px，各级标题按层级略大但仍小于 21px。
+ * 弹窗正文含各级标题都必须小于弹窗标题的 21px；正文对齐描述字号 14.5px，
+ * 各级标题按层级略大。
  */
 .project-dialog__prose {
   font-size: 14.5px;
@@ -287,8 +284,7 @@
 }
 
 /**
- * 关闭按钮只留一个叉号：不要圆角方形底（原来有边框 + 面板底色 + 圆角）。
- * 与 tag dialog 的关闭按钮统一，无边框无底色，只保留颜色变化；44px 热区由 width/height 保留。
+ * 关闭按钮无边框无底色，只保留颜色变化；44px 热区由 width/height 保留。
  */
 .project-dialog__close {
   flex: 0 0 auto;
@@ -326,8 +322,8 @@
 }
 
 /*
- * 末尾元素的外边距会算进滚动区：正文最后一段的 margin 折叠到 .prose 外层后，
- * 内容放得下也会出现滚动条，因此把直接子元素与它内部最后一个元素一起归零。
+ * 末尾元素的外边距会算进滚动区，内容放得下也会出现滚动条；
+ * 因此把直接子元素与其内部最后一个元素一起归零。
  */
 .project-dialog__content > :last-child,
 .project-dialog__content > :last-child > :last-child {
@@ -339,7 +335,7 @@
   color: var(--muted);
 }
 
-/* ---------------- <=640px：底部抽屉 ---------------- */
+/* <=640px：底部抽屉 */
 
 @media (max-width: 640px) {
   .project-dialog {

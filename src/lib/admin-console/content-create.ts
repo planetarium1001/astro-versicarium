@@ -435,8 +435,8 @@ const buildBitsContentCreatePlan = async (
 };
 
 /**
- * projects / devlog 都是「标题 + 日期」的列表型集合，创建计划结构一致，因此共用一份实现。
- * 新字段不需要在建条目时写入，由编辑页的字段矩阵负责。
+ * projects / devlog 都是列表型集合，创建计划结构一致，共用一份实现。
+ * 新字段不在建条目时写入，由编辑页的字段矩阵负责。
  */
 const buildTitleListContentCreatePlan = async (
   input: AdminTitleListContentCreateInput

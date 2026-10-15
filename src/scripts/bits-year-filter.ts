@@ -1,8 +1,9 @@
 /**
  * `/bits/` 年份胶囊。本脚本只声明年份：切换激活态、搬动滑块，再用 `entry-search:set-year`
- * 把年份交给 `entry-search.ts`；可见集合（年份 ∧ 标签 ∧ 关键词 ∧ 分页）始终由后者一次算出，
- * 本脚本不写 `item.hidden`。`?year=` 由本脚本独占读写（`entry-search.ts` 只管 `?tags=&mode=`），
- * 双方都基于当前 URL 改自己的参数；内容区滑动与 `/archive/` 一级胶囊共用 `content-slide.ts`。
+ * 把年份交给 `entry-search.ts`；可见集合始终由后者算出，本脚本不写 `item.hidden`。
+ *
+ * `?year=` 由本脚本独占读写（`entry-search.ts` 只管 `?tags=&mode=`），双方都基于当前 URL
+ * 改自己的参数；内容区滑动与 `/archive/` 一级胶囊共用 `content-slide.ts`。
  */
 
 import { createContentSlider, createPillCursor, pillDirection } from './content-slide';

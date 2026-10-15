@@ -69,7 +69,9 @@ type BuildBaseIslandPropsInput<Payload extends AdminContentWorkspaceEditorPayloa
   returnHref: string;
 };
 
-type BuildBlogIslandPropsInput = BuildBaseIslandPropsInput<AdminBlogEditorPayload> & {
+type BuildListIslandPropsInput = BuildBaseIslandPropsInput<
+  AdminBlogEditorPayload | AdminProjectsEditorPayload | AdminDevlogEditorPayload
+> & {
   BlogOutlineItems: EditorOutlineBlogSourceItem[];
   initialArticleInfoOpen: boolean;
 };
@@ -83,13 +85,13 @@ type BuildAboutIslandPropsInput = BuildBaseIslandPropsInput<AdminAboutEditorPayl
 
 type BuildIslandPropsInput<Payload extends AdminContentWorkspaceEditorPayload> =
   Payload extends AdminBlogEditorPayload
-    ? BuildBlogIslandPropsInput
+    ? BuildListIslandPropsInput
     : Payload extends AdminProjectsEditorPayload
-      ? BuildBlogIslandPropsInput
+      ? BuildListIslandPropsInput
       : Payload extends AdminBitsEditorPayload
         ? BuildBitsIslandPropsInput
         : Payload extends AdminDevlogEditorPayload
-          ? BuildBlogIslandPropsInput
+          ? BuildListIslandPropsInput
           : BuildAboutIslandPropsInput;
 
 type AdminContentEditorPageRegistration<
@@ -217,14 +219,14 @@ export const loadAdminContentEditorOutlines = async (
   return createEmptyAdminContentEditorOutlines();
 };
 
-const buildBlogEditorIslandProps = ({
+const buildListEditorIslandProps = ({
   payload,
   endpoints,
   returnHref,
   BlogOutlineItems,
   initialArticleInfoOpen
-}: BuildBlogIslandPropsInput): BlogEditorShellProps => ({
-  collection: 'blog',
+}: BuildListIslandPropsInput): BlogEditorShellProps => ({
+  collection: payload.collection,
   ...endpoints,
   returnHref,
   entryId: payload.entryId,
@@ -291,7 +293,7 @@ const CONTENT_EDITOR_PAGE_REGISTRY = {
     },
     usesImagePicker: getAdminContentCollectionCapability('blog').imagePicker,
     resolveReturnHref: ({ withBase }) => withBase('/admin/content/'),
-    buildIslandProps: buildBlogEditorIslandProps
+    buildIslandProps: buildListEditorIslandProps
   },
   bits: {
     collection: 'bits',
@@ -334,7 +336,7 @@ const CONTENT_EDITOR_PAGE_REGISTRY = {
     },
     usesImagePicker: getAdminContentCollectionCapability('projects').imagePicker,
     resolveReturnHref: ({ collectionHref }) => collectionHref,
-    buildIslandProps: buildBlogEditorIslandProps
+    buildIslandProps: buildListEditorIslandProps
   },
   devlog: {
     collection: 'devlog',
@@ -356,7 +358,7 @@ const CONTENT_EDITOR_PAGE_REGISTRY = {
     },
     usesImagePicker: getAdminContentCollectionCapability('devlog').imagePicker,
     resolveReturnHref: ({ collectionHref }) => collectionHref,
-    buildIslandProps: buildBlogEditorIslandProps
+    buildIslandProps: buildListEditorIslandProps
   },
   about: {
     collection: 'about',
@@ -402,30 +404,18 @@ export const buildAdminContentEditorIslandProps = ({
   outlines: AdminContentEditorOutlines;
   initialArticleInfoOpen: boolean;
 }): AdminContentEditorIslandProps => {
-  if (payload.collection === 'blog') {
-    return CONTENT_EDITOR_PAGE_REGISTRY.blog.buildIslandProps({
+  if (
+    payload.collection === 'blog'
+    || payload.collection === 'projects'
+    || payload.collection === 'devlog'
+  ) {
+    return CONTENT_EDITOR_PAGE_REGISTRY[payload.collection].buildIslandProps({
       payload,
       endpoints,
       returnHref,
       BlogOutlineItems: outlines.BlogOutlineItems,
       initialArticleInfoOpen
     });
-  }
-
-  if (payload.collection === 'projects' || payload.collection === 'devlog') {
-    return {
-      collection: payload.collection,
-      ...endpoints,
-      returnHref,
-      entryId: payload.entryId,
-      relativePath: payload.relativePath,
-      defaultPublicSlug: payload.defaultPublicSlug,
-      revision: payload.revision,
-      initialFrontmatter: payload.values,
-      initialBody: payload.bodyText,
-      BlogOutlineItems: outlines.BlogOutlineItems,
-      initialArticleInfoOpen
-    };
   }
 
   if (payload.collection === 'bits') {

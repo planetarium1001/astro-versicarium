@@ -5,7 +5,7 @@ type BlogImageTextSelection = {
 
 export type BlogImageTextRange = BlogImageTextSelection;
 
-export type BlogImageBlockKind = 'markdown' | 'figure';
+type BlogImageBlockKind = 'markdown' | 'figure';
 export type BlogImageInsertPresentation = 'plain' | 'figure';
 export type BlogImageDisplaySize = 'default' | 'sm' | 'md' | 'lg' | 'full';
 export type BlogImageDisplayAlignment = 'center' | 'left' | 'right';

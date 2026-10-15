@@ -1,6 +1,6 @@
 /* Lists
-   负责通用列表与归档布局；禁止放页面专属卡片或页面私有间距调优。
-*/
+   通用列表与归档布局；不放页面专属卡片与页面私有间距调优。
+ */
 
 .list {
   display: flex;
@@ -173,9 +173,9 @@
 }
 
 /**
- * 列表卡采用「拉伸链接」结构：卡片本体是 <div class="list-item list-item--link">，
- * 真正的链接在标题里（.list-item__stretch），其 ::after 铺满整张卡以保持整块可点，
- * 同时卡片内部还能放真正的 <a>（tag 筛选入口，<a> 不能嵌套）。
+ * 列表卡采用拉伸链接结构：卡片本体是 <div class="list-item list-item--link">，
+ * 链接在标题里（.list-item__stretch），其 ::after 铺满整卡以保持整块可点；
+ * 卡片内部仍可放真正的 <a>（tag 筛选入口，<a> 不能嵌套）。
  */
 .list-item--link {
   position: relative;
@@ -235,17 +235,10 @@
   transition: color 0.2s ease;
 }
 
-/* 只在标题文字上悬停时高亮，配色与下划线对齐归档时间线的悬停样式；
-   卡片悬停只改背景，不连带改变标题。 */
+/* 只在标题文字悬停时高亮，与归档时间线的悬停样式一致；卡片悬停只改背景。 */
 .list-item__title:hover {
   color: var(--accent);
   text-decoration: underline;
-}
-
-.list-item__meta {
-  white-space: nowrap;
-  color: var(--faint);
-  font-size: 12px;
 }
 
 .list-item__excerpt {
@@ -282,54 +275,6 @@
   background: #1f1f1f;
   border-color: #3f3f3f;
   color: var(--muted);
-}
-
-.archive-year {
-  margin: 28px 0 6px;
-  font-size: 20px;
-}
-
-.archive-list {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  padding: 0 0 10px;
-}
-
-.archive-row {
-  display: grid;
-  grid-template-columns: 56px 1fr auto;
-  gap: 14px;
-  align-items: baseline;
-  font-size: 15px;
-}
-
-.archive-title {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.archive-meta {
-  display: contents;
-}
-
-.archive-date {
-  grid-column: 1;
-  grid-row: 1;
-  color: var(--faint);
-  font-variant-numeric: tabular-nums;
-}
-
-.archive-tag {
-  grid-column: 3;
-  grid-row: 1;
-  color: var(--faint);
-  font-size: 13px;
-  font-family: var(--font-copy);
-}
-
-.archive-date-full {
-  display: none;
 }
 
 @media (max-width: 900px) {
@@ -370,48 +315,6 @@
     height: 24px;
   }
 
-  .list-item__meta {
-    white-space: normal;
-  }
-
-  .archive-row {
-    grid-template-columns: 1fr;
-    gap: 2px;
-  }
-
-  .archive-title {
-    grid-column: auto;
-  }
-
-  .archive-meta {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 6px;
-    color: var(--faint);
-    font-size: 12px;
-  }
-
-  .archive-date {
-    grid-column: auto;
-  }
-
-  .archive-date-md {
-    display: none;
-  }
-
-  .archive-date-full {
-    display: inline;
-  }
-
-  .archive-tag {
-    grid-column: auto;
-    font-size: 12px;
-  }
-
-  .archive-tag::before {
-    content: " - ";
-    color: var(--faint);
-  }
 }
 
 .meta-line {
@@ -481,8 +384,8 @@ a.tag:focus-visible {
   gap: 12px;
 }
 
-/* 触控目标与外观统一由 layout.css 的 .pagination__link 负责（min-height/width = 44px），
-   这里只保留分页容器的布局声明；再声明 min-height 会因 import 顺序覆盖 layout.css。 */
+/* 触控目标与外观统一由 layout.css 的 .pagination__link 负责（min-height/width = 44px）；
+   这里只保留分页容器布局声明，再声明 min-height 会因 import 顺序覆盖 layout.css。 */
 .pagination__link {
   padding: 0 10px;
   border-radius: 12px;
@@ -501,10 +404,6 @@ a.tag:focus-visible {
 .pagination__link:focus-visible {
   outline-color: var(--accent);
   outline-offset: var(--focus-ring-offset);
-}
-
-.pagination__link--next {
-  margin-left: auto;
 }
 
 .blog-page .pagination__inner {

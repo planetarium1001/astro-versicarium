@@ -2117,8 +2117,7 @@ export const getSiteFaviconLinks = (favicon: SiteFaviconSettings): SiteFaviconLi
 };
 
 /**
- * 备案图标：https 外链原样返回；public 相对路径在文件存在时才返回，
- * 避免配置错误时输出裂图（与 favicon 的处理一致）。
+ * 备案图标：https 外链原样返回；public 相对路径仅在文件存在时返回，防止输出裂图。
  */
 export const getSiteFilingIcon = (
   icon: string | null

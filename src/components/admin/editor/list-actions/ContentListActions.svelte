@@ -113,17 +113,6 @@ const createEmptyFrontmatter = (): AdminBlogEditorValues => ({
   badge: ''
 });
 
-const createNewBlogFrontmatter = (): AdminBlogEditorValues => {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return {
-    ...createEmptyFrontmatter(),
-    date: `${now.getFullYear()}-${month}-${day}`,
-    draft: true
-  };
-};
-
 const createEmptyProjectsFrontmatter = (): AdminProjectsEditorValues => ({
   title: '',
   subtitle: '',
@@ -245,9 +234,7 @@ const setStatus = (
 };
 
 /**
- * 新条目的源文件名固定为 `YYYY-MM-DD-title`。这里用 buildContentEntryId 而非
- * contentSourceEntryIdToPublicEntryId：后者基于 github-slugger，对 CJK 与连续标点
- * 会留下成串连字符。日期缺失时用当天，避免文件名缺少日期前缀。
+ * 新条目的源文件名固定为 `YYYY-MM-DD-title`；日期缺失或非法时用当天。
  */
 const deriveCreateEntryId = (date: string, title: string): string => {
   const trimmed = title.trim();

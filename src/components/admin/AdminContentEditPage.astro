@@ -55,9 +55,8 @@ const contentEditDevState = shouldShowContentConsole
     })
   : null;
 const selectedEntryEditorPayload = contentEditDevState?.payload ?? null;
-const workspaceEditorPayload = selectedEntryEditorPayload;
-const editorRegistration = workspaceEditorPayload
-  ? getAdminContentEditorPageRegistration(workspaceEditorPayload.collection)
+const editorRegistration = selectedEntryEditorPayload
+  ? getAdminContentEditorPageRegistration(selectedEntryEditorPayload.collection)
   : null;
 // Keep Svelte islands behind DEV-only dynamic imports; static imports leak
 // editor chunks into the production build.
@@ -68,7 +67,7 @@ if (import.meta.env.DEV && editorRegistration) {
 }
 const adminStylesHref = contentEditDevState?.stylesHref ?? adminShellStylesHref;
 const collectionHref = withBase(getAdminContentEntryListHref(collection));
-const shouldUseEditorPageLayout = Boolean(EditorIsland && workspaceEditorPayload && editorRegistration);
+const shouldUseEditorPageLayout = Boolean(EditorIsland && selectedEntryEditorPayload && editorRegistration);
 const contentEditorBodyClass = shouldUseEditorPageLayout ? 'admin-page--content-editor' : undefined;
 const adminEditorRecoveryScriptHref = isDev && shouldUseEditorPageLayout
   ? (await import('../../scripts/admin-content/editor-recovery.ts?url')).default
@@ -85,9 +84,9 @@ const adminImageMetaEndpoint = withBase(ADMIN_IMAGE_META_API_PATH);
 const editorReturnHref = editorRegistration
   ? editorRegistration.resolveReturnHref({ withBase, collectionHref })
   : collectionHref;
-const editorIslandProps = workspaceEditorPayload && contentEditDevState
+const editorIslandProps = selectedEntryEditorPayload && contentEditDevState
   ? buildAdminContentEditorIslandProps({
-      payload: workspaceEditorPayload,
+      payload: selectedEntryEditorPayload,
       endpoints: editorEndpoints,
       returnHref: editorReturnHref,
       defaultAuthor: bitsDefaultAuthor,

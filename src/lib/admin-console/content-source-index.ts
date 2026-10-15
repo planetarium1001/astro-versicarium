@@ -342,7 +342,7 @@ const createProjectsSourceIndexItem: FrontmatterAdapter = (record) => {
   const type = normalizeOptionalText(frontmatter.type);
   const description = normalizeOptionalText(frontmatter.description);
   const subtitle = normalizeOptionalText(frontmatter.subtitle);
-  // projects 已取消 tags 字段：列表检索与标签筛选都不再暴露项目标签。
+  // projects 无 tags 字段：列表检索与标签筛选都不暴露项目标签。
   const tags: string[] = [];
   const bodyDerived = getBodyDerived(record);
   const sourceError = mergeSourceError(
