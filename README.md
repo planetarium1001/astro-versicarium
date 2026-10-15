@@ -232,7 +232,7 @@ npm run ci        # 等价于 verify，CI 使用
 
 ## 致谢
 
-本仓库是对 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）的增量改造。上游的排版风格源自 [elizen/elizen-blog](https://github.com/elizen/elizen-blog)，其设计又继承自 Hugo 主题 [yihui/hugo-ivy](https://github.com/yihui/hugo-ivy)。
+本仓库是对 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）的增量改造，站点由 [Astro](https://astro.build/) 构建。
 
 ## 许可
 
