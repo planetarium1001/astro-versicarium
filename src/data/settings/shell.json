@@ -1,12 +1,49 @@
 {
   "brandTitle": "Astro Whono Tweaked",
+  "titleNarrow": null,
   "quote": "一个极简双栏 Astro 主题。",
   "nav": [
-    { "id": "blog", "label": "博客", "ornament": "·", "order": 1, "visible": true },
-    { "id": "projects", "label": "项目", "ornament": "·", "order": 2, "visible": true },
-    { "id": "bits", "label": "动态", "ornament": "·", "order": 3, "visible": true },
-    { "id": "devlog", "label": "更新", "ornament": "·", "order": 4, "visible": true },
-    { "id": "archive", "label": "归档", "ornament": "·", "order": 5, "visible": true },
-    { "id": "about", "label": "关于", "ornament": "·", "order": 6, "visible": true }
+    {
+      "id": "blog",
+      "label": "博客",
+      "ornament": "·",
+      "order": 1,
+      "visible": true
+    },
+    {
+      "id": "projects",
+      "label": "项目",
+      "ornament": "·",
+      "order": 2,
+      "visible": true
+    },
+    {
+      "id": "bits",
+      "label": "动态",
+      "ornament": "·",
+      "order": 3,
+      "visible": true
+    },
+    {
+      "id": "devlog",
+      "label": "更新",
+      "ornament": "·",
+      "order": 4,
+      "visible": true
+    },
+    {
+      "id": "archive",
+      "label": "归档",
+      "ornament": "·",
+      "order": 5,
+      "visible": true
+    },
+    {
+      "id": "about",
+      "label": "关于",
+      "ornament": "·",
+      "order": 6,
+      "visible": true
+    }
   ]
 }
