@@ -18,7 +18,7 @@ import {
 const ROOT = process.cwd();
 const GUTTER = 15; // html { scrollbar-gutter: stable } 在桌面浏览器上的槽宽
 const TOLERANCE = 0.5;
-const MIN_RAIL_INSET = 4; // 悬浮列右缘距 ICB 右缘的下限，再小就贴住滚动条槽
+const MIN_RAIL_INSET = 4; // 悬浮列右缘距 初始包含块 右缘的下限，再小就贴住滚动条槽
 const MIN_CLEARANCE = 4;
 
 const problems = [];
@@ -153,7 +153,7 @@ const main = async () => {
   const [shellPadStart, shellPadEnd] = shellPadParts.map((part) => evaluatePx(part, variables));
   const floatRight = evaluatePx(bySelector.get('.float-stack')?.get('right') ?? '', variables);
   /**
-   * 把手位置由目录表头单独补偿：负的右外边距把表头推到 ICB 右缘，
+   * 把手位置由目录表头单独补偿：负的右外边距把表头推到 初始包含块 右缘，
    * 右内边距再把把手压回 --rail-action-offset 的竖线。
    */
   const railHeadPadRight = evaluatePx(
@@ -215,8 +215,8 @@ const main = async () => {
     lines.push(`  竖线两侧呼吸一致 = ${contentPad}px`);
   }
 
-  // 内容盒两侧的视觉间隙相等：起始内边距直接落在 ICB 左缘，结束内边距还要加上
-  // 被 scrollbar-gutter 排除在 ICB 之外的槽宽。
+  // 内容盒两侧的视觉间隙相等：起始内边距直接落在 初始包含块 左缘，结束内边距还要加上
+  // 被 scrollbar-gutter 排除在 初始包含块 之外的槽宽。
   const leftInset = shellPadStart;
   const rightInset = shellPadEnd + gutter;
   if (!near(leftInset, rightInset)) {
@@ -239,17 +239,17 @@ const main = async () => {
     lines.push(`  页面外缘间隙 = ${pageGap}px，换算 --page-inline = ${O}px（槽宽 ${gutter}px）`);
   }
 
-  // 悬浮列右缘距 ICB 右缘必须为正且不太小，否则会被视口边缘与滚动条压住。
+  // 悬浮列右缘距 初始包含块 右缘必须为正且不太小，否则会被视口边缘与滚动条压住。
   // 偏移公式不叠加 --page-inline，因此不拿槽宽当阈值。
   if (floatRight < MIN_RAIL_INSET - TOLERANCE) {
     problems.push(`悬浮列 right(${floatRight}) < ${MIN_RAIL_INSET}px，会贴住视口右缘`);
   } else {
-    lines.push(`  悬浮列右缘距 ICB 右缘 ${floatRight}px（>= ${MIN_RAIL_INSET}px，不贴边）`);
+    lines.push(`  悬浮列右缘距 初始包含块 右缘 ${floatRight}px（>= ${MIN_RAIL_INSET}px，不贴边）`);
   }
 
   /**
-   * 把手与悬浮列右缘都直接以「距 ICB 右缘」计量。目录列右边界落在壳层内容盒右缘，
-   * 表头用 margin-right: -page-inline 补偿到 ICB 右缘，再用 padding-right: --rail-action-offset
+   * 把手与悬浮列右缘都直接以「距 初始包含块 右缘」计量。目录列右边界落在壳层内容盒右缘，
+   * 表头用 margin-right: -page-inline 补偿到 初始包含块 右缘，再用 padding-right: --rail-action-offset
    * 把把手压回与悬浮列同一条竖线。
    */
   if (!near(floatRight, railOffset)) {
@@ -281,14 +281,14 @@ const main = async () => {
     problems.push('壳层外边距不成立：--page-gap-inline 必须为正（两侧都要加宽）');
   }
 
-  // 悬浮列不能与正文文字相交。两者都换算到「距 ICB 右缘」参照系：
+  // 悬浮列不能与正文文字相交。两者都换算到「距 初始包含块 右缘」参照系：
   // 正文占据 [proseRightInset, ∞)（越靠左数值越大），悬浮列占据 [floatRight, floatRight + railSize]。
   // 因此重叠条件是 floatLeftInset > proseRightInset。
   const proseRightInset = O + contentPad;
   const floatLeftInset = floatRight + railSize;
   if (floatLeftInset > proseRightInset - MIN_CLEARANCE) {
     problems.push(
-      `悬浮列与正文相交/过近：悬浮列左缘距 ICB 右缘 ${floatLeftInset} 已越过正文右缘 `
+      `悬浮列与正文相交/过近：悬浮列左缘距 初始包含块 右缘 ${floatLeftInset} 已越过正文右缘 `
       + `${proseRightInset}（净空 ${(proseRightInset - floatLeftInset).toFixed(1)}px，要求 >= ${MIN_CLEARANCE}px）`
     );
   } else {
