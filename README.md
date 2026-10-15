@@ -24,6 +24,37 @@
 
 之后通过 `npm run theme:update` 获取主题更新，无需共享 git 历史。
 
+### 克隆指定分支
+
+只取 `main` 一个分支，在本地开始写作：
+
+```bash
+git clone --branch main --single-branch https://github.com/planetarium1001/astro-whono-tweaked.git my-site
+cd my-site
+npm install
+npm run dev
+```
+
+克隆得到的 `origin` 指向主题仓库，不能向它推送。要把它变成自己的站点，先清掉主题历史再重新初始化：
+
+```bash
+rm -rf .git
+git init -b main
+git add -A
+git commit -m "chore: 从 astro-whono-tweaked 初始化"
+git remote add origin git@github.com:<你的账号>/<你的仓库>.git
+git push -u origin main
+```
+
+清掉历史不影响主题更新：`theme.json` 记录主题仓库与基准提交，`npm run theme:update` 按它取更新，不依赖 git 历史。
+
+想保留主题历史、用 git 合并而不是 `theme:update`，就不要删 `.git`，只改远程地址：
+
+```bash
+git remote set-url origin git@github.com:<你的账号>/<你的仓库>.git
+git push -u origin main
+```
+
 ### Fork 本仓库
 
 Fork 本仓库后，`main` 与主题保持同源历史，可直接用 git 合并：
@@ -155,6 +186,8 @@ npm run ci        # 等价于 verify，CI 使用
 
 ## 部署
 
+### 工作流
+
 仓库自带两个 GitHub Actions 工作流，都不需要配置 secret：
 
 | 工作流 | 触发 | 作用 | 权限 |
@@ -162,7 +195,21 @@ npm run ci        # 等价于 verify，CI 使用
 | `ci.yml` | push / PR 到 `main`、`demo` | `npm ci` 后执行 `npm run ci` | `contents: read` |
 | `pages.yml` | push 到 `demo`、手动触发 | 构建并发布到 GitHub Pages | `contents: read`、`pages: write`、`id-token: write` |
 
-启用 Pages：仓库设为 public（Free 计划下私有仓库无法使用 Pages）；Settings → Pages → Source 选 GitHub Actions。若 `github-pages` 环境的部署分支策略限制了分支，需要在 Settings → Environments 中放行 `demo`。
+### 配置 GitHub Pages
+
+1. 仓库设为 public。Free 计划下私有仓库无法使用 Pages。
+2. Settings → Pages → Source 选 **GitHub Actions**。不要选「Deploy from a branch」：那条路径会走 GitHub 内置的 Jekyll 构建，对 Astro 项目必然失败。
+3. Settings → Environments → `github-pages` → **Deployment branches and tags** → 加入部署分支（本仓库为 `demo`）。该策略默认只放行默认分支；不放行时 `deploy` 作业会在没有任何步骤执行的情况下立即失败，而 `build` 仍然成功。
+4. 触发一次部署：向部署分支推送，或在 Actions → `pages` → Run workflow。
+
+### 部署自己的站点
+
+`pages.yml` 默认只部署 `demo`：`on.push.branches` 与 `actions/checkout` 的 `ref` 都指向它。内容放在 `main` 的人需要把这两处一起改掉：
+
+- `on.push.branches` 改为自己的部署分支
+- `actions/checkout` 去掉 `ref: demo`，让它检出发起运行的那个提交
+
+只改一处，部署的仍然是 `demo` 的内容。改完后同样要在 `github-pages` 环境里放行新的部署分支。不需要示例站时，可以删掉 `demo` 分支。
 
 站点地址由工作流按仓库名推导：项目页发布在 `https://<owner>.github.io/<repo>/`，仓库名为 `<owner>.github.io` 时发布在根路径。绑定自定义域名后，把工作流中的 `SITE_URL` 与 `ASTRO_WHONO_BASE_PATH` 改为固定值（`https://你的域名` 与 `/`），否则资源路径会带上仓库子路径而 404。
 
