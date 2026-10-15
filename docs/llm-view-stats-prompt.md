@@ -1,6 +1,6 @@
 # 取数脚本编写提示词
 
-复制给大模型时，替换最后一节「我的统计服务」即可。模型能读文件时，让它先读 `src/scripts/view-stats.ts`、`src/lib/view-stats.ts` 与 [analytics.md](analytics.md)。
+复制给大模型时，替换最后一节「我的统计服务」。模型能读文件时，让它先读 `src/scripts/view-stats.ts`、`src/lib/view-stats.ts` 与 [analytics.md](analytics.md)。
 
 ## 任务
 
@@ -48,8 +48,6 @@
 - `VIEW_STATS_READY_EVENT` —— 槽位挂载完成后在 `document` 上派发
 
 ## 我的统计服务
-
-（填写以下内容）
 
 - 服务与版本：
 - 读取接口与参数：

@@ -40,7 +40,8 @@
     "font:charset": "node ./scripts/font-charset.mjs",
     "font:subset": "node ./scripts/font-subset.mjs",
     "font:build": "npm run font:charset && npm run font:subset",
-    "new:bit": "node ./scripts/new-bit.mjs"
+    "new:bit": "node ./scripts/new-bit.mjs",
+    "theme:update": "node ./scripts/theme-update.mjs"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.19",
