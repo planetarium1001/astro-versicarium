@@ -167,6 +167,27 @@ const fewestMatchingTagKey = (indexItems: { slug: string; tags: string[] }[]) =>
   return keys.sort((a, b) => countFor(a) - countFor(b))[0]!;
 };
 
+/** /bits/ 年份胶囊，已剔除「全部」：结果按年份倒序，第 1 项最新。 */
+const bitsYearPills = () =>
+  Array.from(document.querySelectorAll<HTMLElement>('[data-bits-year-item][data-bits-year]'))
+    .filter((el) => (el.dataset.bitsYear ?? '').trim() !== '');
+
+const clickBitsYear = (year: string) => {
+  const pill = document.querySelector<HTMLElement>(
+    `[data-bits-year-item][data-bits-year="${year}"]`
+  );
+  expect(pill, `需要 ${year} 年份胶囊`).not.toBeNull();
+  pill!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  return pill!;
+};
+
+/** 某一年份下的条目 slug，从已渲染条目推导，不绑定示例内容。 */
+const slugsForYear = (year: string) =>
+  pageItems()
+    .filter((el) => (el.dataset.entryYear ?? '').trim() === year)
+    .map((el) => (el.dataset.slug ?? '').trim())
+    .sort();
+
 describe('级联动效：串行，一次只走一步', () => {
   let harness: ReturnType<typeof createAnimationHarness>;
 
@@ -457,9 +478,9 @@ describe('级联动效：串行，一次只走一步', () => {
     const browse = document.querySelector<HTMLElement>('[data-bits-browse]');
     expect(browse, '需要 /bits/ 的内容容器').not.toBeNull();
 
-    const pill = document.querySelector<HTMLElement>('[data-bits-year-item][data-bits-year="2025"]')!;
-    expect(pill, '需要 2025 年份胶囊').not.toBeNull();
-    pill.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    const year = bitsYearPills()[0]?.dataset.bitsYear ?? '';
+    expect(year, '需要至少一个年份胶囊').not.toBe('');
+    const pill = clickBitsYear(year);
 
     const slides = () => harness.containerRecords('[data-bits-browse]');
     expect(slides().length).toBe(1);
@@ -469,8 +490,8 @@ describe('级联动效：串行，一次只走一步', () => {
     await harness.stepToNextBoundary();
     expect(slides().length).toBe(2);
     expect(slides()[1]!.kind).toBe('show');
-    expect(visibleSlugs()).toEqual(['bits-2025-02-03-0101']);
-    expect(window.location.search).toContain('year=2025');
+    expect(visibleSlugs().sort()).toEqual(slugsForYear(year));
+    expect(window.location.search).toContain(`year=${year}`);
     expect(harness.entryItemRecords().length).toBe(0);
   });
 
@@ -486,10 +507,11 @@ describe('级联动效：串行，一次只走一步', () => {
     const firstFrame = (record: (typeof harness.records)[number]) =>
       record.frames[0]?.transform ?? '';
 
-    // 条上的顺序：全部(第 1 颗) → 2026(第 2 颗) → 2025(第 3 颗)。
-    // 全部 → 2025 = 往右点一颗 → 内容向左滑出、从右侧滑入。
-    document.querySelector<HTMLElement>('[data-bits-year-item][data-bits-year="2025"]')!
-      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    // 胶囊条按年份倒序：全部(第 1 颗) → 最新年份(第 2 颗) → 次新年份(第 3 颗)。
+    // 全部 → 较早年份 = 往右点一颗 → 内容向左滑出、从右侧滑入。
+    const [newestYear, olderYear] = bitsYearPills().map((pill) => pill.dataset.bitsYear ?? '');
+    expect(olderYear, '需要至少两个年份胶囊').toBeTruthy();
+    clickBitsYear(olderYear!);
 
     expect(slides().length).toBe(1);
     expect(lastFrame(slides()[0]!), '往右点时内容应向左滑出').toContain('translateX(-24px)');
@@ -498,9 +520,8 @@ describe('级联动效：串行，一次只走一步', () => {
     expect(firstFrame(slides()[1]!), '往右点时应从右侧滑入').toContain('translateX(24px)');
     await harness.settleAll();
 
-    // 2025 → 2026 = 往左点一颗 → 方向与上一步相反
-    document.querySelector<HTMLElement>('[data-bits-year-item][data-bits-year="2026"]')!
-      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    // 较早年份 → 最新年份 = 往左点一颗 → 方向与上一步相反
+    clickBitsYear(newestYear!);
 
     const backward = slides().slice(2);
     expect(backward.length).toBe(1);

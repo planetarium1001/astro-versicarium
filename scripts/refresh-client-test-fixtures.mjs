@@ -8,13 +8,32 @@
  * 用法：`SITE_URL=... npm run build && node ./scripts/refresh-client-test-fixtures.mjs`
  */
 
-import { copyFile, mkdir } from 'node:fs/promises';
+import { copyFile, mkdir, readdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
 const ROOT = process.cwd();
 const OUT = path.join(ROOT, 'tests', 'fixtures');
+
+/**
+ * 文章详情页快照的来源。只有构建产物才带 data-article-toc / data-toc-toggle 结构，
+ * 因此必须取一篇真实渲染过的文章；取哪一篇不影响断言，取字典序第一项即可，
+ * 这样快照脚本不绑定任何一条示例内容。
+ */
+const resolveArticleFixtureSource = async () => {
+  const blogDir = path.join(ROOT, 'dist', 'blog');
+  if (!existsSync(blogDir)) return null;
+
+  const entries = await readdir(blogDir, { withFileTypes: true });
+  const candidates = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => `dist/blog/${entry.name}/index.html`)
+    .filter((relative) => existsSync(path.join(ROOT, relative)))
+    .sort();
+
+  return candidates[0] ?? null;
+};
 
 const SOURCES = [
   ['dist/bits/index.html', 'bits-page.dev.html'],
@@ -23,8 +42,7 @@ const SOURCES = [
   ['dist/blog/index.json', 'blog-index.dev.json'],
   ['dist/archive/index.html', 'archive-page.dev.html'],
   ['dist/archive/index.json', 'archive-index.dev.json'],
-  // 文章详情页：只有构建产物才带 data-article-toc / data-toc-toggle 结构。
-  ['dist/blog/2026-06-13-content-console-使用指南/index.html', 'article-page.dev.html'],
+  [(await resolveArticleFixtureSource()) ?? 'dist/blog/<entry>/index.html', 'article-page.dev.html'],
   ['dist/devlog/index.html', 'devlog-page.dev.html']
 ];
 

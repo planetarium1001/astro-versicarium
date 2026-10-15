@@ -56,7 +56,8 @@ describe('article-toc 目录把手客户端行为', () => {
     // jsdom 的 <html> 在同一文件的用例间是共享的，上一例写入的状态位会污染下一例。
     delete document.documentElement.dataset.tocCollapsed;
     delete document.documentElement.dataset.tocIntro;
-    window.history.replaceState(null, '', '/blog/2026-06-13-content-console-使用指南/');
+    // 路径只用于推导 localStorage 键，取任意合法的文章路径即可，不绑定具体内容。
+    window.history.replaceState(null, '', '/blog/sample-post/');
     // jsdom 不实现 matchMedia（脚本用它判断 prefers-reduced-motion）。
     vi.stubGlobal(
       'matchMedia',
