@@ -1,8 +1,11 @@
 /**
- * `/devlog/` 的摘要策略：整页一个开关，不做逐条回退——任何一条摘要被压缩就整体回退，摘要挪进
- * 正文顶部（窄屏亦然）。列表属性 `data-devlog-excerpts="inline"` 时列表内显示摘要且正文不重复，
- * `"fallback"` 时列表内一条都不显示、正文顶部完整摘要放开 `hidden`。判定在切到 inline 后逐条比较
- * `scrollWidth > clientWidth`（ellipsis 压缩），窄屏（≤900px）直接回退；无 JS 时摘要照旧显示。
+ * `/devlog/` 的摘要策略：整页一个开关，不做逐条回退 —— 任一条摘要被压缩就整体回退，
+ * 摘要挪到正文顶部（窄屏亦然）。
+ *
+ * 列表属性 `data-devlog-excerpts="inline"`：列表内显示摘要且正文不重复；
+ * `"fallback"`：列表内一条都不显示，正文顶部完整摘要放开 `hidden`。
+ * 判定方式是切到 inline 后逐条比较 `scrollWidth > clientWidth`（ellipsis 压缩），
+ * 窄屏（≤900px）直接回退。无 JS 时摘要照旧显示。
  */
 const list = document.querySelector<HTMLElement>('[data-devlog-list]');
 
@@ -22,19 +25,17 @@ if (list) {
   };
 
   /**
-   * 摘要一刀切的过渡，分三段：先把列表里的摘要淡出；再落状态（摘要从列表移除、
-   * 正文顶部的完整摘要放开 `hidden`）；最后并行跑行高过渡与正文摘要淡入。
-   * 反方向（`inline`）是镜像：先落状态让摘要回到列表，行高过渡回去，摘要淡入。
+   * 摘要一刀切的过渡，分三段：列表里的摘要淡出；落状态（摘要离开列表、正文顶部完整摘要
+   * 放开 `hidden`）；并行跑行高过渡与正文摘要淡入。反方向（`inline`）是镜像。
    *
-   * 用令牌丢弃过期的一轮：测量与缩放可能连着触发，旧的过渡不能盖住新一轮的状态。
+   * 用令牌丢弃过期的一轮：测量与缩放可能连着触发，旧过渡不能盖住新一轮的状态。
    */
   const FADE_MS = 300;
   const REFLOW_MS = 360;
   let applyToken = 0;
   /**
-   * 已落定的模式。不能用 `list.dataset.devlogExcerpts` 当状态读：测量时会把属性
-   * 临时置成 `inline`（`fallback` 下摘要是 `display:none`，量不到宽度），
-   * 读属性会把当前其实处于回退态误判成 inline。
+   * 已落定的模式。不能用 `list.dataset.devlogExcerpts` 当状态读：测量时会把属性临时置成
+   * `inline`（`fallback` 下摘要是 `display:none`，量不到宽度），读属性会把回退态误判成 inline。
    */
   let currentMode: 'inline' | 'fallback' | null = null;
 
@@ -118,7 +119,7 @@ if (list) {
       return;
     }
 
-    // ① 摘要先淡出
+    // 第一步：摘要先淡出。
     currentMode = 'fallback';
     const fadeOuts = descriptions.map((description) =>
       description.animate(
@@ -128,11 +129,11 @@ if (list) {
     );
     void Promise.all(fadeOuts.map((animation) => animation.finished.catch(() => {}))).then(() => {
       if (token !== applyToken) return;
-      // ② 摘要离开列表、正文里的完整摘要放开
+      // 第二步：摘要离开列表、正文里的完整摘要放开。
       const before = measureRows();
       commitMode(true);
       cancelAnimations(descriptions);
-      // ③ 行高过渡（正文范围扩大）+ 摘要文本淡入，并行
+      // 第三步：行高过渡（正文范围扩大）+ 摘要文本淡入，并行。
       animateRowHeights(before);
       fadeSummariesIn();
     });

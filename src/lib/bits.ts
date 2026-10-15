@@ -109,7 +109,7 @@ export async function getSortedBits(options: BitsQueryOptions = {}) {
   return cloneBitEntries(await sortedBitsPromise);
 }
 
-/** 服务端分页已取消：返回全部条目，分页交给客户端。 */
+/** 返回全部条目，分页由客户端负责。 */
 export async function getBitsPageData() {
   const bits = await getSortedBits();
 

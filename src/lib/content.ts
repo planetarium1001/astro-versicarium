@@ -32,7 +32,7 @@ export type GetPublishedOptions<K extends CollectionKey> = {
  */
 const isReservedSlug = (slug: string) => RESERVED_BLOG_SLUGS.has(slug);
 
-/* 服务端分页已取消：列表页 SSR 渲染全部条目，筛选与分页交给客户端。 */
+// 列表页 SSR 渲染全部条目，筛选与分页由客户端负责。
 
 const isContentSourceFilePresent = <K extends CollectionKey>(entry: CollectionEntry<K>): boolean => {
   if (!import.meta.env.DEV) return true;
@@ -177,7 +177,6 @@ const assertUniqueBlogSlugs = (entries: readonly BlogEntry[]) => {
   );
 };
 
-const orderByBlogDate = (a: BlogEntry, b: BlogEntry) => b.data.date.valueOf() - a.data.date.valueOf();
 const shouldMemoizeBlogQueries = import.meta.env.PROD;
 const MAX_BLOG_INDEX_TEXT = 600;
 
@@ -193,7 +192,7 @@ const shouldUseDefaultBlogCache = (includeDraft?: boolean) =>
 const loadSortedblogs = async ({ includeDraft }: BlogQueryOptions = {}) => {
   const blogs = await getPublished('blog', {
     ...(includeDraft === undefined ? {} : { includeDraft }),
-    orderBy: orderByBlogDate
+    orderBy: orderByEntryDateDesc
   });
   assertUniqueBlogSlugs(blogs);
   return blogs;

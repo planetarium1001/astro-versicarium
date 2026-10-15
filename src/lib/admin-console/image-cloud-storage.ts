@@ -59,10 +59,7 @@ const ADMIN_IMAGE_CLOUD_MAX_ATTEMPTS = 2;
 const ADMIN_IMAGE_CLOUD_DEFAULT_UPLOAD_DEADLINE_MS = 60_000;
 const ADMIN_IMAGE_CLOUD_DEFAULT_LIST_DEADLINE_MS = 15_000;
 
-/**
- * 超时时间延迟解析并允许环境变量覆盖：测试需要真实计时器下缩短超时，
- * 而不是用假时钟推进（假时钟推不到位会让模块级上传队列整体挂住）。
- */
+/** 超时时间延迟解析，可由环境变量覆盖；测试据此在真实计时器下缩短超时。 */
 const readDeadlineOverrideMs = (envKey: string): number | null => {
   const raw = process.env[envKey]?.trim();
   if (!raw) return null;
@@ -116,8 +113,8 @@ const toSafeKeyPart = (value: string): string =>
     .join('/');
 
 /**
- * `entryId` 可能含 `/`（如 `no-assets/index`），会产生嵌套目录；
- * 对象键里的 `{slug}` 必须单层，因此这里把分隔符折叠掉。
+ * `entryId` 可能含 `/`（如 `no-assets/index`），而对象键里的 `{slug}` 必须单层：
+ * 折叠分隔符。
  */
 export const toSingleLayerSafeKeyPart = (value: string, fallback = 'entry'): string => {
   const normalized = toSafeKeyPart(value);

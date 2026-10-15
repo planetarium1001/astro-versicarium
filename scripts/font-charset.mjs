@@ -89,8 +89,8 @@ const main = async () => {
       process.exit(1);
     }
 
-    // stamp 由 font:subset 成功后写入（charset 文件的 sha256）：拦截“跑了 font:charset
-    // 却没跑 font:subset”的 woff2 过期状态——纯 txt 对比无法发现。
+    // stamp 由 font:subset 成功后写入（charset 文件的 sha256）：纯 txt 对比无法发现
+    // 「跑了 font:charset 却没跑 font:subset」的 woff2 过期状态。
     const stampPath = path.join(path.dirname(OUTPUT_PATH), 'charset-common.sha256');
     let stamp = '';
     try {

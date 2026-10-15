@@ -519,11 +519,11 @@ describe('entry-search 客户端行为', () => {
     await loadPage(page);
     await importEntrySearch();
 
-    // ① 搜索框（连同它的工具栏）彻底不存在
+    // 搜索框（连同它的工具栏）彻底不存在
     expect(document.querySelector('[data-entry-tag-filter]')).toBeNull();
     expect(document.querySelector('dialog .entry-tags-dialog__toolbar')).toBeNull();
 
-    // ② 标题行只剩「清除筛选 + 关闭」
+    // 标题行只剩「清除筛选 + 关闭」
     const actions = document.querySelector('.entry-tags-dialog__head .entry-tags-dialog__actions');
     expect(actions, '动作区应当在标题行里').not.toBeNull();
     expect(Array.from(actions!.children).map((el) => el.className)).toEqual([
@@ -531,9 +531,9 @@ describe('entry-search 客户端行为', () => {
       'entry-tags-dialog__close'
     ]);
 
-    // ③ 新增的预览行：长胶囊在左、`+` `/` 在右，且初始是空态提示
+    // 预览行：长胶囊在左、`+` `/` 在右，且初始是空态提示
     const row = document.querySelector('.entry-tags-dialog__expression-row');
-    expect(row, '需要新增一行逻辑预览').not.toBeNull();
+    expect(row, '需要一行逻辑预览').not.toBeNull();
     expect(Array.from(row!.children).map((el) => el.className)).toEqual([
       'entry-tags-dialog__expression',
       'entry-tags-dialog__mode'

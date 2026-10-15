@@ -3,7 +3,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 // 构建产物里的样式源：dist/_astro 下的 CSS 与各页面内联 <style>。
-// 返回顺序即加载顺序，同名选择器后者覆盖前者。
+// 返回顺序即加载顺序。
 export const collectDistStyleSources = async (root) => {
   const sources = [];
   const astroDir = path.join(root, 'dist', '_astro');
@@ -36,12 +36,12 @@ export const collectDistStyleSources = async (root) => {
 };
 
 // 构建产物会把伪元素规范化为单冒号（lightningcss：::after → :after），
-// 登记与查询统一用单冒号，否则会出现「规则在产物里却报未声明」。
+// 登记与查询统一用单冒号。
 export const normalizePseudoSelector = (selector) =>
   selector.replace(/::(before|after|marker|placeholder)/g, ':$1');
 
 // 按出现顺序展开全部声明（跨来源顺序 = 加载顺序，来源内 = 书写顺序）。
-// selector 保持原文，调用方若需要特异度或顺序判定必须用原文。
+// selector 保持原文。
 export const collectOrderedDeclarations = (sources) => {
   const ordered = [];
   for (const { css } of sources) {

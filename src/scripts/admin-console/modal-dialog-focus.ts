@@ -31,17 +31,16 @@ const isDisabledControl = (element: HTMLElement): boolean =>
     || element instanceof HTMLTextAreaElement)
   && element.disabled;
 
-const isFocusableElement = (element: HTMLElement): boolean => {
-  if (element.tabIndex < 0 || element.hidden || isDisabledControl(element)) return false;
-  if (element.closest('[hidden], [inert], [aria-hidden="true"]')) return false;
-  return true;
-};
+const isRenderedFocusTarget = (element: HTMLElement): boolean =>
+  !element.hidden
+  && !isDisabledControl(element)
+  && !element.closest('[hidden], [inert], [aria-hidden="true"]');
 
-const canReceiveProgrammaticFocus = (element: HTMLElement): boolean => {
-  if (element.hidden || isDisabledControl(element)) return false;
-  if (element.closest('[hidden], [inert], [aria-hidden="true"]')) return false;
-  return true;
-};
+const isFocusableElement = (element: HTMLElement): boolean =>
+  element.tabIndex >= 0 && isRenderedFocusTarget(element);
+
+const canReceiveProgrammaticFocus = (element: HTMLElement): boolean =>
+  isRenderedFocusTarget(element);
 
 const focusElement = (element: HTMLElement | null): void => {
   if (!element) return;

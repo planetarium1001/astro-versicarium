@@ -2,10 +2,10 @@ import type { APIRoute } from 'astro';
 import { AdminImageRenameError, renameAdminImage } from '../../../../lib/admin-console/image-rename';
 
 /**
- * 图片重命名。与其它图片接口一致：仅开发环境可用（生产构建下返回 404，避免静态站点暴露写接口）。
+ * 图片重命名。仅开发环境可用：生产构建下返回 404，避免静态站点暴露写接口。
  * Body `{ from: 'images/blog/<slug>/old.webp', to: 'new.webp' }`，返回
  * `{ ok: true, result: { from, to, fileName, rewritten: [{ file, count }] } }`。
- * 目标已存在时返回 409 且不做任何改动；改名成功后同步改写内容里的引用（见 `image-rename.ts`）。
+ * 目标已存在时返回 409 且不做改动；改名成功后同步改写内容里的引用（见 image-rename.ts）。
  */
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',

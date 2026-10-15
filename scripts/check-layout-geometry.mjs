@@ -1,10 +1,7 @@
 #!/usr/bin/env node
 /**
  * 校验间距的几何不变量。取值来自 dist 的 CSS、页面内联 <style> 与 <html> 上的内联自定义属性，
- * 只读一处会得出错误结论。O = --page-inline（结束内边距），G = --scrollbar-gutter-inline，
- * P = --page-gap-inline（后台「页面外缘间隙」，同时是起始内边距）；不变量：G1 nav gap + dot +
- * sidebarPad == contentPad；G2 起始内边距 == 结束内边距 + G；G3 悬浮列距 ICB 右缘 >= 4px；
- * G4 悬浮列与目录把手同线、表头补偿 -O；G5 两行页头保持 display:grid；O == P - G。
+ * 只读一处会得出错误结论。
  * 用法：SITE_URL=... npm run build && node ./scripts/check-layout-geometry.mjs
  */
 
@@ -29,8 +26,7 @@ const lines = [];
 
 /**
  * 读取构建页面 `<html>` 上的内联自定义属性（BaseLayout 写入的生效值）。
- * 这里必须用内联属性：:root 与首页 critical CSS 快照里的 --page-inline 都只是默认值，
- * 后台改过「页面外缘间隙」后，实际生效的是内联这一份。
+ * `:root` 与首页 critical CSS 快照里的 `--page-inline` 都只是默认值。
  */
 const readHtmlInlineVariables = async (root) => {
   const pageFile = path.join(root, 'dist', 'index.html');
@@ -67,7 +63,7 @@ const evaluatePx = (value, variables, depth = 0) => {
   const calc = /^calc\(([\s\S]*)\)$/.exec(text);
   if (calc) {
     // 乘式（如 `var(--page-inline) * -1`，var() 已在上方展开）先整体求值：
-    // 交给下面的按 +- 切分会把负因子当成减法项而解析失败。
+    // 按 +- 切分会把负因子当成减法项而解析失败。
     const product = /^([\s\S]+?)\s*\*\s*(-?\d+(?:\.\d+)?)$/.exec(calc[1].trim());
     if (product) {
       const base = evaluatePx(product[1], variables, depth + 1);
@@ -95,7 +91,7 @@ const evaluatePx = (value, variables, depth = 0) => {
   return null;
 };
 
-// 选择器特异度（只算 G5 需要的三类；:where() 按规范计 0）。
+// 选择器特异度（:where() 按规范计 0）。
 // 返回可直接比较的数字：id * 10000 + class/attr/伪类 * 100 + 元素/伪元素。
 const specificity = (selector) => {
   const stripped = selector.replace(/:where\([^)]*\)/g, '');
@@ -121,7 +117,7 @@ const main = async () => {
     if (property.startsWith('--')) variables.set(property, value);
   }
 
-  // 内联属性优先级高于 :root 与首页 critical CSS 快照，用量到的生效值覆盖取值表。
+  // 内联属性优先于 :root 与首页 critical CSS 快照，用量到的生效值覆盖取值表。
   const inlineVariables = await readHtmlInlineVariables(ROOT);
   if (!inlineVariables) {
     console.error(
@@ -158,7 +154,7 @@ const main = async () => {
   const floatRight = evaluatePx(bySelector.get('.float-stack')?.get('right') ?? '', variables);
   /**
    * 把手位置由目录表头单独补偿：负的右外边距把表头推到 ICB 右缘，
-   * 右内边距再把把手压回 --rail-action-offset 的竖线（与右下角浮动列同线）。
+   * 右内边距再把把手压回 --rail-action-offset 的竖线。
    */
   const railHeadPadRight = evaluatePx(
     bySelector.get('.article-toc__rail-head')?.get('padding-right') ?? '',
@@ -171,7 +167,7 @@ const main = async () => {
 
   lines.push(`[check-layout-geometry] 样式源 ${sources.length} 个`);
   lines.push(
-    `[check-layout-geometry] O(--page-inline)=${O} P(--page-gap-inline)=${pageGap} gutter=${gutter}`
+    `[check-layout-geometry] --page-inline=${O} --page-gap-inline=${pageGap} gutter=${gutter}`
     + ` sidebarPad=${sidebarPad} contentPad=${contentPad} navGap=${navGap} dot=${dot}`
     + ` railOffset=${railOffset} railSize=${railSize}`
   );
@@ -208,31 +204,31 @@ const main = async () => {
 
   const near = (a, b) => Math.abs(a - b) <= TOLERANCE;
 
-  // G1：竖线两侧呼吸一致（导航文字右缘 ↔ 竖线 == 竖线 ↔ 正文左缘）
+  // 竖线两侧呼吸一致：导航文字右缘 ↔ 竖线 == 竖线 ↔ 正文左缘
   const breathingLeft = navGap + dot + sidebarPad;
   if (!near(breathingLeft, contentPad)) {
     problems.push(
-      `G1 不成立：nav gap(${navGap}) + dot(${dot}) + sidebarPad(${sidebarPad}) = ${breathingLeft}`
+      `竖线两侧呼吸不一致：nav gap(${navGap}) + dot(${dot}) + sidebarPad(${sidebarPad}) = ${breathingLeft}`
       + ` != contentPad(${contentPad})`
     );
   } else {
-    lines.push(`  ✓ G1 竖线两侧呼吸一致 = ${contentPad}px`);
+    lines.push(`  竖线两侧呼吸一致 = ${contentPad}px`);
   }
 
-  // G2：内容盒两侧的视觉间隙相等。起始内边距直接落在 ICB 左缘，结束内边距还要加上
-  // 被 scrollbar-gutter 排除在 ICB 之外的槽宽，两者必须相等。
+  // 内容盒两侧的视觉间隙相等：起始内边距直接落在 ICB 左缘，结束内边距还要加上
+  // 被 scrollbar-gutter 排除在 ICB 之外的槽宽。
   const leftInset = shellPadStart;
   const rightInset = shellPadEnd + gutter;
   if (!near(leftInset, rightInset)) {
     problems.push(
-      `G2 不成立：内容盒左侧视觉间隙 ${leftInset} != 右侧 ${rightInset}`
+      `内容盒两侧视觉间隙不相等：左侧 ${leftInset} != 右侧 ${rightInset}`
       + `（差 ${(leftInset - rightInset).toFixed(1)}px）`
     );
   } else {
-    lines.push(`  ✓ G2 内容盒两侧视觉间隙相等 = ${leftInset}px`);
+    lines.push(`  内容盒两侧视觉间隙相等 = ${leftInset}px`);
   }
 
-  // 后台设定的是「内容盒到浏览器边缘」的视觉间隙 P，程序内换算成 O = P - 槽宽。
+  // 后台设定的是「内容盒到浏览器边缘」的视觉间隙，程序内换算成 --page-inline = 间隙 - 槽宽。
   // 两份取值分别来自 <html> 内联属性与 CSS，任何一个被单独改动都会在这里失败。
   if (!near(O, pageGap - gutter)) {
     problems.push(
@@ -240,33 +236,33 @@ const main = async () => {
       + ` - --scrollbar-gutter-inline(${gutter})`
     );
   } else {
-    lines.push(`  ✓ 页面外缘间隙 = ${pageGap}px，换算 --page-inline = ${O}px（槽宽 ${gutter}px）`);
+    lines.push(`  页面外缘间隙 = ${pageGap}px，换算 --page-inline = ${O}px（槽宽 ${gutter}px）`);
   }
 
-  // G3：悬浮列右缘距 ICB 右缘必须为正且不太小，否则会被视口边缘与滚动条压住。
+  // 悬浮列右缘距 ICB 右缘必须为正且不太小，否则会被视口边缘与滚动条压住。
   // 偏移公式不叠加 --page-inline，因此不拿槽宽当阈值。
   if (floatRight < MIN_RAIL_INSET - TOLERANCE) {
-    problems.push(`G3 不成立：悬浮列 right(${floatRight}) < ${MIN_RAIL_INSET}px，会贴住视口右缘`);
+    problems.push(`悬浮列 right(${floatRight}) < ${MIN_RAIL_INSET}px，会贴住视口右缘`);
   } else {
-    lines.push(`  ✓ G3 悬浮列右缘距 ICB 右缘 ${floatRight}px（>= ${MIN_RAIL_INSET}px，不贴边）`);
+    lines.push(`  悬浮列右缘距 ICB 右缘 ${floatRight}px（>= ${MIN_RAIL_INSET}px，不贴边）`);
   }
 
   /**
-   * G4：把手与悬浮列右缘都直接以「距 ICB 右缘」计量。目录列右边界落在壳层内容盒右缘，
+   * 把手与悬浮列右缘都直接以「距 ICB 右缘」计量。目录列右边界落在壳层内容盒右缘，
    * 表头用 margin-right: -page-inline 补偿到 ICB 右缘，再用 padding-right: --rail-action-offset
-   * 把把手压回与悬浮列同一条竖线；补偿少一份或多一份都会在这里失败。
+   * 把把手压回与悬浮列同一条竖线。
    */
   if (!near(floatRight, railOffset)) {
-    problems.push(`G4 不成立：悬浮列 right(${floatRight}) != railOffset(${railOffset})`);
+    problems.push(`悬浮列 right(${floatRight}) != railOffset(${railOffset})`);
   }
   if (!near(railHeadPadRight, railOffset)) {
-    problems.push(`G4 不成立：目录表头右内边距(${railHeadPadRight}) != railOffset(${railOffset})`);
+    problems.push(`目录表头右内边距(${railHeadPadRight}) != railOffset(${railOffset})`);
   }
   if (!near(railHeadMarginRight, -O)) {
-    problems.push(`G4 不成立：目录表头右外边距(${railHeadMarginRight}) != -pageInline(${-O})`);
+    problems.push(`目录表头右外边距(${railHeadMarginRight}) != -pageInline(${-O})`);
   }
   if (near(floatRight, railOffset) && near(railHeadPadRight, railOffset) && near(railHeadMarginRight, -O)) {
-    lines.push(`  ✓ G4 目录把手与悬浮列右缘对齐（距内容盒右缘 ${railOffset}px）`);
+    lines.push(`  目录把手与悬浮列右缘对齐（距内容盒右缘 ${railOffset}px）`);
   }
 
   // 壳层外边距：起始取视觉间隙，结束取扣除滚动条槽后的值
@@ -279,7 +275,7 @@ const main = async () => {
       `壳层外边距不成立：.shell padding-inline 结束(${shellPadEnd}) != --page-inline(${O})`
     );
   } else {
-    lines.push(`  ✓ 壳层外边距：起始 ${shellPadStart}px、结束 ${shellPadEnd}px（视觉各 ${leftInset}px）`);
+    lines.push(`  壳层外边距：起始 ${shellPadStart}px、结束 ${shellPadEnd}px（视觉各 ${leftInset}px）`);
   }
   if (pageGap <= 0) {
     problems.push('壳层外边距不成立：--page-gap-inline 必须为正（两侧都要加宽）');
@@ -297,15 +293,15 @@ const main = async () => {
     );
   } else {
     lines.push(
-      `  ✓ 悬浮列左缘(${floatLeftInset}) 在正文右缘(${proseRightInset}) 右侧，净空 `
+      `  悬浮列左缘(${floatLeftInset}) 在正文右缘(${proseRightInset}) 右侧，净空 `
       + `${(proseRightInset - floatLeftInset).toFixed(1)}px`
     );
   }
 
-  // G5：`.page-heading--tag-bar` 的 display:grid 必须真的生效。
-  // lists.css 里更高特异度、且加载更晚的 `.page-heading { display: flex }` 会把它压回去，
-  // 而类型检查、构建与 DOM 断言都看不出来。判据取充分条件：所有声明了 display 且选择器提到
-  // .page-heading 的规则里，没有任何一条的 (特异度, 顺序) 能压过提到 .page-heading--tag-bar 的那条。
+  // `.page-heading--tag-bar` 的 display:grid 必须真的生效：lists.css 里更高特异度、
+  // 且加载更晚的 `.page-heading { display: flex }` 会把它压回去，类型检查与构建都看不出来。
+  // 判据取充分条件：所有声明了 display 且选择器提到 .page-heading 的规则里，
+  // 没有任何一条的 (特异度, 顺序) 能压过提到 .page-heading--tag-bar 的那条。
   const displayDeclarations = ordered
     .map((entry, index) => ({ ...entry, index }))
     .filter((entry) => entry.property === 'display' && entry.selector.includes('page-heading'));
@@ -315,7 +311,7 @@ const main = async () => {
   const others = displayDeclarations.filter((entry) => !entry.selector.includes('page-heading--tag-bar'));
 
   if (tagBarGrid.length === 0) {
-    problems.push('G5 不成立：没有找到 `.page-heading--tag-bar { display: grid }`');
+    problems.push('没有找到 `.page-heading--tag-bar { display: grid }`');
   } else {
     const rank = (entry) => specificity(entry.selector) * 1e6 + entry.index;
     const bestTagBar = tagBarGrid.reduce((best, entry) => (rank(entry) > rank(best) ? entry : best), tagBarGrid[0]);
@@ -323,14 +319,14 @@ const main = async () => {
     if (beaten.length > 0) {
       for (const entry of beaten) {
         problems.push(
-          `G5 不成立：\`${entry.selector}{display:${entry.value}}\`（特异度 ${specificity(entry.selector)}）`
+          `\`${entry.selector}{display:${entry.value}}\`（特异度 ${specificity(entry.selector)}）`
           + ` 压过了两行页头的 \`${bestTagBar.selector}{display:${bestTagBar.value}}\``
-          + `（特异度 ${specificity(bestTagBar.selector)}）—— 页头会退回 flex，副标题被推到右边`
+          + `（特异度 ${specificity(bestTagBar.selector)}），页头会退回 flex`
         );
       }
     } else {
       lines.push(
-        `  ✓ G5 两行页头的 display:grid 未被任何 .page-heading 规则压过`
+        `  两行页头的 display:grid 未被任何 .page-heading 规则压过`
         + `（最高 ${specificity(bestTagBar.selector)}：${bestTagBar.selector}）`
       );
     }
@@ -344,7 +340,7 @@ const main = async () => {
   }
 
   console.log(lines.join('\n'));
-  console.log('[check-layout-geometry] OK（G1–G5 + 壳层外边距 + 页面外缘间隙换算全部成立）');
+  console.log('[check-layout-geometry] OK（几何不变量 + 壳层外边距 + 页面外缘间隙换算全部成立）');
 };
 
 await main();

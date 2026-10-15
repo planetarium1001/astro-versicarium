@@ -15,10 +15,12 @@ import {
 } from '../utils/format';
 
 /**
- * `/devlog/` 的项目筛选与页头搜索，取值域只有 `project`（不含 kind）。搜索的 haystack 取每行
- * 已渲染文本（本页全量渲染、无 index.json），关键词与项目同时成立；交互复用 tag dialog 的样式
- * 与已选胶囊：第一行项目名，第二行「描述 · 共 N 条更新 + 切换项目 + 清除筛选」，切换过渡用条目
- * 淡入淡出，不翻页滑动。本页只有本脚本写 `hidden`，抽屉展开由 `devlog-drawer.ts` 负责。
+ * `/devlog/` 的项目筛选与页头搜索，取值域只有 `project`（不含 kind）。
+ *
+ * 搜索的 haystack 取每行已渲染文本（本页全量渲染、无 index.json），关键词与项目同时成立。
+ * 交互复用 tag dialog 的样式与已选胶囊：第一行项目名，第二行「描述 · 共 N 条更新 +
+ * 切换项目 + 清除筛选」；切换过渡用条目淡入淡出，不翻页滑动。
+ * 本页只有本脚本写 `hidden`，抽屉展开由 `devlog-drawer.ts` 负责。
  */
 
 const dialog = document.querySelector<HTMLDialogElement>('[data-entry-tag-dialog]');
@@ -124,8 +126,8 @@ if (dialog && listEl) {
   };
 
   /**
-   * 时间线的收尾只认最后一条可见的条目：按项目筛选或搜索之后，新的「最后一条」
-   * 同样要把线收在它的日期上。标记按计划结果同步打上，不等动画。
+   * 时间线收尾只认最后一条可见条目：筛选或搜索之后，新的「最后一条」同样把线收在它的日期上。
+   * 标记按计划结果同步打上，不等动画。
    */
   const markLastVisibleRow = () => {
     const lastVisible = [...ROWS].reverse().find((row) => matches(row)) ?? null;
@@ -146,8 +148,8 @@ if (dialog && listEl) {
   };
 
   /**
-   * 按当前状态（项目 ∧ 关键词）重算一遍可见集合：整体一次过渡，错峰开始、同时结束，
-   * 与 tag 筛选同一套观感，不是翻页滑动。
+   * 按当前状态（项目 ∧ 关键词）重算可见集合：整体一次过渡，错峰开始、同时结束，
+   * 与 tag 筛选同一套观感，不翻页滑动。
    */
   const runPlan = (options: { animate?: boolean } = {}) => {
     const animate = options.animate ?? true;
@@ -160,8 +162,7 @@ if (dialog && listEl) {
       if (!hit && !row.hidden) hide.push(row);
     }
 
-    // 计数按计划结果同步更新，不等动画：动画只负责旧内容淡出、新内容淡入。
-    // 等动画跑完再改计数的话，减少动效或 jsdom 这类没有 WAAPI 的环境里会先显示旧数字。
+    // 计数按计划结果同步更新，不等动画：动画结束后再改，会让没有 WAAPI 的环境先显示旧数字。
     const visibleAfter = ROWS.filter((row) => matches(row)).length;
     applySubtitleCount(visibleAfter);
     syncOptions();

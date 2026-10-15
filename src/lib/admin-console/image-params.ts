@@ -171,9 +171,8 @@ const normalizeDirectoryInput = (value: string | null | undefined): string =>
   (value ?? '').trim().replace(/\\/g, '/').replace(/\/+$/, '');
 
 /**
- * 请求参数里的 `dir`：保留子目录原文（如 `public/images/bits`）。
- * 必须与 `normalizeAdminImageDirectory` 区分：后者把值收敛到已知目录选项，
- * 会把子目录降级成父目录。这里只做前缀校验，避免任意路径进入扫描。
+ * 请求参数里的 `dir`：保留子目录原文（如 `public/images/bits`），只做前缀校验。
+ * 不收敛到已知目录选项，否则子目录会被降级成父目录。
  */
 const normalizeAdminImageRequestDirectory = (value: string | null | undefined): string => {
   const normalized = normalizeDirectoryInput(value);
@@ -311,7 +310,7 @@ export const getAdminImageListRequest = (searchParams: URLSearchParams): AdminIm
   return {
     field,
     // 保留调用方请求的目录原文（可以是已知前缀的子目录，如 public/images/bits）；
-    // 仅做协议/空白归一化，不用枚举做「精确白名单」。
+    // 只做协议与空白归一化，不做精确白名单。
     directory: normalizeAdminImageRequestDirectory(searchParams.get('dir')),
     owner: normalizeAdminImageOwnerValue(searchParams.get('owner')),
     origin,

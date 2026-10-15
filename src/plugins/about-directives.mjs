@@ -43,9 +43,7 @@ const normalizeAboutDirectiveAvatarSource = (value, base = '/') => {
   try {
     const parsed = new URL(trimmed);
     return parsed.protocol === 'https:' ? parsed.toString() : '';
-  } catch {
-    // Fall through to local path normalization.
-  }
+  } catch {}
 
   const normalized = trimmed.replace(/\\/g, '/').replace(/^\.\/+/, '');
   if (

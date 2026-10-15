@@ -1,6 +1,5 @@
 /* entry-tags.css
-   负责 archive / blog 标签入口、当前筛选状态与标签选择器；
-   不承担首页或正文页专属样式。
+   archive / blog 的标签入口、当前筛选状态与标签选择器。
  */
 
 .page-subtitle--entry-filters {
@@ -18,21 +17,9 @@
   min-width: 0;
 }
 
-/* 状态栏容器：混排胶囊、按钮、文字时显式居中对齐，避免基线错位 */
-.entry-tag-status {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  min-width: 0;
-}
-
-/* 已选标签控件条
-   本容器只装第一行：[图标] [#a ×] (+|/) [#b ×]，与标题顶端对齐；
-   「切换标签 / 清除筛选」在副标题那一行（复用 .page-subtitle__action / __link）。
-   不用 min-height: var(--tap-min-h) 撑热区：那会把第一行撑到 44px，
-   与「两行合计约等于标题高度」冲突；44px 热区由 .entry-tag-chip__remove::after 提供，
-   check-touch-targets 按它判定。 */
+/* 已选标签控件条：只装第一行 [图标] [#a ×] (+|/) [#b ×]，与标题顶端对齐。
+   不用 min-height: var(--tap-min-h) 撑热区（会把首行撑到 44px）；
+   44px 热区由 .entry-tag-chip__remove::after 提供，check-touch-targets 按它判定。 */
 .entry-tag-apply {
   display: inline-flex;
   align-items: center;
@@ -80,10 +67,7 @@
   align-items: center;
   /* `×` 贴住文字：不留 gap，靠按钮自身的负外边距再收紧一点 */
   gap: 0;
-  /**
-   * 控件条是已选状态，比 dialog 选项更紧凑：高度 20px + 行距 0（见 layout.css 的 row-gap: 0），
-   * 使胶囊行与描述行的视觉间距等于正文行距。原来是 24px + 2px，两行之间会空出约 11px。
-   */
+/* 控件条比 dialog 选项紧凑：高度 20px，行距由 layout.css 的 row-gap: 0 控制。 */
   min-height: 20px;
   padding: 1px 3px 1px 8px;
   border-radius: 999px;
@@ -133,10 +117,7 @@
   border-radius: 3px;
 }
 
-/**
- * × 是小小的一个叉：无圆圈底、无边框，紧贴文字与胶囊右缘。
- * 宽度按最小可点保留 13px，不靠 padding 撑开。
- */
+/* × 无圆圈底与边框；宽度 13px，不用 padding 撑开。 */
 .entry-tag-chip__remove {
   position: relative;
   display: inline-flex;
@@ -160,11 +141,8 @@
   color: var(--text);
 }
 
-/**
- * 触控热区：视觉 13px，可点高度 44px，用不占布局的覆盖层实现。
- * 宽度刻意保持在胶囊内，不横跨标签文字，否则「点文字打开选择器」与「点 × 移除」互相抢点击。
- * check-touch-targets 按本覆盖层的 height 判定。
- */
+/* 触控热区：视觉 13px，可点高度 44px，用不占布局的覆盖层实现。
+   宽度不超出胶囊，避免与标签文字的点击区域重叠；check-touch-targets 按本覆盖层 height 判定。 */
 .entry-tag-chip__remove::after {
   content: '';
   position: absolute;
@@ -215,11 +193,7 @@
   outline-offset: var(--focus-ring-offset);
 }
 
-/**
- * 「切换标签」/「清除筛选」复用克制的文字链接样式：前者用 .page-subtitle__action（accent 色），
- * 后者用 .page-subtitle__link（灰色、hover 变亮）。脚本渲染成 <button>，
- * 这里只做按钮归一化：去掉 UA 边框、底色与字体。
- */
+/* 「切换标签 / 清除筛选」由脚本渲染为 <button>，此处只做按钮归一化：去掉 UA 边框、底色与字体。 */
 .page-subtitle__actions > button {
   padding: 0;
   border: 0;
@@ -248,31 +222,21 @@
   min-height: 1.4em;
 }
 
-/**
- * hidden 必须真的隐藏：上面的 display: inline-flex 会压过 UA 的 [hidden] { display: none }，
- * 否则描述行里「#标签」与「切换标签」会同时出现。
- */
+/* display: inline-flex 会压过 UA 的 [hidden] { display: none }，需显式隐藏。 */
 .page-subtitle__item[hidden],
 .page-subtitle__text[hidden],
 .page-subtitle__actions[hidden] {
   display: none;
 }
 
-/**
- * 纯文本描述段的分隔符保持行内，它本身不可点，无误触问题。
- * 判定条件必须是「后面还有可见项」：用 :not(:last-child) 会把被 hidden 的兄弟
- * （如「项目」作用域下隐藏的 #标签 入口）算在内，描述行末尾会多出一个孤立的「·」。
- */
+/* 分隔符判定须基于「后面还有可见项」：:not(:last-child) 会把 hidden 的兄弟算在内，末尾留下孤立的「·」。 */
 .page-subtitle__text:has(~ .page-subtitle__item:not([hidden]))::after {
   content: "·";
   margin: 0 0.55em;
   color: var(--faint);
 }
 
-/**
- * 可点元素右侧的「·」若用行内 ::after 会被算进链接的点击盒子，实测点 RSS 右边的「·」
- * 也会触发 RSS。改为绝对定位 + pointer-events: none：视觉上仍在两段之间，但不吃点击。
- */
+/* 「·」用绝对定位 + pointer-events: none：行内 ::after 会被算进链接的点击盒子。 */
 .page-subtitle__item {
   position: relative;
 }
@@ -356,10 +320,7 @@
   z-index: 1;
 }
 
-/**
- * dialog 内的工具栏。活动 dialog 里已无工具栏，AND/OR 开关移到标题行；
- * 这条规则只服务 <noscript> 的回退块（.entry-tags-fallback）。
- */
+/* 仅服务 <noscript> 回退块（.entry-tags-fallback）；活动 dialog 的工具栏已移至标题行。 */
 .entry-tags-dialog__toolbar {
   min-width: 0;
 }
@@ -456,7 +417,7 @@
   flex: 0 0 auto;
 }
 
-/* ---------------- 逻辑预览行 ---------------- */
+/* 逻辑预览行 */
 /* 结构：[ 长胶囊：已选标签 + 运算符 + () ] [+] [/] */
 .entry-tags-dialog__expression-row {
   display: flex;
@@ -465,10 +426,7 @@
   min-width: 0;
 }
 
-/**
- * 那条「大一号的长胶囊」：比标签选项更高更宽，里面实时渲染表达式。
- * 内容超长时横向滚动（不换行），高度保持稳定，避免 dialog 抖动。
- */
+/* 表达式预览胶囊：比标签选项更高更宽；超长时横向滚动不换行，高度保持稳定。 */
 .entry-tags-dialog__expression {
   display: flex;
   align-items: center;
@@ -662,11 +620,8 @@
   gap: 8px;
   position: relative;
   flex: 0 1 auto;
-  /**
-   * 尺寸对齐原 /bits/ 年份筛选胶囊：字号 13px、内容视觉高度 = 34px 容器 − 6px = 28px。
-   * 可点高度保持 44px，用 min-height: var(--tap-min-h) 撑热区，并用上下 padding 把内容居中；
-   * 不用 ::before 覆盖层撑热区——该伪元素在构建产物里会被丢掉。
-   */
+/* 字号 13px，内容视觉高度 28px（34px 容器 − 6px）；可点高度 44px 由 min-height: var(--tap-min-h) 撑起。
+   不用 ::before 覆盖层撑热区：该伪元素在构建产物中会被移除。 */
   /* 视觉高度 28px（与原年份胶囊一致），可点高度 44px 由下面的 ::before 覆盖层提供 */
   height: 28px;
   max-width: 100%;
@@ -677,7 +632,7 @@
   color: var(--muted);
   cursor: pointer;
   text-align: left;
-  /* 标签从 <a> 改成 <button> 后必须显式继承字体：UA 的 button 默认 font 会渗进未设 font-family 的 .entry-tag-option__count */
+/* <button> 不继承字体，需显式声明 font，否则 UA 默认字体渗入未设 font-family 的子元素。 */
   font: inherit;
   font-family: var(--font-copy);
   font-size: 13px;
@@ -800,17 +755,9 @@
   }
 }
 
-/**
- * 窄屏下 tag 块与标题的排版。.entry-tag-apply 全局带 align-self: start，
- * 在「标题 + tag」行里贴行顶部，而标题行盒有 36px 高，胶囊下沿到描述行会空出近 20px。
- * 处理：标题行占满可用宽度，tag 块底部对齐并吃掉标题右侧剩余宽度按需换行，
- * 标签多时回退成两行，整体贴在标题右侧。
- */
+/* 窄屏：标题行占满宽度，tag 块底部对齐并占用标题右侧剩余宽度；标签多时回退为两行。 */
 @media (max-width: 900px) {
-  /**
-   * 单行 tag 时胶囊底部要与标题底部齐平。标题行盒在字形下方还有 descent 与行距，
-   * 先把行盒收紧到贴近字形，再把胶囊从行盒底部上抬一点，使「胶囊底部 ≈ 标题字形底部」。
-   */
+/* 单行 tag 时胶囊底部需与标题字形底部齐平：先收紧标题行盒，再把胶囊从行盒底部上抬。 */
   .page-header .page-heading--tag-slot .page-title {
     line-height: 1.15;
   }

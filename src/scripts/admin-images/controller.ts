@@ -176,8 +176,7 @@ export const initAdminImagesConsole = () => {
     query: bootstrap.initialState.query,
     page: bootstrap.initialState.page
   };
-  let filtersOpen = currentState.scope === DEFAULT_SCOPE
-    && (currentState.group !== DEFAULT_GROUP || currentState.subgroup.trim().length > 0);
+  let filtersOpen = false;
   let currentViewMode: AdminImageViewMode = 'grid';
   let searchOpen = currentState.query.trim().length > 0;
   let draftQuery = currentState.query;
@@ -237,6 +236,9 @@ export const initAdminImagesConsole = () => {
   const hasBrowseFilters = () =>
     currentState.scope === DEFAULT_SCOPE
     && (currentState.group !== DEFAULT_GROUP || currentState.subgroup.trim().length > 0);
+
+  /** 首次同步前 filtersOpen 还是占位值，这里补上初始态。 */
+  filtersOpen = hasBrowseFilters();
 
   const withoutCloudGroupOption = (options: readonly AdminImageFilterOption[]): AdminImageFilterOption[] =>
     options.filter((option) => option.value !== 'cloud');

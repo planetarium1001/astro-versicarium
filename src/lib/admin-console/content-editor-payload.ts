@@ -59,8 +59,8 @@ export type AdminProjectsEditorValues = {
 };
 
 /**
- * devlog 是列表型集合。没有 `links` 字段：外链写在正文 markdown 里，
- * 因此既没有 `linksText`，后台也不需要行编辑器。
+ * devlog 是列表型集合，无 `links` 字段：外链写在正文 markdown 里，
+ * 没有 `linksText`，后台不需要行编辑器。
  */
 export type AdminDevlogEditorValues = {
   title: string;

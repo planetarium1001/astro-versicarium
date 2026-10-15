@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * check-svelte-components —— 编译全部 .svelte 组件。
+ * check-svelte-components：编译全部 .svelte 组件。
  *
  * astro check（tsc）不看模板，build 也不编译只在 DEV 下挂载的后台 Svelte 岛，因此模板语法
  * 错误可以让两个命令全绿而开发服务器打开后台就 500。这里用 svelte/compiler 直接编译

@@ -1,6 +1,6 @@
 // 右下角浮动按钮列：回到顶部、回到上次阅读位置（退出阅读由 sidebar-reading.ts 控制）。
-// 位置记忆分两层：跨次打开按路径存 localStorage，本次会话用位置栈（目录跳转、
-// 回到顶部前入栈）。每条记「最近标题 + 段内偏移」与「滚动比例」，锚点优先、比例兜底。
+// 位置记忆分两层：跨次打开按路径存 localStorage，本次会话用位置栈（目录跳转、回到顶部前入栈）。
+// 每条记「最近标题 + 段内偏移」与「滚动比例」，锚点优先、比例兜底。
 
 const STACK_SIZE = 12;
 const STORAGE_KEY = 'astro-whono:reading-position';
@@ -67,7 +67,7 @@ const initFloatingStack = () => {
   const maxScroll = () =>
     Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
 
-  // 当前位置所属章节与整体比例
+  // 当前位置所属章节与整体比例。
   const capturePosition = (): SavedPosition => {
     const y = currentY();
     let headingId: string | null = null;
@@ -111,11 +111,11 @@ const initFloatingStack = () => {
   const positionStack: SavedPosition[] = [];
 
   const pushCurrentPosition = () => {
-    // 页面开头没有回退价值
+    // 页面开头没有回退价值。
     if (currentY() < 80) return;
     const current = capturePosition();
     const last = positionStack[positionStack.length - 1];
-    // 位置几乎没变则不入栈，避免连点堆积历史
+    // 位置几乎没变则不入栈，避免连点堆积历史。
     if (last && Math.abs(last.ratio - current.ratio) * maxScroll() < MIN_SCROLL_PX) return;
     positionStack.push(current);
     if (positionStack.length > STACK_SIZE) positionStack.shift();
@@ -161,7 +161,7 @@ const initFloatingStack = () => {
 
   const syncScrollTopButton = () => {
     if (!stackButton) return;
-    // 一屏看完时没有回到顶部可言，直接隐藏
+    // 一屏看完时没有回到顶部可言，直接隐藏。
     const scrollable = maxScroll() > 48;
     stackButton.hidden = !scrollable;
     stackButton.setAttribute(
@@ -186,10 +186,10 @@ const initFloatingStack = () => {
     const fromStored = positionStack.length === 0;
     const target = positionStack.pop() ?? storedPosition;
     if (!target) return;
-    // 记下当前位置，便于再跳回来
+    // 记下当前位置，便于再跳回来。
     pushCurrentPosition();
     if (fromStored) {
-      // 跨次记忆已用掉，避免下次打开又提示同一位置
+      // 跨次记忆已用掉，避免下次打开又提示同一位置。
       storedPosition = null;
       if (stored[pageKey]) {
         delete stored[pageKey];
@@ -200,7 +200,7 @@ const initFloatingStack = () => {
     syncAll();
   });
 
-  // 目录跳转前入栈（article-toc.ts 在滚动前派发）
+  // 目录跳转前入栈（article-toc.ts 在滚动前派发）。
   window.addEventListener('astro-whono:reading-jump', () => {
     pushCurrentPosition();
     syncAll();
@@ -215,11 +215,11 @@ const initFloatingStack = () => {
   window.addEventListener('load', syncAll);
   window.addEventListener('pagehide', saveCurrentPosition);
   window.addEventListener('astro-whono:reading-mode-change', () => {
-    // 布局过渡结束后位置才有效，延后一拍校准
+    // 布局过渡结束后位置才有效，延后一拍校准。
     window.setTimeout(syncAll, 600);
   });
 
-  // 图片/字体加载会改变页面高度，需重算能否回到顶部
+  // 图片/字体加载会改变页面高度，需重算能否回到顶部。
   if (typeof ResizeObserver === 'function') {
     new ResizeObserver(() => syncAll()).observe(document.body);
   }

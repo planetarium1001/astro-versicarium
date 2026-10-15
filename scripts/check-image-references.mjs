@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * check-image-references —— 全站图片引用完整性校验，覆盖 Markdown `![]()`、HTML `src=`、
+ * check-image-references：全站图片引用完整性校验，覆盖 Markdown `![]()`、HTML `src=`、
  * `<source srcset>` 以及 frontmatter 与设置文件里的 cover/icon/images[].src/avatar；
  * 跳过 `https://`、`http://`、`data:`、协议相对 `//` 与模板表达式 `${...}`。
  * 用法：`node ./scripts/check-image-references.mjs`
@@ -26,9 +26,9 @@ const SOURCE_DIRS = [
 const SOURCE_FILES = ['site.config.mjs'];
 
 const MARKDOWN_IMAGE_RE = /!\[[^\]]*]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g;
-/** Markdown 容器指令的图片属性，例如 `:::friend{avatar="author/avatar.webp"}`。 */
+// Markdown 容器指令的图片属性，例如 `:::friend{avatar="author/avatar.webp"}`。
 const DIRECTIVE_IMAGE_ATTR_RE = /\b(?:avatar|cover|icon|src)\s*=\s*"([^"]*\.[A-Za-z0-9]+)"/g;
-/** JSON / mjs 里的图片键（avatar / authorAvatar / heroImageSrc / cover / icon / src）。 */
+// JSON / mjs 里的图片键。
 const JSON_IMAGE_KEY_RE = /\b(?:avatar|authorAvatar|heroImageSrc|cover|icon|src)\s*:\s*["']([^"']+)["']/g;
 const HTML_SRC_RE = /<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/gi;
 const SOURCE_SRCSET_RE = /<source\b[^>]*\bsrcset\s*=\s*["']([^"']+)["']/gi;
@@ -45,9 +45,7 @@ const stripDecorations = (value) => {
   let out = value.trim();
   // Markdown 标题：![alt](url "title")
   out = out.replace(/\s+"[^"]*"$/, '').trim();
-  // 去掉包围的引号与尖括号
   out = out.replace(/^<|>$/g, '').replace(/^["']|["']$/g, '').trim();
-  // 去掉查询串与片段
   return (out.split(/[?#]/, 1)[0] ?? '').trim();
 };
 
@@ -78,7 +76,7 @@ const toAbsolutePath = (rawValue, filePath, base) => {
 const collectFiles = () =>
   collectSourceFiles(ROOT, { dirs: SOURCE_DIRS, files: SOURCE_FILES });
 
-// 去掉代码围栏与行内代码：文档里的示例路径不是真引用。
+// 去掉代码围栏与行内代码。
 const stripCodeFences = (text) =>
   text
     .replace(/^([ \t]*)(```|~~~)[\s\S]*?^\1\2[^\n]*$/gm, '')
@@ -104,8 +102,7 @@ const collectReferences = async (filePath) => {
     }
   }
   if (path.extname(filePath) === '.md') {
-    // frontmatter 的图片字段按 public/ 解析（schema 要求「不要带 public/、不要以 / 开头」）。
-    // 示例：bits 的 `images[].src: images/bits/<slug>/x.webp`
+    // frontmatter 的图片字段按 public/ 解析（schema 要求不带 public/、不以 / 开头）。
     for (const match of text.matchAll(FRONTMATTER_KEY_RE)) {
       raw.push({ value: match[1], base: 'public-relative' });
     }

@@ -17,11 +17,11 @@ if (
 
 export const site = {
   url: hasSiteUrl ? siteUrl : fallbackSiteUrl,
-  title: 'Astro Themes by Whono',
-  brandTitle: 'Whono',
-  author: 'Whono',
+  title: 'Astro Whono',
+  brandTitle: 'Astro Whono',
+  author: 'Astro Whono',
   authorAvatar: 'author/avatar.webp',
-  description: '一个 Astro 主题的展示站：轻量、可维护、可复用。'
+  description: '一个极简双栏 Astro 主题，用于个人写作与轻量内容发布。'
 };
 
 // 服务端分页已取消，这三个值是前端每页条目数：列表页写入

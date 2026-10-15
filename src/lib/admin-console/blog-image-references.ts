@@ -48,10 +48,7 @@ type LocalImagePathPart = {
   pathPart: string;
 };
 
-/**
- * 校验器必须同时支持相对路径与 `/images/...` 绝对路径。
- * 旧实现遇到前导 `/` 直接返回 null，正文图改用绝对路径后存盘缺图拦截会整体失效。
- */
+/** 校验器需同时支持相对路径与以 `/` 开头的绝对路径。 */
 const getLocalImagePathPart = (src: string): LocalImagePathPart | null => {
   const normalized = normalizeMarkdownImageSource(src);
   // 协议相对（//cdn...）与带 scheme（https:、data:）的都不算本地引用。
@@ -87,7 +84,7 @@ const collectFigureImageSources = (source: string): ImageSourceReference[] => {
       .filter(Boolean);
     if (!classNames.includes('figure')) continue;
 
-    // `<picture>` 里的每个 `<source srcset>` 候选都要纳入校验，不能遇到 picture 整块跳过
+    // `<picture>` 里的每个 `<source srcset>` 候选都纳入校验。
     for (const sourceTag of figureBody.matchAll(SOURCE_TAG_RE)) {
       for (const candidate of parseSrcsetCandidates(getHtmlAttributeValue(sourceTag[0], 'srcset'))) {
         references.push({ kind: 'figure', src: candidate });

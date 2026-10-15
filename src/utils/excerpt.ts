@@ -1,11 +1,11 @@
 const MORE_REGEX = /<!--\s*more\s*-->/i;
 
-export type DerivedMarkdownText = {
+type DerivedMarkdownText = {
   plainText: string;
   excerptText: string;
 };
 
-export function splitMore(md: string): string {
+function splitMore(md: string): string {
   if (!md) return '';
   const match = md.match(MORE_REGEX);
   if (!match) return md;
@@ -40,20 +40,16 @@ export function truncateText(text: string, maxChars = 120): string {
   return `${text.slice(0, Math.max(0, maxChars))}…`;
 }
 
-/** 空格回退的下限：回退后至少要保留这么多字符，否则宁可切在词中间。 */
+/** 空格回退的下限：回退后至少要保留这么多字符，否则切在词中间。 */
 const WORD_BOUNDARY_KEEP_RATIO = 0.7;
 
-/** 句子结束标点：摘要优先收在这些标点之后，读者看到的是完整句子而不是半句话。 */
 const SENTENCE_END_PATTERN = /[。！？；…!?;]/;
 
-/** 句子边界回退的下限：标点太靠前就不回退，否则摘要会明显短于预算。 */
+/** 句子边界回退的下限：标点太靠前就不回退。 */
 const SENTENCE_BOUNDARY_KEEP_RATIO = 0.6;
 
 /**
- * 摘要用的字符截断：不做样式兜底，也不从行中间切。
- *
- * 超出上限时依次尝试：收在最后一句的句末标点之后（不再补省略号）→ 回退到最后一个空白
- * （避免把西文单词截成两半）→ 按上限切片并补省略号。
+ * 摘要截断：优先收在句末标点之后，其次回退到最后一个空白，最后按上限切片并补省略号。
  */
 export function truncateTextAtWord(text: string, maxChars: number): string {
   if (!text || text.length <= maxChars) return text;

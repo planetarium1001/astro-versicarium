@@ -93,15 +93,16 @@ const listenSystemThemeChange = (listener: () => void) => {
     return;
   }
 
-  // 兼容旧版 Safari / WebView 的 MediaQueryList 监听接口。
+  // 兼容只实现 addListener 的旧版 Safari / WebView。
   const legacyColorSchemeMq = colorSchemeMq as unknown as LegacyMediaQueryList;
   legacyColorSchemeMq.addListener?.(listener);
 };
 
 /**
- * 主题切换涟漪：按目标主题分类方向。切到亮色时新快照从点击处向四周扩散
- * （`::view-transition-new(root)` 的 clip 从 0 圆放大到整屏）；切到暗色时反过来，从四周向
- * 点击处收敛，用旧快照收缩（`::view-transition-old(root)` 的 clip 从整屏收到 0 圆）。
+ * 主题切换涟漪：切到亮色时新快照从点击处向四周扩散
+ * （`::view-transition-new(root)` 的 clip 从 0 圆放大到整屏）；切到暗色时反向收敛，
+ * 用旧快照收缩（`::view-transition-old(root)` 的 clip 从整屏收到 0 圆）。
+ *
  * 不支持 `startViewTransition` 或偏好减少动效时直接切换。
  */
 type ViewTransitionLike = { ready: Promise<void> };
@@ -117,11 +118,11 @@ const prefersReducedMotion = () =>
 const getStartViewTransition = (): StartViewTransitionLike | null => {
   const candidate = (document as unknown as { startViewTransition?: unknown }).startViewTransition;
   if (typeof candidate !== 'function') return null;
-  // 必须以 document 为 this 调用，不能取裸函数
+  // 必须以 document 为 this 调用，不能取裸函数。
   return (candidate as StartViewTransitionLike).bind(document);
 };
 
-// 圆心取指针位置；键盘触发（clientX/Y 为 0）时回退到按钮中心
+// 圆心取指针位置；键盘触发（clientX/Y 为 0）时回退到按钮中心。
 const resolveRippleOrigin = (event: MouseEvent) => {
   if (event.clientX > 0 || event.clientY > 0) {
     return { x: event.clientX, y: event.clientY };
@@ -136,11 +137,11 @@ const resolveRippleOrigin = (event: MouseEvent) => {
 };
 
 /**
- * 涟漪方向写在 `<html>` 上的标记（`data-theme-ripple`）。两个方向需要不同的层叠顺序，
- * 只改 clip-path 是不够的：
+ * 涟漪方向标记（`<html>` 上的 `data-theme-ripple`）。两个方向需要不同的层叠顺序，
+ * 只改 clip-path 不够：
  * - `expand`（切到亮色）：动画 `::view-transition-new(root)`，新快照在上；
  * - `converge`（切到暗色）：动画 `::view-transition-old(root)`，旧快照必须压在新快照之上，
- *   否则旧快照被裁掉的过程根本看不见（样式见 `global.css` 的 `[data-theme-ripple]` 规则）。
+ *   否则裁掉旧快照的过程不可见（样式见 `global.css` 的 `[data-theme-ripple]` 规则）。
  */
 const RIPPLE_ATTR = 'themeRipple';
 
@@ -159,15 +160,15 @@ const applyThemeWithRipple = (event: MouseEvent, apply: () => void, targetTheme:
   const center = `${x}px ${y}px`;
   const circle = (r: number) => `circle(${Math.ceil(r)}px at ${center})`;
 
-  // 亮色 = 扩散（新快照从小圆放大）；暗色 = 收敛（旧快照从整屏收到点击处）
+  // 亮色 = 扩散（新快照从小圆放大）；暗色 = 收敛（旧快照从整屏收到点击处）。
   const expanding = targetTheme === 'light';
   root.dataset[RIPPLE_ATTR] = expanding ? 'expand' : 'converge';
 
   /**
    * 过渡期间冻结滚动条配色。
    *
-   * View Transition 只拍内容区的快照，滚动条由浏览器自己画：`color-scheme` 一变，
-   * 浏览器立刻把滚动条重画成新主题（暗到亮时最右侧会先跳成亮色），看起来像涟漪漏了一块。
+   * View Transition 只拍内容区快照，滚动条由浏览器自己画：`color-scheme` 一变，
+   * 浏览器立刻把滚动条重画成新主题，看起来像涟漪漏了一块。
    * 这里在过渡期间把 `color-scheme` 钉在旧主题上，动画结束后撤掉内联值交还 CSS。
    */
   const previousScheme = root.dataset.theme === 'dark' ? 'dark' : 'light';
@@ -209,7 +210,7 @@ const initTheme = () => {
     const apply = () => setThemeMode(nextMode);
     const nextTheme = resolveTheme(nextMode);
 
-    // 解析后主题未变（如浅色 → 跟随系统且系统为浅色）时不跑涟漪
+    // 解析后主题未变（如浅色 → 跟随系统且系统为浅色）时不跑涟漪。
     if (nextTheme === resolveTheme(activeThemeMode)) {
       apply();
       return;

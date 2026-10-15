@@ -116,7 +116,7 @@ describe('/devlog/ 的「项目」筛选与行内展开', () => {
     await loadPage();
     await importScripts();
 
-    // ① 样式载体是 tag dialog
+    // 样式载体是 tag dialog
     expect(dialog(), '需要复用 tag dialog').not.toBeNull();
     expect(dialog()!.classList.contains('entry-tags-dialog')).toBe(true);
     expect(dialog()!.querySelector('.entry-tags-dialog__title')?.textContent?.trim()).toBe('更新项目');
@@ -125,11 +125,11 @@ describe('/devlog/ 的「项目」筛选与行内展开', () => {
     // 单选项目没有 AND/OR 语义，也没有 RSS
     expect(dialog()!.querySelector('.entry-tags-dialog__mode')).toBeNull();
     expect(document.querySelector('.page-subtitle__link'), 'devlog 不该有 RSS 链接').toBeNull();
-    // 旧的胶囊条必须已经删掉
+    // 不得再出现旧的胶囊条
     expect(document.querySelector('[data-devlog-filter-bar]')).toBeNull();
     expect(document.querySelector('.scope-pills__item')).toBeNull();
 
-    // ② 取值域 = 「全部」 + 去重后的 project 值
+    // 取值域 = 「全部」 + 去重后的 project 值
     const values = optionValues();
     expect(values[0], '第一项应是「全部」').toBe('');
     expect(option('')!.classList.contains('is-active')).toBe(true);
@@ -138,7 +138,7 @@ describe('/devlog/ 的「项目」筛选与行内展开', () => {
     expect(projects().length, '需要至少两个项目才能验证筛选收敛').toBeGreaterThan(1);
     expect(values.slice(1)).toEqual(projects());
 
-    // ③ 关键：kind 值不得出现在选项里
+    // kind 值不得出现在选项里
     expect(kinds().length).toBeGreaterThan(0);
     for (const kind of kinds()) {
       expect(values, `kind（${kind}）不应成为筛选取值`).not.toContain(kind);
@@ -200,7 +200,7 @@ describe('/devlog/ 的「项目」筛选与行内展开', () => {
     expect(strip!.querySelector('.entry-tag-chip__label')?.textContent?.trim()).toBe(project);
     expect(strip!.querySelector('.entry-tag-chip__remove')).not.toBeNull();
 
-    // 第二行：切换项目 / 清除筛选（复用旧主题的克制文字样式）
+    // 第二行：切换项目 / 清除筛选
     const actions = document.querySelector<HTMLElement>('[data-entry-tag-actions]');
     expect(actions).not.toBeNull();
     expect(actions!.parentElement?.classList.contains('page-subtitle')).toBe(true);
@@ -387,9 +387,6 @@ describe('/devlog/ 的「项目」筛选与行内展开', () => {
     expect(linkRow.textContent ?? '').not.toContain('·');
   });
 
-  // 摘要策略是全局一刀切：只要有一条摘要会被页面宽度压缩，就整体回退到不显示摘要，
-  // 把内容放回正文，保证全局样式统一。逐条回退时被压缩的摘要会和标题抢宽度。
-
   const descriptionRows = () =>
     rows().filter(
       (row) =>
@@ -514,7 +511,7 @@ describe('/devlog/ 的「项目」筛选与行内展开', () => {
     const keyframesOf = (call: { keyframes: unknown }) =>
       Array.isArray(call.keyframes) ? (call.keyframes as { opacity?: number; height?: string }[]) : [];
 
-    // ① 列表里的摘要先淡出（1 → 0）
+    // 列表里的摘要先淡出（1 → 0）
     const fadeOut = calls.find((call) => {
       const frames = keyframesOf(call);
       return frames[0]?.opacity === 1 && frames[1]?.opacity === 0;
@@ -522,12 +519,12 @@ describe('/devlog/ 的「项目」筛选与行内展开', () => {
     expect(fadeOut, '切到回退时应当先播一次 1 → 0 的淡出').toBeTruthy();
     expect(fadeOut!.target.classList.contains('devlog-row__description')).toBe(true);
 
-    // ② 行高过渡：过渡要覆盖到正文那一部分
+    // 行高过渡：过渡要覆盖到正文那一部分
     const heightTransition = calls.find((call) => keyframesOf(call)[0]?.height !== undefined);
     expect(heightTransition, '落状态后应当跑一次行高过渡').toBeTruthy();
     expect(heightTransition!.target.classList.contains('devlog-row')).toBe(true);
 
-    // ③ 正文里的完整摘要并行淡入（0 → 1）
+    // 正文里的完整摘要并行淡入（0 → 1）
     const summaryFadeIn = calls.find((call) => {
       const frames = keyframesOf(call);
       return frames[0]?.opacity === 0

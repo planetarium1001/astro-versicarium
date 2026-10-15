@@ -3,7 +3,7 @@
 // 子节点为 [data-view-stat="pv"|"uv"] 及其 [data-view-stat-value]，未填值时带 hidden。
 // scope 取值 article / archive / projects / bits / devlog / blog / about / home；
 // path 为含部署 base 的浏览器路径，route 为去掉 base 的逻辑路由，title 为纯文本标题。
-// 开关在 Theme Console → 内页设置 →「浏览数据」，打开但未填值时页面不显示内容。
+// 开关在 Theme Console → 内页设置 →「浏览数据」；打开但未填值时页面不显示内容。
 // 取数与接入方式见 docs/analytics.md。
 
 export {};

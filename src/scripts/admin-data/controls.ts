@@ -81,36 +81,10 @@ const CONTROL_IDS: Record<keyof AdminDataControls, string> = {
   resultListEl: 'admin-data-result-list'
 };
 
-const CONTROL_SELECTORS: Record<keyof AdminDataControls, string> = {
-  bootstrapEl: '#admin-data-bootstrap',
-  statusLiveEl: '#admin-data-status-live',
-  statusEl: '#admin-data-status',
-  errorBannerEl: '#admin-data-error-banner',
-  errorTitleEl: '#admin-data-error-title',
-  errorMessageEl: '#admin-data-error-message',
-  errorListEl: '#admin-data-error-list',
-  exportBtn: '#admin-data-export',
-  fileInput: '#admin-data-file',
-  dropzoneEl: '#admin-data-dropzone',
-  dropzoneTriggerBtn: '#admin-data-dropzone-empty',
-  dropzoneReselectBtn: '#admin-data-dropzone-reselect',
-  dropzoneEmptyEl: '#admin-data-dropzone-empty',
-  dropzoneSummaryEl: '#admin-data-dropzone-summary',
-  dropzoneMetaEl: '#admin-data-dropzone-meta',
-  selectedFileEl: '#admin-data-selected-file',
-  dryRunBtn: '#admin-data-dry-run',
-  applyBtn: '#admin-data-apply',
-  previewEl: '#admin-data-preview',
-  previewBadgeEl: '#admin-data-preview-badge',
-  previewEmptyEl: '#admin-data-preview-empty',
-  previewEmptyTitleEl: '#admin-data-preview-empty-title',
-  previewEmptyBodyEl: '#admin-data-preview-empty-body',
-  previewContentEl: '#admin-data-preview-content',
-  previewTitleEl: '#admin-data-preview-title',
-  previewBodyEl: '#admin-data-preview-body',
-  previewNoteEl: '#admin-data-preview-note',
-  resultListEl: '#admin-data-result-list'
-};
+/** 缺失诊断用的选择器：与 `CONTROL_IDS` 同键同序，值加 `#` 前缀。 */
+const CONTROL_SELECTORS = Object.fromEntries(
+  Object.entries(CONTROL_IDS).map(([key, id]): [string, string] => [key, `#${id}`])
+) as Record<keyof AdminDataControls, string>;
 
 const byId = <T extends HTMLElement>(id: string): T | null => document.getElementById(id) as T | null;
 

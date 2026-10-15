@@ -142,17 +142,14 @@ export const initAdminEditorRecovery = (
 
   const handleDetected = (value: unknown) => {
     if (!isAdminEditorRecoveryError(value)) return;
-    windowRef.requestAnimationFrame?.(() => {
+    const reveal = () => {
       if (!shouldShowAdminEditorRecovery(documentRoot)) return;
       revealRecovery(root);
       dialogFocus.captureReturnFocus(root.trigger);
       openModal(root, dialogFocus);
-    }) ?? windowRef.setTimeout(() => {
-      if (!shouldShowAdminEditorRecovery(documentRoot)) return;
-      revealRecovery(root);
-      dialogFocus.captureReturnFocus(root.trigger);
-      openModal(root, dialogFocus);
-    }, 0);
+    };
+    // 环境可能没有 requestAnimationFrame（例如测试桩），退回宏任务。
+    windowRef.requestAnimationFrame?.(reveal) ?? windowRef.setTimeout(reveal, 0);
   };
 
   const handlePreloadError = (event: Event) => {

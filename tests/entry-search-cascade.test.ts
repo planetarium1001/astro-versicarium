@@ -219,19 +219,19 @@ describe('级联动效：串行，一次只走一步', () => {
 
     const hides = () => harness.entryItemRecords('hide');
 
-    // ① 点击后整批动画同时被创建，不再一条条排队
+    // 点击后整批动画同时被创建，不再一条条排队
     expect(hides().length, '需要变化的条目应当一次性全部进入过渡').toBe(expectedHideOrder.length);
 
-    // ② 顺序 = 文档顺序（自上而下扫过）
+    // 顺序 = 文档顺序（自上而下扫过）
     expect(hides().map((record) => (record.el as HTMLElement).dataset.slug)).toEqual(expectedHideOrder);
 
-    // ③ 错峰起步：起点单调递增，且后一条不等前一条结束（重叠才是一个整体）
+    // 错峰起步：起点单调递增，且后一条不等前一条结束（重叠才是一个整体）
     const starts = hides().map((record) => record.start);
     expect(starts).toEqual([...starts].sort((a, b) => a - b));
     expect(starts.at(-1)!).toBeGreaterThan(starts[0]!);
     expect(hides()[1]!.start).toBeLessThan(hides()[0]!.end);
 
-    // ④ 同时结束：所有淡出动画的终点完全相同
+    // 同时结束：所有淡出动画的终点完全相同
     expect(new Set(hides().map((record) => record.end)).size, '所有条目必须同时结束').toBe(1);
     // 让最后一步也落地，然后确认可见集合收敛到命中集合
     await harness.settleAll();
@@ -369,7 +369,7 @@ describe('级联动效：串行，一次只走一步', () => {
     devlogPill.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
 
     const slides = () => harness.containerRecords('[data-archive-content]');
-    // ① 动的是内容容器，而不是包住页头的外层容器
+    // 动的是内容容器，而不是包住页头的外层容器
     expect(slides().length).toBe(1);
     expect(slides()[0]!.kind).toBe('hide');
     expect(
@@ -377,14 +377,14 @@ describe('级联动效：串行，一次只走一步', () => {
       '不应再对包住页头的容器做滑动'
     ).toBe(0);
 
-    // ② 页头完全没有动画
+    // 页头完全没有动画
     for (const selector of ['.page-title', '.page-subtitle', '.page-heading']) {
       const header = document.querySelector(selector);
       if (!header) continue;
       expect(harness.records.filter((record) => record.el === header).length, `页头 ${selector} 不应有动画`).toBe(0);
     }
 
-    // ③ 滑动期间不叠逐条淡出（两套动作不能同时跑）
+    // 滑动期间不叠逐条淡出（两套动作不能同时跑）
     expect(harness.entryItemRecords().length).toBe(0);
 
     // 推进到滑出结束（中间可能还有别的动画边界，例如上一轮标签胶囊的退场）
@@ -430,10 +430,10 @@ describe('级联动效：串行，一次只走一步', () => {
     // 直接派发 click 就断言会读到还没开始过渡的中间态。
     await clickTag(picked);
 
-    // ① 标签筛选不做容器滑动（方向是竖直的，滑动语义不对）
+    // 标签筛选不做容器滑动（方向是竖直的，滑动语义不对）
     expect(harness.containerRecords('[data-archive-content]').length).toBe(0);
 
-    // ② 整月要淡出时，月份（含标题）作为一块动，而不是先淡条目再淡标题
+    // 整月要淡出时，月份（含标题）作为一块动，而不是先淡条目再淡标题
     const sections = Array.from(document.querySelectorAll<HTMLElement>('[data-entry-section]'));
     const matchesPicked = (member: HTMLElement) => {
       const item = indexItems.find((entry) => entry.slug === (member.dataset.slug ?? ''));
@@ -457,7 +457,7 @@ describe('级联动效：串行，一次只走一步', () => {
       expect(memberAnimations(section).length, '整块淡出时不该再逐条淡出').toBe(0);
     }
 
-    // ③ 部分命中的月份仍然逐条淡出
+    // 部分命中的月份仍然逐条淡出
     const partialSections = sections.filter((section) => {
       const members = Array.from(section.querySelectorAll<HTMLElement>('[data-entry-item]'));
       const hiding = members.filter((member) => !member.hidden && !matchesPicked(member));

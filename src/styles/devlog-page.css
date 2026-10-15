@@ -1,24 +1,23 @@
 /* devlog-page.css — /devlog/ 列表与行内展开面板
-   条目视觉与 /archive/ 一致（标题变 accent + 下划线，无整行底色）。
-   时间线是真实渲染的一条线，穿过日期年份的中轴，仅在日期处用页面底色断开成节点。
-   摘要一刀切：任一条被压成省略号或处于窄屏档时列表内不展示摘要，内容回退到展开正文顶部。
-   展开面板上下边距取条目行距的一半（行距 = 2 × --devlog-row-pad-y）。
-   项目筛选复用 TagFilterHeader 与共享的已选胶囊条。 */
+   条目视觉与 /archive/ 一致：标题 accent 色 + 下划线，无整行底色。
+   时间线为真实渲染的一条线，穿过日期年份中轴，仅在日期处用页面底色断开成节点。
+   摘要一刀切：任一条被压成省略号或处于窄屏档时，列表内不展示摘要，回退到展开正文顶部。
+   展开面板上下边距取条目行距的一半（行距 = 2 × --devlog-row-pad-y）。 */
 
 :root {
-  /**
-   * 时间线 x = 行左内边距 8px + 年份「2026」的中轴 16px = 24px。
-   * 必须用 px：ch 会跟随元素各自的 font-size，面板里的线就对不齐。
+  /*
+   * 时间线 x = 行左内边距 8px + 年份中轴 16px = 24px。
+   * 必须用 px：ch 会跟随元素自身 font-size，面板里的线会对不齐。
    */
   --devlog-line-x: 24px;
   /* 面板内容与时间线之间的间隙 */
   --devlog-line-gutter: 16px;
-  /**
-   * 桌面栅格列间距。日期列用 max-content，视觉间距才等于本值；
-   * 固定列宽会把剩余空白也计入视觉间距。
+  /*
+   * 桌面栅格列间距。日期列用 max-content 时视觉间距才等于本值；
+   * 固定列宽会把剩余空白计入视觉间距。
    */
   --devlog-gap: 6px;
-  /**
+  /*
    * 单行上下内边距。收缩状态下相邻条目无 margin/gap，行距 = 2 × 本值；
    * 展开面板正文的上下边距取本值的一半。
    */
@@ -29,23 +28,18 @@
   --devlog-line-color: color-mix(in srgb, var(--muted) 52%, transparent);
 }
 
-/**
- * /devlog/ 的「项目」筛选复用 tag dialog 样式
- * （TagFilterHeader + .entry-tags-dialog，见 entry-tags.css），旧的 .devlog-filter* 已删除。
- */
 .devlog-list {
   position: relative;
   display: flex;
   flex-direction: column;
-  /* 行自身 padding 提供间距，时间线在行间无断口，视觉上连续 */
+  /* 行间距由行自身 padding 提供，时间线在行间不断口 */
   gap: 0;
-  /* 补足行内容上方到 44px 最小高度的差额，首行不至于离页头太远 */
+  /* 补足内容高度到 min-height 的差额 */
   margin-top: 8px;
 }
 
 /**
  * 时间线逐行、逐面板各画一段：最后一条未展开时其下不再有线，展开时才补上。
- * 行段上下撑满（行间距为 0，相邻行天然相接），面板段停在面板底部。
  */
 .devlog-row__toggle::before {
   content: '';
@@ -71,7 +65,6 @@
   pointer-events: none;
 }
 
-/* 单行：无边框、无圆角、无底色，悬停也不给底色（与归档一致） */
 .devlog-row {
   border: 0;
   border-radius: 0;
@@ -85,14 +78,11 @@
 .devlog-row__toggle {
   position: relative;
   display: grid;
-  /**
-   * 列顺序：日期（max-content）/ 项目名 / kind 胶囊 / 标题与摘要 / 展开图标。
-   */
+  /* 列顺序：日期 / 项目名 / kind 胶囊 / 标题与摘要 / 展开图标 */
   grid-template-columns: max-content auto auto minmax(0, 1fr) auto;
   align-items: baseline;
   gap: var(--devlog-gap);
   width: 100%;
-  /* 相邻条目间距 = 上下 padding 各 5px */
   padding: var(--devlog-row-pad-y) var(--devlog-row-pad-x);
   border: 0;
   border-radius: 6px;
@@ -103,11 +93,7 @@
   cursor: pointer;
   /* 行内容较矮，用最小高度撑住 44px 触控热区 */
   min-height: var(--tap-min-h);
-  /**
-   * 栅格默认 baseline 对齐会把 min-height 多出的高度全堆在内容下方，
-   * 使展开正文比窄屏多下沉约 15px；改用 align-content: end 把余高移到上方，
-   * 「正文到标题」的间距才与窄屏一致。
-   */
+  /* 栅格 baseline 对齐会把 min-height 的余高堆到内容下方；用 align-content: end 移到上方，与窄屏一致 */
   align-content: end;
   transition: color 0.16s ease;
 }
@@ -117,7 +103,7 @@
   outline-offset: -2px;
 }
 
-/* 字重层级：标题最重、摘要常规、meta 最轻（字号对齐归档） */
+/* 字重层级：标题 > 摘要 > meta */
 .devlog-row__date {
   position: relative;
   /* 日期压在时间线上：用页面同色底让线在日期处断开 */
@@ -125,7 +111,7 @@
   padding-right: 2px;
   background: var(--bg);
   font-variant-numeric: tabular-nums;
-  /* 日期用 --muted 而非 --faint：后者在亮暗两种模式下都偏淡 */
+  /* 用 --muted 而非 --faint：后者在亮暗两种模式下都偏淡 */
   color: var(--muted);
   font-size: 13px;
   font-weight: 400;
@@ -133,9 +119,8 @@
 }
 
 /**
- * 最后一条（含筛选后的最后一条，见 devlog-filter.ts 的 is-last-visible）收起时
- * 时间线只画到日期下沿。做法是在日期元素上覆盖 4px 宽的页面同色补丁，
- * top: 100% 即日期下沿，无需计算 baseline；由行内的 overflow: hidden 裁切。
+ * 最后一条（含筛选后的最后一条，见 devlog-filter.ts 的 is-last-visible）收起时，
+ * 时间线只画到日期下沿：在日期元素上覆盖 4px 宽的页面同色补丁，由行内 overflow: hidden 裁切。
  */
 .devlog-row:is(:last-child, .is-last-visible) .devlog-row__toggle {
   /* 把补丁裁在行按钮内，避免高度外溢盖到列表下方 */
@@ -159,9 +144,7 @@
   opacity: 0;
 }
 
-/**
- * 项目名是这一行的主角：加粗、15px、纯文本色；下方更新标题不加粗且更小一号。
- */
+/* 项目名 15px / 600；下方更新标题不加粗且小一号 */
 .devlog-row__project {
   color: var(--text);
   font-size: 15px;
@@ -172,11 +155,8 @@
   max-width: 220px;
 }
 
-/* 胶囊与两侧间隙收紧：列间距已收到 6px，这里再 -1px 即够（有效间隙 5px） */
-/**
- * kind 胶囊照搬项目卡 .badge 配色：浅色 #fafafa / 边框 --border / 文字 --muted，
- * 暗色 #1f1f1f / #3f3f3f。
- */
+/* 有效列间距 5px = 列 gap 6px − 1px */
+
 .devlog-row__kind {
   justify-self: start;
   margin-inline: -1px;
@@ -200,13 +180,11 @@
 }
 
 /**
- * 摘要一刀切回退：宽度足够（每条摘要都能完整显示）时所有条目展示摘要；
- * 只要任一条会被压成省略号或页面处于窄屏档，列表内一条摘要都不显示，
+ * 摘要一刀切：只要任一条会被压成省略号或页面处于窄屏档，列表内一条摘要都不显示，
  * 内容回退到展开正文顶部（[data-devlog-panel-summary]）。
- * 逐条判断会让被压缩的摘要与标题抢宽度，标题也出现省略号；
  * 开关是列表上的 data-devlog-excerpts（由 scripts/devlog-excerpts.ts 判定）。
  */
-/* 更新标题：不加粗、比项目名小一号，仍大于摘要（13px） */
+
 .devlog-row__title {
   font-weight: 400;
   color: var(--text);
@@ -215,7 +193,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  /* 与标题同排时摘要先让位（见 .devlog-row__description 的 shrink 999） */
   flex: 0 1 auto;
   flex-shrink: 1;
   transition: color 0.16s ease;
@@ -229,23 +206,23 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  /* 收缩权重 999：空间不足时摘要先被压 */
+  /* 空间不足时摘要先被压缩 */
   flex: 1 1 auto;
   flex-shrink: 999;
 }
 
-/* 回退态：列表内不显示摘要（内容在展开正文顶部单独显示） */
+/* 回退态：列表内不显示摘要，内容在展开正文顶部显示 */
 .devlog-list[data-devlog-excerpts='fallback'] .devlog-row__description {
   display: none;
 }
 
-/* 正常态：摘要已在列表内显示，正文里不重复 */
+/* 正常态：摘要已在列表内显示，正文不重复 */
 .devlog-list[data-devlog-excerpts='inline'] .devlog-panel__summary {
   display: none;
 }
 
 /**
- * 悬停/聚焦只给下划线，不做红色高亮；展开后鼠标不在上面时不保留下划线。
+ * 悬停 / 聚焦只给下划线，不做红色高亮。
  */
 .devlog-row__toggle:hover .devlog-row__title,
 .devlog-row__toggle:focus-visible .devlog-row__title {
@@ -290,16 +267,15 @@
   display: flex;
   flex-direction: column;
   /**
-   * 面板上下边距取条目行距的 1/4（2.5px）：加上行首 5px 下内边距后，
-   * 标题到正文的观感与正文正常行距一致。首尾子元素 margin 会被归零。
+   * 面板上下边距取条目行距的 1/4（2.5px），加上行首下内边距后
+   * 标题到正文的观感与正文行距一致。
    */
   padding: calc(var(--devlog-row-pad-y) / 2) 8px calc(var(--devlog-row-pad-y) / 2) calc(var(--devlog-line-x) + var(--devlog-line-gutter));
-  /* 摘要与正文之间不留额外间隙，靠各自行高形成行距 */
   gap: 0;
 }
 
 /**
- * 面板正文字号不得大于条目标题：标题 15px，这里压到 14px，行高同步收紧。
+ * 面板正文字号不得超过条目标题。
  */
 .devlog-panel__prose {
   font-size: 14px;
@@ -308,8 +284,7 @@
 
 /**
  * 首尾子元素 margin 归零（.prose p 默认上下各 12px）。
- * 选择器需带 .devlog-panel__inner：末尾链接行（.trailing-links）自带 margin-top，
- * 否则正文与链接行之间会多出一段段间距。
+ * 选择器须带 .devlog-panel__inner：末尾链接行（.trailing-links）自带 margin-top。
  */
 .devlog-panel__inner .devlog-panel__prose > :first-child,
 .devlog-panel__inner .devlog-panel__prose > :last-child {
@@ -328,7 +303,7 @@
 }
 
 /**
- * 列表内摘要被截断或被容器查询隐藏时，在展开正文顶部完整显示；
+ * 列表内摘要被截断或隐藏时，在展开正文顶部完整显示；
  * 显隐由 devlog-drawer.ts 判定，默认隐藏。
  */
 .devlog-panel__summary {
@@ -342,12 +317,11 @@
   display: none;
 }
 
-/* ---------------- <=900px：两行条目（meta + 箭头 / 标题 + 摘要） ---------------- */
+/* <=900px：两行条目（meta + 箭头 / 标题 + 摘要） */
 
 @media (max-width: 900px) {
   /**
-   * 窄屏时间线与桌面同一套 ::before，逐行、逐面板各画一段：
-   * 日期给页面同色底让线断开，标题块右移到线右侧，线不压标题文字。
+   * 窄屏时间线与桌面共用同一套 ::before，逐行、逐面板各画一段。
    */
   .devlog-row__toggle {
     display: flex;
@@ -392,7 +366,7 @@
 
   /**
    * 标题块缩进到线位置 + 线到内容的间隙，并减掉 --devlog-row-pad-x：
-   * ::before 的包含块是 padding box，不减会让标题比正文多缩进 8px、与展开正文对不齐。
+   * ::before 的包含块是 padding box。
    */
   .devlog-row__headline {
     order: 1;
@@ -403,7 +377,7 @@
     padding-left: calc(var(--devlog-line-x) + var(--devlog-line-gutter) - var(--devlog-row-pad-x));
   }
 
-  /* 窄屏同样保持省略号，不改成换行 */
+  /* 窄屏同样保持省略号，不换行 */
   .devlog-row__title,
   .devlog-row__description {
     white-space: nowrap;

@@ -1,8 +1,7 @@
 /**
  * `/archive/` 一级胶囊（全部 / 博客 / 项目 / 更新）。本脚本只声明作用域：切换激活态、重建 dialog
  * 里的标签按钮，再用 `entry-search:set-scope` 事件把作用域交给 `entry-search.ts`；可见集合
- * （作用域 ∧ 标签 ∧ 关键词）统一由后者一次算出，两个脚本各自写 `hidden` 会互相覆盖。
- * 胶囊动效由 `.is-active` 加 CSS 滑块实现；只显示日期加标题，bits 不在归档数据源里。
+ * 统一由后者算出，两个脚本各自写 `hidden` 会互相覆盖。胶囊动效由 `.is-active` 加 CSS 滑块实现。
  */
 import {
   createContentSlider,
@@ -16,8 +15,7 @@ const ROOT = document.querySelector<HTMLElement>('[data-archive-timeline]');
 if (ROOT) {
   const PILLS = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-archive-scope]'));
   const GROUP_SELECTOR = '[data-archive-group]';
-  // 必须从 document 找：标签 dialog 由 TagFilterHeader 渲染在 timeline 之外，
-  // 用 ROOT.querySelector 会命中 null，标签按钮就重建不出来。
+  // 必须从 document 找：标签 dialog 由 TagFilterHeader 渲染在 timeline 之外。
   const TAG_LIST = document.querySelector<HTMLElement>('.entry-tags-dialog__list');
   const TAG_DATA_EL = document.getElementById('archive-tag-scope-data');
   /** 页头的 tag 入口（`#标签` / `#项目`）：切到「项目」作用域时整体隐藏。 */
@@ -51,11 +49,11 @@ if (ROOT) {
 
   /**
    * 归档有两种过渡：
-   * - 一级胶囊（全部 / 博客 / 项目 / 更新）横向切换，走内容容器左右滑动；
+   * - 一级胶囊横向切换，走内容容器左右滑动；
    * - 标签筛选纵向收敛，走 `entry-search` 的整块淡入淡出（整月作为一块）。
    *
-   * 滑动的目标必须是内容容器 `[data-archive-content]`（即 `.archive-timeline`）；
-   * 滑 `[data-archive-timeline]` 会把页头（标题 / 描述 / RSS / #标签）一起滑走。
+   * 滑动目标是内容容器 `[data-archive-content]`（即 `.archive-timeline`），
+   * 滑 `[data-archive-timeline]` 会把页头一并滑走。
    */
   const contentSlider = createContentSlider(
     () => document.querySelector<HTMLElement>('[data-archive-content]')
@@ -72,8 +70,8 @@ if (ROOT) {
 
   /**
    * 归档的 tag 入口随一级胶囊换语义：项目档隐藏整个 `#标签` 入口且 dialog 不可用；更新档把
-   * 入口文案与 dialog 标题改成「项目」，选项为项目名称；全部 / 博客档仍是「标签」。称谓写在
-   * 根上的 `data-entry-tag-noun`，供 `entry-search` 生成「切换项目 / 清除筛选」这类按钮。
+   * 入口文案与 dialog 标题改成「项目」，选项为项目名称；其余档仍是「标签」。称谓写在根上的
+   * `data-entry-tag-noun`，供 `entry-search` 生成「切换项目 / 清除筛选」这类按钮。
    */
   const syncTagEntryLabels = (scope: ScopeId) => {
     const isProjects = scope === 'projects';
@@ -118,8 +116,7 @@ if (ROOT) {
    * 空分组整体隐藏。
    *
    * 判定基准是 entry-search 广播的可见 slug 集合，不是 DOM 的 `hidden` 属性：
-   * 条目淡出动画期间 `hidden` 还没落，按属性判定会把刚变空的分组误判为仍有可见项，
-   * 筛选后会留下没有命中内容的年月标题。
+   * 条目淡出动画期间 `hidden` 还没落，按属性判定会把刚变空的分组误判为仍有可见项。
    */
   const syncGroupVisibility = (visibleSlugs?: Set<string>) => {
     document.querySelectorAll<HTMLElement>(GROUP_SELECTOR).forEach((group) => {
@@ -133,8 +130,8 @@ if (ROOT) {
 
   /**
    * 收合时机：分组 `hidden` 若在事件到达的瞬间就落，父级的 `display:none` 会当场
-   * 掐掉组内那些还没轮到淡出的行，整组被筛空时看到的是硬切。因此等 entry-search
-   * 广播的 `transition` Promise 走完再收合，并用 `transitionId` 丢弃过期的那一轮。
+   * 掐掉组内还没轮到淡出的行。因此等 entry-search 广播的 `transition` Promise 走完
+   * 再收合，并用 `transitionId` 丢弃过期的那一轮。
    */
   let latestTransitionId = 0;
 
@@ -156,11 +153,11 @@ if (ROOT) {
   /**
    * 切换作用域。
    *
-   * 胶囊自身的激活态与滑块立即更新（点击反馈不能等动画）；「换内容」这一步才交给
-   * slider：滑出结束后才落作用域，然后滑入。初始化（`animate: false`）不播动画。
+   * 胶囊激活态与滑块立即更新（点击反馈不能等动画）；「换内容」交给 slider：
+   * 滑出结束后才落作用域，然后滑入。初始化（`animate: false`）不播动画。
    */
   const setActiveScope = (scope: ScopeId, options: { animate?: boolean } = {}) => {
-    // 方向按胶囊在条上的先后顺序决定（往右切 forward），不是按取值大小。
+    // 方向按胶囊在条上的先后顺序决定，不按取值大小。
     const direction: SlideDirection = pillDirection(
       PILLS,
       (pill) => pill.dataset.archiveScope ?? 'all',
