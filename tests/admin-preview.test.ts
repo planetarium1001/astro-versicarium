@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { createJsonRequest } from './admin-content-write-fixture';
 
 describe('admin preview api', () => {
-  it('renders markdown with project callout and sanitize rules', async () => {
+  // 该用例触发 Markdown 管线的首次模块初始化（shiki），并发执行时明显慢于默认上限。
+  it('renders markdown with project callout and sanitize rules', { timeout: 30000 }, async () => {
     const { POST } = await import('../src/pages/api/admin/preview');
 
     const response = await POST({

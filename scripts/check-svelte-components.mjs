@@ -43,7 +43,7 @@ for (const file of files) {
 
 if (failures.length > 0) {
   console.error('[check:svelte] 组件编译失败：');
-  for (const failure of failures) console.error(`  ✗ ${failure}`);
+  for (const failure of failures) console.error(`  ${failure}`);
   process.exit(1);
 }
 
