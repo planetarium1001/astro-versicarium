@@ -10,6 +10,7 @@
     "copyright": "Astro Whono Tweaked"
   },
   "filings": {
+    "scope": "all",
     "icp": {
       "number": null,
       "link": null
