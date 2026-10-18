@@ -9,7 +9,8 @@ import {
   ADMIN_CONTENT_IMPORT_API_PATH,
   ADMIN_IMAGE_UPLOAD_API_PATH,
   ADMIN_MEDIA_BATCH_API_PATH,
-  ADMIN_MEDIA_LIST_API_PATH
+  ADMIN_MEDIA_LIST_API_PATH,
+  ADMIN_MEDIA_TEXT_API_PATH
 } from '../../../lib/admin-console/admin-api-paths';
 import { ADMIN_CONTENT_COLLECTIONS } from '../../../lib/admin-console/content-routes';
 import { getAdminContentCollectionCapability } from '../../../lib/admin-console/content-collections';
@@ -26,6 +27,7 @@ const collectionOptions = ADMIN_CONTENT_COLLECTIONS.map((collection) => ({
 }));
 const endpoints = {
   list: withBase(ADMIN_MEDIA_LIST_API_PATH),
+  text: withBase(ADMIN_MEDIA_TEXT_API_PATH),
   batch: withBase(ADMIN_MEDIA_BATCH_API_PATH),
   imageUpload: withBase(ADMIN_IMAGE_UPLOAD_API_PATH),
   export: withBase(ADMIN_CONTENT_EXPORT_API_PATH),
@@ -48,6 +50,7 @@ const endpoints = {
         class="resources-console"
         data-admin-resources-root
         data-list-endpoint={endpoints.list}
+        data-text-endpoint={endpoints.text}
         data-batch-endpoint={endpoints.batch}
         data-image-upload-endpoint={endpoints.imageUpload}
         data-file-upload-endpoint={endpoints.fileUpload}
@@ -74,8 +77,8 @@ const endpoints = {
           </div>
         </header>
 
-        <div class="resources-layout">
-          <aside class="resources-tree" aria-label="资源目录">
+        <div class="resources-layout" data-resources-layout>
+          <aside class="resources-tree" id="resources-tree-panel" aria-label="资源目录">
             <div class="resources-tree__head">
               <div>
                 <p class="resources-tree__eyebrow">目录</p>
@@ -90,9 +93,30 @@ const endpoints = {
             </div>
           </aside>
 
+          <div
+            class="resources-resizer"
+            data-resources-resizer
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="调整目录宽度"
+            tabindex="0"
+          ></div>
+
           <main class="resources-main">
             <div class="resources-main__head">
-              <nav class="resources-breadcrumb" data-resources-breadcrumb aria-label="资源面包屑"></nav>
+              <div class="resources-main__lead">
+                <button
+                  class="resources-tree-toggle"
+                  type="button"
+                  data-resources-tree-toggle
+                  aria-expanded="true"
+                  aria-controls="resources-tree-panel"
+                >
+                  <AdminIcon name="admin-sidebar" size={14} />
+                  <span data-resources-tree-toggle-label>收起目录</span>
+                </button>
+                <nav class="resources-breadcrumb" data-resources-breadcrumb aria-label="资源面包屑"></nav>
+              </div>
               <div class="resources-view" role="group" aria-label="视图">
                 <button class="resources-view__button is-active" type="button" data-resources-view="grid" aria-label="网格视图" aria-pressed="true">
                   <AdminIcon name="grid-tiles" size={15} />
@@ -281,12 +305,27 @@ const endpoints = {
             <div class="resources-drawer__preview" data-resources-detail-preview></div>
             <dl class="resources-drawer__meta" data-resources-detail-meta></dl>
             <div class="resources-drawer__actions">
-              <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-detail-copy-path>复制路径</button>
-              <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-detail-copy-md>复制引用</button>
-              <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-detail-export>导出条目压缩包</button>
-              <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-detail-rename>重命名</button>
-              <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-detail-move>移动</button>
-              <button class="admin-btn admin-btn--danger admin-btn--compact" type="button" data-resources-detail-delete>删除</button>
+              <div class="resources-drawer__action-group">
+                <span class="resources-drawer__action-label">复制</span>
+                <div class="resources-drawer__action-buttons">
+                  <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-detail-copy-path>复制路径</button>
+                  <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-detail-copy-md>复制引用</button>
+                </div>
+              </div>
+              <div class="resources-drawer__action-group">
+                <span class="resources-drawer__action-label">整理</span>
+                <div class="resources-drawer__action-buttons">
+                  <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-detail-rename>重命名</button>
+                  <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-detail-move>移动</button>
+                  <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-detail-export>导出条目</button>
+                </div>
+              </div>
+              <div class="resources-drawer__action-group resources-drawer__action-group--danger">
+                <span class="resources-drawer__action-label">危险操作</span>
+                <div class="resources-drawer__action-buttons">
+                  <button class="admin-btn admin-btn--danger admin-btn--compact" type="button" data-resources-detail-delete>删除资源</button>
+                </div>
+              </div>
             </div>
           </div>
         </dialog>

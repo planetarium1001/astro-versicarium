@@ -52,7 +52,15 @@ const MIME_BY_EXT: Record<string, string> = {
   '.jpg': 'image/jpeg',
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
-  '.webp': 'image/webp'
+  '.webp': 'image/webp',
+  // 条目附件（资源页展示类型；图片上传仍只接受上面的图片扩展名）
+  '.txt': 'text/plain',
+  '.md': 'text/markdown',
+  '.markdown': 'text/markdown',
+  '.json': 'application/json',
+  '.csv': 'text/csv',
+  '.pdf': 'application/pdf',
+  '.zip': 'application/zip'
 };
 
 const ADMIN_IMAGE_CLOUD_MAX_ATTEMPTS = 2;

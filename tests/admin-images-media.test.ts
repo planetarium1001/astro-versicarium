@@ -129,6 +129,51 @@ describe('admin media api', () => {
     ]));
   });
 
+  it('keeps non-series entries as a single tree level above their directories', async () => {
+    const entryDirectory = path.join(tempRoot, 'content', 'blog', 'plain-entry');
+    await mkdir(path.join(entryDirectory, 'images'), { recursive: true });
+    await mkdir(path.join(entryDirectory, 'files'), { recursive: true });
+    await writeFile(path.join(entryDirectory, 'index.md'), [
+      '---',
+      'title: 普通条目',
+      'date: 2026-03-01',
+      '---',
+      '',
+      '没有系列。',
+      ''
+    ].join('\n'), 'utf8');
+    await writeFile(path.join(entryDirectory, 'images', 'a.png'), PNG_1X1);
+    await writeFile(path.join(entryDirectory, 'files', 'b.txt'), 'text');
+
+    const { GET } = await import('../src/pages/api/admin/media/list');
+    const response = await GET({
+      url: new URL('http://127.0.0.1:4321/api/admin/media/list?collection=blog&limit=50')
+    } as never);
+    const payload = JSON.parse(await response.text());
+
+    const collectionNode = payload.result.tree[0];
+    expect(collectionNode.children.some((node: { kind: string }) => node.kind === 'series')).toBe(true);
+    const entryNode = collectionNode.children.find(
+      (node: { kind: string; label: string }) => node.kind === 'version' && node.label === '普通条目'
+    );
+    expect(entryNode).toEqual(expect.objectContaining({
+      kind: 'version',
+      entryId: 'plain-entry',
+      series: ''
+    }));
+    expect(entryNode.children.map((node: { directory: string }) => node.directory)).toEqual(['files', 'images']);
+
+    const breadcrumbResponse = await GET({
+      url: new URL('http://127.0.0.1:4321/api/admin/media/list?collection=blog&entry=plain-entry&limit=50')
+    } as never);
+    const breadcrumbPayload = JSON.parse(await breadcrumbResponse.text());
+    expect(breadcrumbPayload.result.breadcrumb.map((crumb: { label: string }) => crumb.label)).toEqual([
+      '全部媒体',
+      '博客',
+      '普通条目'
+    ]);
+  });
+
   it('filters by reference status, type and modified time', async () => {
     const { GET } = await import('../src/pages/api/admin/media/list');
     const list = async (query: string) => {

@@ -26,6 +26,7 @@ type MediaItem = {
   versionLabel: string;
   entryId: string;
   entryLabel: string;
+  hasSeries: boolean;
   entryExists: boolean;
   directory: string;
   referenceCount: number;
@@ -151,6 +152,14 @@ const getFileExtension = (fileName: string): string => {
   const match = /\.([a-z0-9]+)$/i.exec(fileName);
   return (match?.[1] ?? 'FILE').toUpperCase().slice(0, 4);
 };
+
+const getRawFileExtension = (fileName: string): string =>
+  (/\.([a-z0-9]+)$/i.exec(fileName)?.[1] ?? '').toLowerCase();
+
+const TEXT_PREVIEW_EXTENSIONS = new Set([
+  'txt', 'md', 'markdown', 'mdx', 'json', 'yml', 'yaml', 'csv', 'tsv',
+  'log', 'toml', 'xml', 'html', 'css', 'js', 'ts', 'sh'
+]);
 
 const getItemValue = (item: MediaItem): string => {
   if (item.path.startsWith('content/')) {
@@ -332,6 +341,7 @@ const init = () => {
   const fileUploadEndpoint = root.dataset.fileUploadEndpoint ?? '';
   const exportEndpoint = root.dataset.exportEndpoint ?? '';
   const importEndpoint = root.dataset.importEndpoint ?? '';
+  const textEndpoint = root.dataset.textEndpoint ?? '';
   const status = root.querySelector<HTMLElement>('[data-admin-resources-status]');
   const treeEl = root.querySelector<HTMLElement>('[data-resources-tree]')!;
   const breadcrumbEl = root.querySelector<HTMLElement>('[data-resources-breadcrumb]')!;
@@ -356,6 +366,49 @@ const init = () => {
   const importDialog = root.querySelector<HTMLDialogElement>('[data-resources-import-dialog]')!;
   const importForm = root.querySelector<HTMLFormElement>('[data-resources-import-form]')!;
   const detailDialog = root.querySelector<HTMLDialogElement>('[data-resources-detail]')!;
+  const layoutEl = root.querySelector<HTMLElement>('[data-resources-layout]')!;
+  const treeToggleEl = root.querySelector<HTMLButtonElement>('[data-resources-tree-toggle]')!;
+  const treeToggleLabelEl = root.querySelector<HTMLElement>('[data-resources-tree-toggle-label]')!;
+  const resizerEl = root.querySelector<HTMLElement>('[data-resources-resizer]')!;
+  const mainEl = root.querySelector<HTMLElement>('.resources-main')!;
+
+  // 让预览区自己滚动、分页条固定在工作区底部；高度按工作区顶部到视口底计算。
+  const syncMainHeight = () => {
+    if (window.innerWidth <= 980) {
+      mainEl.style.height = '';
+      return;
+    }
+    const top = mainEl.getBoundingClientRect().top + window.scrollY;
+    mainEl.style.height = `${Math.max(420, window.innerHeight - top - 20)}px`;
+  };
+  syncMainHeight();
+  window.addEventListener('resize', syncMainHeight);
+
+  // 目录面板：宽度可拖拽、可整体收起；两者都记住用户上次选择。
+  const TREE_WIDTH_KEY = 'astro-whono:resources-tree-width';
+  const TREE_COLLAPSED_KEY = 'astro-whono:resources-tree-collapsed';
+  const MIN_TREE_WIDTH = 180;
+  const MAX_TREE_WIDTH = 560;
+  const DEFAULT_TREE_WIDTH = 248;
+
+  const clampTreeWidth = (value: number): number =>
+    Math.min(MAX_TREE_WIDTH, Math.max(MIN_TREE_WIDTH, Math.round(value)));
+
+  const applyTreeWidth = (value: number) => {
+    layoutEl.style.setProperty('--resources-tree-width', `${clampTreeWidth(value)}px`);
+  };
+
+  const readStoredTreeWidth = (): number => {
+    const stored = Number.parseInt(localStorage.getItem(TREE_WIDTH_KEY) ?? '', 10);
+    return Number.isFinite(stored) ? clampTreeWidth(stored) : DEFAULT_TREE_WIDTH;
+  };
+
+  const syncTreeCollapsed = (collapsed: boolean) => {
+    layoutEl.dataset.treeCollapsed = String(collapsed);
+    treeToggleEl.setAttribute('aria-expanded', String(!collapsed));
+    treeToggleLabelEl.textContent = collapsed ? '展开目录' : '收起目录';
+    localStorage.setItem(TREE_COLLAPSED_KEY, collapsed ? '1' : '0');
+  };
 
   const setStatus = (message: string, state: 'idle' | 'ok' | 'error' | 'loading' = 'idle') => {
     if (!status) return;
@@ -510,8 +563,39 @@ const init = () => {
     return state.entry === node.entryId && state.dir === node.directory;
   };
 
+  const hasActiveDescendant = (node: TreeNode): boolean =>
+    node.children.some((child) => isNodeActive(child) || hasActiveDescendant(child));
+
+  const createToggle = (node: TreeNode, group: HTMLElement, expanded: boolean): HTMLElement => {
+    if (node.children.length === 0) {
+      const placeholder = document.createElement('span');
+      placeholder.className = 'resources-tree__toggle resources-tree__toggle--placeholder';
+      return placeholder;
+    }
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'resources-tree__toggle';
+    toggle.setAttribute('aria-expanded', String(expanded));
+    toggle.setAttribute('aria-label', `${expanded ? '收起' : '展开'}${node.label}`);
+    const chevron = document.createElement('span');
+    chevron.className = 'resources-tree__chevron';
+    toggle.append(chevron);
+    toggle.addEventListener('click', () => {
+      const next = group.dataset.collapsed !== 'true';
+      group.dataset.collapsed = String(next);
+      toggle.setAttribute('aria-expanded', String(!next));
+      toggle.setAttribute('aria-label', `${next ? '展开' : '收起'}${node.label}`);
+    });
+    return toggle;
+  };
+
   const renderTree = (nodes: readonly TreeNode[]) => {
     treeEl.replaceChildren();
+    const allRow = document.createElement('div');
+    allRow.className = 'resources-tree__row';
+    const allPlaceholder = document.createElement('span');
+    allPlaceholder.className = 'resources-tree__toggle resources-tree__toggle--placeholder';
     const allButton = document.createElement('button');
     allButton.type = 'button';
     allButton.className = 'resources-tree__node';
@@ -522,7 +606,8 @@ const init = () => {
       state = { ...state, collection: '', series: '', entry: '', dir: '', page: 1 };
       void load();
     });
-    treeEl.append(allButton);
+    allRow.append(allPlaceholder, allButton);
+    treeEl.append(allRow);
 
     if (nodes.length === 0) {
       const empty = document.createElement('p');
@@ -539,6 +624,11 @@ const init = () => {
       for (const node of items) {
         const item = document.createElement('li');
         item.className = 'resources-tree__group';
+        // 默认只展开第一级；当前筛选路径上的祖先自动展开，避免选中项被折叠隐藏。
+        const expanded = depth === 0 || hasActiveDescendant(node);
+        item.dataset.collapsed = String(node.children.length > 0 && !expanded);
+        const row = document.createElement('div');
+        row.className = 'resources-tree__row';
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'resources-tree__node';
@@ -555,7 +645,8 @@ const init = () => {
         count.textContent = String(node.count);
         button.append(swatch, label, count);
         button.addEventListener('click', () => selectNode(node));
-        item.append(button);
+        row.append(createToggle(node, item, expanded), button);
+        item.append(row);
         if (node.children.length > 0) item.append(renderList(node.children, depth + 1));
         list.append(item);
       }
@@ -633,11 +724,43 @@ const init = () => {
     detailDialog.querySelector<HTMLElement>('[data-resources-detail-kind]')!.textContent = item.kind === 'image' ? '图片' : '附件';
     detailDialog.querySelector<HTMLElement>('[data-resources-detail-title]')!.textContent = item.fileName;
     const preview = detailDialog.querySelector<HTMLElement>('[data-resources-detail-preview]')!;
-    preview.replaceChildren(createThumb(item, 'resources-drawer__preview-inner'));
+    const textPreview = item.kind === 'file' && TEXT_PREVIEW_EXTENSIONS.has(getRawFileExtension(item.fileName));
+    if (textPreview) {
+      const box = document.createElement('pre');
+      box.className = 'resources-drawer__text';
+      box.textContent = '正在读取文本…';
+      box.setAttribute('aria-label', `${item.fileName} 文本预览`);
+      preview.replaceChildren(box);
+      const loadPreview = async () => {
+        try {
+          const response = await fetch(`${textEndpoint}?path=${encodeURIComponent(item.path)}`);
+          const payload = await response.json();
+          if (!response.ok || payload?.ok !== true) {
+            throw new Error(payload?.errors?.[0] ?? '文本读取失败');
+          }
+          const text = String(payload.result?.text ?? '');
+          box.textContent = text.length ? text : '（空文件）';
+          if (payload.result?.truncated) {
+            const note = document.createElement('span');
+            note.className = 'resources-drawer__text-note';
+            note.textContent = '文件较大，仅显示前 256 KB。';
+            preview.append(note);
+          }
+        } catch (error) {
+          box.textContent = error instanceof Error ? error.message : '文本读取失败';
+        }
+      };
+      void loadPreview();
+    } else {
+      preview.replaceChildren(createThumb(item, 'resources-drawer__preview-inner'));
+    }
     const meta = detailDialog.querySelector<HTMLElement>('[data-resources-detail-meta]')!;
     meta.replaceChildren();
+    const scopeLabel = item.hasSeries
+      ? `${getCollectionLabel(item.collection)} / ${item.seriesLabel} / ${item.versionLabel}`
+      : `${getCollectionLabel(item.collection)} / ${item.entryLabel}`;
     const rows: Array<[string, string]> = [
-      ['所属', `${getCollectionLabel(item.collection)} / ${item.seriesLabel} / ${item.versionLabel}`],
+      ['所属', scopeLabel],
       ['路径', item.path],
       ['类型', item.mimeType ?? '未知类型'],
       ['大小', formatSize(item.size)],
@@ -803,6 +926,52 @@ const init = () => {
       setStatus(error instanceof Error ? error.message : '资源列表加载失败', 'error');
     }
   };
+
+  // 目录宽度：拖拽分割条调整，键盘左右键微调，双击恢复默认。
+  applyTreeWidth(readStoredTreeWidth());
+  syncTreeCollapsed(localStorage.getItem(TREE_COLLAPSED_KEY) === '1');
+
+  treeToggleEl.addEventListener('click', () => {
+    syncTreeCollapsed(layoutEl.dataset.treeCollapsed !== 'true');
+  });
+
+  resizerEl.addEventListener('dblclick', () => {
+    applyTreeWidth(DEFAULT_TREE_WIDTH);
+    localStorage.setItem(TREE_WIDTH_KEY, String(DEFAULT_TREE_WIDTH));
+  });
+  resizerEl.addEventListener('keydown', (event) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    const next = clampTreeWidth(
+      Number.parseFloat(getComputedStyle(layoutEl).getPropertyValue('--resources-tree-width'))
+        + (event.key === 'ArrowRight' ? 16 : -16)
+    );
+    applyTreeWidth(next);
+    localStorage.setItem(TREE_WIDTH_KEY, String(next));
+  });
+  resizerEl.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    resizerEl.setPointerCapture(event.pointerId);
+    resizerEl.dataset.dragging = 'true';
+    const startX = event.clientX;
+    const startWidth = Number.parseFloat(
+      getComputedStyle(layoutEl).getPropertyValue('--resources-tree-width')
+    ) || DEFAULT_TREE_WIDTH;
+    const handleMove = (moveEvent: PointerEvent) => {
+      applyTreeWidth(startWidth + moveEvent.clientX - startX);
+    };
+    const handleUp = () => {
+      resizerEl.dataset.dragging = 'false';
+      const width = Number.parseFloat(getComputedStyle(layoutEl).getPropertyValue('--resources-tree-width'));
+      localStorage.setItem(TREE_WIDTH_KEY, String(Math.round(width)));
+      resizerEl.removeEventListener('pointermove', handleMove);
+      resizerEl.removeEventListener('pointerup', handleUp);
+      resizerEl.removeEventListener('pointercancel', handleUp);
+    };
+    resizerEl.addEventListener('pointermove', handleMove);
+    resizerEl.addEventListener('pointerup', handleUp);
+    resizerEl.addEventListener('pointercancel', handleUp);
+  });
 
   filterToggle.addEventListener('click', () => {
     const expanded = filterToggle.getAttribute('aria-expanded') === 'true';

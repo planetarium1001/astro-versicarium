@@ -640,7 +640,10 @@ const createTreeNode = (
   children: []
 });
 
-/** 树按 collection → series → version → 目录 逐层建立；count 只统计当前筛选池。 */
+/**
+ * 树按 collection → series（仅系列）→ version/entry → 目录 逐层建立；
+ * 非系列条目跳过 series 层，避免出现同名两级目录。count 只统计当前筛选池。
+ */
 const buildMediaTree = (items: readonly AdminMediaItem[]): AdminMediaTreeNode[] => {
   const collectionNodes = new Map<string, AdminMediaTreeNode>();
 
@@ -659,31 +662,49 @@ const buildMediaTree = (items: readonly AdminMediaItem[]): AdminMediaTreeNode[] 
     }
     addToCounts(collectionNode, item);
 
-    const seriesKey = item.series || UNASSIGNED_SERIES;
-    let seriesNode = collectionNode.children.find((child) => child.series === seriesKey);
-    if (!seriesNode) {
-      seriesNode = createTreeNode('series', item.seriesLabel || seriesKey, {
-        collection: item.collection,
-        series: seriesKey,
-        version: '',
-        entryId: '',
-        directory: ''
-      });
-      collectionNode.children.push(seriesNode);
-    }
-    addToCounts(seriesNode, item);
+    const seriesKey = item.hasSeries ? (item.series || UNASSIGNED_SERIES) : '';
+    let parentNode = collectionNode;
 
-    const versionKey = item.version || item.entryId || UNASSIGNED_VERSION;
-    let versionNode = seriesNode.children.find((child) => child.version === versionKey);
+    if (item.hasSeries) {
+      let seriesNode = collectionNode.children.find(
+        (child) => child.kind === 'series' && child.series === seriesKey
+      );
+      if (!seriesNode) {
+        seriesNode = createTreeNode('series', item.seriesLabel || seriesKey, {
+          collection: item.collection,
+          series: seriesKey,
+          version: '',
+          entryId: '',
+          directory: ''
+        });
+        collectionNode.children.push(seriesNode);
+      }
+      addToCounts(seriesNode, item);
+      parentNode = seriesNode;
+    }
+
+    const versionKey = item.hasSeries
+      ? (item.version || item.entryId || UNASSIGNED_VERSION)
+      : (item.entryId || UNASSIGNED_VERSION);
+    const nodeVersion = item.hasSeries ? versionKey : '';
+    let versionNode = parentNode.children.find(
+      (child) => child.kind === 'version' && child.version === nodeVersion && child.entryId === item.entryId
+    );
     if (!versionNode) {
-      versionNode = createTreeNode('version', item.versionLabel || versionKey, {
-        collection: item.collection,
-        series: seriesKey,
-        version: versionKey,
-        entryId: item.entryId,
-        directory: ''
-      });
-      seriesNode.children.push(versionNode);
+      versionNode = createTreeNode(
+        'version',
+        item.hasSeries
+          ? (item.versionLabel || versionKey)
+          : (item.entryId ? (item.entryLabel || versionKey) : '未归属资源'),
+        {
+          collection: item.collection,
+          series: seriesKey,
+          version: nodeVersion,
+          entryId: item.entryId,
+          directory: ''
+        }
+      );
+      parentNode.children.push(versionNode);
     }
     addToCounts(versionNode, item);
 
@@ -693,7 +714,7 @@ const buildMediaTree = (items: readonly AdminMediaItem[]): AdminMediaTreeNode[] 
       directoryNode = createTreeNode('directory', directoryKey || '条目根目录', {
         collection: item.collection,
         series: seriesKey,
-        version: versionKey,
+        version: item.hasSeries ? versionKey : '',
         entryId: item.entryId,
         directory: directoryKey
       });
@@ -736,24 +757,35 @@ const buildBreadcrumb = (
     label: collectionNode.label,
     filters: { collection: filters.collection }
   });
-  if (!filters.series) return breadcrumb;
+  let parentNode = collectionNode;
+  if (filters.series) {
+    const seriesNode = collectionNode.children.find(
+      (node) => node.kind === 'series' && node.series === filters.series
+    );
+    if (!seriesNode) return breadcrumb;
+    breadcrumb.push({
+      id: seriesNode.id,
+      label: seriesNode.label,
+      filters: { collection: filters.collection, series: filters.series }
+    });
+    parentNode = seriesNode;
+  }
 
-  const seriesNode = collectionNode.children.find((node) => node.series === filters.series);
-  if (!seriesNode) return breadcrumb;
-  breadcrumb.push({
-    id: seriesNode.id,
-    label: seriesNode.label,
-    filters: { collection: filters.collection, series: filters.series }
-  });
   const entryId = filters.entry || filters.version;
   if (!entryId) return breadcrumb;
 
-  const versionNode = seriesNode.children.find((node) => node.entryId === entryId);
+  const versionNode = parentNode.children.find(
+    (node) => node.kind === 'version' && node.entryId === entryId
+  );
   if (!versionNode) return breadcrumb;
   breadcrumb.push({
     id: versionNode.id,
     label: versionNode.label,
-    filters: { collection: filters.collection, series: filters.series, entry: entryId }
+    filters: {
+      collection: filters.collection,
+      ...(filters.series ? { series: filters.series } : {}),
+      entry: entryId
+    }
   });
   if (!filters.directory) return breadcrumb;
 
@@ -764,7 +796,7 @@ const buildBreadcrumb = (
       label: directoryNode.label,
       filters: {
         collection: filters.collection,
-        series: filters.series,
+        ...(filters.series ? { series: filters.series } : {}),
         entry: entryId,
         directory: filters.directory
       }
@@ -824,7 +856,7 @@ const buildMediaFilterOptions = (
       versionOption.count += 1;
       versions.set(item.entryId, versionOption);
 
-      const directoryKey = `${item.entryId} ${item.directory}`;
+      const directoryKey = `${item.entryId}\u0000${item.directory}`;
       const directoryOption = directories.get(directoryKey) ?? {
         value: item.directory,
         label: item.directory || '条目根目录',
