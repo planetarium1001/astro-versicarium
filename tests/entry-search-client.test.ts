@@ -15,6 +15,17 @@ import {
 } from './entry-search-harness';
 
 /**
+ * 客户端分页会隐藏第一页之外的条目；清空筛选后应恢复的是「当前页」而不是全部 DOM。
+ * 页大小来自页面上的 data-page-size，避免把 12 / 20 写死。
+ */
+const visiblePageSize = (): number => {
+  const root = document.querySelector<HTMLElement>('[data-entry-filters]');
+  const pageSize = Number(root?.dataset.pageSize ?? '0');
+  const total = pageItems().length;
+  return pageSize > 0 ? Math.min(total, pageSize) : total;
+};
+
+/**
  * 端到端客户端行为测试（真实页面 HTML + 真实 entry-search.ts）。
  *
  * jsdom 载入构建产物里的真实 HTML，stub fetch 返回真实 index.json，再 import 真实脚本断言 DOM：
@@ -86,7 +97,7 @@ describe('entry-search 客户端行为', () => {
     expect(clear, '需要「清除筛选」按钮').not.toBeNull();
     clear!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     await vi.waitFor(() => {
-      expect(visibleItems().length).toBe(pageItems().length);
+      expect(visibleItems().length).toBe(visiblePageSize());
     });
   });
 
@@ -155,7 +166,7 @@ describe('entry-search 客户端行为', () => {
 
     allPill!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     await vi.waitFor(() => {
-      expect(visibleItems().length).toBe(pageItems().length);
+      expect(visibleItems().length).toBe(visiblePageSize());
     });
   });
 
@@ -225,8 +236,9 @@ describe('entry-search 客户端行为', () => {
 
     const groups = () => Array.from(document.querySelectorAll<HTMLElement>('[data-archive-group]'));
     expect(groups().length).toBeGreaterThan(1);
-    // 初始全部可见
-    expect(groups().every((group) => !group.hidden)).toBe(true);
+    // 客户端分页会先隐藏第一页之外的月份组；这里只要求初始有可见分组，
+    // 具体哪些组可见由分页决定，筛选后的断言再看可见组。
+    expect(groups().some((group) => !group.hidden)).toBe(true);
 
     // 选一个只命中最后一个月（1 月）的标签
     const matchesFor = (key: string) =>

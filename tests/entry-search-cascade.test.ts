@@ -10,6 +10,7 @@ import {
   stubEntrySearchEnvironment,
   stubMatchMedia,
   tagButtons,
+  visibleItems,
   visibleSlugs
 } from './entry-search-harness';
 
@@ -210,19 +211,24 @@ describe('级联动效：串行，一次只走一步', () => {
   it('blog：淡出是一个整体，一次计划全部、错峰起步、同时结束', async () => {
     const { indexItems } = await loadPage(PAGES[1]);
     await importEntrySearch();
+    // 先让首屏分页把第一页之外的条目落成 hidden，后续只观察本轮筛选的动画。
+    await harness.settleAll();
 
     const key = fewestMatchingTagKey(indexItems);
     const hiddenSlugs = new Set(
       indexItems.filter((item) => !getTagKeys(item.tags).includes(key)).map((item) => item.slug)
     );
     const expectedHideOrder = pageItems()
-      .filter((el) => hiddenSlugs.has((el.dataset.slug ?? '').trim()))
+      .filter((el) => !el.hidden && hiddenSlugs.has((el.dataset.slug ?? '').trim()))
       .map((el) => (el.dataset.slug ?? '').trim());
     expect(expectedHideOrder.length, '这个标签至少要隐藏 3 条才验证得了串行').toBeGreaterThanOrEqual(3);
 
+    const recordedBefore = harness.records.length;
     await clickTag(key);
 
-    const hides = () => harness.entryItemRecords('hide');
+    const hides = () => harness.records
+      .slice(recordedBefore)
+      .filter((record) => record.isEntryItem && record.el.isConnected && record.kind === 'hide');
 
     // 点击后整批动画同时创建，不逐条排队
     expect(hides().length, '需要变化的条目应当一次性全部进入过渡').toBe(expectedHideOrder.length);
@@ -251,11 +257,15 @@ describe('级联动效：串行，一次只走一步', () => {
   it('blog：条目再多也是同一个总时长，错峰自然变密、尾部不拖长', async () => {
     const { indexItems } = await loadPage(PAGES[1]);
     await importEntrySearch();
+    await harness.settleAll();
 
     const key = fewestMatchingTagKey(indexItems);
+    const recordedBefore = harness.records.length;
     await clickTag(key);
 
-    const hides = harness.entryItemRecords('hide');
+    const hides = harness.records
+      .slice(recordedBefore)
+      .filter((record) => record.isEntryItem && record.el.isConnected && record.kind === 'hide');
     expect(hides.length).toBeGreaterThan(0);
 
     // 总时长固定：第一条时长就是整段过渡时长
@@ -274,12 +284,33 @@ describe('级联动效：串行，一次只走一步', () => {
   it('blog：新一轮筛选立即取代旧队列', async () => {
     const { indexItems } = await loadPage(PAGES[1]);
     await importEntrySearch();
+    // 分页首屏的收起动画先结算，避免被算进本轮队列。
+    await harness.settleAll();
 
-    const key = fewestMatchingTagKey(indexItems);
-    await clickTag(key);
+    // 选一个「命中项在首屏」的标签：清空后不会因为分页把第二页条目移回首屏/再移走，
+    // 否则会合法地产生额外的 hide，掩盖「旧队列是否停止」的断言。
+    const initiallyVisibleSlugs = new Set(
+      visibleItems().map((el) => (el.dataset.slug ?? '').trim())
+    );
+    const key = tagButtons()
+      .map((el) => (el.dataset.entryTagKey ?? '').trim())
+      .find((candidate) => {
+        const matches = indexItems.filter((item) => getTagKeys(item.tags).includes(candidate));
+        return matches.length > 0
+          && matches.length < pageItems().length
+          && matches.some((item) => initiallyVisibleSlugs.has(item.slug));
+      });
+    expect(key, '需要至少一个命中首屏条目的标签').toBeTruthy();
+    const recordedBeforeTag = harness.records.length;
+    await clickTag(key!);
     // 走完第一步，让第二步开始 —— 此时队列处于「进行到一半」
     await harness.step(1000);
-    expect(harness.entryItemRecords('hide').length).toBeGreaterThanOrEqual(2);
+    expect(
+      harness.records
+        .slice(recordedBeforeTag)
+        .filter((record) => record.isEntryItem && record.kind === 'hide')
+        .length
+    ).toBeGreaterThanOrEqual(2);
 
     const recordedBefore = harness.records.length;
     const clear = document.querySelector<HTMLElement>('[data-entry-tag-clear]');
@@ -294,8 +325,12 @@ describe('级联动效：串行，一次只走一步', () => {
       .filter((record) => record.isEntryItem && record.kind === 'hide');
     expect(lateHides.length, '旧队列必须立即停止，不能继续往下吞').toBe(0);
 
-    // 且最终收敛到「全部可见」
-    expect(visibleSlugs().length).toBe(pageItems().length);
+    // 且最终收敛到第一页可见（客户端分页会隐藏第一页之外的条目）
+    const pageSize = Number(
+      document.querySelector<HTMLElement>('[data-entry-filters]')?.dataset.pageSize ?? '0'
+    );
+    const expectedVisible = pageSize > 0 ? Math.min(pageItems().length, pageSize) : pageItems().length;
+    expect(visibleSlugs().length).toBe(expectedVisible);
   });
 
   it('prefers-reduced-motion：不排动画队列，直接落状态', async () => {
@@ -313,8 +348,12 @@ describe('级联动效：串行，一次只走一步', () => {
   it('archive：整组被筛空时，先让这一组淡完，再收合年月分组标题', async () => {
     const { indexItems } = await loadPage(PAGES[2]);
     await importEntrySearch({ archiveScope: true });
+    // 分页会先隐藏第一页之外的月份组；只对初始可见的组断言「淡出期间不提前收合」。
+    await harness.settleAll();
 
     const groups = () => Array.from(document.querySelectorAll<HTMLElement>('[data-archive-group]'));
+    const initiallyVisibleGroups = groups().filter((group) => !group.hidden);
+    expect(initiallyVisibleGroups.length).toBeGreaterThan(0);
     const slugsOf = (group: HTMLElement) =>
       Array.from(group.querySelectorAll<HTMLElement>('[data-entry-item]')).map((el) =>
         (el.dataset.slug ?? '').trim()
@@ -335,10 +374,10 @@ describe('级联动效：串行，一次只走一步', () => {
 
     await clickTag(target!);
 
-    // 行还在逐条淡出：此时不能已经把分组 hidden，
+    // 行还在逐条淡出：初始可见的组此时不能已经 hidden，
     // 父级 display:none 会当场掐掉还没轮到的行，表现为硬切。
     expect(
-      groups().every((group) => !group.hidden),
+      initiallyVisibleGroups.every((group) => !group.hidden),
       '级联进行中不得提前收合分组'
     ).toBe(true);
 
