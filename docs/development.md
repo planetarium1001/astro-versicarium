@@ -20,7 +20,7 @@ Node.js ≥ 22.12.0，版本基线写在 `.nvmrc`（当前 22.22.0）并与 `pac
 | `npm run theme:update` | 从主题仓库同步更新，见 [../README.md](../README.md) 的「主题同步」 |
 | `npm run font:charset`、`npm run font:subset`、`npm run font:build` | 字体字符集与子集 |
 
-构建期生成 RSS、canonical 与 sitemap 需要提供 `SITE_URL`，产物类守卫也依赖它。构建期环境变量见 [../README.md](../README.md) 的「构建期环境变量」。
+构建期生成 RSS、canonical 与 sitemap 需要提供 `SITE_URL`，产物类守卫也依赖它。构建期环境变量见 [deployment.md](deployment.md) 的「构建期环境变量」。
 
 ## 验证流水线
 
@@ -85,7 +85,7 @@ Vitest 配置在 `vitest.config.ts`，用例位于 `tests/*.test.ts`，默认运
 | `tests/fixtures/` | 由构建产物生成的页面快照 |
 | `src/test-fixtures/*.md` | Markdown 冒烟夹具，渲染结果由 `check:markdown-smoke` 断言 |
 
-写入类用例通过 `tests/admin-content-write-fixture.ts` 在系统临时目录搭出内容目录，并用环境变量把设置目录与项目根指向临时位置，测试结束即清理，不触碰仓库内的真实内容。
+写入类用例通过 `tests/admin-content-write-fixture.ts` 在系统临时目录搭出内容目录，并用环境变量把设置目录与项目根指向临时位置，测试结束即清理，不触碰仓库内的真实内容。`theme-settings.test.ts` 的 favicon 默认态用例同样使用临时 settings，不读实时 `site.json`；槽位与反向代理说明见 [favicon.md](favicon.md)。
 
 ## 内容命名规范
 
@@ -97,19 +97,8 @@ Vitest 配置在 `vitest.config.ts`，用例位于 `tests/*.test.ts`，默认运
 
 构造逻辑集中在 `src/utils/slug-rules.ts` 的 `buildContentEntryId()`，后台写作页新建条目时调用它。`npm run new:bit` 按 `YYYY-MM-DD-HHMM` 生成动态草稿。博客详情的公开 slug 默认由条目 ID 去掉日期前缀得到，可用 frontmatter 的 `slug` 覆盖，取值须为小写 kebab-case（允许 CJK），且不得与 `/blog/` 下的静态路由冲突。
 
-## CI
+## CI 与发布
 
-两个工作流见 `.github/workflows/`，均不需要配置 secret。
+工作流、分支模型、GitHub Pages 配置与环境变量见 [deployment.md](deployment.md)，与上游的同步方向见 [upstream.md](upstream.md)。
 
-| 工作流 | 触发 | 作用 |
-| --- | --- | --- |
-| `ci.yml` | push 与 PR 到 `main`、`demo` | 按 `.nvmrc` 安装 Node、`npm ci`，以 `SITE_URL=https://astro-whono.example.com` 执行 `npm run ci` |
-| `pages.yml` | push 到 `demo`、手动触发 | 检出 `demo`、构建 `dist/` 并发布到 GitHub Pages |
-
-CI 必须提供 `SITE_URL`：`astro.config.mjs` 只在 `SITE_URL` 非空时注册 sitemap 集成，而产物守卫会断言 `dist/sitemap-*.xml` 存在。
-
-## 双分支发布模型
-
-`main` 是模板分支，只保留每类一到数条种子内容；`demo` 是完整示例站点，并承载 Pages 部署。工作流文件本身留在默认分支，`pages.yml` 因此也可从 Actions 页面手动触发。同步方向与操作见 [upstream.md](upstream.md)。
-
-Pages 构建在项目页场景下把 `SITE_URL` 定为 `https://<owner>.github.io`，把 `ASTRO_WHONO_BASE_PATH` 定为 `/<repo>/`，仓库名为 `<owner>.github.io` 时 base 取 `/`。绑定自定义域名后需把这两项改为固定域名与 `/`。
+CI 以 `SITE_URL=https://astro-whono.example.com` 执行 `npm run ci`，按 `.nvmrc` 安装 Node。`SITE_URL` 必须提供：`astro.config.mjs` 只在它非空时注册 sitemap 集成，产物守卫会断言 `dist/sitemap-*.xml` 存在。

@@ -14,6 +14,7 @@ import {
   normalizeSiteFaviconPath,
   type SiteFaviconSlot
 } from '../utils/format';
+import { DEFAULT_SITE_FAVICON } from '../utils/favicon-defaults';
 import {
   ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT,
   ADMIN_ARTICLE_META_DATE_LABEL_MAX_LENGTH,
@@ -184,8 +185,7 @@ interface SiteFilingSettings {
 
 export interface SiteFilingsSettings {
   /**
-   * 备案信息显示范围：'all' 渲染到所有公开页面的页脚（默认，与历史行为一致），
-   * 'root' 只在站点根目录（含子路径部署的 base）渲染。
+   * 备案信息显示范围：'all' 渲染到所有公开页面，'root' 只在站点根目录（含子路径 base）。
    */
   scope: SiteFilingsScope;
   icp: SiteFilingSettings;
@@ -2119,41 +2119,65 @@ export const resetThemeSettingsCache = (): void => {
   cachedSettings = null;
 };
 
-// 文件缺失的槽位按主题默认回退，不阻断构建、不锁后台。
-// 标签页图标（svg/png）的默认值只在两个槽位都缺失时输出：自定义后继续输出默认 SVG
-// 会让桌面浏览器优先选中默认图标；触摸图标不参与竞争，独立回退。
+// 自定义槽位优先；文件缺失时返回 null，由链接构建回退默认。
 const resolveRenderableFaviconPath = (value: string | null): string | null => {
   if (!value) return null;
   const projectRoot = process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
   return existsSync(join(projectRoot, ...getSiteFaviconLocalFilePath(value).split('/'))) ? value : null;
 };
 
+// 默认资源用相对路径，检查存在性时补成 public 根路径。
+const hasDefaultFaviconFile = (value: string): boolean =>
+  resolveRenderableFaviconPath(`/${value}`) !== null;
+
+const createIconLink = (
+  href: string,
+  type: 'image/svg+xml' | 'image/png',
+  sizes?: string
+): SiteFaviconLink => ({
+  rel: 'icon',
+  type,
+  ...(sizes ? { sizes } : {}),
+  href
+});
+
 export const getSiteFaviconLinks = (favicon: SiteFaviconSettings): SiteFaviconLink[] => {
   const svg = resolveRenderableFaviconPath(favicon.svg);
   const png = resolveRenderableFaviconPath(favicon.png);
   const appleTouchIcon = resolveRenderableFaviconPath(favicon.appleTouchIcon);
+  const hasCustomTabIcon = Boolean(svg || png);
 
   const links: SiteFaviconLink[] = [];
-  if (!svg && !png) {
-    links.push(
-      { rel: 'icon', type: 'image/svg+xml', sizes: 'any', href: 'favicon.svg' },
-      { rel: 'icon', type: 'image/png', sizes: '32x32', href: 'favicon-32x32.png' }
-    );
+  if (!hasCustomTabIcon) {
+    if (hasDefaultFaviconFile(DEFAULT_SITE_FAVICON.svg)) {
+      links.push(createIconLink(DEFAULT_SITE_FAVICON.svg, 'image/svg+xml', 'any'));
+    }
+    if (hasDefaultFaviconFile(DEFAULT_SITE_FAVICON.png)) {
+      links.push(createIconLink(DEFAULT_SITE_FAVICON.png, 'image/png', '32x32'));
+    }
   } else {
-    if (svg) {
-      links.push({ rel: 'icon', type: 'image/svg+xml', sizes: 'any', href: svg });
-    }
-    if (png) {
-      const sizes = getSiteFaviconSizesFromPath(png);
-      links.push({ rel: 'icon', type: 'image/png', ...(sizes ? { sizes } : {}), href: png });
-    }
+    if (svg) links.push(createIconLink(svg, 'image/svg+xml', 'any'));
+    if (png) links.push(createIconLink(png, 'image/png', getSiteFaviconSizesFromPath(png) ?? undefined));
   }
 
-  if (appleTouchIcon) {
-    const sizes = getSiteFaviconSizesFromPath(appleTouchIcon);
-    links.push({ rel: 'apple-touch-icon', ...(sizes ? { sizes } : {}), href: appleTouchIcon });
-  } else {
-    links.push({ rel: 'apple-touch-icon', sizes: '180x180', href: 'apple-touch-icon.png' });
+  // 触摸图标优先显式配置，留空时复用标签页 PNG；无自定义标签页图标时才回退默认。
+  const defaultAppleTouchIcon = !hasCustomTabIcon
+    && hasDefaultFaviconFile(DEFAULT_SITE_FAVICON.appleTouchIcon)
+    ? DEFAULT_SITE_FAVICON.appleTouchIcon
+    : null;
+  const touchHref = appleTouchIcon ?? png ?? defaultAppleTouchIcon;
+  if (touchHref) {
+    const isReusedTabIcon = !appleTouchIcon && touchHref === png;
+    const touchSizes = appleTouchIcon
+      ? getSiteFaviconSizesFromPath(appleTouchIcon)
+      : isReusedTabIcon
+        ? null
+        : '180x180';
+    links.push({
+      rel: 'apple-touch-icon',
+      ...(touchSizes ? { sizes: touchSizes } : {}),
+      href: touchHref
+    });
   }
   return links;
 };

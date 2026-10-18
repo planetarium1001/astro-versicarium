@@ -114,6 +114,7 @@ export function getBitsAvatarLocalFilePath(value: string): string | null {
 }
 
 export type SiteFaviconSlot = 'svg' | 'png' | 'appleTouchIcon';
+export type SiteFaviconUploadSlot = Exclude<SiteFaviconSlot, 'svg'>;
 
 const SITE_FAVICON_EXT_RE_BY_SLOT: Record<SiteFaviconSlot, RegExp> = {
   svg: /\.svg$/i,

@@ -277,11 +277,18 @@ describe('theme-settings revision semantics', () => {
     expect(getThemeSettingsRevision(mutated)).not.toBe(getThemeSettingsRevision(resolved));
   });
 
-  it('resolves favicon slots to null defaults and emits the default three-link set', () => {
+  it('emits the default three-link set when every favicon slot is null', async () => {
+    // 使用临时 settings，避免站点自定义图标后影响“全空默认态”。
+    const settingsDir = await createTempSettingsFixture();
+    const sitePath = path.join(settingsDir, 'site.json');
+    const siteJson = JSON.parse(await readFile(sitePath, 'utf8')) as Record<string, any>;
+    siteJson.favicon = { svg: null, png: null, appleTouchIcon: null };
+    await writeFile(sitePath, `${JSON.stringify(siteJson, null, 2)}\n`, 'utf8');
+
     const resolved = getThemeSettings();
 
     expect(resolved.settings.site.favicon).toEqual({ svg: null, png: null, appleTouchIcon: null });
-    // demo site.json 显式写了三个 null 槽位，来源应标记为 new（显式配置的默认态）。
+    // fixture 显式写入 null，来源为 new。
     expect(resolved.sources.site.faviconPng).toBe('new');
     expect(getSiteFaviconLinks(resolved.settings.site.favicon)).toEqual([
       { rel: 'icon', type: 'image/svg+xml', sizes: 'any', href: 'favicon.svg' },
@@ -305,7 +312,7 @@ describe('theme-settings revision semantics', () => {
     expect(getEditableThemeSettingsState(resolved).ok).toBe(true);
   });
 
-  it('accepts an existing favicon slot path and suppresses default links for unset slots', async () => {
+  it('reuses the configured tab png for touch when appleTouchIcon is empty', async () => {
     const settingsDir = await createTempSettingsFixture();
     const sitePath = path.join(settingsDir, 'site.json');
     const siteJson = JSON.parse(await readFile(sitePath, 'utf8')) as Record<string, any>;
@@ -317,10 +324,25 @@ describe('theme-settings revision semantics', () => {
     expect(resolved.settings.site.favicon.png).toBe('/favicon-32x32.png');
     expect(resolved.sources.site.faviconPng).toBe('new');
     expect(getThemeSettingsReadDiagnostics(resolved)).toEqual([]);
-    // png 自定义后标签页图标组不回退默认 SVG；触摸图标独立回退。
+    // 不回退默认 SVG；触摸复用同一 PNG，不写 sizes。
     expect(getSiteFaviconLinks(resolved.settings.site.favicon)).toEqual([
       { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png' },
-      { rel: 'apple-touch-icon', sizes: '180x180', href: 'apple-touch-icon.png' }
+      { rel: 'apple-touch-icon', href: '/favicon-32x32.png' }
+    ]);
+  });
+
+  it('does not fall back to the theme touch icon when only a custom svg tab icon is set', async () => {
+    const settingsDir = await createTempSettingsFixture();
+    const sitePath = path.join(settingsDir, 'site.json');
+    const siteJson = JSON.parse(await readFile(sitePath, 'utf8')) as Record<string, any>;
+    siteJson.favicon = { svg: '/favicon.svg', png: null, appleTouchIcon: null };
+    await writeFile(sitePath, `${JSON.stringify(siteJson, null, 2)}\n`, 'utf8');
+
+    const resolved = getThemeSettings();
+
+    // 只有 SVG 时没有可复用的 PNG；不回退主题默认触摸图标。
+    expect(getSiteFaviconLinks(resolved.settings.site.favicon)).toEqual([
+      { rel: 'icon', type: 'image/svg+xml', sizes: 'any', href: '/favicon.svg' }
     ]);
   });
 
@@ -383,6 +405,24 @@ describe('theme-settings revision semantics', () => {
         { rel: 'icon', type: 'image/svg+xml', sizes: 'any', href: '/images/site/favicon-a1b2c3d4.svg' },
         { rel: 'icon', type: 'image/png', href: '/images/site/favicon-notdims.png' },
         { rel: 'apple-touch-icon', sizes: '180x180', href: '/images/site/apple-touch-icon-180x180-a1b2c3d4.png' }
+      ]);
+    } finally {
+      delete process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT;
+    }
+  });
+
+  it('omits default favicon links whose files are missing', async () => {
+    const tempRoot = await mkdtemp(path.join(tmpdir(), 'astro-whono-favicon-defaults-'));
+    tempDirs.push(tempRoot);
+    const publicDir = path.join(tempRoot, 'public');
+    await mkdir(publicDir, { recursive: true });
+    await writeFile(path.join(publicDir, 'favicon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>');
+
+    process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT = tempRoot;
+    try {
+      // 只有 favicon.svg 存在：不要输出会 404 的默认 PNG / 触摸图标。
+      expect(getSiteFaviconLinks({ svg: null, png: null, appleTouchIcon: null })).toEqual([
+        { rel: 'icon', type: 'image/svg+xml', sizes: 'any', href: 'favicon.svg' }
       ]);
     } finally {
       delete process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT;

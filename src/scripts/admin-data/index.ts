@@ -168,7 +168,7 @@ if (!root) {
         hasCompletedApply = true;
         ui.renderPreview(results, {
           state: 'applied',
-          body: '✅ 写入成功',
+          body: '写入成功',
           note: '继续导入其他快照前，请重新执行 dry-run。'
         });
         ui.setStatus('ok', '写入完成');

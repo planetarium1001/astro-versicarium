@@ -1,11 +1,4 @@
-/* ===============================
-   Code Styling
-   - Astro 常输出 <pre class="astro-code">（带行内背景/颜色）
-   - 部分环境会输出 <pre class="shiki">
-   - 覆盖背景，并在深色模式下映射 token 颜色
-================================ */
-
-/* 覆盖正文代码块的行内背景 */
+/* 覆盖 Astro/Shiki 代码块的行内背景与 token 颜色。 */
 .prose pre:is(.astro-code, .shiki) {
   background-color: var(--code-content-bg) !important;
 }

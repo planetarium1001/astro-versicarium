@@ -1,5 +1,6 @@
 import { ADMIN_SITE_ASSET_UPLOAD_API_PATH } from '@/lib/admin-console/admin-api-paths';
-import { createWithBase } from '@/utils/format';
+import { createWithBase, type SiteFaviconUploadSlot } from '@/utils/format';
+import { DEFAULT_SITE_FAVICON } from '@/utils/favicon-defaults';
 
 type StatusSetter = (
   state: string,
@@ -7,7 +8,7 @@ type StatusSetter = (
   options?: { announce?: boolean }
 ) => void;
 
-type FaviconUploadSlot = 'png' | 'appleTouchIcon';
+type FaviconUploadSlot = SiteFaviconUploadSlot;
 
 const UPLOAD_SLOTS: readonly FaviconUploadSlot[] = ['png', 'appleTouchIcon'];
 const SLOT_LABELS: Record<FaviconUploadSlot, string> = {
@@ -18,10 +19,10 @@ const SLOT_LABELS: Record<FaviconUploadSlot, string> = {
 const base = import.meta.env.BASE_URL ?? '/';
 const withBase = createWithBase(base);
 
-// 预览常显：空槽位显示主题默认图标（半透明），自定义后显示自定义图标。
+// 空槽位的默认预览；触摸槽位留空且有标签页 PNG 时改显复用图。
 const DEFAULT_PREVIEW_SRC: Record<FaviconUploadSlot, string> = {
-  png: '/favicon-32x32.png',
-  appleTouchIcon: '/apple-touch-icon.png'
+  png: `/${DEFAULT_SITE_FAVICON.png}`,
+  appleTouchIcon: `/${DEFAULT_SITE_FAVICON.appleTouchIcon}`
 };
 
 /* 与 image-fields 的 DOM sink 边界一致：写入 <img src> 前用 URL 构造器重新解析同源路径。 */
@@ -55,12 +56,15 @@ export const createAdminFaviconUploads = ({
 
     const value = inputs[slot].value.trim();
     const safeSrc = value ? toSafePreviewSrc(value) : null;
-    const isCustom = Boolean(safeSrc);
+    // 触摸图标留空时渲染层会复用标签页 PNG，预览也跟着显示那张图。
+    const reusedSrc = !safeSrc && slot === 'appleTouchIcon'
+      ? toSafePreviewSrc(inputs.png.value.trim())
+      : null;
 
-    previewImg.src = safeSrc ?? withBase(DEFAULT_PREVIEW_SRC[slot]);
-    previewWrap.dataset.state = isCustom ? 'custom' : 'default';
-    previewWrap.title = isCustom ? value : '主题默认';
-    if (clearBtn) clearBtn.disabled = !isCustom;
+    previewImg.src = safeSrc ?? reusedSrc ?? withBase(DEFAULT_PREVIEW_SRC[slot]);
+    previewWrap.dataset.state = safeSrc ? 'custom' : reusedSrc ? 'reuse' : 'default';
+    previewWrap.title = safeSrc ? value : reusedSrc ? '复用标签页图标' : '主题默认';
+    if (clearBtn) clearBtn.disabled = !safeSrc;
   };
 
   const applyUploadedPath = (slot: FaviconUploadSlot, nextPath: string): void => {
@@ -125,11 +129,18 @@ export const createAdminFaviconUploads = ({
     clearBtn?.addEventListener('click', () => {
       if (!input.value.trim()) return;
       applyUploadedPath(slot, '');
-      setStatus('ok', `已恢复${SLOT_LABELS[slot]}为主题默认，保存后生效`);
+      const reuseHint = slot === 'appleTouchIcon' && inputs.png.value.trim()
+        ? '，留空时将复用标签页图标'
+        : '';
+      setStatus('ok', `已清除${SLOT_LABELS[slot]}${reuseHint}，保存后生效`);
     });
 
-    input.addEventListener('input', () => refreshPreview(slot));
-    input.addEventListener('change', () => refreshPreview(slot));
+    const refreshFromInput = (): void => {
+      refreshPreview(slot);
+      if (slot === 'png') refreshPreview('appleTouchIcon');
+    };
+    input.addEventListener('input', refreshFromInput);
+    input.addEventListener('change', refreshFromInput);
     refreshPreview(slot);
   });
 

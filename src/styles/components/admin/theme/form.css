@@ -1306,6 +1306,15 @@
   opacity: 0.45;
 }
 
+/* 触摸图标留空、复用标签页 PNG：保持可见但弱化，和真正的主题默认区分开。 */
+.admin-favicon-slot__preview[data-state='reuse'] {
+  border-style: dashed;
+}
+
+.admin-favicon-slot__preview[data-state='reuse'] img {
+  opacity: 0.7;
+}
+
 /* 备案图标预览：与站点图标一致，预览框放在标签行内 */
 .admin-label--filings-icon {
   align-items: center;

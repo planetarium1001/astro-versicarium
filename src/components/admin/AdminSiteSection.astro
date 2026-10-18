@@ -23,10 +23,22 @@ interface Props {
 
 const { footerStartYearMin, footerStartYearMax, socialCustomLimit } = Astro.props;
 
-// 站点图标：标签页图标与触摸图标各一个槽位，只有文案与 data 钩子不同。
+// 站点图标槽位；触摸图标留空时复用标签页 PNG。
 const faviconSlots = [
-  { key: 'png', label: '标签页图标', uploadLabel: '上传标签页图标', clearLabel: '恢复标签页图标为主题默认' },
-  { key: 'appleTouchIcon', label: '触摸图标', uploadLabel: '上传触摸图标', clearLabel: '恢复触摸图标为主题默认' }
+  {
+    key: 'png',
+    label: '标签页图标',
+    uploadLabel: '上传标签页图标',
+    clearLabel: '恢复标签页图标为主题默认',
+    clearText: '恢复默认'
+  },
+  {
+    key: 'appleTouchIcon',
+    label: '触摸图标',
+    uploadLabel: '上传触摸图标',
+    clearLabel: '清除触摸图标（留空时复用标签页图标）',
+    clearText: '清除'
+  }
 ];
 
 // 备案信息：两个备案号另有长度上限与占位文案，两个链接可留空。
@@ -207,7 +219,7 @@ const filingFields: FilingField[] = [
               </span>
               <span class="admin-favicon-slot__label">{slot.label}</span>
               <button class="admin-btn admin-btn--ghost admin-btn--compact" type="button" data-favicon-upload={slot.key} aria-label={slot.uploadLabel}>上传</button>
-              <button class="admin-btn admin-btn--ghost admin-btn--compact" type="button" data-favicon-clear={slot.key} aria-label={slot.clearLabel}>恢复默认</button>
+              <button class="admin-btn admin-btn--ghost admin-btn--compact" type="button" data-favicon-clear={slot.key} aria-label={slot.clearLabel}>{slot.clearText}</button>
             </div>
           </>
         ))}
@@ -216,7 +228,8 @@ const filingFields: FilingField[] = [
         <input type="file" accept="image/png" hidden data-favicon-file={slot.key} />
       ))}
       <p class="admin-help">
-        建议上传 256x256 的正方形 PNG（边长 16-512px，不超过 256KB）；SVG 图标请直接替换 <code>public/favicon.svg</code>。
+        建议上传 256x256 的正方形 PNG（边长 16-512px，不超过 256KB）。只传标签页图标即可，触摸图标留空时会复用它；
+        需要单独的主屏图标再传第二张。SVG 图标请手动放到 <code>public/</code>，并在 <code>site.json</code> 的 <code>favicon.svg</code> 指定。
       </p>
     </div>
   </div>
