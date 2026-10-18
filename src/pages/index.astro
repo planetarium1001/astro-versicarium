@@ -834,6 +834,8 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
         <EntryListItem
           href={href}
           title={item.entry.data.title}
+          badge={item.entry.data.badge}
+          dateGranularity={item.entry.data.dateGranularity ?? articleMeta.dateGranularity}
           date={item.entry.data.date}
           dateText={item.entry.data.dateText}
           dateHasTime={item.entry.data.dateHasTime}

@@ -3,12 +3,13 @@ import { createWithBase } from '../utils/format';
 import { getSiteTimezone } from '../utils/site-timezone';
 import { resolveArticleDateItems } from '../lib/display-date';
 import { isRoutableTagKey, toTagKey } from '../lib/tags';
-import type { ArticleMetaSettings } from '../lib/theme-settings';
+import type { ArticleDateGranularity, ArticleMetaSettings } from '../lib/theme-settings';
 
 const {
   href,
   title,
   excerpt,
+  dateGranularity,
   date,
   dateText,
   dateHasTime = false,
@@ -27,6 +28,7 @@ const {
   href: string;
   title: string;
   excerpt?: string | null;
+  dateGranularity?: ArticleDateGranularity;
   date: Date;
   dateText?: string;
   dateHasTime?: boolean;
@@ -48,6 +50,7 @@ const timeZone = getSiteTimezone();
 const dateItems = resolveArticleDateItems({
   mode: dateDisplay ?? articleMetaSettings.dateDisplay ?? 'updated',
   timeZone,
+  granularity: dateGranularity ?? articleMetaSettings.dateGranularity ?? 'date',
   date: { date, text: dateText, hasTime: dateHasTime },
   publishedAt: publishedAt ? { date: publishedAt, text: publishedAtText, hasTime: publishedAtHasTime } : undefined,
   updatedAt: updatedAt ? { date: updatedAt, text: updatedAtText, hasTime: updatedAtHasTime } : undefined,

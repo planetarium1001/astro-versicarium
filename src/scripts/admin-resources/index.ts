@@ -1,3 +1,10 @@
+import {
+  MEDIA_FILE_ICON_PATHS,
+  getMediaFileExtension,
+  resolveMediaFileVisual,
+  type MediaFileIcon
+} from '../../lib/admin-console/media-file-visual';
+
 type ResourceKind = 'image' | 'file';
 type ReferenceStatus = 'referenced' | 'unreferenced' | 'orphan';
 type ViewMode = 'grid' | 'list';
@@ -147,14 +154,6 @@ const formatTime = (mtimeMs: number | null): string => {
 
 const getCollectionLabel = (collection: string): string =>
   COLLECTION_LABELS[collection] ?? collection;
-
-const getFileExtension = (fileName: string): string => {
-  const match = /\.([a-z0-9]+)$/i.exec(fileName);
-  return (match?.[1] ?? 'FILE').toUpperCase().slice(0, 4);
-};
-
-const getRawFileExtension = (fileName: string): string =>
-  (/\.([a-z0-9]+)$/i.exec(fileName)?.[1] ?? '').toLowerCase();
 
 const TEXT_PREVIEW_EXTENSIONS = new Set([
   'txt', 'md', 'markdown', 'mdx', 'json', 'yml', 'yaml', 'csv', 'tsv',
@@ -700,9 +699,46 @@ const init = () => {
     return badge;
   };
 
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  const createFileIcon = (icon: MediaFileIcon): SVGSVGElement => {
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '1.5');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.classList.add('resources-file-visual__icon');
+    for (const pathData of MEDIA_FILE_ICON_PATHS[icon]) {
+      const path = document.createElementNS(SVG_NS, 'path');
+      path.setAttribute('d', pathData);
+      svg.append(path);
+    }
+    return svg;
+  };
+
+  const createFileVisual = (fileName: string): HTMLElement => {
+    const visual = resolveMediaFileVisual(fileName);
+    const root = document.createElement('div');
+    root.className = 'resources-file-visual';
+    root.dataset.tone = visual.tone;
+    root.setAttribute('aria-hidden', 'true');
+    const page = document.createElement('span');
+    page.className = 'resources-file-visual__page';
+    page.append(createFileIcon(visual.icon));
+    const label = document.createElement('span');
+    label.className = 'resources-file-visual__label';
+    label.textContent = visual.label;
+    root.append(page, label);
+    return root;
+  };
+
   const createThumb = (item: MediaItem, className: string): HTMLElement => {
     const wrapper = document.createElement('div');
     wrapper.className = className;
+    wrapper.dataset.kind = item.kind;
     if (item.previewSrc) {
       const image = document.createElement('img');
       image.src = item.previewSrc;
@@ -711,10 +747,7 @@ const init = () => {
       image.addEventListener('error', () => image.remove());
       wrapper.append(image);
     } else {
-      const badge = document.createElement('span');
-      badge.className = 'resources-file-badge';
-      badge.textContent = getFileExtension(item.fileName);
-      wrapper.append(badge);
+      wrapper.append(createFileVisual(item.fileName));
     }
     return wrapper;
   };
@@ -724,7 +757,7 @@ const init = () => {
     detailDialog.querySelector<HTMLElement>('[data-resources-detail-kind]')!.textContent = item.kind === 'image' ? '图片' : '附件';
     detailDialog.querySelector<HTMLElement>('[data-resources-detail-title]')!.textContent = item.fileName;
     const preview = detailDialog.querySelector<HTMLElement>('[data-resources-detail-preview]')!;
-    const textPreview = item.kind === 'file' && TEXT_PREVIEW_EXTENSIONS.has(getRawFileExtension(item.fileName));
+    const textPreview = item.kind === 'file' && TEXT_PREVIEW_EXTENSIONS.has(getMediaFileExtension(item.fileName));
     if (textPreview) {
       const box = document.createElement('pre');
       box.className = 'resources-drawer__text';

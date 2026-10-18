@@ -1,4 +1,5 @@
 import type {
+  ArticleDateGranularity,
   HomeIntroLinkKey,
   SidebarDividerVariant,
   SidebarNavId,
@@ -18,6 +19,7 @@ import {
   type SiteFaviconSlot
 } from '@/utils/format';
 import {
+  ADMIN_ARTICLE_DATE_GRANULARITY_DEFAULT,
   ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT,
   ADMIN_FILINGS_SCOPE_DEFAULT,
   ADMIN_HERO_IMAGE_ALT_DEFAULT,
@@ -37,6 +39,7 @@ import {
   ADMIN_VIEW_STATS_UV_LABEL_DEFAULT,
   canonicalizeAdminThemeSettings,
   isAdminFilingsScope,
+  isAdminArticleDateGranularity,
   isAdminHomeIntroLinkKey,
   isAdminNavId,
   isAdminTypographyFontId,
@@ -81,6 +84,7 @@ type FormCodecContext = {
   inputPageListRssArchive: HTMLInputElement;
   inputPageArchiveVersionMode: HTMLSelectElement;
   inputUiArticleDateDisplay: HTMLSelectElement;
+  inputUiArticleDateGranularity: HTMLSelectElement;
   inputUiCardDateDisplay: HTMLSelectElement;
   pageListRssGroupEl: HTMLElement;
   inputSiteFooterStartYear: HTMLInputElement;
@@ -233,6 +237,7 @@ export const createFormCodec = ({
   inputPageListRssArchive,
   inputPageArchiveVersionMode,
   inputUiArticleDateDisplay,
+  inputUiArticleDateGranularity,
   inputUiCardDateDisplay,
   pageListRssGroupEl,
   inputSiteFooterStartYear,
@@ -396,10 +401,17 @@ export const createFormCodec = ({
 
   const ARTICLE_META_PREVIEW_PUBLISHED = '2026-03-18';
   const ARTICLE_META_PREVIEW_UPDATED = '2026-03-20';
+  const ARTICLE_META_PREVIEW_TIME = '14:30';
   const ARTICLE_META_PREVIEW_TAGS = ['#Astro', '#写作'] as const;
   const ARTICLE_META_PREVIEW_WORD_COUNT = '共 2,416 字';
   const ARTICLE_META_PREVIEW_READING_TIME = '约 6 分钟';
   const ARTICLE_META_PREVIEW_EMPTY = '当前不显示文章元信息';
+
+  /** 预览跟随粒度：date 只到日期，datetime 补站点时间语义的时分（不带时区后缀）。 */
+  const getArticleMetaPreviewDateText = (dateText: string): string =>
+    inputUiArticleDateGranularity.value === 'datetime'
+      ? `${dateText} ${ARTICLE_META_PREVIEW_TIME}`
+      : dateText;
 
   const getArticleMetaPreviewText = (): string => {
     const segments: string[] = [];
@@ -410,13 +422,13 @@ export const createFormCodec = ({
       // 与 resolveArticleDateItems 保持一致：updated 缺失时回退 published，
       // 但预览固定展示「同时显示」时的两行日期。
       if (dateDisplay === 'published') {
-        segments.push(`${dateLabel}${ARTICLE_META_PREVIEW_PUBLISHED}`);
+        segments.push(`${dateLabel}${getArticleMetaPreviewDateText(ARTICLE_META_PREVIEW_PUBLISHED)}`);
       } else if (dateDisplay === 'updated') {
-        segments.push(`更新于：${ARTICLE_META_PREVIEW_UPDATED}`);
+        segments.push(`更新于：${getArticleMetaPreviewDateText(ARTICLE_META_PREVIEW_UPDATED)}`);
       } else {
         segments.push(
-          `${dateLabel}${ARTICLE_META_PREVIEW_PUBLISHED}`,
-          `更新于：${ARTICLE_META_PREVIEW_UPDATED}`
+          `${dateLabel}${getArticleMetaPreviewDateText(ARTICLE_META_PREVIEW_PUBLISHED)}`,
+          `更新于：${getArticleMetaPreviewDateText(ARTICLE_META_PREVIEW_UPDATED)}`
         );
       }
     }
@@ -520,6 +532,17 @@ export const createFormCodec = ({
   const getSelectedFilingsScope = (): SiteFilingsScope => {
     const value = inputSiteFilingsScope.value;
     return isAdminFilingsScope(value) ? value : ADMIN_FILINGS_SCOPE_DEFAULT;
+  };
+
+  const getSelectedArticleDateGranularity = (): ArticleDateGranularity => {
+    const value = inputUiArticleDateGranularity.value;
+    return isAdminArticleDateGranularity(value) ? value : ADMIN_ARTICLE_DATE_GRANULARITY_DEFAULT;
+  };
+
+  const applyArticleDateGranularity = (value: unknown): void => {
+    inputUiArticleDateGranularity.value = isAdminArticleDateGranularity(value)
+      ? value
+      : ADMIN_ARTICLE_DATE_GRANULARITY_DEFAULT;
   };
 
   const typographyGroups: Record<TypographyRole, HTMLElement> = {
@@ -794,6 +817,7 @@ export const createFormCodec = ({
           showDate: Boolean(inputArticleMetaShowDate.checked),
           dateLabel: normalizeSingleLine(inputArticleMetaDateLabel.value),
           dateDisplay: inputUiArticleDateDisplay.value as 'published' | 'updated' | 'both',
+          dateGranularity: getSelectedArticleDateGranularity(),
           showTags: Boolean(inputArticleMetaShowTags.checked),
           showWordCount: Boolean(inputArticleMetaShowWordCount.checked),
           showReadingTime: Boolean(inputArticleMetaShowReadingTime.checked)
@@ -909,6 +933,7 @@ export const createFormCodec = ({
     inputArticleMetaShowDate.checked = settings.ui?.articleMeta?.showDate !== false;
     inputArticleMetaDateLabel.value = settings.ui?.articleMeta?.dateLabel ?? ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT;
     inputUiArticleDateDisplay.value = settings.ui?.articleMeta?.dateDisplay ?? 'updated';
+    applyArticleDateGranularity(settings.ui?.articleMeta?.dateGranularity);
     inputUiCardDateDisplay.value = settings.ui?.cardDateDisplay ?? 'updated';
     inputArticleMetaShowTags.checked = settings.ui?.articleMeta?.showTags !== false;
     inputArticleMetaShowWordCount.checked = settings.ui?.articleMeta?.showWordCount !== false;

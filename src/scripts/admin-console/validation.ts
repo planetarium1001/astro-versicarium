@@ -30,6 +30,7 @@ type ValidationContext = {
   inputPageListRssArchive: HTMLInputElement;
   inputPageArchiveVersionMode: HTMLSelectElement;
   inputUiArticleDateDisplay: HTMLSelectElement;
+  inputUiArticleDateGranularity: HTMLSelectElement;
   inputUiCardDateDisplay: HTMLSelectElement;
   inputSiteFooterStartYear: HTMLInputElement;
   inputSiteFooterShowCurrentYear: HTMLInputElement;
@@ -125,6 +126,7 @@ export const createValidation = ({
   inputPageListRssArchive,
   inputPageArchiveVersionMode,
   inputUiArticleDateDisplay,
+  inputUiArticleDateGranularity,
   inputUiCardDateDisplay,
   inputSiteFooterStartYear,
   inputSiteFooterShowCurrentYear,
@@ -261,6 +263,8 @@ export const createValidation = ({
         return () => inputPageArchiveVersionMode;
       case 'ui.articleMeta.dateDisplay':
         return () => inputUiArticleDateDisplay;
+      case 'ui.articleMeta.dateGranularity':
+        return () => inputUiArticleDateGranularity;
       case 'ui.cardDateDisplay':
         return () => inputUiCardDateDisplay;
       case 'site.titleMaxPercent':

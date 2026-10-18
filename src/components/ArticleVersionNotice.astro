@@ -55,46 +55,46 @@ const statusLabel = (version: (typeof versions)[number]): string => {
         </svg>
       </span>
     </button>
-  </section>
 
-  <dialog class="version-drawer" id={drawerId} data-version-drawer aria-label={`版本历史（${versionCount}）`}>
-    <div class="version-drawer__panel">
-      <div class="version-drawer__head">
-        <h2 class="version-drawer__title">版本历史 ({versionCount})</h2>
-        <button class="version-drawer__close" type="button" data-version-close aria-label="关闭版本历史">
-          <span aria-hidden="true">^</span>
-        </button>
-      </div>
-      <ol class="version-list">
-        {versions.map((version) => {
-          const current = version.entryId === route.entry.id;
-          const status = statusLabel(version);
-          return (
-            <li class:list={['version-item', current && 'is-current']}>
-              {current ? (
-                <span class="version-item__main">
-                  <span class="version-item__label">{version.versionLabel}</span>
-                  <span class="version-item__name">{version.versionName}</span>
+    <dialog class="version-drawer" id={drawerId} data-version-drawer aria-label={`版本历史（${versionCount}）`}>
+      <div class="version-drawer__panel">
+        <div class="version-drawer__head">
+          <h2 class="version-drawer__title">版本历史 ({versionCount})</h2>
+          <button class="version-drawer__close" type="button" data-version-close aria-label="关闭版本历史">
+            <span aria-hidden="true">^</span>
+          </button>
+        </div>
+        <ol class="version-list">
+          {versions.map((version) => {
+            const current = version.entryId === route.entry.id;
+            const status = statusLabel(version);
+            return (
+              <li class:list={['version-item', current && 'is-current']}>
+                {current ? (
+                  <span class="version-item__main">
+                    <span class="version-item__label">{version.versionLabel}</span>
+                    <span class="version-item__name">{version.versionName}</span>
+                  </span>
+                ) : (
+                  <a class="version-item__main" href={withBase(version.href)}>
+                    <span class="version-item__label">{version.versionLabel}</span>
+                    <span class="version-item__name">{version.versionName}</span>
+                  </a>
+                )}
+                <span class="version-item__meta">
+                  <span>{version.date}</span>
+                  <span class="version-item__status">{status}</span>
                 </span>
-              ) : (
-                <a class="version-item__main" href={withBase(version.href)}>
-                  <span class="version-item__label">{version.versionLabel}</span>
-                  <span class="version-item__name">{version.versionName}</span>
-                </a>
-              )}
-              <span class="version-item__meta">
-                <span>{version.date}</span>
-                <span class="version-item__status">{status}</span>
-              </span>
-              {version.versionSummary ? (
-                <span class="version-item__summary">{version.versionSummary}</span>
-              ) : null}
-            </li>
-          );
-        })}
-      </ol>
-    </div>
-  </dialog>
+                {version.versionSummary ? (
+                  <span class="version-item__summary">{version.versionSummary}</span>
+                ) : null}
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    </dialog>
+  </section>
 
   <script>
     import '../scripts/article-version-drawer.ts';

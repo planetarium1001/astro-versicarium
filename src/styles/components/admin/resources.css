@@ -163,7 +163,8 @@
   flex: 1;
   min-height: 0;
   padding: 8px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: var(--admin-border-strong) transparent;
@@ -187,7 +188,7 @@
 
 .resources-tree__list,
 .resources-tree__group {
-  min-width: max-content;
+  min-width: 0;
 }
 
 .resources-tree__loading,
@@ -213,7 +214,8 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  min-width: max-content;
+  width: 100%;
+  min-width: 0;
 }
 
 .resources-tree__toggle {
@@ -260,10 +262,11 @@
 
 .resources-tree__node {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
   gap: 7px;
-  width: max-content;
-  min-width: 100%;
+  width: auto;
+  min-width: 0;
   min-height: 30px;
   padding: 5px 8px;
   border: 0;
@@ -308,8 +311,10 @@
 .resources-tree__node[data-kind='version'] .resources-tree__swatch { background: var(--admin-border-strong); }
 
 .resources-tree__label {
+  flex: 1 1 auto;
   min-width: 0;
-  overflow: visible;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -325,6 +330,8 @@
   margin-left: 9px;
   padding-left: 8px;
   border-left: 1px solid var(--admin-border);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .resources-main {
@@ -778,44 +785,134 @@
   justify-content: center;
   aspect-ratio: 4 / 3;
   overflow: hidden;
-  background:
+  border-radius: 10px 10px 0 0;
+  background-color: var(--admin-surface-soft);
+  border-bottom: 1px solid var(--admin-border);
+}
+
+/* 棋盘格只留给图片（含透明 PNG）；附件用柔和的点阵底。 */
+.resources-card__preview[data-kind='image'] {
+  background-image:
     linear-gradient(45deg, color-mix(in srgb, var(--panel) 60%, transparent) 25%, transparent 25%, transparent 75%, color-mix(in srgb, var(--panel) 60%, transparent) 75%),
     linear-gradient(45deg, color-mix(in srgb, var(--panel) 60%, transparent) 25%, transparent 25%, transparent 75%, color-mix(in srgb, var(--panel) 60%, transparent) 75%);
   background-position: 0 0, 8px 8px;
   background-size: 16px 16px;
-  border-bottom: 1px solid var(--admin-border);
+}
+
+.resources-card__preview[data-kind='file'] {
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--admin-border-strong) 48%, transparent) 0.7px,
+    transparent 0.8px
+  );
+  background-size: 9px 9px;
 }
 
 .resources-card__preview img {
+  display: block;
   width: 100%;
   height: 100%;
+  border-radius: inherit;
   object-fit: cover;
 }
 
-.resources-card__file {
+/* 附件缩略图：文件页形状 + 分类色调 + 大写扩展名。 */
+.resources-file-visual {
+  --resources-file-tone: #57534e;
+
   display: flex;
   flex-direction: column;
-  gap: 5px;
   align-items: center;
   justify-content: center;
-  color: var(--muted);
-  font-size: 11px;
+  gap: 7px;
+  max-width: 100%;
+  color: var(--resources-file-tone);
 }
 
-.resources-file-badge {
-  display: inline-flex;
+.resources-file-visual[data-tone='red'] { --resources-file-tone: #b91c1c; }
+.resources-file-visual[data-tone='blue'] { --resources-file-tone: #1d4ed8; }
+.resources-file-visual[data-tone='green'] { --resources-file-tone: #15803d; }
+.resources-file-visual[data-tone='emerald'] { --resources-file-tone: #047857; }
+.resources-file-visual[data-tone='amber'] { --resources-file-tone: #b45309; }
+.resources-file-visual[data-tone='violet'] { --resources-file-tone: #6d28d9; }
+.resources-file-visual[data-tone='cyan'] { --resources-file-tone: #0e7490; }
+.resources-file-visual[data-tone='pink'] { --resources-file-tone: #be185d; }
+.resources-file-visual[data-tone='purple'] { --resources-file-tone: #7e22ce; }
+.resources-file-visual[data-tone='orange'] { --resources-file-tone: #c2410c; }
+.resources-file-visual[data-tone='teal'] { --resources-file-tone: #0f766e; }
+.resources-file-visual[data-tone='slate'] { --resources-file-tone: #475569; }
+.resources-file-visual[data-tone='stone'] { --resources-file-tone: #57534e; }
+
+:root[data-theme='dark'] .resources-file-visual[data-tone='red'] { --resources-file-tone: #fca5a5; }
+:root[data-theme='dark'] .resources-file-visual[data-tone='blue'] { --resources-file-tone: #93c5fd; }
+:root[data-theme='dark'] .resources-file-visual[data-tone='green'] { --resources-file-tone: #86efac; }
+:root[data-theme='dark'] .resources-file-visual[data-tone='emerald'] { --resources-file-tone: #6ee7b7; }
+:root[data-theme='dark'] .resources-file-visual[data-tone='amber'] { --resources-file-tone: #fcd34d; }
+:root[data-theme='dark'] .resources-file-visual[data-tone='violet'] { --resources-file-tone: #c4b5fd; }
+:root[data-theme='dark'] .resources-file-visual[data-tone='cyan'] { --resources-file-tone: #67e8f9; }
+:root[data-theme='dark'] .resources-file-visual[data-tone='pink'] { --resources-file-tone: #f9a8d4; }
+:root[data-theme='dark'] .resources-file-visual[data-tone='purple'] { --resources-file-tone: #d8b4fe; }
+:root[data-theme='dark'] .resources-file-visual[data-tone='orange'] { --resources-file-tone: #fdba74; }
+:root[data-theme='dark'] .resources-file-visual[data-tone='teal'] { --resources-file-tone: #5eead4; }
+:root[data-theme='dark'] .resources-file-visual[data-tone='slate'] { --resources-file-tone: #cbd5e1; }
+:root[data-theme='dark'] .resources-file-visual[data-tone='stone'] { --resources-file-tone: #d6d3d1; }
+
+.resources-file-visual__page {
+  position: relative;
+  display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 42px;
-  height: 42px;
-  padding: 0 8px;
-  border: 1px solid var(--admin-border);
+  width: 54px;
+  height: 64px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--resources-file-tone) 34%, var(--admin-border));
   border-radius: 9px;
-  background: var(--admin-surface-soft);
-  color: var(--muted);
-  font-size: 10px;
+  background:
+    linear-gradient(
+      155deg,
+      color-mix(in srgb, var(--resources-file-tone) 17%, var(--admin-surface)) 0%,
+      color-mix(in srgb, var(--resources-file-tone) 6%, var(--admin-surface-soft)) 58%,
+      var(--admin-surface-soft) 100%
+    );
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--resources-file-tone) 16%, transparent);
+  color: var(--resources-file-tone);
+}
+
+/* 右上角的折角高光，让形状更像文件页而不是普通色块。 */
+.resources-file-visual__page::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 15px;
+  height: 15px;
+  border-bottom-left-radius: 7px;
+  background: linear-gradient(
+    225deg,
+    color-mix(in srgb, var(--resources-file-tone) 30%, var(--admin-surface)) 0 50%,
+    transparent 50%
+  );
+  opacity: .75;
+  pointer-events: none;
+}
+
+.resources-file-visual__icon {
+  width: 26px;
+  height: 26px;
+  flex: none;
+}
+
+.resources-file-visual__label {
+  max-width: 100%;
+  overflow: hidden;
+  color: color-mix(in srgb, var(--resources-file-tone) 76%, var(--text));
+  font-family: var(--font-mono);
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: .04em;
+  letter-spacing: .08em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .resources-card__body {
@@ -896,9 +993,37 @@
 }
 
 .resources-row__thumb img {
+  display: block;
   width: 100%;
   height: 100%;
+  border-radius: inherit;
   object-fit: cover;
+}
+
+/* 列表缩略图空间有限：只留文件页图标，隐藏扩展名。 */
+.resources-row__thumb .resources-file-visual {
+  gap: 0;
+}
+
+.resources-row__thumb .resources-file-visual__page {
+  width: 24px;
+  height: 28px;
+  border-radius: 5px;
+}
+
+.resources-row__thumb .resources-file-visual__page::after {
+  width: 8px;
+  height: 8px;
+  border-bottom-left-radius: 4px;
+}
+
+.resources-row__thumb .resources-file-visual__icon {
+  width: 14px;
+  height: 14px;
+}
+
+.resources-row__thumb .resources-file-visual__label {
+  display: none;
 }
 
 .resources-row__main {
@@ -1083,6 +1208,40 @@
   background: var(--admin-surface-soft);
 }
 
+.resources-drawer__preview-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.resources-drawer__preview-inner .resources-file-visual {
+  gap: 10px;
+}
+
+.resources-drawer__preview-inner .resources-file-visual__page {
+  width: 72px;
+  height: 86px;
+  border-radius: 12px;
+}
+
+.resources-drawer__preview-inner .resources-file-visual__page::after {
+  width: 20px;
+  height: 20px;
+  border-bottom-left-radius: 9px;
+}
+
+.resources-drawer__preview-inner .resources-file-visual__icon {
+  width: 34px;
+  height: 34px;
+}
+
+.resources-drawer__preview-inner .resources-file-visual__label {
+  font-size: 11px;
+}
+
 .resources-drawer__preview:has(.resources-drawer__text) {
   align-items: stretch;
   justify-content: flex-start;
@@ -1110,8 +1269,10 @@
 }
 
 .resources-drawer__preview img {
+  display: block;
   max-width: 100%;
   max-height: 280px;
+  border-radius: 8px;
   object-fit: contain;
 }
 

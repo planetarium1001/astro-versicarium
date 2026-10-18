@@ -68,6 +68,7 @@ const fallbackListId = 'blog-tag-list';
         date={item.entry.data.date}
         dateText={item.entry.data.dateText}
         dateHasTime={item.entry.data.dateHasTime}
+        dateGranularity={item.entry.data.dateGranularity ?? articleMeta.dateGranularity}
         publishedAt={item.entry.data.publishedAt}
         publishedAtText={item.entry.data.publishedAtText}
         publishedAtHasTime={item.entry.data.publishedAtHasTime}

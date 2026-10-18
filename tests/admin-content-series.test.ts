@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildAdminContentListGroups,
-  buildAdminContentListRenderEntries,
+  buildAdminContentListSections,
   compareAdminContentSeriesVersions,
+  getAdminContentSeriesDisplayTitle,
   resolveAdminContentSeriesVersionStates
 } from '../src/lib/admin-console/content-series';
 
@@ -12,6 +13,7 @@ type VersionInput = {
   dateText?: string | null;
   versionOrder?: number | null;
   title?: string;
+  versionName?: string | null;
 };
 
 const version = ({
@@ -19,11 +21,13 @@ const version = ({
   series,
   dateText = '2026-01-01',
   versionOrder = null,
-  title = id
+  title = id,
+  versionName = null
 }: VersionInput) => ({
   id,
   series,
   title,
+  versionName,
   date: dateText ? new Date(`${dateText}T00:00:00+08:00`) : null,
   versionOrder
 });
@@ -94,9 +98,9 @@ describe('admin-console/content-series', () => {
 
   it('groups series versions at their first list position and keeps single entries inline', () => {
     const items = withStates([
-      version({ id: 'post-v1', series: 'post', dateText: '2026-01-01', title: '旧标题' }),
+      version({ id: 'post-v1', series: 'post', dateText: '2026-01-01', title: '旧标题', versionName: '初版' }),
       version({ id: 'single', series: null, dateText: '2026-02-01' }),
-      version({ id: 'post-v2', series: 'post', dateText: '2026-03-01', title: '新标题' })
+      version({ id: 'post-v2', series: 'post', dateText: '2026-03-01', title: '系列名: 最新版', versionName: '最新版' })
     ]);
 
     const groups = buildAdminContentListGroups(items);
@@ -107,7 +111,8 @@ describe('admin-console/content-series', () => {
       kind: 'series',
       key: 'series:post',
       series: 'post',
-      title: '新标题',
+      title: '系列名: 最新版',
+      displayTitle: '系列名',
       versionCount: 2
     });
     if (seriesGroup?.kind !== 'series') throw new Error('expected a series group');
@@ -115,28 +120,53 @@ describe('admin-console/content-series', () => {
     expect(groups[1]).toMatchObject({ kind: 'entry', item: { id: 'single' } });
   });
 
-  it('flattens groups into header and row render entries', () => {
+  it('lists standalone entries first, then series sections', () => {
     const items = withStates([
-      version({ id: 'post-v1', series: 'post', dateText: '2026-01-01', title: '旧标题' }),
-      version({ id: 'single', series: null, dateText: '2026-02-01' }),
-      version({ id: 'post-v2', series: 'post', dateText: '2026-03-01', title: '新标题' })
+      version({ id: 'post-v1', series: 'post', dateText: '2026-01-01', title: '系列名：最新版', versionName: '最新版' }),
+      version({ id: 'single-a', series: null, dateText: '2026-02-01' }),
+      version({ id: 'post-v2', series: 'post', dateText: '2026-03-01', title: '系列名：最新版', versionName: '最新版' }),
+      version({ id: 'single-b', series: null, dateText: '2026-02-02' })
     ]);
 
-    const entries = buildAdminContentListRenderEntries(items);
+    const sections = buildAdminContentListSections(items);
 
-    expect(entries.map((entry) => entry.kind)).toEqual(['series', 'item', 'item', 'item']);
-    expect(entries[0]).toEqual({
-      kind: 'series',
-      key: 'series:post',
-      series: 'post',
-      title: '新标题',
-      versionCount: 2
+    expect(sections.map((section) => section.kind)).toEqual(['standalone', 'series']);
+
+    const standaloneSection = sections[0];
+    expect(standaloneSection).toMatchObject({
+      kind: 'standalone',
+      key: 'standalone',
+      label: '单篇文章',
+      count: 2
     });
-    expect(entries.slice(1).map((entry) => entry.kind === 'item' ? entry.item.id : '')).toEqual([
-      'post-v2',
-      'post-v1',
-      'single'
+    if (standaloneSection?.kind !== 'standalone') throw new Error('expected a standalone section');
+    expect(standaloneSection.items.map((item) => item.id)).toEqual(['single-a', 'single-b']);
+
+    const seriesSection = sections[1];
+    expect(seriesSection).toMatchObject({
+      kind: 'series',
+      key: 'series',
+      label: '系列',
+      count: 1
+    });
+    if (seriesSection?.kind !== 'series') throw new Error('expected a series section');
+    expect(seriesSection.groups.map((group) => group.series)).toEqual(['post']);
+    expect(seriesSection.groups[0]?.displayTitle).toBe('系列名');
+  });
+
+  it('omits empty sections so subheads only render for real content', () => {
+    const standaloneOnly = withStates([
+      version({ id: 'single', series: null })
     ]);
+    const seriesOnly = withStates([
+      version({ id: 'post-v1', series: 'post', dateText: '2026-01-01' }),
+      version({ id: 'post-v2', series: 'post', dateText: '2026-02-01' })
+    ]);
+
+    expect(buildAdminContentListSections(standaloneOnly).map((section) => section.kind))
+      .toEqual(['standalone']);
+    expect(buildAdminContentListSections(seriesOnly).map((section) => section.kind))
+      .toEqual(['series']);
   });
 
   it('keeps the full version count when a page only shows part of a series', () => {
@@ -166,5 +196,30 @@ describe('admin-console/content-series', () => {
     expect(items.slice().sort(compareAdminContentSeriesVersions).map((item) => item.id))
       .toEqual(['post-dated', 'post-undated']);
     expect(resolveAdminContentSeriesVersionStates(items).get('post-dated')?.isLatestVersion).toBe(true);
+  });
+});
+
+describe('getAdminContentSeriesDisplayTitle', () => {
+  it('strips a trailing version name after either colon style', () => {
+    expect(getAdminContentSeriesDisplayTitle('资源管理演示：最新版', 'resource-demo', '最新版'))
+      .toBe('资源管理演示');
+    expect(getAdminContentSeriesDisplayTitle('资源管理演示: 最新版', 'resource-demo', '最新版'))
+      .toBe('资源管理演示');
+    expect(getAdminContentSeriesDisplayTitle('资源管理演示 ： 最新版 ', 'resource-demo', '最新版'))
+      .toBe('资源管理演示');
+  });
+
+  it('keeps the title when the suffix does not match and falls back to the series slug', () => {
+    expect(getAdminContentSeriesDisplayTitle('资源管理演示：初版', 'resource-demo', '最新版'))
+      .toBe('资源管理演示：初版');
+    expect(getAdminContentSeriesDisplayTitle('资源管理演示', 'resource-demo'))
+      .toBe('资源管理演示');
+    expect(getAdminContentSeriesDisplayTitle('   ', 'resource-demo', '最新版'))
+      .toBe('resource-demo');
+  });
+
+  it('escapes regex characters in the version name', () => {
+    expect(getAdminContentSeriesDisplayTitle('Demo: v1.0 (latest)', 'demo', 'v1.0 (latest)'))
+      .toBe('Demo');
   });
 });

@@ -1,4 +1,4 @@
-import type { ArticleDateDisplayMode } from './theme-settings';
+import type { ArticleDateDisplayMode, ArticleDateGranularity } from './theme-settings';
 import { formatDateTimeInTimeZone, formatISODateInTimeZone } from '../utils/format';
 
 export type DisplayDateItem = {
@@ -18,14 +18,23 @@ type DateValue = {
   hasTime?: boolean | undefined;
 };
 
-const getTimeZoneName = (timeZone: string, date: Date): string => {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    timeZoneName: 'short'
-  }).formatToParts(date);
-  const name = parts.find((part) => part.type === 'timeZoneName')?.value ?? '';
-  if (timeZone === 'Asia/Shanghai' && /^(?:GMT\+8|UTC\+8|CST)$/i.test(name)) return 'CST';
-  return name.replace(/^GMT/i, 'UTC');
+/**
+ * 站点时区短名：Asia/Shanghai 固定按 CST 展示（Intl 在部分环境返回 GMT+8），
+ * 其余时区用 Intl 的 short 名称，GMT 前缀统一写成 UTC。
+ */
+export const getTimeZoneShortName = (timeZone: string, date: Date): string => {
+  if (timeZone === 'Asia/Shanghai') return 'CST';
+
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      timeZoneName: 'short'
+    }).formatToParts(date);
+    const name = parts.find((part) => part.type === 'timeZoneName')?.value ?? '';
+    return name.replace(/^GMT/i, 'UTC');
+  } catch {
+    return 'UTC';
+  }
 };
 
 export const getTimeZoneOffsetLabel = (timeZone: string, date: Date): string => {
@@ -49,17 +58,18 @@ const toDisplayDate = (
   kind: DisplayDateItem['kind'],
   label: string,
   value: DateValue,
-  timeZone: string
+  timeZone: string,
+  granularity: ArticleDateGranularity
 ): DisplayDateItem => {
-  const hasTime = value.hasTime === true;
+  // hasTime 反映「实际是否显示时分」：粒度是 date、或 frontmatter 本身没写时分，都不算。
+  const hasTime = granularity === 'datetime' && value.hasTime === true;
   const dateText = value.text || formatISODateInTimeZone(value.date, timeZone);
   return {
     kind,
     label,
     date: value.date,
-    text: hasTime
-      ? `${formatDateTimeInTimeZone(value.date, timeZone)} ${getTimeZoneName(timeZone, value.date)}`
-      : dateText,
+    // 服务端只输出站点时区的日期/时间，不拼时区名；访客时区的后缀由 article-dates.ts 补。
+    text: hasTime ? formatDateTimeInTimeZone(value.date, timeZone) : dateText,
     iso: hasTime ? value.date.toISOString() : dateText,
     hasTime,
     timeZone,
@@ -70,6 +80,7 @@ const toDisplayDate = (
 export const resolveArticleDateItems = ({
   mode,
   timeZone,
+  granularity = 'date',
   date,
   publishedAt,
   updatedAt,
@@ -78,6 +89,7 @@ export const resolveArticleDateItems = ({
 }: {
   mode: ArticleDateDisplayMode;
   timeZone: string;
+  granularity?: ArticleDateGranularity;
   date: DateValue;
   publishedAt?: DateValue | undefined;
   updatedAt?: DateValue | undefined;
@@ -85,12 +97,13 @@ export const resolveArticleDateItems = ({
   forceVersionDate?: boolean;
 }): DisplayDateItem[] => {
   if (forceVersionDate) {
-    return [toDisplayDate('version', '版本日期：', date, timeZone)];
+    // 旧版本的「版本日期」始终只到日期，不受粒度设置影响。
+    return [toDisplayDate('version', '版本日期：', date, timeZone, 'date')];
   }
 
-  const published = toDisplayDate('published', publishedLabel, publishedAt ?? date, timeZone);
+  const published = toDisplayDate('published', publishedLabel, publishedAt ?? date, timeZone, granularity);
   const updated = updatedAt
-    ? toDisplayDate('updated', '更新于：', updatedAt, timeZone)
+    ? toDisplayDate('updated', '更新于：', updatedAt, timeZone, granularity)
     : null;
 
   if (mode === 'published') return [published];

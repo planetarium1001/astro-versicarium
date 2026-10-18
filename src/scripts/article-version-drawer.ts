@@ -1,11 +1,31 @@
 type VersionDrawerRoot = HTMLElement;
 
+/**
+ * 先按组件结构在 root 内找 drawer；结构变化时再按 trigger 的 aria-controls 回退到 document。
+ * 两段都用同一份 trigger→dialog 约定，避免模板挪动位置后交互静默失效。
+ */
+const resolveDialog = (
+  root: VersionDrawerRoot,
+  trigger: HTMLButtonElement
+): HTMLDialogElement | null => {
+  const scoped = root.querySelector<HTMLDialogElement>('[data-version-drawer]');
+  if (scoped) return scoped;
+
+  const controlledId = trigger.getAttribute('aria-controls')?.trim();
+  if (!controlledId) return null;
+
+  const controlled = document.getElementById(controlledId);
+  if (!controlled || controlled.tagName !== 'DIALOG') return null;
+  return controlled as HTMLDialogElement;
+};
+
 const roots = Array.from(document.querySelectorAll<VersionDrawerRoot>('[data-article-version]'));
 
 for (const root of roots) {
   const trigger = root.querySelector<HTMLButtonElement>('[data-version-trigger]');
-  const dialog = root.querySelector<HTMLDialogElement>('[data-version-drawer]');
-  if (!trigger || !dialog) continue;
+  if (!trigger) continue;
+  const dialog = resolveDialog(root, trigger);
+  if (!dialog) continue;
 
   const closeButton = dialog.querySelector<HTMLButtonElement>('[data-version-close]');
   let restoreFocus = true;
@@ -60,3 +80,5 @@ for (const root of roots) {
     if (event.target === dialog) close();
   });
 }
+
+export {};

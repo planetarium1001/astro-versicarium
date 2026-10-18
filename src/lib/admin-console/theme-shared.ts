@@ -6,6 +6,7 @@ import type {
   SidebarNavId,
   SiteFilingsScope,
   ArticleDateDisplayMode,
+  ArticleDateGranularity,
   ArchiveVersionMode,
   SiteSocialIconKey,
   SiteSocialPresetId,
@@ -76,6 +77,18 @@ const ADMIN_ARTICLE_DATE_DISPLAY_SET = new Set<ArticleDateDisplayMode>(
 );
 export const isAdminArticleDateDisplayMode = (value: unknown): value is ArticleDateDisplayMode =>
   typeof value === 'string' && ADMIN_ARTICLE_DATE_DISPLAY_SET.has(value as ArticleDateDisplayMode);
+
+/** 日期粒度与「显示模式（published/updated/both）」是两个维度：粒度只管是否带时分。 */
+export const ADMIN_ARTICLE_DATE_GRANULARITY_OPTIONS = [
+  { id: 'date', label: '仅日期' },
+  { id: 'datetime', label: '日期 + 时间' }
+] as const satisfies readonly { id: ArticleDateGranularity; label: string }[];
+export const ADMIN_ARTICLE_DATE_GRANULARITY_DEFAULT: ArticleDateGranularity = 'date';
+const ADMIN_ARTICLE_DATE_GRANULARITY_SET = new Set<ArticleDateGranularity>(
+  ADMIN_ARTICLE_DATE_GRANULARITY_OPTIONS.map((option) => option.id)
+);
+export const isAdminArticleDateGranularity = (value: unknown): value is ArticleDateGranularity =>
+  typeof value === 'string' && ADMIN_ARTICLE_DATE_GRANULARITY_SET.has(value as ArticleDateGranularity);
 
 export const ADMIN_ARCHIVE_VERSION_MODE_OPTIONS = [
   { id: 'all', label: '显示全部版本' },
@@ -762,6 +775,9 @@ export const canonicalizeAdminThemeSettings = (
         dateDisplay: isAdminArticleDateDisplayMode(rawUiArticleMeta.dateDisplay)
           ? rawUiArticleMeta.dateDisplay
           : ADMIN_ARTICLE_DATE_DISPLAY_DEFAULT,
+        dateGranularity: isAdminArticleDateGranularity(rawUiArticleMeta.dateGranularity)
+          ? rawUiArticleMeta.dateGranularity
+          : ADMIN_ARTICLE_DATE_GRANULARITY_DEFAULT,
         showTags: typeof rawUiArticleMeta.showTags === 'boolean' ? rawUiArticleMeta.showTags : true,
         showWordCount: typeof rawUiArticleMeta.showWordCount === 'boolean' ? rawUiArticleMeta.showWordCount : true,
         showReadingTime: typeof rawUiArticleMeta.showReadingTime === 'boolean'
@@ -918,6 +934,9 @@ export const validateAdminThemeSettings = (
 
   if (!isAdminArticleDateDisplayMode(settings.ui.articleMeta.dateDisplay)) {
     pushIssue('ui.articleMeta.dateDisplay', '文章日期显示模式无效');
+  }
+  if (!isAdminArticleDateGranularity(settings.ui.articleMeta.dateGranularity)) {
+    pushIssue('ui.articleMeta.dateGranularity', '文章日期粒度无效');
   }
   if (!isAdminArticleDateDisplayMode(settings.ui.cardDateDisplay)) {
     pushIssue('ui.cardDateDisplay', '卡片日期显示模式无效');
@@ -1617,7 +1636,7 @@ const UI_COMPATIBILITY_GROUP_FIELDS: ReadonlyArray<readonly [string, readonly st
     ['showPv', 'pvLabel', 'showUv', 'uvLabel', 'onArticleMeta', 'onIndexPages']
   ],
   ['typography', ['readable', 'copy', 'mono', 'brand']],
-  ['articleMeta', ['showDate', 'dateLabel', 'dateDisplay', 'showTags', 'showWordCount', 'showReadingTime']]
+  ['articleMeta', ['showDate', 'dateLabel', 'dateDisplay', 'dateGranularity', 'showTags', 'showWordCount', 'showReadingTime']]
 ];
 
 const fillAdminThemeSettingsShellCompatibilityDefaults = (

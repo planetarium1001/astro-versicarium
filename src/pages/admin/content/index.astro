@@ -3,40 +3,36 @@ import AdminLayout from '../../../components/admin/AdminLayout.astro';
 import AdminIcon from '../../../components/admin/AdminIcon.astro';
 import AdminReadonlyNotice from '../../../components/admin/AdminReadonlyNotice.astro';
 import AdminShell from '../../../components/admin/AdminShell.astro';
+import ContentRow from '../../../components/admin/content/ContentRow.astro';
 import {
   ADMIN_CONTENT_DRAFT_OPTIONS,
   ADMIN_CONTENT_SORT_OPTIONS,
   getAdminContentConsolePageData,
-  getAdminContentEntryEditHref,
   getAdminContentFilterHref,
   getAdminContentEntryListHref,
-  getAdminContentPublicFallbackLabel,
   getAdminContentCollectionCapability
 } from '../../../lib/admin-console/content';
 import type {
   AdminContentCollectionKey,
   AdminContentDraftFilter,
-  AdminContentIndexItem,
   AdminContentScopeKey,
   AdminContentSortKey
 } from '../../../lib/admin-console/content';
 import type { AdminContentCreatableCollectionKey } from '../../../lib/admin-console/content-collections';
 import {
-  buildAdminContentListRenderEntries
+  buildAdminContentListSections
 } from '../../../lib/admin-console/content-series';
 import {
   ADMIN_CONTENT_CREATE_API_PATH,
   ADMIN_CONTENT_CREATE_VERSION_API_PATH,
   ADMIN_CONTENT_DELETE_API_PATH,
   ADMIN_CONTENT_ENTRY_API_PATH,
-  ADMIN_CONTENT_EXPORT_API_PATH,
   ADMIN_CONTENT_BULK_STATUS_API_PATH,
   ADMIN_CONTENT_BULK_DELETE_API_PATH,
   ADMIN_CONTENT_BULK_EXPORT_API_PATH
 } from '../../../lib/admin-console/admin-api-paths';
-import { isAdminContentDeletableCollectionKey } from '../../../lib/admin-console/content-delete-contract';
 import { getThemeSettings } from '../../../lib/theme-settings';
-import { createWithBase, formatISODate } from '../../../utils/format';
+import { createWithBase } from '../../../utils/format';
 
 const isDev = import.meta.env.DEV;
 const shouldShowContentConsole = isDev;
@@ -83,7 +79,6 @@ const resetHref = withBase(contentHref);
 const adminContentEntryEndpoint = withBase(ADMIN_CONTENT_ENTRY_API_PATH);
 const adminContentCreateEndpoint = withBase(ADMIN_CONTENT_CREATE_API_PATH);
 const adminContentCreateVersionEndpoint = withBase(ADMIN_CONTENT_CREATE_VERSION_API_PATH);
-const adminContentExportEndpoint = withBase(ADMIN_CONTENT_EXPORT_API_PATH);
 const adminContentDeleteEndpoint = withBase(ADMIN_CONTENT_DELETE_API_PATH);
 const adminContentBulkStatusEndpoint = withBase(ADMIN_CONTENT_BULK_STATUS_API_PATH);
 const adminContentBulkDeleteEndpoint = withBase(ADMIN_CONTENT_BULK_DELETE_API_PATH);
@@ -95,39 +90,8 @@ const clearScopedStateHref = pageData && pageData.collection !== 'all'
   : resetHref;
 const searchPlaceholder = '搜索标题、标签或 slug…';
 
-const getContentEntryExportHref = (collection: string, entryId: string): string => {
-  const params = new URLSearchParams({
-    collection,
-    entryId
-  });
-  return `${adminContentExportEndpoint}?${params.toString()}`;
-};
-
 const getCollectionListHref = (collection: AdminContentCollectionKey): string =>
   withBase(getAdminContentEntryListHref(collection));
-
-const getContentRowDateLabel = (
-  item: Pick<AdminContentIndexItem, 'collection' | 'date' | 'dateLabel'>
-): string =>
-  item.collection === 'bits' && item.date ? formatISODate(item.date) : item.dateLabel;
-
-const getContentPublicLinkLabel = (item: Pick<AdminContentIndexItem, 'collection'>): string => {
-  const capability = getAdminContentCollectionCapability(item.collection);
-  if (capability.fixedPage) return `转到${capability.label}`;
-  if (item.collection === 'bits') return '前台查看';
-  return '转到文章';
-};
-
-const getContentInfoActionLabel = (item: Pick<AdminContentIndexItem, 'collection'>): string => {
-  const capability = getAdminContentCollectionCapability(item.collection);
-  if (!capability.writable) return '查看源信息';
-  if (item.collection === 'blog' || item.collection === 'bits') return '修改信息';
-  if (capability.fixedPage) return `${capability.label}信息`;
-  return '编辑信息';
-};
-
-const hasListInfoAction = (collection: AdminContentCollectionKey): collection is 'blog' | 'bits' =>
-  collection === 'blog' || collection === 'bits';
 
 const getContentPaginationHref = (page: number): string => {
   // 分页只属于具体 collection scope；总览和全部内容搜索不生成分页链接。
@@ -476,24 +440,10 @@ const getContentCreateAction = (
                   : null;
                 const shouldShowSectionCreateAction = Boolean(createAction);
                 const isSectionTitleLinked = pageData.mode === 'overview';
-                const sectionRenderEntries = buildAdminContentListRenderEntries(section.items);
-                const sectionSeriesEntries = sectionRenderEntries.filter(
-                  (entry) => entry.kind === 'series' || (entry.kind === 'item' && Boolean(entry.item.series))
+                const sectionContentSections = buildAdminContentListSections(section.items);
+                const sectionHasSeries = sectionContentSections.some(
+                  (contentSection) => contentSection.kind === 'series'
                 );
-                const sectionStandaloneEntries = sectionRenderEntries.filter(
-                  (entry) => entry.kind === 'item' && !entry.item.series
-                );
-                const sectionSeriesCount = sectionSeriesEntries.filter((entry) => entry.kind === 'series').length;
-                const sectionOrderedEntries = [
-                  ...(sectionSeriesEntries.length
-                    ? [{ kind: 'subhead' as const, key: 'series', label: '系列', count: sectionSeriesCount }]
-                    : []),
-                  ...sectionSeriesEntries,
-                  ...(sectionSeriesEntries.length && sectionStandaloneEntries.length
-                    ? [{ kind: 'subhead' as const, key: 'standalone', label: '单篇文章', count: sectionStandaloneEntries.length }]
-                    : []),
-                  ...sectionStandaloneEntries
-                ];
                 return (
                   <section class="admin-content-module" aria-labelledby={sectionTitleId}>
                     <div class="admin-content-module__head">
@@ -544,234 +494,58 @@ const getContentCreateAction = (
                     {
                       section.items.length > 0 ? (
                         <ol class="admin-content-list" aria-label={`${section.collectionLabel}内容条目`}>
-                            {
-                              sectionOrderedEntries.map((entry, entryIndex) => {
-                                if (entry.kind === 'subhead') {
-                                  return (
-                                    <li class="admin-content-list-subhead" data-admin-content-subhead={entry.key}>
-                                      <span class="admin-content-list-subhead__label">{entry.label}</span>
-                                      <span class="admin-content-list-subhead__count">
-                                        {entry.count}{entry.key === 'series' ? ' 个系列' : ' 篇'}
-                                      </span>
+                          {
+                            sectionContentSections.map((contentSection) => (
+                              <>
+                                {contentSection.kind === 'standalone' ? (
+                                  <>
+                                    {sectionHasSeries ? (
+                                      <li class="admin-content-list-subhead" data-admin-content-subhead="standalone">
+                                        <span class="admin-content-list-subhead__label">{contentSection.label}</span>
+                                        <span class="admin-content-list-subhead__count">{contentSection.count} 篇</span>
+                                      </li>
+                                    ) : null}
+                                    {contentSection.items.map((item) => <ContentRow item={item} />)}
+                                  </>
+                                ) : (
+                                  <>
+                                    <li class="admin-content-list-subhead" data-admin-content-subhead="series">
+                                      <span class="admin-content-list-subhead__label">{contentSection.label}</span>
+                                      <span class="admin-content-list-subhead__count">{contentSection.count} 个系列</span>
                                     </li>
-                                  );
-                                }
-
-                                if (entry.kind === 'series') {
-                                  return (
-                                    <li
-                                      class="admin-content-series-head"
-                                      data-admin-content-series-group={entry.series}
-                                    >
-                                      <div class="admin-content-series-head__title">
-                                        <strong class="admin-content-series-head__name">{entry.title}</strong>
-                                        <code class="admin-content-series-head__series">{entry.series}</code>
-                                      </div>
-                                      <span class="admin-content-series-head__count">{entry.versionCount} 个版本</span>
-                                    </li>
-                                  );
-                                }
-
-                                const item = entry.item;
-                                const capability = getAdminContentCollectionCapability(item.collection);
-                                const editPath = getAdminContentEntryEditHref(item.collection, item.id);
-                                const editHref = withBase(editPath);
-                                const supportsListInfoAction = capability.writable && hasListInfoAction(item.collection);
-                                const articleInfoHref = capability.writable
-                                  ? item.collection === 'blog'
-                                    ? withBase(`${editPath}?panel=info`)
-                                    : editHref
-                                  : null;
-                                const entryTitleHref = capability.writable ? editHref : getCollectionListHref(item.collection);
-                                const publicHref = item.publicHref ? withBase(item.publicHref) : null;
-                                const publicFallbackLabel = getAdminContentPublicFallbackLabel(item);
-                                const exportHref = getContentEntryExportHref(item.collection, item.id);
-                                const deleteUnsupportedReason = capability.deleteUnsupportedReason ?? `当前 collection 暂不支持删除：${item.collection}`;
-                                const sourceErrorPanelId = item.sourceError
-                                  ? `admin-content-source-error-${section.collection}-${entryIndex}`
-                                  : null;
-                                const hasBulkIdentity = Boolean(item.collection && item.id && item.relativePath);
-                                const bulkCheckboxLabel = hasBulkIdentity
-                                  ? `选择${item.title}`
-                                  : '缺少源文件身份，无法批量操作';
-                                return (
-                                  <li
-                                    class="admin-row admin-row--plain admin-row--interactive admin-row--table admin-content-item"
-                                    data-collection={item.collection}
-                                    data-admin-content-item
-                                  >
-                                    <label class="admin-content-bulk-select" title={bulkCheckboxLabel}>
-                                      <input
-                                        class="admin-content-bulk-checkbox"
-                                        type="checkbox"
-                                        data-admin-content-bulk-entry={hasBulkIdentity ? true : undefined}
-                                        data-collection={hasBulkIdentity ? item.collection : undefined}
-                                        data-entry-id={hasBulkIdentity ? item.id : undefined}
-                                        data-relative-path={hasBulkIdentity ? item.relativePath : undefined}
-                                        data-title={hasBulkIdentity ? item.title : undefined}
-                                        disabled={!hasBulkIdentity}
-                                        aria-label={bulkCheckboxLabel}
-                                      />
-                                    </label>
-                                    <p class="admin-content-row-meta">
-                                      <span data-admin-content-row-date>{getContentRowDateLabel(item)}</span>
-                                    </p>
-
-                                  <div class="admin-content-item__title-row">
-                                    <a class="admin-content-row-title" href={entryTitleHref} data-admin-content-row-title>{item.title}</a>
-                                    {
-                                      item.collection === 'blog' && item.series ? (
-                                        <>
-                                          <span
-                                            class="admin-content-row-version"
-                                            data-admin-content-row-version
-                                            title={item.versionName ?? undefined}
-                                          >
-                                            {item.versionLabel || item.dateLabel}
-                                          </span>
-                                          <span
-                                            class:list={[
-                                              'admin-content-row-mark',
-                                              item.isLatestVersion
-                                                ? 'admin-content-row-mark--latest'
-                                                : 'admin-content-row-mark--history'
-                                            ]}
-                                            data-admin-content-row-version-state={item.isLatestVersion ? 'latest' : 'history'}
-                                          >
-                                            {item.isLatestVersion ? '最新' : '历史'}
-                                          </span>
-                                        </>
-                                      ) : null
-                                    }
-                                    {
-                                      item.sourceError && sourceErrorPanelId ? (
-                                        <details class="admin-content-source-error">
-                                          <summary
-                                            class="admin-content-source-error__trigger"
-                                            title={item.sourceError}
-                                            aria-label={`查看源文件异常：${item.title}`}
-                                            aria-controls={sourceErrorPanelId}
-                                          >
-                                            <AdminIcon name="triangle-alert" size={14} />
-                                          </summary>
-                                          <div
-                                            id={sourceErrorPanelId}
-                                            class="admin-content-source-error__panel"
-                                            role="note"
-                                          >
-                                            <p class="admin-content-source-error__label">源文件异常</p>
-                                            <p class="admin-content-source-error__message">{item.sourceError}</p>
-                                          </div>
-                                        </details>
-                                      ) : null
-                                    }
-                                    <span
-                                      class="admin-content-row-mark admin-content-row-mark--draft"
-                                      hidden={!item.isDraft}
-                                    >
-                                      [draft]
-                                    </span>
-                                    <span
-                                      class="admin-content-row-mark admin-content-row-mark--archive"
-                                      data-admin-content-row-archive
-                                      hidden={item.archive !== false}
-                                    >
-                                      [archive off]
-                                    </span>
-                                  </div>
-
-                                  <div class="admin-content-item__actions">
-                                    {capability.writable ? (
-                                      <a class="admin-btn admin-btn--secondary admin-btn--compact" href={editHref}>
-                                        编辑
-                                      </a>
-                                    ) : (
-                                      <span
-                                        class="admin-btn admin-btn--secondary admin-btn--compact is-disabled"
-                                        aria-disabled="true"
-                                        title={capability.readonlyReason ?? '当前内容暂不支持编辑'}
+                                    {contentSection.groups.map((group) => (
+                                      <li
+                                        class="admin-content-series"
+                                        data-admin-content-series-group={group.series}
                                       >
-                                        待接入
-                                      </span>
-                                    )}
-                                    <details class="admin-content-item__more">
-                                      <summary class="admin-btn admin-btn--ghost admin-btn--compact">更多</summary>
-                                      <div class="admin-content-more-panel" aria-label="内容操作">
-                                        <a
-                                          class:list={[
-                                            'admin-content-menu-item',
-                                            !articleInfoHref && 'is-disabled'
-                                          ]}
-                                          href={articleInfoHref ?? undefined}
-                                          data-admin-content-info-action={supportsListInfoAction ? true : undefined}
-                                          data-collection={supportsListInfoAction ? item.collection : undefined}
-                                          data-entry-id={supportsListInfoAction ? item.id : undefined}
-                                          aria-disabled={articleInfoHref ? undefined : 'true'}
-                                          title={articleInfoHref ? undefined : capability.readonlyReason ?? '当前内容暂不支持编辑'}
-                                          tabindex={articleInfoHref ? undefined : '-1'}
-                                        >
-                                          <AdminIcon name="admin-page" size={14} />
-                                          <span>{getContentInfoActionLabel(item)}</span>
-                                        </a>
-                                        <a
-                                          class:list={[
-                                            'admin-content-menu-item',
-                                            !publicHref && 'is-disabled'
-                                          ]}
-                                          href={publicHref ?? undefined}
-                                          data-admin-content-row-public-link
-                                          aria-disabled={publicHref ? undefined : 'true'}
-                                          title={publicHref ? undefined : publicFallbackLabel}
-                                          tabindex={publicHref ? undefined : '-1'}
-                                        >
-                                          <AdminIcon name="link" size={14} />
-                                          <span>{getContentPublicLinkLabel(item)}</span>
-                                        </a>
-                                        {item.collection === 'blog' ? (
-                                          <button
-                                            type="button"
-                                            class="admin-content-menu-item"
-                                            data-admin-content-create-version-action
-                                            data-entry-id={item.id}
+                                        <details class="admin-content-series-details">
+                                          <summary class="admin-content-series-head">
+                                            <span class="admin-content-series-head__title">
+                                              <strong class="admin-content-series-head__name">{group.displayTitle}</strong>
+                                              <code class="admin-content-series-head__series">{group.series}</code>
+                                            </span>
+                                            <span class="admin-content-series-head__meta">
+                                              <span class="admin-content-series-head__count">{group.versionCount} 个版本</span>
+                                              <span class="admin-content-series-head__chevron" aria-hidden="true">
+                                                <AdminIcon name="chevron-down" size={14} />
+                                              </span>
+                                            </span>
+                                          </summary>
+                                          <ol
+                                            class="admin-content-series-versions"
+                                            aria-label={`${group.displayTitle}版本`}
                                           >
-                                            <AdminIcon name="admin-page" size={14} />
-                                            <span>新建版本</span>
-                                          </button>
-                                        ) : null}
-                                        <a
-                                          class="admin-content-menu-item"
-                                          href={exportHref}
-                                          data-admin-content-export-action
-                                        >
-                                          <AdminIcon name="download" size={14} />
-                                          <span>导出</span>
-                                        </a>
-                                        {isAdminContentDeletableCollectionKey(item.collection) ? (
-                                          <button
-                                            type="button"
-                                            class="admin-content-menu-item admin-content-menu-item--danger"
-                                            data-admin-content-delete-action
-                                            data-collection={item.collection}
-                                            data-entry-id={item.id}
-                                            data-relative-path={item.relativePath}
-                                          >
-                                            <AdminIcon name="trash" size={14} />
-                                            <span>删除</span>
-                                          </button>
-                                        ) : (
-                                          <span class="admin-content-menu-item admin-content-menu-item--danger is-disabled" aria-disabled="true" title={deleteUnsupportedReason}>
-                                            <AdminIcon name="trash" size={14} />
-                                            <span>删除</span>
-                                          </span>
-                                        )}
-                                      </div>
-                                    </details>
-                                  </div>
-                                  </li>
-                                );
-                              })
-                            }
-                          </ol>
+                                            {group.items.map((item) => <ContentRow item={item} />)}
+                                          </ol>
+                                        </details>
+                                      </li>
+                                    ))}
+                                  </>
+                                )}
+                              </>
+                            ))
+                          }
+                        </ol>
                       ) : (
                         <p class="admin-content-empty">
                           {getContentEmptyMessage(section.collectionLabel)}

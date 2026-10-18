@@ -17,6 +17,7 @@ import {
 import { DEFAULT_SITE_FAVICON, GENERATED_SITE_FAVICON } from '../utils/favicon-defaults';
 import { isValidIanaTimeZone } from '../utils/timezone';
 import {
+  ADMIN_ARTICLE_DATE_GRANULARITY_DEFAULT,
   ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT,
   ADMIN_ARTICLE_META_DATE_LABEL_MAX_LENGTH,
   ADMIN_HERO_IMAGE_ALT_DEFAULT,
@@ -63,6 +64,7 @@ import {
   isAdminSocialOrderValue,
   isAdminSidebarDividerVariant,
   isAdminFilingsScope,
+  isAdminArticleDateGranularity,
   normalizeAdminSocialIconKey,
 } from './admin-console/theme-shared';
 
@@ -72,6 +74,8 @@ export type SidebarNavId = 'blog' | 'projects' | 'bits' | 'devlog' | 'archive' |
 export type HeroPresetId = 'default' | 'none';
 export type SidebarDividerVariant = 'default' | 'subtle' | 'none';
 export type ArticleDateDisplayMode = 'published' | 'updated' | 'both';
+/** 文章元信息日期粒度：'date' 只到日期（默认），'datetime' 才显示时分。 */
+export type ArticleDateGranularity = 'date' | 'datetime';
 export type ArchiveVersionMode = 'all' | 'latest';
 /** 备案信息显示范围：'all' 所有公开页面（默认），'root' 仅站点根目录。 */
 export type SiteFilingsScope = 'all' | 'root';
@@ -277,6 +281,7 @@ export interface ArticleMetaSettings {
   showDate: boolean;
   dateLabel: string;
   dateDisplay: ArticleDateDisplayMode;
+  dateGranularity: ArticleDateGranularity;
   showTags: boolean;
   showWordCount: boolean;
   showReadingTime: boolean;
@@ -415,6 +420,7 @@ interface ThemeSettingsSources {
     articleMetaShowDate: SettingSource;
     articleMetaDateLabel: SettingSource;
     articleMetaDateDisplay: SettingSource;
+    articleMetaDateGranularity: SettingSource;
     cardDateDisplay: SettingSource;
     articleMetaShowTags: SettingSource;
     articleMetaShowWordCount: SettingSource;
@@ -709,6 +715,7 @@ const DEFAULT_UI: UiSettings = {
     showDate: true,
     dateLabel: ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT,
     dateDisplay: 'updated',
+    dateGranularity: 'date',
     showTags: true,
     showWordCount: true,
     showReadingTime: true
@@ -774,6 +781,9 @@ const asArticleDateDisplayMode = (value: unknown): ArticleDateDisplayMode | unde
   const next = asNonEmptyString(value);
   return next === 'published' || next === 'updated' || next === 'both' ? next : undefined;
 };
+
+const asArticleDateGranularity = (value: unknown): ArticleDateGranularity | undefined =>
+  isAdminArticleDateGranularity(value) ? value : undefined;
 
 const asArchiveVersionMode = (value: unknown): ArchiveVersionMode | undefined => {
   const next = asNonEmptyString(value);
@@ -1749,6 +1759,11 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
     undefined,
     DEFAULT_UI.articleMeta.dateDisplay
   );
+  const articleDateGranularity = resolveValue(
+    asArticleDateGranularity(uiArticleMeta?.dateGranularity),
+    undefined,
+    ADMIN_ARTICLE_DATE_GRANULARITY_DEFAULT
+  );
   const cardDateDisplay = resolveValue(
     asArticleDateDisplayMode(uiJson?.cardDateDisplay),
     undefined,
@@ -1942,6 +1957,7 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
           showDate: showArticleDate.value,
           dateLabel: articleDateLabel.value,
           dateDisplay: articleDateDisplay.value,
+          dateGranularity: articleDateGranularity.value,
           showTags: showArticleTags.value,
           showWordCount: showArticleWordCount.value,
           showReadingTime: showArticleReadingTime.value
@@ -2035,6 +2051,7 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         articleMetaShowDate: showArticleDate.source,
         articleMetaDateLabel: articleDateLabel.source,
         articleMetaDateDisplay: articleDateDisplay.source,
+        articleMetaDateGranularity: articleDateGranularity.source,
         cardDateDisplay: cardDateDisplay.source,
         articleMetaShowTags: showArticleTags.source,
         articleMetaShowWordCount: showArticleWordCount.source,

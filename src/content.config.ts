@@ -204,6 +204,7 @@ const blog = defineCollection({
         ogImageAlt: z.string().trim().optional(),
         articleDateDisplay: z.enum(['published', 'updated', 'both']).optional(),
         cardDateDisplay: z.enum(['published', 'updated', 'both']).optional(),
+        dateGranularity: z.enum(['date', 'datetime']).optional(),
         badge: z.string().trim().optional()
       })
       .transform((data, ctx) => {

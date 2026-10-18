@@ -12,6 +12,7 @@ export type AdminContentSeriesVersionLike = {
 
 export type AdminContentSeriesListEntry = AdminContentSeriesVersionLike & {
   title: string;
+  versionName?: string | null;
   isLatestVersion?: boolean;
   versionGroupSize?: number;
 };
@@ -21,26 +22,75 @@ export type AdminContentSeriesVersionState = {
   versionGroupSize: number;
 };
 
-export type AdminContentListGroup<T extends AdminContentSeriesListEntry> =
-  | { kind: 'entry'; key: string; item: T }
-  | {
-      kind: 'series';
-      key: string;
-      series: string;
-      title: string;
-      versionCount: number;
-      items: T[];
-    };
+export type AdminContentListEntryGroup<T extends AdminContentSeriesListEntry> = {
+  kind: 'entry';
+  key: string;
+  item: T;
+};
 
-export type AdminContentListRenderEntry<T extends AdminContentSeriesListEntry> =
-  | { kind: 'series'; key: string; series: string; title: string; versionCount: number }
-  | { kind: 'item'; key: string; item: T };
+export type AdminContentListSeriesGroup<T extends AdminContentSeriesListEntry> = {
+  kind: 'series';
+  key: string;
+  series: string;
+  title: string;
+  /** 去掉尾部版本名后的系列显示名；系列头只用它，不再直接展示最新版标题。 */
+  displayTitle: string;
+  versionCount: number;
+  items: T[];
+};
+
+export type AdminContentListGroup<T extends AdminContentSeriesListEntry> =
+  | AdminContentListEntryGroup<T>
+  | AdminContentListSeriesGroup<T>;
+
+export type AdminContentListStandaloneSection<T extends AdminContentSeriesListEntry> = {
+  kind: 'standalone';
+  key: 'standalone';
+  label: '单篇文章';
+  count: number;
+  items: T[];
+};
+
+export type AdminContentListSeriesSection<T extends AdminContentSeriesListEntry> = {
+  kind: 'series';
+  key: 'series';
+  label: '系列';
+  count: number;
+  groups: AdminContentListSeriesGroup<T>[];
+};
+
+export type AdminContentListSection<T extends AdminContentSeriesListEntry> =
+  | AdminContentListStandaloneSection<T>
+  | AdminContentListSeriesSection<T>;
 
 const compareNullableDateDesc = (left: Date | null, right: Date | null): number => {
   if (left && right) return right.valueOf() - left.valueOf();
   if (left) return -1;
   if (right) return 1;
   return 0;
+};
+
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * 系列头显示名：从最新版标题去掉尾部的 `: 版本名` / `：版本名`。
+ * 兼容中英文冒号、冒号前后空格；标题本身没有版本后缀时保留原标题，空标题兜底 series slug。
+ */
+export const getAdminContentSeriesDisplayTitle = (
+  title: string,
+  series: string,
+  versionName?: string | null
+): string => {
+  const trimmedTitle = title.trim();
+  const trimmedVersionName = versionName?.trim();
+
+  if (trimmedTitle && trimmedVersionName) {
+    const suffix = new RegExp(`\\s*[:：]\\s*${escapeRegExp(trimmedVersionName)}\\s*$`);
+    const strippedTitle = trimmedTitle.replace(suffix, '').trim();
+    if (strippedTitle) return strippedTitle;
+  }
+
+  return trimmedTitle || series;
 };
 
 /**
@@ -99,7 +149,7 @@ export const resolveAdminContentSeriesVersionStates = (
 
 /**
  * 列表渲染分组：series 条目合并成一组（首条出现的位置），无 series 的条目保持独立一行。
- * 组标题取最新版标题；versionCount 取完整 series 版本数，分页截断后仍显示总数。
+ * 组标题取最新版标题并去掉版本名后缀；versionCount 取完整 series 版本数，分页截断后仍显示总数。
  */
 export const buildAdminContentListGroups = <T extends AdminContentSeriesListEntry>(
   items: readonly T[]
@@ -135,6 +185,7 @@ export const buildAdminContentListGroups = <T extends AdminContentSeriesListEntr
       key: `series:${item.series}`,
       series: item.series,
       title: latest.title,
+      displayTitle: getAdminContentSeriesDisplayTitle(latest.title, item.series, latest.versionName),
       versionCount: Math.max(
         ...members.map((member) => member.versionGroupSize ?? members.length),
         members.length
@@ -147,27 +198,41 @@ export const buildAdminContentListGroups = <T extends AdminContentSeriesListEntr
 };
 
 /**
- * 把分组展开成单层渲染条目：series 组先插入标题条目，再按版本顺序插入行；
- * 无 series 的条目直接作为单行。模板只需一次 map，避免重复行标记。
+ * 后台列表的两段式顺序：先「单篇文章」（无 series 的独立行），再「系列」。
+ * 每组内部仍保持列表原有顺序；系列组内版本顺序由 buildAdminContentListGroups 保证。
  */
-export const buildAdminContentListRenderEntries = <T extends AdminContentSeriesListEntry>(
+export const buildAdminContentListSections = <T extends AdminContentSeriesListEntry>(
   items: readonly T[]
-): AdminContentListRenderEntry<T>[] =>
-  buildAdminContentListGroups(items).flatMap((group) =>
-    group.kind === 'series'
-      ? [
-          {
-            kind: 'series' as const,
-            key: group.key,
-            series: group.series,
-            title: group.title,
-            versionCount: group.versionCount
-          },
-          ...group.items.map((item) => ({
-            kind: 'item' as const,
-            key: `item:${item.id}`,
-            item
-          }))
-        ]
-      : [{ kind: 'item' as const, key: group.key, item: group.item }]
-  );
+): AdminContentListSection<T>[] => {
+  const standaloneItems: T[] = [];
+  const seriesGroups: AdminContentListSeriesGroup<T>[] = [];
+
+  for (const group of buildAdminContentListGroups(items)) {
+    if (group.kind === 'series') seriesGroups.push(group);
+    else standaloneItems.push(group.item);
+  }
+
+  const sections: AdminContentListSection<T>[] = [];
+
+  if (standaloneItems.length > 0) {
+    sections.push({
+      kind: 'standalone',
+      key: 'standalone',
+      label: '单篇文章',
+      count: standaloneItems.length,
+      items: standaloneItems
+    });
+  }
+
+  if (seriesGroups.length > 0) {
+    sections.push({
+      kind: 'series',
+      key: 'series',
+      label: '系列',
+      count: seriesGroups.length,
+      groups: seriesGroups
+    });
+  }
+
+  return sections;
+};

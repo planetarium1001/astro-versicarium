@@ -111,6 +111,23 @@ describe('theme-settings revision semantics', () => {
     }
   });
 
+  it('defaults ui.articleMeta.dateGranularity to date without locking the console', async () => {
+    const settingsDir = await createTempSettingsFixture();
+    const uiPath = path.join(settingsDir, 'ui.json');
+    const uiJson = JSON.parse(await readFile(uiPath, 'utf8')) as Record<string, unknown>;
+    const articleMeta = uiJson.articleMeta as Record<string, unknown>;
+    delete articleMeta.dateGranularity;
+    await writeFile(uiPath, `${JSON.stringify(uiJson, null, 2)}\n`, 'utf8');
+
+    const resolved = getThemeSettings();
+    const state = getEditableThemeSettingsState(resolved);
+
+    expect(resolved.settings.ui.articleMeta.dateGranularity).toBe('date');
+    expect(resolved.sources.ui.articleMetaDateGranularity).toBe('default');
+    expect(getThemeSettingsReadDiagnostics(resolved)).toEqual([]);
+    expect(state.ok).toBe(true);
+  });
+
   it('keeps the console unlocked when ui.json lacks the typography block', async () => {
     const settingsDir = await createTempSettingsFixture();
     const uiPath = path.join(settingsDir, 'ui.json');

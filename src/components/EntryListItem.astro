@@ -1,12 +1,14 @@
 ---
 import { getSiteTimezone } from '../utils/site-timezone';
 import { resolveArticleDateItems } from '../lib/display-date';
-import type { ArticleMetaSettings } from '../lib/theme-settings';
+import type { ArticleDateGranularity, ArticleMetaSettings } from '../lib/theme-settings';
 
 const {
   href,
   title,
   excerpt,
+  badge = '随笔',
+  dateGranularity,
   date,
   dateText,
   dateHasTime = false,
@@ -23,6 +25,8 @@ const {
   href: string;
   title: string;
   excerpt?: string | null;
+  badge?: string;
+  dateGranularity?: ArticleDateGranularity;
   date: Date;
   dateText?: string;
   dateHasTime?: boolean;
@@ -37,11 +41,13 @@ const {
   articleMetaSettings: ArticleMetaSettings;
 };
 
+const displayBadge = badge.trim() ? badge : '随笔';
 const shouldShowMetaLine = articleMetaSettings.showDate || (articleMetaSettings.showTags && visibleTags.length > 0);
 const timeZone = getSiteTimezone();
 const dateItems = resolveArticleDateItems({
   mode: dateDisplay ?? articleMetaSettings.dateDisplay ?? 'updated',
   timeZone,
+  granularity: dateGranularity ?? articleMetaSettings.dateGranularity ?? 'date',
   date: { date, text: dateText, hasTime: dateHasTime },
   publishedAt: publishedAt ? { date: publishedAt, text: publishedAtText, hasTime: publishedAtHasTime } : undefined,
   updatedAt: updatedAt ? { date: updatedAt, text: updatedAtText, hasTime: updatedAtHasTime } : undefined,
@@ -51,7 +57,10 @@ const dateItems = resolveArticleDateItems({
 
 <a class="list-item list-item--link" href={href}>
   <div class="list-item__row">
-    <h3 class="list-item__title">{title}</h3>
+    <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+      <span class="badge">{displayBadge}</span>
+      <h3 class="list-item__title" style="margin:0; min-width:0;">{title}</h3>
+    </div>
   </div>
   {excerpt ? <p class="list-item__excerpt">{excerpt}</p> : null}
   {shouldShowMetaLine ? (
