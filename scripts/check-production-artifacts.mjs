@@ -116,7 +116,7 @@ const runProductionArtifactCheck = async () => {
     'dist/about/index.html',
     'dist/admin/index.html',
     'dist/admin/content/index.html',
-    'dist/admin/images/index.html',
+    'dist/admin/resources/index.html',
     'dist/bits/index.html',
     'dist/admin/data/index.html',
     'dist/admin/theme/index.html',
@@ -159,7 +159,7 @@ const runProductionArtifactCheck = async () => {
   expect(!sitemapXml.includes('/admin/'), 'Admin route leaked into sitemap');
   expect(!sitemapXml.includes('/admin/theme/'), 'Admin theme route leaked into sitemap');
   expect(!sitemapXml.includes('/admin/content/'), 'Admin content route leaked into sitemap');
-  expect(!sitemapXml.includes('/admin/images/'), 'Admin images route leaked into sitemap');
+  expect(!sitemapXml.includes('/admin/resources/'), 'Admin images route leaked into sitemap');
   expect(!sitemapXml.includes('/admin/data/'), 'Admin data route leaked into sitemap');
 
   // 读者端不得有写稿入口：不产出 bits draft partial 路由，读者页也不带写稿钩子。
@@ -206,12 +206,12 @@ const runProductionArtifactCheck = async () => {
 
   const adminHtml = readText('dist/admin/index.html');
   const adminContentHtml = readText('dist/admin/content/index.html');
-  const adminImageHtml = readText('dist/admin/images/index.html');
+  const adminImageHtml = readText('dist/admin/resources/index.html');
   const adminThemeHtml = readText('dist/admin/theme/index.html');
   const adminDataHtml = readText('dist/admin/data/index.html');
   const readonlyAdminHtmlChecks = [
     ['dist/admin/content/index.html', adminContentHtml, 'Content Console'],
-    ['dist/admin/images/index.html', adminImageHtml, 'Images Console'],
+    ['dist/admin/resources/index.html', adminImageHtml, '资源管理'],
     ['dist/admin/theme/index.html', adminThemeHtml, 'Theme Console'],
     ['dist/admin/data/index.html', adminDataHtml, 'Data Console']
   ];

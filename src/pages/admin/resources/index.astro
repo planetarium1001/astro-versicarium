@@ -1,0 +1,306 @@
+---
+import AdminIcon from '../../../components/admin/AdminIcon.astro';
+import AdminLayout from '../../../components/admin/AdminLayout.astro';
+import AdminReadonlyNotice from '../../../components/admin/AdminReadonlyNotice.astro';
+import AdminShell from '../../../components/admin/AdminShell.astro';
+import {
+  ADMIN_CONTENT_EXPORT_API_PATH,
+  ADMIN_CONTENT_FILES_UPLOAD_API_PATH,
+  ADMIN_CONTENT_IMPORT_API_PATH,
+  ADMIN_IMAGE_UPLOAD_API_PATH,
+  ADMIN_MEDIA_BATCH_API_PATH,
+  ADMIN_MEDIA_LIST_API_PATH
+} from '../../../lib/admin-console/admin-api-paths';
+import { ADMIN_CONTENT_COLLECTIONS } from '../../../lib/admin-console/content-routes';
+import { getAdminContentCollectionCapability } from '../../../lib/admin-console/content-collections';
+import { createWithBase } from '../../../utils/format';
+import '../../../styles/components/admin/resources.css';
+
+const isDev = import.meta.env.DEV;
+const base = import.meta.env.BASE_URL ?? '/';
+const withBase = createWithBase(base);
+const { default: adminShellStylesHref } = await import('../../../styles/components/admin/shell.css?url');
+const collectionOptions = ADMIN_CONTENT_COLLECTIONS.map((collection) => ({
+  value: collection,
+  label: getAdminContentCollectionCapability(collection).label
+}));
+const endpoints = {
+  list: withBase(ADMIN_MEDIA_LIST_API_PATH),
+  batch: withBase(ADMIN_MEDIA_BATCH_API_PATH),
+  imageUpload: withBase(ADMIN_IMAGE_UPLOAD_API_PATH),
+  export: withBase(ADMIN_CONTENT_EXPORT_API_PATH),
+  import: withBase(ADMIN_CONTENT_IMPORT_API_PATH),
+  fileUpload: withBase(ADMIN_CONTENT_FILES_UPLOAD_API_PATH)
+};
+---
+
+<AdminLayout title="资源管理" stylesHref={adminShellStylesHref}>
+  <AdminShell currentRoute="resources" title="资源管理" subtitle="资源管理" showNav={isDev}>
+    {isDev ? (
+      <div slot="status" class="admin-status-slot">
+        <p id="admin-resources-status-live" class="admin-sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+        <p id="admin-resources-status" class="admin-status" data-state="idle" data-admin-resources-status>准备中</p>
+      </div>
+    ) : null}
+
+    {isDev ? (
+      <section
+        class="resources-console"
+        data-admin-resources-root
+        data-list-endpoint={endpoints.list}
+        data-batch-endpoint={endpoints.batch}
+        data-image-upload-endpoint={endpoints.imageUpload}
+        data-file-upload-endpoint={endpoints.fileUpload}
+        data-export-endpoint={endpoints.export}
+        data-import-endpoint={endpoints.import}
+      >
+        <header class="resources-hero">
+          <div class="resources-hero__copy">
+            <p class="resources-hero__eyebrow">内容资源</p>
+            <h1 class="resources-hero__title">图片与附件</h1>
+            <p class="resources-hero__description">
+              按内容集合、系列和版本浏览资源。上传会自动落到当前条目的 images/ 或 files/，构建时只输出被引用的文件。
+            </p>
+          </div>
+          <div class="resources-hero__actions">
+            <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-import-open>
+              <AdminIcon name="download" size={15} />
+              <span>导入条目</span>
+            </button>
+            <button class="admin-btn admin-btn--primary admin-btn--compact" type="button" data-resources-upload-open>
+              <AdminIcon name="plus" size={15} />
+              <span>上传资源</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="resources-layout">
+          <aside class="resources-tree" aria-label="资源目录">
+            <div class="resources-tree__head">
+              <div>
+                <p class="resources-tree__eyebrow">目录</p>
+                <p class="resources-tree__title">内容库</p>
+              </div>
+              <button class="resources-tree__refresh" type="button" data-resources-refresh aria-label="刷新资源目录">
+                <AdminIcon name="refresh" size={14} />
+              </button>
+            </div>
+            <div class="resources-tree__body" data-resources-tree>
+              <p class="resources-tree__loading">正在载入目录…</p>
+            </div>
+          </aside>
+
+          <main class="resources-main">
+            <div class="resources-main__head">
+              <nav class="resources-breadcrumb" data-resources-breadcrumb aria-label="资源面包屑"></nav>
+              <div class="resources-view" role="group" aria-label="视图">
+                <button class="resources-view__button is-active" type="button" data-resources-view="grid" aria-label="网格视图" aria-pressed="true">
+                  <AdminIcon name="grid-tiles" size={15} />
+                </button>
+                <button class="resources-view__button" type="button" data-resources-view="list" aria-label="列表视图" aria-pressed="false">
+                  <AdminIcon name="list" size={15} />
+                </button>
+              </div>
+            </div>
+
+            <div class="resources-toolbar">
+              <label class="resources-search">
+                <AdminIcon name="search" size={16} />
+                <input
+                  type="search"
+                  name="q"
+                  autocomplete="off"
+                  placeholder="搜索文件名、系列或条目…"
+                  aria-label="搜索资源"
+                  data-resources-search
+                />
+              </label>
+              <div class="resources-tabs" role="group" aria-label="资源类型">
+                <button class="resources-tabs__item is-active" type="button" data-resources-type="" aria-pressed="true">全部</button>
+                <button class="resources-tabs__item" type="button" data-resources-type="image" aria-pressed="false">图片</button>
+                <button class="resources-tabs__item" type="button" data-resources-type="file" aria-pressed="false">附件</button>
+              </div>
+              <button class="resources-filter-toggle" type="button" data-resources-filter-toggle aria-expanded="false">
+                <AdminIcon name="funnel" size={15} />
+                <span>筛选</span>
+              </button>
+            </div>
+
+            <form class="resources-filters" data-resources-filters hidden>
+              <div class="resources-filters__grid">
+                <label class="resources-field">
+                  <span class="resources-field__label">内容集合</span>
+                  <select class="resources-field__control" name="collection">
+                    <option value="">全部集合</option>
+                    {collectionOptions.map((option) => <option value={option.value}>{option.label}</option>)}
+                  </select>
+                </label>
+
+                <div class="resources-combobox" data-resources-combobox="series">
+                  <span class="resources-field__label">系列</span>
+                  <div class="resources-combobox__control">
+                    <input class="resources-field__control" type="text" autocomplete="off" placeholder="输入或选择系列" role="combobox" aria-expanded="false" aria-autocomplete="list" />
+                    <button type="button" class="resources-combobox__clear" aria-label="清除系列" hidden>×</button>
+                  </div>
+                  <input type="hidden" name="series" />
+                  <ul class="resources-combobox__menu" role="listbox" hidden></ul>
+                </div>
+
+                <div class="resources-combobox" data-resources-combobox="entry">
+                  <span class="resources-field__label">版本 / 条目</span>
+                  <div class="resources-combobox__control">
+                    <input class="resources-field__control" type="text" autocomplete="off" placeholder="输入或选择版本" role="combobox" aria-expanded="false" aria-autocomplete="list" />
+                    <button type="button" class="resources-combobox__clear" aria-label="清除版本" hidden>×</button>
+                  </div>
+                  <input type="hidden" name="entry" />
+                  <ul class="resources-combobox__menu" role="listbox" hidden></ul>
+                </div>
+
+                <div class="resources-combobox" data-resources-combobox="dir">
+                  <span class="resources-field__label">目录</span>
+                  <div class="resources-combobox__control">
+                    <input class="resources-field__control" type="text" autocomplete="off" placeholder="输入或选择目录" role="combobox" aria-expanded="false" aria-autocomplete="list" />
+                    <button type="button" class="resources-combobox__clear" aria-label="清除目录" hidden>×</button>
+                  </div>
+                  <input type="hidden" name="dir" />
+                  <ul class="resources-combobox__menu" role="listbox" hidden></ul>
+                </div>
+
+                <label class="resources-field">
+                  <span class="resources-field__label">引用状态</span>
+                  <select class="resources-field__control" name="ref">
+                    <option value="">全部状态</option>
+                    <option value="referenced">已引用</option>
+                    <option value="unreferenced">未引用</option>
+                    <option value="orphan">孤儿</option>
+                  </select>
+                </label>
+
+                <label class="resources-field">
+                  <span class="resources-field__label">开始日期</span>
+                  <input class="resources-field__control" type="date" name="from" />
+                </label>
+
+                <label class="resources-field">
+                  <span class="resources-field__label">结束日期</span>
+                  <input class="resources-field__control" type="date" name="to" />
+                </label>
+
+                <div class="resources-filters__actions">
+                  <button class="admin-btn admin-btn--primary admin-btn--compact" type="submit">应用筛选</button>
+                  <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-reset>重置</button>
+                </div>
+              </div>
+            </form>
+
+            <div class="resources-selection" data-resources-selection hidden>
+              <span class="resources-selection__count" data-resources-selected-count>已选 0 项</span>
+              <div class="resources-selection__actions">
+                <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-batch="rename">重命名</button>
+                <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-batch="move">移动</button>
+                <button class="admin-btn admin-btn--danger admin-btn--compact" type="button" data-resources-batch="delete">删除</button>
+              </div>
+            </div>
+
+            <div class="resources-results" data-resources-results></div>
+            <div class="resources-empty" data-resources-empty hidden>
+              <p class="resources-empty__title">没有找到资源</p>
+              <p class="resources-empty__text">试试切换目录、清除筛选，或上传第一张图片。</p>
+              <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-reset>清除筛选</button>
+            </div>
+
+            <footer class="resources-pager">
+              <p class="resources-pager__summary" data-resources-summary></p>
+              <div class="resources-pager__actions">
+                <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-prev>上一页</button>
+                <span data-resources-page>1 / 1</span>
+                <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-next>下一页</button>
+              </div>
+            </footer>
+          </main>
+        </div>
+
+        <dialog class="resources-dialog" data-resources-upload-dialog aria-labelledby="resources-upload-title">
+          <form method="dialog" class="resources-dialog__panel" data-resources-upload-form>
+            <div class="resources-dialog__head">
+              <div>
+                <p class="resources-dialog__eyebrow">上传</p>
+                <h2 class="resources-dialog__title" id="resources-upload-title">上传资源</h2>
+              </div>
+              <button class="resources-dialog__close" type="button" data-resources-close aria-label="关闭">×</button>
+            </div>
+            <p class="resources-dialog__hint" data-resources-upload-target>请先从左侧目录选择版本或条目。</p>
+            <label class="resources-field">
+              <span class="resources-field__label">类型</span>
+              <select class="resources-field__control" name="kind">
+                <option value="image">图片 → images/</option>
+                <option value="file">附件 → files/</option>
+              </select>
+            </label>
+            <label class="resources-field">
+              <span class="resources-field__label">文件</span>
+              <input class="resources-field__control" type="file" name="file" required />
+            </label>
+            <div class="resources-dialog__actions">
+              <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-close>取消</button>
+              <button class="admin-btn admin-btn--primary admin-btn--compact" type="submit">开始上传</button>
+            </div>
+          </form>
+        </dialog>
+
+        <dialog class="resources-dialog" data-resources-import-dialog aria-labelledby="resources-import-title">
+          <form method="dialog" class="resources-dialog__panel" data-resources-import-form>
+            <div class="resources-dialog__head">
+              <div>
+                <p class="resources-dialog__eyebrow">导入</p>
+                <h2 class="resources-dialog__title" id="resources-import-title">导入条目</h2>
+              </div>
+              <button class="resources-dialog__close" type="button" data-resources-close aria-label="关闭">×</button>
+            </div>
+            <p class="resources-dialog__hint">选择一个条目目录的压缩包，包含 Markdown、图片和附件。导入不会覆盖已有条目。</p>
+            <label class="resources-field">
+              <span class="resources-field__label">压缩包文件</span>
+              <input class="resources-field__control" type="file" name="file" accept=".zip,application/zip" required />
+            </label>
+            <div class="resources-dialog__actions">
+              <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-close>取消</button>
+              <button class="admin-btn admin-btn--primary admin-btn--compact" type="submit">导入</button>
+            </div>
+          </form>
+        </dialog>
+
+        <dialog class="resources-drawer" data-resources-detail aria-labelledby="resources-detail-title">
+          <div class="resources-drawer__panel">
+            <div class="resources-drawer__head">
+              <div>
+                <p class="resources-drawer__eyebrow" data-resources-detail-kind>资源详情</p>
+                <h2 class="resources-drawer__title" id="resources-detail-title" data-resources-detail-title></h2>
+              </div>
+              <button class="resources-drawer__close" type="button" data-resources-detail-close aria-label="关闭详情">×</button>
+            </div>
+            <div class="resources-drawer__preview" data-resources-detail-preview></div>
+            <dl class="resources-drawer__meta" data-resources-detail-meta></dl>
+            <div class="resources-drawer__actions">
+              <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-detail-copy-path>复制路径</button>
+              <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-detail-copy-md>复制引用</button>
+              <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-detail-export>导出条目压缩包</button>
+              <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-detail-rename>重命名</button>
+              <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-detail-move>移动</button>
+              <button class="admin-btn admin-btn--danger admin-btn--compact" type="button" data-resources-detail-delete>删除</button>
+            </div>
+          </div>
+        </dialog>
+      </section>
+    ) : (
+      <AdminReadonlyNotice>
+        资源管理只在本地开发环境可用。运行 <code translate="no">npm run dev</code> 后从后台进入。
+      </AdminReadonlyNotice>
+    )}
+  </AdminShell>
+
+  {isDev ? (
+    <script>
+      import '../../../scripts/admin-resources/index.ts';
+    </script>
+  ) : null}
+</AdminLayout>

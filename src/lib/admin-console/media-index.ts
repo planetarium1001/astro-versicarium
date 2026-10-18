@@ -51,6 +51,9 @@ export type AdminMediaFilterOption = {
   value: string;
   label: string;
   count: number;
+  collection?: AdminContentCollectionKey;
+  series?: string;
+  entryId?: string;
 };
 
 export type AdminMediaTreeNode = {
@@ -100,6 +103,11 @@ export type AdminMediaListResult = {
   breadcrumb: AdminMediaBreadcrumb[];
   referenceOptions: AdminMediaFilterOption[];
   typeOptions: AdminMediaFilterOption[];
+  options: {
+    series: AdminMediaFilterOption[];
+    versions: AdminMediaFilterOption[];
+    directories: AdminMediaFilterOption[];
+  };
 };
 
 type MediaEntryMeta = {
@@ -777,6 +785,60 @@ const buildFilterOptions = (
   ];
 };
 
+const buildMediaFilterOptions = (
+  items: readonly AdminMediaItem[]
+): AdminMediaListResult['options'] => {
+  const series = new Map<string, AdminMediaFilterOption>();
+  const versions = new Map<string, AdminMediaFilterOption>();
+  const directories = new Map<string, AdminMediaFilterOption>();
+
+  for (const item of items) {
+    if (item.entryExists) {
+      const seriesKey = `${item.collection}:${item.series}`;
+      const seriesOption = series.get(seriesKey) ?? {
+        value: item.series,
+        label: item.seriesLabel || item.series,
+        count: 0,
+        collection: item.collection
+      };
+      seriesOption.count += 1;
+      series.set(seriesKey, seriesOption);
+
+      const versionOption = versions.get(item.entryId) ?? {
+        value: item.entryId,
+        label: item.versionLabel || item.entryId,
+        count: 0,
+        collection: item.collection,
+        series: item.series,
+        entryId: item.entryId
+      };
+      versionOption.count += 1;
+      versions.set(item.entryId, versionOption);
+
+      const directoryKey = `${item.entryId} ${item.directory}`;
+      const directoryOption = directories.get(directoryKey) ?? {
+        value: item.directory,
+        label: item.directory || '条目根目录',
+        count: 0,
+        collection: item.collection,
+        series: item.series,
+        entryId: item.entryId
+      };
+      directoryOption.count += 1;
+      directories.set(directoryKey, directoryOption);
+    }
+  }
+
+  const sortOptions = (values: AdminMediaFilterOption[]): AdminMediaFilterOption[] =>
+    values.sort((left, right) => left.label.localeCompare(right.label, 'zh-CN'));
+
+  return {
+    series: sortOptions(Array.from(series.values())),
+    versions: sortOptions(Array.from(versions.values())),
+    directories: sortOptions(Array.from(directories.values()))
+  };
+};
+
 const normalizeRequest = (request: Partial<AdminMediaListRequest>): AdminMediaListRequest => {
   const reference = request.reference === 'referenced'
     || request.reference === 'unreferenced'
@@ -842,7 +904,8 @@ export const listAdminMediaItems = async (
     tree,
     breadcrumb: buildBreadcrumb(tree, filters),
     referenceOptions: buildFilterOptions(treePool, 'reference'),
-    typeOptions: buildFilterOptions(treePool, 'type')
+    typeOptions: buildFilterOptions(treePool, 'type'),
+    options: buildMediaFilterOptions(allItems)
   };
 };
 

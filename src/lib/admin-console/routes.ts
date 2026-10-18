@@ -1,6 +1,6 @@
 import type { AdminIconName } from './admin-icon-names';
 
-export type AdminRouteId = 'overview' | 'theme' | 'content' | 'images' | 'data';
+export type AdminRouteId = 'overview' | 'theme' | 'content' | 'resources' | 'data';
 
 export type AdminRouteActiveMatch = 'exact' | 'prefix';
 
@@ -15,7 +15,7 @@ export type AdminRouteDefinition = {
     | '/admin/'
     | '/admin/theme/'
     | '/admin/content/'
-    | '/admin/images/'
+    | '/admin/resources/'
     | '/admin/data/';
   label: string;
   sidebarLabel: string;
@@ -51,12 +51,12 @@ export const ADMIN_ROUTES: readonly AdminRouteDefinition[] = [
     description: '内容管理'
   },
   {
-    id: 'images',
-    href: '/admin/images/',
-    label: 'Images',
-    sidebarLabel: '图片',
+    id: 'resources',
+    href: '/admin/resources/',
+    label: '资源管理',
+    sidebarLabel: '资源',
     sidebarIcon: 'images',
-    description: '图片管理'
+    description: '图片与附件管理'
   },
   {
     id: 'data',

@@ -28,9 +28,9 @@ describe('admin route helpers', () => {
   });
 
   it('keeps prefix matching as the default admin route behavior', () => {
-    const imagesRoute = getAdminRoute('images');
+    const resourcesRoute = getAdminRoute('resources');
 
-    expect(isAdminRoutePathActive('/admin/images/', imagesRoute.href, imagesRoute.activeMatch)).toBe(true);
-    expect(isAdminRoutePathActive('/admin/images/browse/', imagesRoute.href, imagesRoute.activeMatch)).toBe(true);
+    expect(isAdminRoutePathActive('/admin/resources/', resourcesRoute.href, resourcesRoute.activeMatch)).toBe(true);
+    expect(isAdminRoutePathActive('/admin/resources/browse/', resourcesRoute.href, resourcesRoute.activeMatch)).toBe(true);
   });
 });

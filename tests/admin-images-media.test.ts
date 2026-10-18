@@ -118,6 +118,15 @@ describe('admin media api', () => {
       'alpha',
       'v1'
     ]);
+    expect(payload.result.options.series).toEqual(expect.arrayContaining([
+      expect.objectContaining({ value: 'alpha', label: 'alpha', collection: 'blog' })
+    ]));
+    expect(payload.result.options.versions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ value: 'series/2026-01-01', label: 'v1' })
+    ]));
+    expect(payload.result.options.directories).toEqual(expect.arrayContaining([
+      expect.objectContaining({ value: 'images', label: 'images' })
+    ]));
   });
 
   it('filters by reference status, type and modified time', async () => {
