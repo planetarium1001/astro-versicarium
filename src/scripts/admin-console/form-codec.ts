@@ -394,7 +394,8 @@ export const createFormCodec = ({
     homeIntroMorePreviewEl.textContent = getHomeIntroPreviewText();
   };
 
-  const ARTICLE_META_PREVIEW_DATE = '2026-03-18';
+  const ARTICLE_META_PREVIEW_PUBLISHED = '2026-03-18';
+  const ARTICLE_META_PREVIEW_UPDATED = '2026-03-20';
   const ARTICLE_META_PREVIEW_TAGS = ['#Astro', '#写作'] as const;
   const ARTICLE_META_PREVIEW_WORD_COUNT = '共 2,416 字';
   const ARTICLE_META_PREVIEW_READING_TIME = '约 6 分钟';
@@ -404,8 +405,20 @@ export const createFormCodec = ({
     const segments: string[] = [];
 
     if (inputArticleMetaShowDate.checked) {
-      const dateLabel = normalizeSingleLine(inputArticleMetaDateLabel.value);
-      segments.push(`${dateLabel}${ARTICLE_META_PREVIEW_DATE}`);
+      const dateLabel = normalizeSingleLine(inputArticleMetaDateLabel.value) || '发布于：';
+      const dateDisplay = inputUiArticleDateDisplay.value;
+      // 与 resolveArticleDateItems 保持一致：updated 缺失时回退 published，
+      // 但预览固定展示「同时显示」时的两行日期。
+      if (dateDisplay === 'published') {
+        segments.push(`${dateLabel}${ARTICLE_META_PREVIEW_PUBLISHED}`);
+      } else if (dateDisplay === 'updated') {
+        segments.push(`更新于：${ARTICLE_META_PREVIEW_UPDATED}`);
+      } else {
+        segments.push(
+          `${dateLabel}${ARTICLE_META_PREVIEW_PUBLISHED}`,
+          `更新于：${ARTICLE_META_PREVIEW_UPDATED}`
+        );
+      }
     }
 
     if (inputArticleMetaShowTags.checked) {

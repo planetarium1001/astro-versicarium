@@ -17,10 +17,34 @@
   gap: 0;
 }
 
+/* 列表内分区标题：把系列与单篇文章分开，避免版本行混在普通文章中间。 */
+.admin-content-list-subhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 16px var(--admin-row-table-padding-inline) 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  color: var(--faint);
+  font-size: var(--admin-text-2xs);
+  font-weight: 600;
+  letter-spacing: var(--admin-tracking-wide);
+}
+
+.admin-content-list-subhead:first-child {
+  padding-top: 6px;
+}
+
+.admin-content-list-subhead__count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
 /* series 分组标题：不参与 data-admin-content-item 行选择器，避免影响批量操作。 */
 .admin-content-series-head {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 6px 12px;

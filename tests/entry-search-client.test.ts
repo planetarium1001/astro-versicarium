@@ -195,16 +195,12 @@ describe('entry-search 客户端行为', () => {
       const bar = document.querySelector<HTMLElement>('[data-archive-scope-bar]')!;
       const cursor = document.querySelector<HTMLElement>('[data-archive-scope-cursor]')!;
       expect(bar.dataset.ready, '初始化后滑块应就绪（可淡入）').toBe('true');
-      // 滑块宽度 = 所有 item 的最大宽度（切换时只有位移、没有宽度跳变）
-      const maxWidth = Math.max(...Object.values(rects).map((r) => r.width));
-      expect(cursor.style.width).toBe(`${maxWidth}px`);
+      // 滑块宽度 = 当前激活胶囊的宽度，避免长标签的滑块盖住相邻胶囊
+      expect(cursor.style.width).toBe(`${rects.all.width}px`);
 
       const expectedLeft = (scope: keyof typeof rects) => {
         const rect: Rect = rects[scope];
-        const left = rect.left - rootRect.left - (maxWidth - rect.width) / 2;
-        const maxLeft = Math.max(rootRect.width - maxWidth, 0);
-        // 与实现同源的夹取：5px 内即视为一致（实现取整）
-        return Math.min(Math.max(left, 0), maxLeft);
+        return rect.left - rootRect.left;
       };
 
       const initial = Number(/translateX\((-?[\d.]+)px\)/.exec(cursor.style.transform)?.[1]);
@@ -216,7 +212,7 @@ describe('entry-search 客户端行为', () => {
       const after = Number(/translateX\((-?[\d.]+)px\)/.exec(cursor.style.transform)?.[1]);
       expect(Math.abs(after - expectedLeft('devlog'))).toBeLessThanOrEqual(1);
       expect(after, '滑块应真的移动了').not.toBe(initial);
-      expect(cursor.style.width, '切换不应改变滑块宽度').toBe(`${maxWidth}px`);
+      expect(cursor.style.width, '切换时滑块应收缩到当前胶囊宽度').toBe(`${rects.devlog.width}px`);
     } finally {
       Element.prototype.getBoundingClientRect = originalRect;
       if (originalOffset) Object.defineProperty(HTMLElement.prototype, 'offsetWidth', originalOffset);

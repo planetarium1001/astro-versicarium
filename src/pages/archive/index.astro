@@ -134,12 +134,6 @@ const tagPayload = { blog: blogTags, projects: projectTags, devlog: devlogTags, 
                 {row.dateText.slice(5)}
               </time>
               <span class="archive-timeline__entry">
-                {row.kind === 'blog' && row.series ? (
-                  <span class="badge badge--version">{row.versionLabel}</span>
-                ) : null}
-                {row.kind === 'blog' && row.series && row.isLatest === false ? (
-                  <span class="badge badge--history">历史</span>
-                ) : null}
                 <a class="archive-timeline__title" href={withBase(row.href)}>
                   {row.kind === 'devlog' && row.project ? (
                     <span class="archive-timeline__project">{`${row.project}: `}</span>

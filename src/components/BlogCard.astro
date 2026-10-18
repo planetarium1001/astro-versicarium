@@ -22,9 +22,6 @@ const {
   visibleTags = [],
   badge = '随笔',
   slug = '',
-  versionLabel = '',
-  versionCount = 1,
-  isLatest = true,
   articleMetaSettings
 } = Astro.props as {
   href: string;
@@ -43,9 +40,6 @@ const {
   visibleTags?: string[];
   badge?: string;
   slug?: string;
-  versionLabel?: string;
-  versionCount?: number;
-  isLatest?: boolean;
   articleMetaSettings: ArticleMetaSettings;
 };
 const displayBadge = badge.trim() ? badge : '随笔';
@@ -85,12 +79,6 @@ const tagLinks = visibleTags.map((tag) => {
   <div class="list-item__row">
     <div style="display:flex; align-items:center; gap:10px; min-width:0;">
       <span class="badge">{displayBadge}</span>
-      {versionCount > 1 ? (
-        <>
-          <span class="badge badge--version">{versionLabel}</span>
-          {!isLatest ? <span class="badge badge--history">历史</span> : null}
-        </>
-      ) : null}
       <h2 class="list-item__title" style="margin:0; min-width:0;">
         <a class="list-item__stretch" href={href}>{title}</a>
       </h2>

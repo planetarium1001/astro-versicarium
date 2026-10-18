@@ -477,6 +477,23 @@ const getContentCreateAction = (
                 const shouldShowSectionCreateAction = Boolean(createAction);
                 const isSectionTitleLinked = pageData.mode === 'overview';
                 const sectionRenderEntries = buildAdminContentListRenderEntries(section.items);
+                const sectionSeriesEntries = sectionRenderEntries.filter(
+                  (entry) => entry.kind === 'series' || (entry.kind === 'item' && Boolean(entry.item.series))
+                );
+                const sectionStandaloneEntries = sectionRenderEntries.filter(
+                  (entry) => entry.kind === 'item' && !entry.item.series
+                );
+                const sectionSeriesCount = sectionSeriesEntries.filter((entry) => entry.kind === 'series').length;
+                const sectionOrderedEntries = [
+                  ...(sectionSeriesEntries.length
+                    ? [{ kind: 'subhead' as const, key: 'series', label: '系列', count: sectionSeriesCount }]
+                    : []),
+                  ...sectionSeriesEntries,
+                  ...(sectionSeriesEntries.length && sectionStandaloneEntries.length
+                    ? [{ kind: 'subhead' as const, key: 'standalone', label: '单篇文章', count: sectionStandaloneEntries.length }]
+                    : []),
+                  ...sectionStandaloneEntries
+                ];
                 return (
                   <section class="admin-content-module" aria-labelledby={sectionTitleId}>
                     <div class="admin-content-module__head">
@@ -528,7 +545,18 @@ const getContentCreateAction = (
                       section.items.length > 0 ? (
                         <ol class="admin-content-list" aria-label={`${section.collectionLabel}内容条目`}>
                             {
-                              sectionRenderEntries.map((entry, entryIndex) => {
+                              sectionOrderedEntries.map((entry, entryIndex) => {
+                                if (entry.kind === 'subhead') {
+                                  return (
+                                    <li class="admin-content-list-subhead" data-admin-content-subhead={entry.key}>
+                                      <span class="admin-content-list-subhead__label">{entry.label}</span>
+                                      <span class="admin-content-list-subhead__count">
+                                        {entry.count}{entry.key === 'series' ? ' 个系列' : ' 篇'}
+                                      </span>
+                                    </li>
+                                  );
+                                }
+
                                 if (entry.kind === 'series') {
                                   return (
                                     <li
@@ -536,7 +564,6 @@ const getContentCreateAction = (
                                       data-admin-content-series-group={entry.series}
                                     >
                                       <div class="admin-content-series-head__title">
-                                        <span class="admin-content-series-head__label">系列</span>
                                         <strong class="admin-content-series-head__name">{entry.title}</strong>
                                         <code class="admin-content-series-head__series">{entry.series}</code>
                                       </div>

@@ -90,8 +90,8 @@ export const createContentSlider = (getContainer: () => HTMLElement | null): Con
 };
 
 /**
- * 胶囊条滑块：宽度取所有胶囊的最大宽度，以激活项中心定位并夹取到 `[0, 容器宽 − 滑块宽]`；
- * resize 与字体就绪后重新对齐到 `.is-active` 胶囊。
+ * 胶囊条滑块：宽度与位置都取激活项自身，避免用「最长胶囊」的宽度时
+ * 滑块盖住相邻胶囊（窄屏尤其明显）。宽度过渡仍由 CSS transition 负责。
  */
 type PillCursor = {
   /** 把滑块对齐到指定的胶囊。 */
@@ -107,16 +107,10 @@ export const createPillCursor = (
     if (!cursor) return;
     const barRect = bar.getBoundingClientRect();
     const pillRect = pill.getBoundingClientRect();
-    const cursorWidth = pills.reduce(
-      (width, item) => Math.max(width, item.offsetWidth),
-      pill.offsetWidth
-    );
-    const centeredLeft = pillRect.left - barRect.left - (cursorWidth - pillRect.width) / 2;
-    const maxLeft = Math.max(barRect.width - cursorWidth, 0);
-    const cursorLeft = Math.min(Math.max(centeredLeft, 0), maxLeft);
 
-    cursor.style.width = `${cursorWidth}px`;
-    cursor.style.transform = `translateX(${cursorLeft}px)`;
+    const borderLeft = Number.parseFloat(getComputedStyle(bar).borderLeftWidth) || 0;
+    cursor.style.width = `${pillRect.width}px`;
+    cursor.style.transform = `translateX(${pillRect.left - barRect.left - borderLeft}px)`;
     bar.dataset.ready = 'true';
   };
 
