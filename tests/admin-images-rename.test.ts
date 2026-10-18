@@ -27,9 +27,9 @@ describe('admin image rename', () => {
     await mkdir(path.join(root, 'public', path.dirname(imagePath)), { recursive: true });
     await writeFile(path.join(root, 'public', imagePath), 'fake-image-bytes', 'utf8');
 
-    await mkdir(path.join(root, 'src', 'content', 'blog'), { recursive: true });
+    await mkdir(path.join(root, 'content', 'blog', '2026-01-02-demo'), { recursive: true });
     await writeFile(
-      path.join(root, 'src', 'content', 'blog', '2026-01-02-demo.md'),
+      path.join(root, 'content', 'blog', '2026-01-02-demo', 'index.md'),
       [
         '---',
         'title: Demo',
@@ -79,7 +79,7 @@ describe('admin image rename', () => {
     expect(await readFile(path.join(root, 'public', nextPath), 'utf8')).toBe('fake-image-bytes');
 
     // 正文（frontmatter cover / markdown / 相对写法 / 百分号编码 srcset）
-    const markdown = await readFile(path.join(root, 'src', 'content', 'blog', '2026-01-02-demo.md'), 'utf8');
+    const markdown = await readFile(path.join(root, 'content', 'blog', '2026-01-02-demo', 'index.md'), 'utf8');
     expect(markdown).toContain(`cover: /${nextPath}`);
     expect(markdown).toContain(`![图注](/${nextPath})`);
     expect(markdown).toContain(`<img src="${nextPath}"`);
@@ -99,7 +99,7 @@ describe('admin image rename', () => {
     // 报告里列出被改写的文件与处数
     const files = result.rewritten.map((entry) => entry.file).sort();
     expect(files).toEqual([
-      'src/content/blog/2026-01-02-demo.md',
+      'content/blog/2026-01-02-demo/index.md',
       'src/data/settings/home.json',
       'src/pages/index.astro'
     ]);
@@ -117,7 +117,7 @@ describe('admin image rename', () => {
 
     expect(await readFile(path.join(root, 'public', imagePath), 'utf8')).toBe('fake-image-bytes');
     expect(await readFile(path.join(root, 'public', nextPath), 'utf8')).toBe('already-there');
-    const markdown = await readFile(path.join(root, 'src', 'content', 'blog', '2026-01-02-demo.md'), 'utf8');
+    const markdown = await readFile(path.join(root, 'content', 'blog', '2026-01-02-demo', 'index.md'), 'utf8');
     expect(markdown).toContain(imagePath);
   });
 

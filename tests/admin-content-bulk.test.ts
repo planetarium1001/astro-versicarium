@@ -19,32 +19,25 @@ describe('admin content bulk api', () => {
   const getTempRoot = setupTempProjectRoot('astro-whono-content-bulk-');
 
   beforeEach(async () => {
-    await mkdir(path.join(getTempRoot(), 'src', 'content', 'blog'), { recursive: true });
-    await mkdir(path.join(getTempRoot(), 'src', 'content', 'bits'), { recursive: true });
-    await mkdir(path.join(getTempRoot(), 'src', 'content', 'about'), { recursive: true });
+    const contentRoot = path.join(getTempRoot(), 'content');
+    const writeEntry = async (collection: string, entryId: string, lines: string[]): Promise<string> => {
+      const entryDirectory = path.join(contentRoot, collection, ...entryId.split('/'));
+      await mkdir(entryDirectory, { recursive: true });
+      const filePath = path.join(entryDirectory, 'index.md');
+      await writeFile(filePath, lines.join('\n'), 'utf8');
+      return filePath;
+    };
 
+    await mkdir(path.join(contentRoot, 'blog'), { recursive: true });
+    await mkdir(path.join(contentRoot, 'bits'), { recursive: true });
+    await mkdir(path.join(contentRoot, 'about'), { recursive: true });
+
+    await writeEntry('blog', 'published', ['---', 'title: Published', 'date: 2026-03-18', '---', '', '# Published', '']);
+    await writeEntry('blog', 'delete-me', ['---', 'title: Delete Me', 'date: 2026-03-19', 'draft: false', '---', '', '# Delete', '']);
+    await writeEntry('bits', 'stale', ['---', 'date: 2025-02-03T22:30:00+08:00', 'draft: false', '---', '', 'stale bit', '']);
+    await writeEntry('blog', 'broken-frontmatter', ['---', 'title: [broken', '---', '', 'still exportable', '']);
     await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'blog', 'published.md'),
-      ['---', 'title: Published', 'date: 2026-03-18', '---', '', '# Published', ''].join('\n'),
-      'utf8'
-    );
-    await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'blog', 'delete-me.md'),
-      ['---', 'title: Delete Me', 'date: 2026-03-19', 'draft: false', '---', '', '# Delete', ''].join('\n'),
-      'utf8'
-    );
-    await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'bits', 'stale.md'),
-      ['---', 'date: 2025-02-03T22:30:00+08:00', 'draft: false', '---', '', 'stale bit', ''].join('\n'),
-      'utf8'
-    );
-    await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'blog', 'broken-frontmatter.md'),
-      ['---', 'title: [broken', '---', '', 'still exportable', ''].join('\n'),
-      'utf8'
-    );
-    await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'about', 'index.md'),
+      path.join(contentRoot, 'about', 'index.md'),
       ['---', '---', '', 'about body', ''].join('\n'),
       'utf8'
     );
@@ -58,7 +51,7 @@ describe('admin content bulk api', () => {
 
   it('patches draft status per entry without rewriting unchanged published entries', async () => {
     const { POST } = await import('../src/pages/api/admin/content/bulk-status');
-    const sourcePath = path.join(getTempRoot(), 'src', 'content', 'blog', 'published.md');
+    const sourcePath = path.join(getTempRoot(), 'content', 'blog', 'published', 'index.md');
     const before = await readFile(sourcePath, 'utf8');
     const url = 'http://127.0.0.1:4321/api/admin/content/bulk-status/';
 
@@ -69,7 +62,7 @@ describe('admin content bulk api', () => {
           {
             collection: 'blog',
             entryId: 'published',
-            expectedRelativePath: 'src/content/blog/published.md'
+            expectedRelativePath: 'content/blog/published/index.md'
           }
         ]
       }),
@@ -88,17 +81,17 @@ describe('admin content bulk api', () => {
           {
             collection: 'blog',
             entryId: 'published',
-            expectedRelativePath: 'src/content/blog/published.md'
+            expectedRelativePath: 'content/blog/published/index.md'
           },
           {
             collection: 'bits',
             entryId: 'stale',
-            expectedRelativePath: 'src/content/bits/other.md'
+            expectedRelativePath: 'content/bits/other/index.md'
           },
           {
             collection: 'unknown-collection',
             entryId: 'index',
-            expectedRelativePath: 'src/content/unknown-collection/index.md'
+            expectedRelativePath: 'content/unknown-collection/index/index.md'
           }
         ]
       }),
@@ -119,7 +112,7 @@ describe('admin content bulk api', () => {
   });
 
   it('reports revision conflicts when bulk status source changes before write', async () => {
-    const sourcePath = path.join(getTempRoot(), 'src', 'content', 'blog', 'published.md');
+    const sourcePath = path.join(getTempRoot(), 'content', 'blog', 'published', 'index.md');
     vi.resetModules();
     vi.doMock('../src/lib/admin-console/admin-api', async (importOriginal) => {
       const actual = await importOriginal<typeof import('../src/lib/admin-console/admin-api')>();
@@ -149,7 +142,7 @@ describe('admin content bulk api', () => {
           {
             collection: 'blog',
             entryId: 'published',
-            expectedRelativePath: 'src/content/blog/published.md'
+            expectedRelativePath: 'content/blog/published/index.md'
           }
         ]
       }),
@@ -171,7 +164,7 @@ describe('admin content bulk api', () => {
     const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
     const deletePayload = await readAdminContentEntryEditorPayload('blog', 'delete-me');
     const stalePayload = await readAdminContentEntryEditorPayload('bits', 'stale');
-    const stalePath = path.join(getTempRoot(), 'src', 'content', 'bits', 'stale.md');
+    const stalePath = path.join(getTempRoot(), 'content', 'bits', 'stale', 'index.md');
     await writeFile(
       stalePath,
       ['---', 'date: 2025-02-03T22:30:00+08:00', 'draft: true', '---', '', 'updated stale bit', ''].join('\n'),
@@ -206,10 +199,10 @@ describe('admin content bulk api', () => {
       succeeded: 1,
       failed: 1
     });
-    await expect(access(path.join(getTempRoot(), 'src', 'content', 'blog', 'delete-me.md'))).rejects.toThrow();
+    await expect(access(path.join(getTempRoot(), 'content', 'blog', 'delete-me'))).rejects.toThrow();
     await expect(readFile(stalePath, 'utf8')).resolves.toContain('updated stale bit');
     const deleted = payload.results.find((result: any) => result.entryId === 'delete-me');
-    await expect(readFile(toAbsoluteTestPath(getTempRoot(), deleted.trashedPath), 'utf8')).resolves.toContain('# Delete');
+    await expect(readFile(path.join(toAbsoluteTestPath(getTempRoot(), deleted.trashedPath), 'index.md'), 'utf8')).resolves.toContain('# Delete');
   });
 
   it('bulk-exports source files into a zip report without parsing frontmatter', async () => {
@@ -222,17 +215,17 @@ describe('admin content bulk api', () => {
           {
             collection: 'blog',
             entryId: 'broken-frontmatter',
-            expectedRelativePath: 'src/content/blog/broken-frontmatter.md'
+            expectedRelativePath: 'content/blog/broken-frontmatter/index.md'
           },
           {
             collection: 'about',
             entryId: 'index',
-            expectedRelativePath: 'src/content/about/index.md'
+            expectedRelativePath: 'content/about/index.md'
           },
           {
             collection: 'bits',
             entryId: 'stale',
-            expectedRelativePath: 'src/content/bits/other.md'
+            expectedRelativePath: 'content/bits/other/index.md'
           }
         ]
       }),

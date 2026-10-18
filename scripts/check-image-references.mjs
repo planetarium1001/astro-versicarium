@@ -10,11 +10,12 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { collectSourceFiles } from './collect-source-files.mjs';
+import { CONTENT_ROOT } from '../site.config.mjs';
 
 const ROOT = process.cwd();
 
 const SOURCE_DIRS = [
-  { dir: 'src/content', exts: ['.md'] },
+  { dir: CONTENT_ROOT, exts: ['.md'] },
   { dir: 'src/test-fixtures', exts: ['.md'] },
   { dir: 'src/data/settings', exts: ['.json'] },
   { dir: 'src/pages', exts: ['.astro'] },
@@ -33,7 +34,7 @@ const HTML_SRC_RE = /<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/gi;
 const SOURCE_SRCSET_RE = /<source\b[^>]*\bsrcset\s*=\s*["']([^"']+)["']/gi;
 // frontmatter 的图片字段。不含 `badge`：它是纯文本角标，当图片路径会产生假阳性。
 const FRONTMATTER_KEY_RE =
-  /^\s*-?\s*(?:cover|icon|avatar|heroImageSrc|src)\s*:\s*["']?([^"'\n#]+)["']?\s*$/gm;
+  /^\s*-?\s*(cover|ogImage|icon|image|avatar|heroImageSrc|src)\s*:\s*["']?([^"'\n#]+)["']?\s*$/gm;
 
 const isRemote = (value) =>
   /^[A-Za-z][A-Za-z\d+.-]*:/.test(value) || value.startsWith('//');
@@ -101,9 +102,14 @@ const collectReferences = async (filePath) => {
     }
   }
   if (path.extname(filePath) === '.md') {
-    // frontmatter 的图片字段按 public/ 解析（schema 要求不带 public/、不以 / 开头）。
+    // frontmatter 图片字段：author/hero 仍按 public/ 解析；内容图片字段相对条目目录。
     for (const match of text.matchAll(FRONTMATTER_KEY_RE)) {
-      raw.push({ value: match[1], base: 'public-relative' });
+      const key = match[1];
+      const publicRelative = key === 'avatar' || key === 'heroImageSrc';
+      raw.push({
+        value: match[2],
+        base: publicRelative ? 'public-relative' : 'source-relative'
+      });
     }
   }
 

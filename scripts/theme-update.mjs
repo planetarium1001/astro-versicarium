@@ -11,6 +11,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
+import { CONTENT_ROOT } from '../site.config.mjs';
 
 const ROOT = process.cwd();
 const THEME_MANIFEST = path.join(ROOT, 'theme.json');
@@ -18,7 +19,7 @@ const CHECK_ONLY = process.argv.includes('--check');
 
 /** 站点自有路径：主题更新不覆盖这些文件，只在报告中列出。 */
 const SITE_OWNED_PREFIXES = [
-  'src/content/',
+  `${CONTENT_ROOT}/`,
   'src/data/settings/',
   'public/images/',
   'public/author/',

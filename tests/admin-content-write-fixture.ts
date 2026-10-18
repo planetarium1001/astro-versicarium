@@ -59,91 +59,79 @@ export const setupAdminContentWriteFixture = (): (() => string) => {
 
   beforeEach(async () => {
     const tempRoot = getTempRoot();
+    const contentRoot = path.join(tempRoot, 'content');
 
-    await mkdir(path.join(tempRoot, 'src', 'content', 'blog'), { recursive: true });
-    await mkdir(path.join(tempRoot, 'src', 'content', 'projects'), { recursive: true });
-    await mkdir(path.join(tempRoot, 'src', 'content', 'bits'), { recursive: true });
-    await mkdir(path.join(tempRoot, 'src', 'content', 'devlog'), { recursive: true });
-    await mkdir(path.join(tempRoot, 'src', 'content', 'about'), { recursive: true });
+    await mkdir(path.join(contentRoot, 'blog'), { recursive: true });
+    await mkdir(path.join(contentRoot, 'projects'), { recursive: true });
+    await mkdir(path.join(contentRoot, 'bits'), { recursive: true });
+    await mkdir(path.join(contentRoot, 'devlog'), { recursive: true });
+    await mkdir(path.join(contentRoot, 'about'), { recursive: true });
     await mkdir(path.join(tempRoot, 'public', 'author'), { recursive: true });
 
+    const writeEntry = async (
+      collection: 'blog' | 'projects' | 'bits' | 'devlog',
+      entryId: string,
+      lines: string[]
+    ): Promise<void> => {
+      const entryDirectory = path.join(contentRoot, collection, ...entryId.split('/'));
+      await mkdir(entryDirectory, { recursive: true });
+      await writeFile(path.join(entryDirectory, 'index.md'), lines.join('\n'), 'utf8');
+    };
+
     await writeFile(path.join(tempRoot, 'public', 'author', 'alice.webp'), 'avatar');
+    await writeEntry('blog', 'demo', ['---', 'title: Demo blog', 'date: 2026-03-18', 'draft: false', '---', '', '# blog', '', '正文保持不变。', '']);
+    await writeEntry('blog', 'admin-console-guide copy', ['---', 'title: Space Name blog', 'date: 2026-03-21', 'draft: false', '---', '', '# Space Name', '']);
+    await writeEntry('blog', 'other', ['---', 'title: Other blog', 'date: 2026-03-20', 'slug: existing-blog', '---', '', '# Other', '', 'duplicate guard', '']);
+    await writeEntry('bits', 'demo', [
+      '---',
+      'date: 2025-02-03T01:01:45+08:00',
+      'tags:',
+      '  - Markdown',
+      'images:',
+      '  - src: bits/demo.webp',
+      '    width: 800',
+      '    height: 600',
+      '---',
+      '',
+      'Bits body',
+      ''
+    ]);
+    await writeEntry('projects', 'demo-project', [
+      '---',
+      'title: Demo Project',
+      'subtitle: Demo subtitle',
+      'description: Demo description',
+      'type: 开源',
+      'date: 2026-02-01',
+      'draft: false',
+      '---',
+      '',
+      'Project body',
+      '',
+      // 仓库/演示等外链写在正文末尾的链接组里，frontmatter 不写 tags/repo/demo
+      '[仓库](https://example.com/repo)',
+      '[演示](https://example.com/demo)',
+      ''
+    ]);
+    await writeEntry('devlog', 'demo-devlog', [
+      '---',
+      'title: Demo Devlog',
+      'date: 2026-02-02',
+      'project: Demo Project',
+      'kind: feature',
+      'description: Demo devlog description',
+      'draft: false',
+      '---',
+      '',
+      'Devlog body',
+      '',
+      // 外链写在正文 markdown 里，frontmatter 不写 links
+      '[仓库](https://example.com/repo)',
+      ''
+    ]);
+    await mkdir(path.join(contentRoot, 'about'), { recursive: true });
     await writeFile(
-      path.join(tempRoot, 'src', 'content', 'blog', 'demo.md'),
-      ['---', 'title: Demo blog', 'date: 2026-03-18', 'draft: false', '---', '', '# blog', '', '正文保持不变。', ''].join('\n'),
-      'utf8'
-    );
-    await writeFile(
-      path.join(tempRoot, 'src', 'content', 'blog', 'admin-console-guide copy.md'),
-      ['---', 'title: Space Name blog', 'date: 2026-03-21', 'draft: false', '---', '', '# Space Name', ''].join('\n'),
-      'utf8'
-    );
-    await writeFile(
-      path.join(tempRoot, 'src', 'content', 'blog', 'other.md'),
-      ['---', 'title: Other blog', 'date: 2026-03-20', 'slug: existing-blog', '---', '', '# Other', '', 'duplicate guard', ''].join('\n'),
-      'utf8'
-    );
-    await writeFile(
-      path.join(tempRoot, 'src', 'content', 'bits', 'demo.md'),
-      [
-        '---',
-        'date: 2025-02-03T01:01:45+08:00',
-        'tags:',
-        '  - Markdown',
-        'images:',
-        '  - src: bits/demo.webp',
-        '    width: 800',
-        '    height: 600',
-        '---',
-        '',
-        'Bits body',
-        ''
-      ].join('\n'),
-      'utf8'
-    );
-    await writeFile(
-      path.join(tempRoot, 'src', 'content', 'projects', 'demo-project.md'),
-      [
-        '---',
-        'title: Demo Project',
-        'subtitle: Demo subtitle',
-        'description: Demo description',
-        'type: 开源',
-        'date: 2026-02-01',
-        'draft: false',
-        '---',
-        '',
-        'Project body',
-        '',
-        // 仓库/演示等外链写在正文末尾的链接组里，frontmatter 不写 tags/repo/demo
-        '[仓库](https://example.com/repo)',
-        '[演示](https://example.com/demo)',
-        ''
-      ].join('\n'),
-      'utf8'
-    );
-    await writeFile(
-      path.join(tempRoot, 'src', 'content', 'devlog', 'demo-devlog.md'),
-      [
-        '---',
-        'title: Demo Devlog',
-        'date: 2026-02-02',
-        'project: Demo Project',
-        'kind: feature',
-        'description: Demo devlog description',
-        'draft: false',
-        '---',
-        '',
-        'Devlog body',
-        '',
-        // 外链写在正文 markdown 里，frontmatter 不写 links
-        '[仓库](https://example.com/repo)',
-        ''
-      ].join('\n'),
-      'utf8'
-    );
-    await writeFile(
-      path.join(tempRoot, 'src', 'content', 'about', 'index.md'),
+      path.join(contentRoot, 'about', 'index.md'),
       ['---', '---', '', 'about body', ''].join('\n'),
       'utf8'
     );

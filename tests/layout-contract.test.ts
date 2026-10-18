@@ -448,11 +448,11 @@ describe('项目卡片与末尾链接行', () => {
       read('src/styles/projects-page.css')
     ]);
 
-    // 可选前置字段，路径写法与 icon 一致
+    // 可选前置字段：icon 与 image 都走同一套内容图片 schema
     expect(schema).toMatch(
-      /icon: z\.string\(\)\.optional\(\),[\s\S]{0,200}?image: z\.string\(\)\.optional\(\)/
+      /icon: createOptionalEntryImage\(image\),[\s\S]{0,200}?image: createOptionalEntryImage\(image\)/
     );
-    expect(page).toContain('image: entry.data.image?.trim() || null,');
+    expect(page).toContain('image: getContentImageSrc(entry.data.image),');
     // 卡片里与文字同列渲染，路径经 withBase 解析
     expect(page).toMatch(
       /card\.image \? \(\s*<span class="project-card__image">\s*<img src=\{withBase\(card\.image\)\}/
@@ -840,20 +840,22 @@ describe('/devlog/ 页头搜索', () => {
 
 describe('归档 tag 的作用域与语义', () => {
   it('项目档不暴露标签入口，更新档只取项目名称，全部档不带项目集合的 tags', async () => {
-    const [page, scopeScript, indexJson, entryScript] = await Promise.all([
+    const [page, scopeScript, indexJson, entryScript, archiveLib] = await Promise.all([
       read('src/pages/archive/index.astro'),
       read('src/scripts/archive-scope.ts'),
       read('src/pages/archive/index.json.ts'),
-      read('src/scripts/entry-search.ts')
+      read('src/scripts/entry-search.ts'),
+      read('src/lib/archive.ts')
     ]);
 
     // 取值域
     expect(page).toMatch(/const projectTags: TagSummary\[\] = \[\];/);
     expect(page).toMatch(/collectTagScopedSummary\('devlog', devlogs, \(entry\) => \[\s*entry\.data\.project\s*\]/);
     expect(page).toMatch(/collectTagScopedSummary\(\s*'all',\s*\[\s*\.\.\.blogs,\s*\.\.\.devlogs\s*\]/);
-    // index.json 的 devlog tags 不含 kind
-    expect(indexJson).toMatch(/tags: \[entry\.data\.project\]/);
-    expect(indexJson).not.toMatch(/tags: \[entry\.data\.project, entry\.data\.kind\]/);
+    // archive row 的 devlog tags 只取项目名称，不含 kind；index.json 直接复用 row.tags
+    expect(archiveLib).toMatch(/tags: \[entry\.data\.project\]/);
+    expect(archiveLib).not.toMatch(/tags: \[entry\.data\.project, entry\.data\.kind\]/);
+    expect(indexJson).toMatch(/tags: row\.tags/);
 
     // 项目档隐藏 tag 入口；更新档把入口与标题按作用域改成「项目」
     expect(scopeScript).toMatch(/TAG_TRIGGER\.hidden = isProjects/);
@@ -867,14 +869,15 @@ describe('归档 tag 的作用域与语义', () => {
 
 describe('归档的更新行补「项目名：」', () => {
   it('devlog 行在标题前渲染项目名，样式用 muted 不抢标题', async () => {
-    const [page, css] = await Promise.all([
+    const [page, css, archiveLib] = await Promise.all([
       read('src/pages/archive/index.astro'),
-      read('src/styles/archive-page.css')
+      read('src/styles/archive-page.css'),
+      read('src/lib/archive.ts')
     ]);
 
     expect(page).toMatch(/row\.kind === 'devlog' && row\.project/);
     expect(page).toContain('archive-timeline__project');
-    expect(page).toMatch(/project: entry\.data\.project/);
+    expect(archiveLib).toMatch(/project: entry\.data\.project/);
     // 半角冒号，冒号后一个空格
     expect(page).toMatch(/\$\{row\.project\}: `/);
     // 项目名与标题继承同一个链接色，悬停整体高亮

@@ -48,7 +48,7 @@ describe('admin content projects/devlog write contract', () => {
       expect.arrayContaining(['tags', 'repo', 'repoLabel', 'demo', 'demoLabel'])
     );
 
-    const saved = await readFile(path.join(getTempRoot(), 'src', 'content', 'projects', 'demo-project.md'), 'utf8');
+    const saved = await readFile(path.join(getTempRoot(), 'content', 'projects', 'demo-project', 'index.md'), 'utf8');
     expect(saved).toContain('title: Edited Project');
     expect(saved).toContain('type: 实验');
     expect(saved).toContain('Project body');
@@ -66,7 +66,7 @@ describe('admin content projects/devlog write contract', () => {
     const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
     const { POST } = await import('../src/pages/api/admin/content/entry');
 
-    const sourcePath = path.join(getTempRoot(), 'src', 'content', 'projects', 'demo-project.md');
+    const sourcePath = path.join(getTempRoot(), 'content', 'projects', 'demo-project', 'index.md');
     await writeFile(
       sourcePath,
       [
@@ -188,7 +188,7 @@ describe('admin content projects/devlog write contract', () => {
     expect(payload.ok).toBe(true);
     expect(payload.result.changedFields).toEqual(expect.arrayContaining(['title', 'kind', 'body']));
 
-    const saved = await readFile(path.join(getTempRoot(), 'src', 'content', 'devlog', 'demo-devlog.md'), 'utf8');
+    const saved = await readFile(path.join(getTempRoot(), 'content', 'devlog', 'demo-devlog', 'index.md'), 'utf8');
     expect(saved).toContain('title: Edited Devlog');
     expect(saved).toContain('kind: fix');
     // 链接在正文里（markdown 写法），而不是 frontmatter
@@ -276,7 +276,7 @@ describe('entry transport guards for new collections', () => {
         publicEntryId: 'demo',
         defaultPublicSlug: 'demo',
         revision: 'rev',
-        relativePath: `src/content/${collection}/demo.md`,
+        relativePath: `content/${collection}/demo/index.md`,
         writable: true,
         readonlyReason: null,
         bodyText: 'body text',

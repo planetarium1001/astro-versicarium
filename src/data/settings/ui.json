@@ -27,7 +27,8 @@
     "dateLabel": "发布于：",
     "showTags": true,
     "showWordCount": true,
-    "showReadingTime": true
+    "showReadingTime": true,
+    "dateDisplay": "updated"
   },
   "layout": {
     "sidebarDivider": "default"
@@ -37,5 +38,6 @@
     "copy": "lxgw-wenkai-lite",
     "mono": "system-mono",
     "brand": "serif-georgia"
-  }
+  },
+  "cardDateDisplay": "updated"
 }

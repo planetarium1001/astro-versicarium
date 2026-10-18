@@ -43,6 +43,14 @@
   color: var(--muted);
 }
 
+.archive-timeline__entry {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
 .archive-timeline__title {
   color: var(--text);
   font-size: 15px;

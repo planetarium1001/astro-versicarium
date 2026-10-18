@@ -15,7 +15,8 @@
   },
   "archive": {
     "title": "归档",
-    "subtitle": "全站时间线"
+    "subtitle": "全站时间线",
+    "versionMode": "all"
   },
   "bits": {
     "title": "动态",

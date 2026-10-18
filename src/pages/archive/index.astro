@@ -1,106 +1,44 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import TagFilterHeader from '../../components/TagFilterHeader.astro';
-import { createWithBase, getBlogSlug, getVisibleDevlogs, getVisibleProjects, getVisibleblogs } from '../../lib/content';
+import { createWithBase, getVisibleblogs, getVisibleDevlogs } from '../../lib/content';
+import { getArchiveRows, groupArchiveRows } from '../../lib/archive';
 import { collectTagScopedSummary, type TagSummary } from '../../lib/tags';
 import { getThemeSettings } from '../../lib/theme-settings';
-import { formatISODateUtc, joinPageSubtitleText } from '../../utils/format';
+import { joinPageSubtitleText } from '../../utils/format';
 import { PAGE_SIZE_ARCHIVE } from '../../../site.config.mjs';
 import '../../styles/archive-page.css';
 
 /**
  * `/archive/` 全站时间线。
  * 一级胶囊：全部 / 博客 / 项目 / 更新，默认「全部」。时间线只显示日期与标题，按年月分组，不含 bits。
- * 标题跳转：博客到 /blog/<slug>/，项目到 /projects/#<entryId>，更新到 /devlog/#<entryId>。
+ * 标题跳转：博客到稳定 slug 或版本 dated URL，项目到 /projects/#<entryId>，更新到 /devlog/#<entryId>。
  * tag dialog 作用域跟随一级胶囊。无服务端分页，/archive/index.json 是客户端筛选与计数的唯一数据源。
  */
-const [blogs, projects, devlogs] = await Promise.all([
-  getVisibleblogs(),
-  getVisibleProjects(),
-  getVisibleDevlogs()
-]);
-
-const base = import.meta.env.BASE_URL ?? '/';
-const withBase = createWithBase(base);
 const {
   settings: { page }
 } = getThemeSettings();
+const [rows, blogs, devlogs] = await Promise.all([
+  getArchiveRows({ versionMode: page.archive.versionMode }),
+  getVisibleblogs(),
+  getVisibleDevlogs()
+]);
+const groups = groupArchiveRows(rows);
+
+const base = import.meta.env.BASE_URL ?? '/';
+const withBase = createWithBase(base);
 
 const pageTitleText = page.archive.title || '归档';
-const totalCount = blogs.length + projects.length + devlogs.length;
+const totalCount = rows.length;
+const blogCount = rows.filter((row) => row.kind === 'blog').length;
+const projectCount = rows.filter((row) => row.kind === 'projects').length;
+const devlogCount = rows.filter((row) => row.kind === 'devlog').length;
 const subtitleText = joinPageSubtitleText(page.archive.subtitle, `共 ${totalCount} 篇内容`);
 const pageDescription = joinPageSubtitleText(
   `${pageTitleText}列表`,
   page.archive.subtitle,
   `共 ${totalCount} 篇内容`
 ) ?? `${pageTitleText}列表`;
-
-type Row = {
-  kind: 'blog' | 'projects' | 'devlog';
-  key: string;
-  id: string;
-  title: string;
-  href: string;
-  date: Date;
-  year: number;
-  month: number;
-  /** 仅 devlog：所属项目名，行内显示成「项目名: 标题」 */
-  project?: string;
-};
-
-const rows: Row[] = [
-  ...blogs.map((entry): Row => ({
-    kind: 'blog',
-    key: `blog:${getBlogSlug(entry)}`,
-    id: getBlogSlug(entry),
-    title: entry.data.title,
-    href: withBase(`/blog/${getBlogSlug(entry)}/`),
-    date: entry.data.date,
-    year: entry.data.date.getUTCFullYear(),
-    month: entry.data.date.getUTCMonth() + 1
-  })),
-  ...projects.map((entry): Row => ({
-    kind: 'projects',
-    key: `projects:${entry.id}`,
-    id: entry.id,
-    title: entry.data.title,
-    href: withBase(`/projects/#${entry.id}`),
-    date: entry.data.date,
-    year: entry.data.date.getUTCFullYear(),
-    month: entry.data.date.getUTCMonth() + 1
-  })),
-  ...devlogs.map((entry): Row => ({
-    kind: 'devlog',
-    key: `devlog:${entry.id}`,
-    id: entry.id,
-    title: entry.data.title,
-    href: withBase(`/devlog/#${entry.id}`),
-    date: entry.data.date,
-    year: entry.data.date.getUTCFullYear(),
-    month: entry.data.date.getUTCMonth() + 1,
-    project: entry.data.project
-  }))
-].sort((left, right) => {
-  const dateOrder = right.date.valueOf() - left.date.valueOf();
-  if (dateOrder !== 0) return dateOrder;
-  return left.id.localeCompare(right.id, 'en');
-});
-
-/** 按年月分组。 */
-const groups: { key: string; label: string; rows: Row[] }[] = [];
-for (const row of rows) {
-  const groupKey = `${row.year}-${String(row.month).padStart(2, '0')}`;
-  const last = groups.at(-1);
-  if (last && last.key === groupKey) {
-    last.rows.push(row);
-    continue;
-  }
-  groups.push({
-    key: groupKey,
-    label: `${row.year} 年 ${row.month} 月`,
-    rows: [row]
-  });
-}
 
 /**
  * 归档的 tag 取值域逐档收敛：
@@ -121,9 +59,9 @@ const allTags: TagSummary[] = collectTagScopedSummary(
 
 const scopePills = [
   { id: 'all', label: '全部', count: totalCount },
-  { id: 'blog', label: '博客', count: blogs.length },
-  { id: 'projects', label: '项目', count: projects.length },
-  { id: 'devlog', label: '更新', count: devlogs.length }
+  { id: 'blog', label: '博客', count: blogCount },
+  { id: 'projects', label: '项目', count: projectCount },
+  { id: 'devlog', label: '更新', count: devlogCount }
 ];
 
 const tagPayload = { blog: blogTags, projects: projectTags, devlog: devlogTags, all: allTags };
@@ -189,15 +127,23 @@ const tagPayload = { blog: blogTags, projects: projectTags, devlog: devlogTags, 
               data-archive-kind={row.kind}
               data-archive-key={row.key}
             >
-              <time class="archive-timeline__date" datetime={formatISODateUtc(row.date)}>
-                {formatISODateUtc(row.date).slice(5)}
+              <time class="archive-timeline__date" datetime={row.dateText}>
+                {row.dateText.slice(5)}
               </time>
-              <a class="archive-timeline__title" href={row.href}>
-                {row.kind === 'devlog' && row.project ? (
-                  <span class="archive-timeline__project">{`${row.project}: `}</span>
+              <span class="archive-timeline__entry">
+                {row.kind === 'blog' && row.series ? (
+                  <span class="badge badge--version">{row.versionLabel}</span>
                 ) : null}
-                {row.title}
-              </a>
+                {row.kind === 'blog' && row.series && row.isLatest === false ? (
+                  <span class="badge badge--history">历史</span>
+                ) : null}
+                <a class="archive-timeline__title" href={withBase(row.href)}>
+                  {row.kind === 'devlog' && row.project ? (
+                    <span class="archive-timeline__project">{`${row.project}: `}</span>
+                  ) : null}
+                  {row.title}
+                </a>
+              </span>
             </div>
           ))}
         </div>

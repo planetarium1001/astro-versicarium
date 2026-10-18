@@ -25,6 +25,9 @@ const {
   description,
   image,
   ogType = 'website',
+  canonicalPath = null,
+  noindex = false,
+  ogImageAlt,
   bodyClass,
   deferGlobalStyles = false,
   activeNavId,
@@ -35,6 +38,10 @@ const {
   description?: string;
   image?: string;
   ogType?: string;
+  /** 不含部署 base 的站点路径；传入时覆盖当前 URL 的 canonical。 */
+  canonicalPath?: string | null;
+  noindex?: boolean;
+  ogImageAlt?: string;
   bodyClass?: string;
   deferGlobalStyles?: boolean;
   activeNavId?: SidebarNavId;
@@ -91,9 +98,6 @@ if (import.meta.env.DEV && typographyApiFonts.length !== selectedApiFonts.length
     '[fonts] ui.typography 选中的字体未注册于本次启动的 fonts 配置，已跳过 <Font> 渲染；重启 dev server 生效。'
   );
 }
-const canonical = (hasSiteUrl && Astro.site)
-  ? new URL(Astro.url.pathname, Astro.site).toString()
-  : null;
 const currentYear = new Date().getFullYear();
 const yearRange = footerShowCurrentYear && currentYear > footerStartYear
   ? `${footerStartYear}-${currentYear}`
@@ -101,15 +105,17 @@ const yearRange = footerShowCurrentYear && currentYear > footerStartYear
 const base = import.meta.env.BASE_URL ?? '/';
 const pathname = Astro.url.pathname;
 const withBase = createWithBase(base);
+const canonical = (hasSiteUrl && Astro.site)
+  ? new URL(canonicalPath ? withBase(canonicalPath) : Astro.url.pathname, Astro.site).toString()
+  : null;
 // og:image 需要绝对地址：相对路径先补成 public 下的根路径、加上部署 base，再按站点 origin 绝对化。
 // 未配置 SITE_URL 时拿不到 origin，此时不输出 og:image，twitter card 回落到 summary。
-// 未传 image 的页面（首页、列表页、归档页）回落到主题默认图，文章详情页由 cover 覆盖。
-const DEFAULT_OG_IMAGE = '/og-default.png';
+// 未传 image 的页面不输出 og:image；只有显式配置了 ogImage 的页面才有分享图。
 const resolveOgImage = (value: string): string =>
   /^[a-z][a-z0-9+.-]*:\/\//i.test(value)
     ? value
     : new URL(withBase(value.startsWith('/') ? value : `/${value}`), Astro.site!).toString();
-const ogImage = (hasSiteUrl && Astro.site) ? resolveOgImage(image || DEFAULT_OG_IMAGE) : null;
+const ogImage = (hasSiteUrl && Astro.site && image) ? resolveOgImage(image) : null;
 const faviconLinks = getSiteFaviconLinks(settings.site.favicon);
 const bodyClassNames = typeof bodyClass === 'string' ? bodyClass.split(/\s+/).filter(Boolean) : [];
 const isAdminPage = bodyClassNames.includes('admin-page');
@@ -232,16 +238,19 @@ const adminUiPrefsScriptHref = isDevAdminPage
     <title>{fullTitle}</title>
     {metaDescription && <meta name="description" content={metaDescription} />}
     {canonical && <link rel="canonical" href={canonical} />}
+    {noindex && <meta name="robots" content="noindex, follow" />}
     <meta property="og:site_name" content={siteTitle} />
     <meta property="og:title" content={fullTitle} />
     {metaDescription && <meta property="og:description" content={metaDescription} />}
     {canonical && <meta property="og:url" content={canonical} />}
     <meta property="og:type" content={ogType} />
     {ogImage && <meta property="og:image" content={ogImage} />}
+    {ogImage && ogImageAlt && <meta property="og:image:alt" content={ogImageAlt} />}
     <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
     <meta name="twitter:title" content={fullTitle} />
     {metaDescription && <meta name="twitter:description" content={metaDescription} />}
     {ogImage && <meta name="twitter:image" content={ogImage} />}
+    {ogImage && ogImageAlt && <meta name="twitter:image:alt" content={ogImageAlt} />}
     {
       deferGlobalStyles ? (
         <>
@@ -360,6 +369,7 @@ const adminUiPrefsScriptHref = isDevAdminPage
       </div>
     ) : null}
     <script>
+      import '../scripts/article-dates.ts';
       import '../scripts/sidebar-theme.ts';
       import '../scripts/sidebar-rail-nav.ts';
       import '../scripts/sidebar-floating-actions.ts';

@@ -275,6 +275,17 @@
   color: var(--muted);
 }
 
+.badge--version {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.badge--history {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
 @media (max-width: 900px) {
   .page-header.page-header--with-search {
     flex-direction: row;

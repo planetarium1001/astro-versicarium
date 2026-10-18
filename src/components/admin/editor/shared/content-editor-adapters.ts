@@ -46,7 +46,13 @@ const cloneBlogValues = (value: AdminBlogEditorValues): AdminBlogEditorValues =>
   tagsText: value.tagsText,
   draft: value.draft,
   slug: value.slug,
-  cover: value.cover,
+  series: value.series,
+  versionLabel: value.versionLabel,
+  versionName: value.versionName,
+  versionSummary: value.versionSummary,
+  versionOrder: value.versionOrder,
+  ogImage: value.ogImage,
+  ogImageAlt: value.ogImageAlt,
   badge: value.badge
 });
 
@@ -76,6 +82,7 @@ const cloneDevlogValues = (value: AdminDevlogEditorValues): AdminDevlogEditorVal
   title: value.title,
   date: value.date,
   project: value.project,
+  projectSlug: value.projectSlug,
   kind: value.kind,
   description: value.description,
   draft: value.draft
@@ -84,7 +91,7 @@ const cloneDevlogValues = (value: AdminDevlogEditorValues): AdminDevlogEditorVal
 const cloneAboutValues = (): AdminAboutEditorValues => ({});
 
 export const isBlogEditorValues = (value: AdminContentWorkspaceEditorValues | null): value is AdminBlogEditorValues =>
-  Boolean(value && 'publishedAt' in value && 'updatedAt' in value && 'cover' in value && 'badge' in value);
+  Boolean(value && 'publishedAt' in value && 'updatedAt' in value && 'ogImage' in value && 'ogImageAlt' in value && 'badge' in value);
 
 export const isBitsEditorValues = (value: AdminContentWorkspaceEditorValues | null): value is AdminBitsEditorValues =>
   Boolean(value && 'authorName' in value && 'authorAvatar' in value && 'imagesText' in value);
@@ -134,7 +141,13 @@ const BLOG_FRONTMATTER_ISSUE_PATHS = new Set([
   'tags',
   'slug',
   'badge',
-  'cover'
+  'series',
+  'versionLabel',
+  'versionName',
+  'versionSummary',
+  'versionOrder',
+  'ogImage',
+  'ogImageAlt'
 ]);
 
 const BITS_FRONTMATTER_ISSUE_PATHS = new Set([
@@ -187,6 +200,7 @@ const DEVLOG_FIELD_LABELS: Readonly<Record<string, string>> = {
   title: '标题',
   date: '日期',
   project: '项目',
+  projectSlug: '项目 slug',
   kind: '类型标签',
   description: '摘要',
   draft: '草稿状态',
@@ -202,7 +216,13 @@ const BLOG_FIELD_LABELS: Readonly<Record<string, string>> = {
   tags: '标签',
   draft: '草稿状态',
   slug: '链接别名',
-  cover: '封面图',
+  series: '系列',
+  versionLabel: '版本标签',
+  versionName: '版本名称',
+  versionSummary: '版本摘要',
+  versionOrder: '版本顺序',
+  ogImage: '分享图',
+  ogImageAlt: '分享图描述',
   badge: '徽标',
   body: '正文'
 };

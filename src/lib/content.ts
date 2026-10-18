@@ -4,13 +4,18 @@ import {
   type CollectionKey
 } from 'astro:content';
 import { existsSync } from 'node:fs';
-import {
-  BLOG_PUBLIC_SLUG_RE,
-  RESERVED_BLOG_SLUGS,
-  flattenEntryIdToSlug
-} from '../utils/slug-rules';
+import { flattenEntryIdToSlug } from '../utils/slug-rules';
 import { deriveMarkdownText, truncateText } from '../utils/excerpt';
+import {
+  buildBlogRouting,
+  getBlogEntryHrefMap,
+  getBlogVersionInfo,
+  getLatestBlogEntries,
+  type BlogRouteInfo,
+  type BlogRoutingResult
+} from './blog-routing';
 export { createWithBase } from '../utils/format';
+export { getBlogEntryHrefMap } from './blog-routing';
 
 type OrderBy<K extends CollectionKey> = (a: CollectionEntry<K>, b: CollectionEntry<K>) => number;
 type CollectionEntryWithSourcePath = {
@@ -25,21 +30,12 @@ export type GetPublishedOptions<K extends CollectionKey> = {
   includeDraft?: boolean;
 };
 
-/**
- * 判断 slug 是否与 `/archive/`、`/blog/` 下的同级静态路由冲突。路由收窄为单段后只需精确匹配。
- *
- * 主要防线是 `assertUniqueBlogSlugs`（构建期抛错），此判断只是 `getVisibleblogs` 的补充防护。
- */
-const isReservedSlug = (slug: string) => RESERVED_BLOG_SLUGS.has(slug);
-
 // 列表页 SSR 渲染全部条目，筛选与分页由客户端负责。
 
 const isContentSourceFilePresent = <K extends CollectionKey>(entry: CollectionEntry<K>): boolean => {
   if (!import.meta.env.DEV) return true;
 
   // DEV-only 同步 existsSync 防御，仅服务公开页 / 公开内容 getter 在 dev preview 下避免显示已删除条目。
-  // Admin Content 列表已迁移到源文件索引层，不依赖也不扩散此过滤。
-  // 同步 IO 成本若随公开内容规模增长变得可见，应作为公开侧优化单独处理。
   const filePath = (entry as CollectionEntryWithSourcePath).filePath;
   return typeof filePath !== 'string' || filePath.length === 0 || existsSync(filePath);
 };
@@ -81,6 +77,14 @@ const orderByEntryDateDescThenId = <Entry extends { id: string; data: { date: Da
   return a.id.localeCompare(b.id, 'en');
 };
 
+const orderBlogVersions = (a: BlogEntry, b: BlogEntry): number => {
+  const dateOrder = orderByEntryDateDesc(a, b);
+  if (dateOrder !== 0) return dateOrder;
+  const versionOrder = (b.data.versionOrder ?? 0) - (a.data.versionOrder ?? 0);
+  if (versionOrder !== 0) return versionOrder;
+  return a.id.localeCompare(b.id, 'en');
+};
+
 /** projects：列表型集合，无详情路由，公开定位为 `/projects/#<entryId>`。 */
 export const getVisibleProjects = async (
   options: AnchorListQueryOptions = {}
@@ -103,12 +107,6 @@ export const getVisibleDevlogs = async (
   return entries;
 };
 type BlogQueryOptions = Pick<GetPublishedOptions<'blog'>, 'includeDraft'>;
-type BlogRouteEntry = {
-  slug: string;
-  entry: BlogEntry;
-  prev: BlogEntry | null;
-  next: BlogEntry | null;
-};
 type BlogDerivedText = {
   plainText: string;
   text: string;
@@ -118,63 +116,19 @@ type BlogDerivedText = {
 export const getBlogSlug = (entry: BlogEntry) =>
   entry.data.slug ?? flattenEntryIdToSlug(entry.id);
 
-const assertUniqueBlogSlugs = (entries: readonly BlogEntry[]) => {
-  const seen = new Map<string, string>();
-  const duplicates = new Map<string, string[]>();
+export type BlogListItem = {
+  entry: BlogEntry;
+  href: string;
+  isLatest: boolean;
+  versionLabel: string;
+  latestHref: string;
+  series: string | null;
+  versionCount: number;
+};
 
-  for (const entry of entries) {
-    const slug = getBlogSlug(entry);
-    const slugSource = entry.data.slug ? 'frontmatter.slug' : `entry.id (flattened from "${entry.id}")`;
-
-    // 保留字检查，与 schema 校验共同构成第一道防线
-    if (isReservedSlug(slug)) {
-      throw new Error(
-        [
-          'blog route slug conflict detected.',
-          `  Entry:       ${entry.id}`,
-          `  Public slug: ${slug}`,
-          `  Source:      ${slugSource}`,
-          `  Reason:      "${slug}" is reserved for sibling static routes under /archive/ and /blog/.`,
-          '  How to fix:  change frontmatter.slug, or rename the file/path so the final public slug is no longer reserved.'
-        ].join('\n')
-      );
-    }
-
-    // 格式校验，兜住拼接结果不合法的 entryId
-    if (!BLOG_PUBLIC_SLUG_RE.test(slug)) {
-      throw new Error(
-        [
-          'Invalid public blog slug detected.',
-          `  Entry:       ${entry.id}`,
-          `  Public slug: ${slug}`,
-          `  Source:      ${slugSource}`,
-          '  Reason:      final public slug must be lowercase kebab-case.',
-          '  How to fix:  provide a valid frontmatter.slug, or rename files/folders to kebab-case.'
-        ].join('\n')
-      );
-    }
-
-    // 唯一性校验，重复时汇总全部冲突条目后统一抛错
-    const firstEntryId = seen.get(slug);
-    if (!firstEntryId) {
-      seen.set(slug, entry.id);
-      continue;
-    }
-
-    const duplicateIds = duplicates.get(slug) ?? [firstEntryId];
-    duplicateIds.push(entry.id);
-    duplicates.set(slug, duplicateIds);
-  }
-
-  if (duplicates.size === 0) return;
-
-  const detail = Array.from(duplicates.entries())
-    .map(([slug, entryIds]) => `"${slug}" <- ${entryIds.join(', ')}`)
-    .join('; ');
-
-  throw new Error(
-    `Duplicate blog slug detected. Public blog slugs must be unique after path flattening. ${detail}`
-  );
+export type BlogRouteEntry = BlogRouteInfo<BlogEntry> & {
+  prev: { href: string; title: string } | null;
+  next: { href: string; title: string } | null;
 };
 
 const shouldMemoizeBlogQueries = import.meta.env.PROD;
@@ -183,18 +137,33 @@ const MAX_BLOG_INDEX_TEXT = 600;
 let sortedblogsPromise: Promise<BlogEntry[]> | null = null;
 let visibleblogsPromise: Promise<BlogEntry[]> | null = null;
 const BlogDerivedTextById = new Map<string, BlogDerivedText>();
+const warnedMissingPublishedAt = new Set<string>();
 
 const cloneBlogEntries = (entries: readonly BlogEntry[]) => entries.slice();
 
 const shouldUseDefaultBlogCache = (includeDraft?: boolean) =>
   shouldMemoizeBlogQueries && includeDraft !== true;
 
+const warnMissingPublishedAt = (entries: readonly BlogEntry[]) => {
+  if (!import.meta.env.PROD) return;
+  for (const entry of entries) {
+    if (entry.data.draft === true || entry.data.publishedAt) continue;
+    if (warnedMissingPublishedAt.has(entry.id)) continue;
+    warnedMissingPublishedAt.add(entry.id);
+    console.warn(
+      `[astro-whono] blog "${entry.id}" has no publishedAt; falling back to date ${entry.data.dateText ?? entry.data.date.toISOString()}.`
+    );
+  }
+};
+
 const loadSortedblogs = async ({ includeDraft }: BlogQueryOptions = {}) => {
   const blogs = await getPublished('blog', {
     ...(includeDraft === undefined ? {} : { includeDraft }),
-    orderBy: orderByEntryDateDesc
+    orderBy: orderBlogVersions
   });
-  assertUniqueBlogSlugs(blogs);
+  warnMissingPublishedAt(blogs);
+  // 构建期校验 series/slug/route 冲突；任何公开查询都会先触发。
+  buildBlogRouting(blogs);
   return blogs;
 };
 
@@ -231,25 +200,81 @@ export async function getSortedblogs(options: BlogQueryOptions = {}) {
   return cloneBlogEntries(await sortedblogsPromise);
 }
 
-/** 公开可见的博客条目：slug 未占用 `/archive/`、`/blog/` 下的同级静态路由名。 */
-export const isVisibleBlogEntry = (entry: BlogEntry): boolean => !isReservedSlug(getBlogSlug(entry));
-
+/** 全部公开版本，用于首页、博客列表与站内搜索。 */
 export async function getVisibleblogs(options: BlogQueryOptions = {}) {
   if (!shouldUseDefaultBlogCache(options.includeDraft)) {
-    const blogs = await getSortedblogs(options);
-    return blogs.filter(isVisibleBlogEntry);
+    return getSortedblogs(options);
   }
 
-  visibleblogsPromise ??= getSortedblogs().then((blogs) => blogs.filter(isVisibleBlogEntry));
+  visibleblogsPromise ??= getSortedblogs();
   return cloneBlogEntries(await visibleblogsPromise);
 }
 
-export async function getVisibleBlogRouteEntries(options: BlogQueryOptions = {}) {
-  const blogs = await getVisibleblogs(options);
-  return blogs.map((entry, index) => ({
-    slug: getBlogSlug(entry),
-    entry,
-    prev: blogs[index - 1] ?? null,
-    next: blogs[index + 1] ?? null
-  })) satisfies BlogRouteEntry[];
+/** 每个 series 只保留最新版，用于 RSS、sitemap 与版本导航。 */
+export async function getLatestVisibleblogs(options: BlogQueryOptions = {}) {
+  return getLatestBlogEntries(await getVisibleblogs(options));
+}
+
+export async function getVisibleBlogRouting(
+  options: BlogQueryOptions = {}
+): Promise<BlogRoutingResult<BlogEntry>> {
+  return buildBlogRouting(await getVisibleblogs(options));
+}
+
+export async function getVisibleBlogListItems(
+  options: BlogQueryOptions = {}
+): Promise<BlogListItem[]> {
+  const entries = await getVisibleblogs(options);
+  const routing = buildBlogRouting(entries);
+  const hrefByEntryId = getBlogEntryHrefMap(routing);
+  const versionCountByEntryId = new Map<string, number>();
+  for (const group of routing.groups) {
+    for (const version of group.versions) {
+      versionCountByEntryId.set(version.id, group.versions.length);
+    }
+  }
+
+  return entries.map((entry) => {
+    const info = getBlogVersionInfo(routing, entry);
+    return {
+      entry,
+      href: hrefByEntryId.get(entry.id) ?? `/blog/${getBlogSlug(entry)}/`,
+      isLatest: info.isLatest,
+      versionLabel: info.versionLabel,
+      latestHref: info.latestHref,
+      series: info.series,
+      versionCount: versionCountByEntryId.get(entry.id) ?? 1
+    } satisfies BlogListItem;
+  });
+}
+
+export async function getVisibleBlogRouteEntries(
+  options: BlogQueryOptions = {}
+): Promise<BlogRouteEntry[]> {
+  const entries = await getVisibleblogs(options);
+  const routing = buildBlogRouting(entries);
+  const hrefByEntryId = getBlogEntryHrefMap(routing);
+  const orderedEntries = entries.slice().sort(orderBlogVersions);
+  const neighborsByEntryId = new Map<string, {
+    prev: { href: string; title: string } | null;
+    next: { href: string; title: string } | null;
+  }>();
+
+  orderedEntries.forEach((entry, index) => {
+    const prev = orderedEntries[index - 1] ?? null;
+    const next = orderedEntries[index + 1] ?? null;
+    neighborsByEntryId.set(entry.id, {
+      prev: prev
+        ? { href: hrefByEntryId.get(prev.id) ?? `/blog/${getBlogSlug(prev)}/`, title: prev.data.title }
+        : null,
+      next: next
+        ? { href: hrefByEntryId.get(next.id) ?? `/blog/${getBlogSlug(next)}/`, title: next.data.title }
+        : null
+    });
+  });
+
+  return routing.routes.map((route) => ({
+    ...route,
+    ...(neighborsByEntryId.get(route.entry.id) ?? { prev: null, next: null })
+  }));
 }

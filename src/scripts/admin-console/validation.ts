@@ -21,12 +21,16 @@ type ValidationContext = {
   inputShellTitleNarrow: HTMLInputElement;
   inputSiteDescription: HTMLTextAreaElement;
   inputSiteDefaultLocale: HTMLInputElement;
+  inputSiteTimezone: HTMLInputElement;
   inputSiteTitleMaxPercent: HTMLInputElement;
   inputSitePageGapPx: HTMLInputElement;
   inputPageListRssEnabled: HTMLInputElement;
   inputPageListRssBlog: HTMLInputElement;
   inputPageListRssBits: HTMLInputElement;
   inputPageListRssArchive: HTMLInputElement;
+  inputPageArchiveVersionMode: HTMLSelectElement;
+  inputUiArticleDateDisplay: HTMLSelectElement;
+  inputUiCardDateDisplay: HTMLSelectElement;
   inputSiteFooterStartYear: HTMLInputElement;
   inputSiteFooterShowCurrentYear: HTMLInputElement;
   inputSiteFooterCopyright: HTMLInputElement;
@@ -112,12 +116,16 @@ export const createValidation = ({
   inputShellTitleNarrow,
   inputSiteDescription,
   inputSiteDefaultLocale,
+  inputSiteTimezone,
   inputSiteTitleMaxPercent,
   inputSitePageGapPx,
   inputPageListRssEnabled,
   inputPageListRssBlog,
   inputPageListRssBits,
   inputPageListRssArchive,
+  inputPageArchiveVersionMode,
+  inputUiArticleDateDisplay,
+  inputUiCardDateDisplay,
   inputSiteFooterStartYear,
   inputSiteFooterShowCurrentYear,
   inputSiteFooterCopyright,
@@ -239,6 +247,8 @@ export const createValidation = ({
         return () => inputSiteDescription;
       case 'site.defaultLocale':
         return () => inputSiteDefaultLocale;
+      case 'site.timezone':
+        return () => inputSiteTimezone;
       case 'page.listRss.enabled':
         return () => inputPageListRssEnabled;
       case 'page.listRss.blog':
@@ -247,6 +257,12 @@ export const createValidation = ({
         return () => inputPageListRssBits;
       case 'page.listRss.archive':
         return () => inputPageListRssArchive;
+      case 'page.archive.versionMode':
+        return () => inputPageArchiveVersionMode;
+      case 'ui.articleMeta.dateDisplay':
+        return () => inputUiArticleDateDisplay;
+      case 'ui.cardDateDisplay':
+        return () => inputUiCardDateDisplay;
       case 'site.titleMaxPercent':
         return () => inputSiteTitleMaxPercent;
       case 'site.pageGapPx':

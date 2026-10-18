@@ -1,9 +1,11 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, fontProviders } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import svelte from '@astrojs/svelte';
 import { createPublicMarkdownConfig } from './src/plugins/markdown-pipeline.mjs';
+import { contentAssets } from './src/integrations/content-assets.mjs';
 import {
   getSelectedAstroApiFonts,
   resolveTypographyFromRawUiSettings
@@ -60,9 +62,67 @@ const isExcludedSitemapPathname = (pathname) =>
   || pathname === '/bits/draft-dialog';
 
 const isExcludedSitemapEntry = (page) => isExcludedSitemapPathname(normalizeSitemapPathname(page));
+
+/**
+ * @astrojs/sitemap 只看到 URL，不知道博客版本关系。
+ * 构建结束后用 /blog/index.json 的最新版 allowlist 移除旧版本与最新版 dated alias。
+ */
+const createSitemapBlogFilter = () => ({
+  name: 'astro-whono:sitemap-blog-filter',
+  hooks: {
+    'astro:build:done': async ({ dir, logger }) => {
+      const distDirectory = fileURLToPath(dir);
+      const indexPath = path.join(distDirectory, 'blog', 'index.json');
+      if (!existsSync(indexPath)) return;
+
+      const items = JSON.parse(readFileSync(indexPath, 'utf8'));
+      const canonicalPaths = new Set(
+        (Array.isArray(items) ? items : [])
+          .filter((item) => item && item.isLatest === true && typeof item.href === 'string')
+          .map((item) => item.href)
+      );
+      if (canonicalPaths.size === 0) return;
+
+      const basePrefix = deploymentBase === '/' ? '' : deploymentBase.replace(/\/+$/, '');
+      const sitemapFiles = readdirSync(distDirectory).filter((name) => /^sitemap-\d+\.xml$/.test(name));
+      let removed = 0;
+
+      for (const fileName of sitemapFiles) {
+        const filePath = path.join(distDirectory, fileName);
+        const xml = readFileSync(filePath, 'utf8');
+        const nextXml = xml.replace(/<url>[\s\S]*?<\/url>/g, (block) => {
+          const loc = /<loc>([^<]+)<\/loc>/.exec(block)?.[1];
+          if (!loc) return block;
+
+          const pathname = new URL(loc).pathname;
+          const stripped = basePrefix && pathname.startsWith(basePrefix)
+            ? pathname.slice(basePrefix.length)
+            : pathname;
+          if (!stripped.startsWith('/blog/')) return block;
+
+          const segments = stripped.split('/').filter(Boolean);
+          if (segments.length !== 2) return block;
+          const canonicalPath = stripped.endsWith('/') ? stripped : `${stripped}/`;
+          if (canonicalPaths.has(canonicalPath)) return block;
+
+          removed += 1;
+          return '';
+        });
+
+        if (nextXml !== xml) writeFileSync(filePath, nextXml, 'utf8');
+      }
+
+      if (removed > 0) {
+        logger.info(`removed ${removed} non-canonical blog URL(s) from sitemap`);
+      }
+    }
+  }
+});
+
 const integrations = [
+  contentAssets(),
   ...(!isProductionBuild ? [svelte()] : []),
-  ...(hasSiteUrl ? [sitemap({ filter: (page) => !isExcludedSitemapEntry(page) })] : [])
+  ...(hasSiteUrl ? [sitemap({ filter: (page) => !isExcludedSitemapEntry(page) }), createSitemapBlogFilter()] : [])
 ];
 
 // ui.typography 选中 astro-fonts-api 字体时，构建期由 Astro Fonts API 下载自托管；

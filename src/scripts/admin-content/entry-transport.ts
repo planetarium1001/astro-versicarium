@@ -129,7 +129,13 @@ const isAdminBlogEditorValues = (value: unknown): value is AdminBlogEditorValues
   && typeof value.tagsText === 'string'
   && typeof value.draft === 'boolean'
   && typeof value.slug === 'string'
-  && typeof value.cover === 'string'
+  && typeof value.series === 'string'
+  && typeof value.versionLabel === 'string'
+  && typeof value.versionName === 'string'
+  && typeof value.versionSummary === 'string'
+  && typeof value.versionOrder === 'string'
+  && typeof value.ogImage === 'string'
+  && typeof value.ogImageAlt === 'string'
   && typeof value.badge === 'string';
 
 const isAdminBitsEditorValues = (value: unknown): value is AdminBitsEditorValues =>

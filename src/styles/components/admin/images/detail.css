@@ -91,7 +91,7 @@
   color: var(--admin-images-origin-assets-text);
 }
 
-.admin-images-browser__origin-badge[data-origin='src/content'] {
+.admin-images-browser__origin-badge[data-origin='content'] {
   background: var(--admin-images-origin-content-bg);
   border-color: var(--admin-images-origin-content-border);
   color: var(--admin-images-origin-content-text);

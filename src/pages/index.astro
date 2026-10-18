@@ -7,7 +7,7 @@ import {
   ADMIN_HOME_INTRO_LINK_DEFAULT,
   getAdminHomeIntroLinkOption
 } from '../lib/admin-console/theme-shared';
-import { getBlogDerivedText, getBlogSlug, getVisibleblogs } from '../lib/content';
+import { getBlogDerivedText, getVisibleBlogListItems } from '../lib/content';
 import { getThemeFontRegistryEntry, getThemeFontStack } from '../lib/fonts/registry';
 import { getThemeSettings, getVisibleArticleMetaTags } from '../lib/theme-settings';
 import { createWithBase } from '../utils/format';
@@ -17,7 +17,7 @@ const withBase = createWithBase(base);
 const {
   settings: {
     home: { introLead, introMore, introMoreLinks, showIntroLead, showIntroMore, heroPresetId, heroImageSrc, heroImageAlt },
-    ui: { articleMeta, typography }
+    ui: { articleMeta, typography, cardDateDisplay }
   }
 } = getThemeSettings();
 const shouldShowHero = heroPresetId !== 'none';
@@ -34,7 +34,7 @@ const resolvedIntroMoreLinks = (introMoreLinks.length ? introMoreLinks : [...ADM
   (linkKey) => getAdminHomeIntroLinkOption(linkKey)
 );
 
-const latest = (await getVisibleblogs()).slice(0, 12);
+const latest = (await getVisibleBlogListItems()).slice(0, 12);
 
 type HomeHeadCriticalFontFace = {
   family: 'LXGW WenKai Lite' | 'Noto Serif SC';
@@ -827,19 +827,29 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
   <h2 class="section-title section-title--index">索引</h2>
 
   <div class="list">
-    {latest.map((entry) => {
-      const slug = getBlogSlug(entry);
-      const href = withBase(`/blog/${slug}/`);
-      const visibleTags = getVisibleArticleMetaTags(entry.data.tags, 'home');
+    {latest.map((item) => {
+      const href = withBase(item.href);
+      const visibleTags = getVisibleArticleMetaTags(item.entry.data.tags, 'home');
       return (
         <EntryListItem
           href={href}
-          title={entry.data.title}
-          date={entry.data.date}
-          updatedAt={entry.data.updatedAt}
+          title={item.entry.data.title}
+          date={item.entry.data.date}
+          dateText={item.entry.data.dateText}
+          dateHasTime={item.entry.data.dateHasTime}
+          publishedAt={item.entry.data.publishedAt}
+          publishedAtText={item.entry.data.publishedAtText}
+          publishedAtHasTime={item.entry.data.publishedAtHasTime}
+          updatedAt={item.entry.data.updatedAt}
+          updatedAtText={item.entry.data.updatedAtText}
+          updatedAtHasTime={item.entry.data.updatedAtHasTime}
+          dateDisplay={item.entry.data.cardDateDisplay ?? cardDateDisplay}
           visibleTags={visibleTags}
           articleMetaSettings={articleMeta}
-          excerpt={getBlogDerivedText(entry).excerpt}
+          excerpt={getBlogDerivedText(item.entry).excerpt}
+          versionLabel={item.versionLabel}
+          versionCount={item.versionCount}
+          isLatest={item.isLatest}
         />
       );
     })}

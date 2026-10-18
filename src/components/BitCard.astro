@@ -2,6 +2,7 @@
 import { type BitsEntry, getBitAnchorId } from '../lib/bits';
 import { BITS_CARD_VISIBLE_IMAGE_LIMIT, buildBitsCardViewModel } from '../lib/bits-card-view-model';
 import { getThemeSettings } from '../lib/theme-settings';
+import { getSiteTimezone } from '../utils/site-timezone';
 import BitAvatar from './BitAvatar.astro';
 import BitTags from './BitTags.astro';
 
@@ -24,7 +25,8 @@ const card = buildBitsCardViewModel({
   images: bitEntry.data.images ?? [],
   ...(bitEntry.data.author ? { author: bitEntry.data.author } : {}),
   defaultAuthor: settings.page.bits.defaultAuthor,
-  base
+  base,
+  timeZone: getSiteTimezone()
 });
 const maxVisible = BITS_CARD_VISIBLE_IMAGE_LIMIT;
 /** 正文口径取自视图模型：未超预算且未截断时渲染完整 Markdown，否则渲染纯文本摘要。 */
@@ -42,7 +44,7 @@ const getImageFetchPriority = (prioritize: boolean) => (prioritize ? 'high' : un
   data-bit-key={bitEntry.id}
   data-slug={card.slug}
   data-entry-item
-  data-entry-year={String(bitEntry.data.date.getFullYear())}
+  data-entry-year={String((bitEntry.data.dateText ?? '').slice(0, 4))}
 >
   {/*
     整卡可点的覆盖层：按钮本身不可见，`::after` 铺满卡片；图片与标签抬到 z-index 1 之上，

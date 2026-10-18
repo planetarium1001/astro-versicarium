@@ -67,7 +67,7 @@ describe('admin content fixed-page write contract', () => {
     expect(writePayload.payload.collection).toBe('about');
     expect(writePayload.payload.values).toEqual({});
 
-    const after = await readFile(path.join(getTempRoot(), 'src', 'content', 'about', 'index.md'), 'utf8');
+    const after = await readFile(path.join(getTempRoot(), 'content', 'about', 'index.md'), 'utf8');
     expect(after).toContain(':::friend{name="Alice" url="https://alice.example"}');
     expect(after).toContain(':::faq{question="能编辑吗？"}');
     expect(after).toBe(['---', '---', nextBody].join('\n'));
@@ -81,7 +81,7 @@ describe('admin content fixed-page write contract', () => {
     if (current.collection !== 'about') throw new Error('expected about payload');
 
     await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'about', 'index.md'),
+      path.join(getTempRoot(), 'content', 'about', 'index.md'),
       [
         '---',
         '---',

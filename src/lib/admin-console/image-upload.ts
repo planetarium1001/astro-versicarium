@@ -10,11 +10,9 @@ import {
   invalidateAdminImageCaches,
   readAdminLocalImageInspectionMeta
 } from './image-shared';
-import { getAdminImageFieldValue } from './image-params';
 import {
   getMimeTypeFromFileName,
   isAdminImageCloudStorageEnabled,
-  toSingleLayerSafeKeyPart,
   uploadAdminImageToCloudStorage
 } from './image-cloud-storage';
 import { AdminImageUploadError } from './image-upload-error';
@@ -75,25 +73,24 @@ const assertUploadFile = (file: File): void => {
 };
 
 /**
- * 本地与云端落点统一为 `public/images/{collection}/{slug}/filename.ext`，
- * 其中 `{slug}` 是条目 entryId 且必须单层。
+ * 条目图片落点：`content/{collection}/{entryId}/images/filename.ext`。
+ * entryId 可能包含多段，实际目录以条目主文件所在目录为准。
  */
-const resolvePublicImageUploadDirectory = (
+const resolveEntryImageUploadDirectory = (
   collection: 'blog' | 'projects' | 'bits' | 'devlog',
   entryId: string
-): string =>
-  path.join(
-    getProjectRoot(),
-    'public',
-    'images',
-    collection,
-    toSingleLayerSafeKeyPart(entryId)
-  );
+): { directory: string; entryDirectory: string } => {
+  const sourcePath = assertContentEntryCanReceiveImage(collection, entryId);
+  const entryDirectory = path.dirname(sourcePath);
+  return {
+    directory: path.join(entryDirectory, 'images'),
+    entryDirectory
+  };
+};
 
-/** 正文图统一写绝对路径 `/images/...`（校验器同时支持相对路径与绝对路径）。 */
-const toPublicImageAbsoluteSrc = (assetPath: string): string => {
-  const relative = path.relative(path.join(getProjectRoot(), 'public'), assetPath).replace(/\\/g, '/');
-  return `/${relative}`;
+const toEntryRelativeImageSrc = (assetPath: string, entryDirectory: string): string => {
+  const relative = path.relative(entryDirectory, assetPath).replace(/\\/g, '/');
+  return relative.startsWith('.') ? relative : `./${relative}`;
 };
 
 const createCandidateFileName = (safeFileName: string, index: number): string => {
@@ -135,13 +132,10 @@ const writeLocalImageFile = async (
   entryId: string,
   safeFileName: string,
   buffer: Buffer
-): Promise<{ assetPath: string; relativePath: string }> => {
-  const assetPath = await writeUniqueImageFile(
-    resolvePublicImageUploadDirectory(collection, entryId),
-    safeFileName,
-    buffer
-  );
-  return { assetPath, relativePath: toRelativeProjectPath(assetPath) };
+): Promise<{ assetPath: string; relativePath: string; entryDirectory: string }> => {
+  const { directory, entryDirectory } = resolveEntryImageUploadDirectory(collection, entryId);
+  const assetPath = await writeUniqueImageFile(directory, safeFileName, buffer);
+  return { assetPath, relativePath: toRelativeProjectPath(assetPath), entryDirectory };
 };
 
 /** 读取新写入图片的尺寸/大小信息；读写前后都要失效缓存，避免读到旧扫描结果。 */
@@ -221,11 +215,11 @@ const uploadAdminMarkdownBodyImage = async ({
     return uploadAdminCloudImage({ collection, entryId, file, safeFileName, buffer });
   }
 
-  const { assetPath, relativePath } = await writeLocalImageFile(collection, entryId, safeFileName, buffer);
+  const { assetPath, relativePath, entryDirectory } = await writeLocalImageFile(collection, entryId, safeFileName, buffer);
   const meta = await readFreshImageInspectionMeta(relativePath);
 
   return {
-    src: toPublicImageAbsoluteSrc(assetPath),
+    src: toEntryRelativeImageSrc(assetPath, entryDirectory),
     path: relativePath,
     fileName: path.basename(assetPath),
     width: meta.width,
@@ -280,12 +274,8 @@ export const uploadAdminBitsImage = async ({
     return uploadAdminCloudImage({ collection: 'bits', entryId, file, safeFileName, buffer });
   }
 
-  const { assetPath, relativePath } = await writeLocalImageFile('bits', entryId, safeFileName, buffer);
-  const src = getAdminImageFieldValue('bits.images', relativePath, 'public');
-  if (!src) {
-    throw new AdminImageUploadError('无法生成 bits.images 可保存的图片路径');
-  }
-
+  const { assetPath, relativePath, entryDirectory } = await writeLocalImageFile('bits', entryId, safeFileName, buffer);
+  const src = toEntryRelativeImageSrc(assetPath, entryDirectory);
   const meta = await readFreshImageInspectionMeta(relativePath);
 
   return {
@@ -296,5 +286,59 @@ export const uploadAdminBitsImage = async ({
     height: meta.height,
     size: meta.size,
     mimeType: meta.mimeType ?? (file.type.trim() || null)
+  };
+};
+
+const SUPPORTED_FILE_UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
+
+const getSafeFileName = (fileName: string): string => {
+  const extension = path.extname(fileName).toLowerCase();
+  const baseName = normalizeFileBaseName(path.basename(fileName, path.extname(fileName)));
+  return `${baseName}${extension}`;
+};
+
+const resolveEntryFileUploadDirectory = (
+  collection: 'blog' | 'projects' | 'bits' | 'devlog',
+  entryId: string
+): { directory: string; entryDirectory: string } => {
+  const sourcePath = assertContentEntryCanReceiveImage(collection, entryId);
+  const entryDirectory = path.dirname(sourcePath);
+  return {
+    directory: path.join(entryDirectory, 'files'),
+    entryDirectory
+  };
+};
+
+export const uploadAdminContentFile = async ({
+  collection,
+  entryId,
+  file
+}: {
+  collection: 'blog' | 'projects' | 'bits' | 'devlog';
+  entryId: string;
+  file: File;
+}): Promise<{ src: string; path: string; fileName: string; size: number; mimeType: string | null }> => {
+  if (file.size <= 0) throw new AdminImageUploadError('文件为空，请重新选择');
+  if (file.size > SUPPORTED_FILE_UPLOAD_MAX_BYTES) {
+    throw new AdminImageUploadError('文件超过 50MB，请压缩后再上传', 413);
+  }
+
+  const safeFileName = getSafeFileName(file.name);
+  if (!safeFileName || safeFileName === path.extname(file.name)) {
+    throw new AdminImageUploadError('无法生成可用的文件名');
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const { directory, entryDirectory } = resolveEntryFileUploadDirectory(collection, entryId);
+  const assetPath = await writeUniqueImageFile(directory, safeFileName, buffer);
+  const relativePath = toRelativeProjectPath(assetPath);
+  const relativeSrc = path.relative(entryDirectory, assetPath).replace(/\\/g, '/');
+
+  return {
+    src: relativeSrc.startsWith('.') ? relativeSrc : `./${relativeSrc}`,
+    path: relativePath,
+    fileName: path.basename(assetPath),
+    size: buffer.length,
+    mimeType: file.type.trim() || getMimeTypeFromFileName(assetPath)
   };
 };

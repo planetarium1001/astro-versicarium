@@ -291,9 +291,13 @@ describe('theme-settings revision semantics', () => {
     // fixture 显式写入 null，来源为 new。
     expect(resolved.sources.site.faviconPng).toBe('new');
     expect(getSiteFaviconLinks(resolved.settings.site.favicon)).toEqual([
-      { rel: 'icon', type: 'image/svg+xml', sizes: 'any', href: 'favicon.svg' },
-      { rel: 'icon', type: 'image/png', sizes: '32x32', href: 'favicon-32x32.png' },
-      { rel: 'apple-touch-icon', sizes: '180x180', href: 'apple-touch-icon.png' }
+      { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/images/site/generated/favicon-16x16.png' },
+      { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/images/site/generated/favicon-32x32.png' },
+      { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+      { rel: 'icon', type: 'image/png', sizes: '192x192', href: '/images/site/generated/icon-192.png' },
+      { rel: 'icon', type: 'image/png', sizes: '512x512', href: '/images/site/generated/icon-512.png' },
+      { rel: 'manifest', href: '/images/site/generated/site.webmanifest' },
+      { rel: 'apple-touch-icon', sizes: '180x180', href: '/images/site/generated/apple-touch-icon.png' }
     ]);
   });
 
@@ -327,6 +331,10 @@ describe('theme-settings revision semantics', () => {
     // 不回退默认 SVG；触摸复用同一 PNG，不写 sizes。
     expect(getSiteFaviconLinks(resolved.settings.site.favicon)).toEqual([
       { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png' },
+      { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+      { rel: 'icon', type: 'image/png', sizes: '192x192', href: '/images/site/generated/icon-192.png' },
+      { rel: 'icon', type: 'image/png', sizes: '512x512', href: '/images/site/generated/icon-512.png' },
+      { rel: 'manifest', href: '/images/site/generated/site.webmanifest' },
       { rel: 'apple-touch-icon', href: '/favicon-32x32.png' }
     ]);
   });
@@ -342,7 +350,12 @@ describe('theme-settings revision semantics', () => {
 
     // 只有 SVG 时没有可复用的 PNG；不回退主题默认触摸图标。
     expect(getSiteFaviconLinks(resolved.settings.site.favicon)).toEqual([
-      { rel: 'icon', type: 'image/svg+xml', sizes: 'any', href: '/favicon.svg' }
+      { rel: 'icon', type: 'image/svg+xml', sizes: 'any', href: '/favicon.svg' },
+      { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+      { rel: 'icon', type: 'image/png', sizes: '192x192', href: '/images/site/generated/icon-192.png' },
+      { rel: 'icon', type: 'image/png', sizes: '512x512', href: '/images/site/generated/icon-512.png' },
+      { rel: 'manifest', href: '/images/site/generated/site.webmanifest' },
+      { rel: 'apple-touch-icon', sizes: '180x180', href: '/images/site/generated/apple-touch-icon.png' }
     ]);
   });
 
@@ -356,8 +369,12 @@ describe('theme-settings revision semantics', () => {
     const resolved = getThemeSettings();
 
     expect(getSiteFaviconLinks(resolved.settings.site.favicon)).toEqual([
-      { rel: 'icon', type: 'image/svg+xml', sizes: 'any', href: 'favicon.svg' },
-      { rel: 'icon', type: 'image/png', sizes: '32x32', href: 'favicon-32x32.png' },
+      { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/images/site/generated/favicon-16x16.png' },
+      { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/images/site/generated/favicon-32x32.png' },
+      { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+      { rel: 'icon', type: 'image/png', sizes: '192x192', href: '/images/site/generated/icon-192.png' },
+      { rel: 'icon', type: 'image/png', sizes: '512x512', href: '/images/site/generated/icon-512.png' },
+      { rel: 'manifest', href: '/images/site/generated/site.webmanifest' },
       { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }
     ]);
   });
@@ -376,9 +393,13 @@ describe('theme-settings revision semantics', () => {
     expect(getThemeSettingsReadDiagnostics(resolved)).toEqual([]);
     expect(getEditableThemeSettingsState(resolved).ok).toBe(true);
     expect(getSiteFaviconLinks(resolved.settings.site.favicon)).toEqual([
-      { rel: 'icon', type: 'image/svg+xml', sizes: 'any', href: 'favicon.svg' },
-      { rel: 'icon', type: 'image/png', sizes: '32x32', href: 'favicon-32x32.png' },
-      { rel: 'apple-touch-icon', sizes: '180x180', href: 'apple-touch-icon.png' }
+      { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/images/site/generated/favicon-16x16.png' },
+      { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/images/site/generated/favicon-32x32.png' },
+      { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+      { rel: 'icon', type: 'image/png', sizes: '192x192', href: '/images/site/generated/icon-192.png' },
+      { rel: 'icon', type: 'image/png', sizes: '512x512', href: '/images/site/generated/icon-512.png' },
+      { rel: 'manifest', href: '/images/site/generated/site.webmanifest' },
+      { rel: 'apple-touch-icon', sizes: '180x180', href: '/images/site/generated/apple-touch-icon.png' }
     ]);
   });
 

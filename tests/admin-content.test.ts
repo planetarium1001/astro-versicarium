@@ -38,11 +38,11 @@ const COLLECTION_LABELS: Record<AdminContentCollectionKey, string> = {
 };
 
 const defaultManifest: AdminContentSourceManifest = {
-  blog: ['src/content/blog/blog-a.md', 'src/content/blog/blog-b.md'],
-  projects: ['src/content/projects/project-a.md'],
-  bits: ['src/content/bits/bits-a.md'],
-  devlog: ['src/content/devlog/devlog-a.md'],
-  about: ['src/content/about/index.md']
+  blog: ['content/blog/blog-a/index.md', 'content/blog/blog-b/index.md'],
+  projects: ['content/projects/project-a/index.md'],
+  bits: ['content/bits/bits-a/index.md'],
+  devlog: ['content/devlog/devlog-a/index.md'],
+  about: ['content/about/index.md']
 };
 
 let sourceItemsByCollection: Record<AdminContentCollectionKey, AdminContentIndexItem[]>;
@@ -58,7 +58,7 @@ const createItem = (overrides: Partial<AdminContentIndexItem> = {}): AdminConten
     publicEntryId: 'admin-console-guide',
     title: 'Admin Console Guide',
     slug: 'admin-console-guide',
-    relativePath: `src/content/${collection}/admin-console-guide.md`,
+    relativePath: `content/${collection}/admin-console-guide/index.md`,
     publicHref: '/blog/admin-console-guide/',
     isDraft: false,
     archive: null,
@@ -83,7 +83,7 @@ const createDefaultItems = (): Record<AdminContentCollectionKey, AdminContentInd
       publicEntryId: 'project-a',
       title: 'Project A',
       slug: 'project-a',
-      relativePath: 'src/content/projects/project-a.md',
+      relativePath: 'content/projects/project-a/index.md',
       publicHref: '/projects/#project-a',
       archive: null,
       date: new Date('2026-02-01T00:00:00.000Z'),
@@ -100,7 +100,7 @@ const createDefaultItems = (): Record<AdminContentCollectionKey, AdminContentInd
       publicEntryId: 'devlog-a',
       title: 'Devlog A',
       slug: 'devlog-a',
-      relativePath: 'src/content/devlog/devlog-a.md',
+      relativePath: 'content/devlog/devlog-a/index.md',
       publicHref: '/devlog/#devlog-a',
       archive: null,
       date: new Date('2026-02-02T00:00:00.000Z'),
@@ -117,7 +117,7 @@ const createDefaultItems = (): Record<AdminContentCollectionKey, AdminContentInd
       publicEntryId: 'bits-2026-02-03-2230',
       title: 'Bits Note',
       slug: 'bits-2026-02-03-2230',
-      relativePath: 'src/content/bits/bits-2026-02-03-2230.md',
+      relativePath: 'content/bits/bits-2026-02-03-2230/index.md',
       publicHref: '/bits/#bit-bits-2026-02-03-2230',
       archive: null,
       date: new Date('2026-02-03T14:30:00.000Z'),
@@ -134,7 +134,7 @@ const createDefaultItems = (): Record<AdminContentCollectionKey, AdminContentInd
       publicEntryId: 'index',
       title: '关于',
       slug: 'about',
-      relativePath: 'src/content/about/index.md',
+      relativePath: 'content/about/index.md',
       publicHref: '/about/',
       archive: null,
       date: null,
@@ -284,7 +284,7 @@ describe('admin-console/content', () => {
         id: 'bits/note',
         title: 'Bits Note',
         slug: 'bits-note',
-        relativePath: 'src/content/bits/note.md',
+        relativePath: 'content/bits/note/index.md',
         tags: ['bits'],
         searchHaystack: 'bits note bits-note bits'
       })
@@ -315,7 +315,7 @@ describe('admin-console/content', () => {
         id: 'bits/note',
         title: 'Bits Note',
         slug: 'bits-note',
-        relativePath: 'src/content/bits/note.md',
+        relativePath: 'content/bits/note/index.md',
         tags: ['admin'],
         searchHaystack: 'bits note bits-note admin'
       })
@@ -424,7 +424,7 @@ describe('admin-console/content', () => {
       publicEntryId: 'untitled-bit',
       title: 'untitled-bit',
       slug: 'untitled-bit',
-      relativePath: 'src/content/bits/untitled-bit.md',
+      relativePath: 'content/bits/untitled-bit/index.md',
       publicHref: '/bits/#bit-untitled-bit',
       archive: null,
       tags: [],
@@ -454,7 +454,7 @@ describe('admin-console/content', () => {
       publicEntryId: 'untitled-bit',
       title: 'untitled-bit',
       slug: 'untitled-bit',
-      relativePath: 'src/content/bits/untitled-bit.md',
+      relativePath: 'content/bits/untitled-bit/index.md',
       publicHref: '/bits/#bit-untitled-bit',
       archive: null,
       tags: [],
@@ -482,7 +482,7 @@ describe('admin-console/content', () => {
         createItem({
           id: 'source file',
           publicEntryId: 'public-slug',
-          relativePath: 'src/content/blog/source file.md'
+          relativePath: 'content/blog/source file/index.md'
         })
       ]
     });
@@ -524,7 +524,7 @@ describe('admin-console/content', () => {
         createItem({
           id: 'admin-console-guide copy',
           publicEntryId: 'admin-console-guide-copy',
-          relativePath: 'src/content/blog/admin-console-guide copy.md',
+          relativePath: 'content/blog/admin-console-guide copy/index.md',
           publicHref: '/blog/admin-console-guide-copy/'
         })
       ]
@@ -537,7 +537,7 @@ describe('admin-console/content', () => {
 
     expect(item?.id).toBe('admin-console-guide copy');
     expect(item?.publicEntryId).toBe('admin-console-guide-copy');
-    expect(item?.relativePath).toBe('src/content/blog/admin-console-guide copy.md');
+    expect(item?.relativePath).toBe('content/blog/admin-console-guide copy/index.md');
     expect(item?.publicHref).toBe('/blog/admin-console-guide-copy/');
   });
 
@@ -607,7 +607,7 @@ describe('admin-console/content', () => {
       publicEntryId: 'draft',
       title: 'Draft Bits',
       slug: 'draft',
-      relativePath: 'src/content/bits/draft.md',
+      relativePath: 'content/bits/draft/index.md',
       publicHref: null,
       isDraft: true,
       archive: null,
@@ -622,7 +622,7 @@ describe('admin-console/content', () => {
         publicEntryId: id,
         title: `Published ${index + 1}`,
         slug: id,
-        relativePath: `src/content/bits/${id}.md`,
+        relativePath: `content/bits/${id}/index.md`,
         publicHref: `/bits/#bit-${id}`,
         archive: null,
         searchHaystack: `published ${index + 1}`
@@ -653,7 +653,7 @@ describe('admin-console/content', () => {
         collectionLabel: '关于',
         id: 'index',
         publicHref: null,
-        relativePath: 'src/content/about/index.md'
+        relativePath: 'content/about/index.md'
       }))
     ).toContain('/about/');
     expect(
@@ -663,7 +663,7 @@ describe('admin-console/content', () => {
         id: 'example',
         slug: 'bits-example',
         publicHref: null,
-        relativePath: 'src/content/bits/example.md'
+        relativePath: 'content/bits/example/index.md'
       }))
     ).toContain('bit-bits-example');
   });

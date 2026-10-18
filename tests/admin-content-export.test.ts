@@ -7,33 +7,23 @@ describe('admin content source export', () => {
   const getTempRoot = setupTempProjectRoot('astro-whono-content-export-');
 
   beforeEach(async () => {
-    await mkdir(path.join(getTempRoot(), 'src', 'content', 'blog'), { recursive: true });
-    await mkdir(path.join(getTempRoot(), 'src', 'content', 'bits'), { recursive: true });
-    await mkdir(path.join(getTempRoot(), 'src', 'content', 'about'), { recursive: true });
+    const contentRoot = path.join(getTempRoot(), 'content');
+    const writeEntry = async (collection: string, entryId: string, lines: string[], extension = '.md'): Promise<void> => {
+      const entryDirectory = path.join(contentRoot, collection, ...entryId.split('/'));
+      await mkdir(entryDirectory, { recursive: true });
+      await writeFile(path.join(entryDirectory, `index${extension}`), lines.join('\n'), 'utf8');
+    };
 
+    await mkdir(path.join(contentRoot, 'blog'), { recursive: true });
+    await mkdir(path.join(contentRoot, 'bits'), { recursive: true });
+    await mkdir(path.join(contentRoot, 'about'), { recursive: true });
+
+    await writeEntry('blog', 'demo', ['---', 'title: Demo blog', 'date: 2026-03-18', '---', '', '# Demo', '']);
+    await writeEntry('blog', 'admin-console-guide copy', ['---', 'title: Space Name blog', 'date: 2026-03-21', '---', '', '# Space Name', '']);
+    await writeEntry('blog', 'series/intro', ['---', 'title: Intro blog', 'date: 2026-03-19', '---', '', '# Intro', '']);
+    await writeEntry('bits', 'bits-2026-02-03-2230', ['---', 'date: 2025-02-03T22:30:00+08:00', '---', '', '<Aside />', ''], '.mdx');
     await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'blog', 'demo.md'),
-      ['---', 'title: Demo blog', 'date: 2026-03-18', '---', '', '# Demo', ''].join('\n'),
-      'utf8'
-    );
-    await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'blog', 'admin-console-guide copy.md'),
-      ['---', 'title: Space Name blog', 'date: 2026-03-21', '---', '', '# Space Name', ''].join('\n'),
-      'utf8'
-    );
-    await mkdir(path.join(getTempRoot(), 'src', 'content', 'blog', 'series', 'intro'), { recursive: true });
-    await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'blog', 'series', 'intro', 'index.md'),
-      ['---', 'title: Intro blog', 'date: 2026-03-19', '---', '', '# Intro', ''].join('\n'),
-      'utf8'
-    );
-    await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'bits', 'bits-2026-02-03-2230.mdx'),
-      ['---', 'date: 2025-02-03T22:30:00+08:00', '---', '', '<Aside />', ''].join('\n'),
-      'utf8'
-    );
-    await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'about', 'index.md'),
+      path.join(contentRoot, 'about', 'index.md'),
       ['---', '---', '', 'about body', ''].join('\n'),
       'utf8'
     );
@@ -45,7 +35,7 @@ describe('admin content source export', () => {
     const download = await readAdminContentSourceDownload('blog', 'demo');
 
     expect(download.fileName).toBe('demo.md');
-    expect(download.relativePath).toBe('src/content/blog/demo.md');
+    expect(download.relativePath).toBe('content/blog/demo/index.md');
     expect(download.contentType).toBe('text/markdown; charset=utf-8');
     expect(download.sourceText).toContain('title: Demo blog');
   });
@@ -56,7 +46,7 @@ describe('admin content source export', () => {
     const download = await readAdminContentSourceDownload('blog', 'admin-console-guide copy');
 
     expect(download.fileName).toBe('admin-console-guide copy.md');
-    expect(download.relativePath).toBe('src/content/blog/admin-console-guide copy.md');
+    expect(download.relativePath).toBe('content/blog/admin-console-guide copy/index.md');
     expect(download.sourceText).toContain('# Space Name');
   });
 

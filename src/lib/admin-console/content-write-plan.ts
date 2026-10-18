@@ -8,7 +8,7 @@ import {
   patchMarkdownFrontmatter,
   replaceMarkdownBody,
   type FrontmatterPatch
-} from './frontmatter';
+} from '../frontmatter';
 import { findMissingMarkdownBodyLocalImageReferences } from './blog-image-references';
 import { buildAdminAboutWritePlan } from './content-about-contract';
 import {
@@ -296,7 +296,14 @@ type AdminBlogCurrentFrontmatter = {
   tags: unknown;
   draft: unknown;
   slug: unknown;
-  cover: unknown;
+  series: unknown;
+  versionLabel: unknown;
+  versionName: unknown;
+  versionSummary: unknown;
+  versionOrder: unknown;
+  ogImage: unknown;
+  ogImageAlt: unknown;
+  legacyCover: unknown;
   badge: unknown;
 };
 
@@ -313,11 +320,10 @@ type AdminBitsCurrentFrontmatter = {
 const buildBlogCurrentFrontmatter = (state: AdminContentSourceState): AdminBlogCurrentFrontmatter => {
   const frontmatter = state.rawFrontmatter;
   const currentDate = getCurrentTextValue(frontmatter, 'date', '');
-  const dateResult = typeof currentDate === 'string' ? parseBlogDateInput(currentDate) : null;
   const currentPublishedAt = getCurrentOptionalTextValue(frontmatter, 'publishedAt');
   const preservedPublishedAt = typeof currentPublishedAt === 'string'
     ? (parseBlogPublishedAtInput(currentPublishedAt) ? currentPublishedAt : undefined)
-    : dateResult?.publishedAtText;
+    : undefined;
   const currentUpdatedAt = getCurrentOptionalTextValue(frontmatter, 'updatedAt');
   const currentUpdatedAtResult = parseBlogDateInput(currentUpdatedAt);
 
@@ -332,7 +338,14 @@ const buildBlogCurrentFrontmatter = (state: AdminContentSourceState): AdminBlogC
     tags: getCurrentStringArrayValue(frontmatter, 'tags', []),
     draft: getCurrentBooleanValue(frontmatter, 'draft', false),
     slug: getCurrentOptionalTextValue(frontmatter, 'slug'),
-    cover: getCurrentOptionalTextValue(frontmatter, 'cover'),
+    series: getCurrentOptionalTextValue(frontmatter, 'series'),
+    versionLabel: getCurrentOptionalTextValue(frontmatter, 'versionLabel'),
+    versionName: getCurrentOptionalTextValue(frontmatter, 'versionName'),
+    versionSummary: getCurrentOptionalTextValue(frontmatter, 'versionSummary'),
+    versionOrder: getCurrentOptionalTextValue(frontmatter, 'versionOrder'),
+    ogImage: getCurrentOptionalTextValue(frontmatter, 'ogImage') ?? getCurrentOptionalTextValue(frontmatter, 'cover'),
+    ogImageAlt: getCurrentOptionalTextValue(frontmatter, 'ogImageAlt'),
+    legacyCover: getCurrentOptionalTextValue(frontmatter, 'cover'),
     badge: getCurrentOptionalTextValue(frontmatter, 'badge')
   };
 };
@@ -460,7 +473,14 @@ const buildBlogWritePlan = async (
     { field: 'tags', path: ['tags'], currentValue: current.tags, nextValue: next.frontmatter.tags },
     { field: 'draft', path: ['draft'], currentValue: current.draft, nextValue: next.frontmatter.draft },
     { field: 'slug', path: ['slug'], currentValue: current.slug, nextValue: next.frontmatter.slug },
-    { field: 'cover', path: ['cover'], currentValue: current.cover, nextValue: next.frontmatter.cover },
+    { field: 'series', path: ['series'], currentValue: current.series, nextValue: next.frontmatter.series },
+    { field: 'versionLabel', path: ['versionLabel'], currentValue: current.versionLabel, nextValue: next.frontmatter.versionLabel },
+    { field: 'versionName', path: ['versionName'], currentValue: current.versionName, nextValue: next.frontmatter.versionName },
+    { field: 'versionSummary', path: ['versionSummary'], currentValue: current.versionSummary, nextValue: next.frontmatter.versionSummary },
+    { field: 'versionOrder', path: ['versionOrder'], currentValue: current.versionOrder, nextValue: next.frontmatter.versionOrder },
+    { field: 'ogImage', path: ['ogImage'], currentValue: current.ogImage, nextValue: next.frontmatter.ogImage },
+    { field: 'ogImageAlt', path: ['ogImageAlt'], currentValue: current.ogImageAlt, nextValue: next.frontmatter.ogImageAlt },
+    { field: 'cover', path: ['cover'], currentValue: current.legacyCover, nextValue: undefined },
     { field: 'badge', path: ['badge'], currentValue: current.badge, nextValue: next.frontmatter.badge }
   ];
 
@@ -577,6 +597,7 @@ const buildDevlogWritePlan = (
     { field: 'title', path: ['title'], currentValue: getCurrentOptionalText(frontmatter, 'title'), nextValue: values.title.trim() },
     { field: 'date', path: ['date'], currentValue: getCurrentTextValue(frontmatter, 'date', ''), nextValue: date?.toISOString() },
     { field: 'project', path: ['project'], currentValue: getCurrentOptionalText(frontmatter, 'project'), nextValue: values.project.trim() },
+    { field: 'projectSlug', path: ['projectSlug'], currentValue: getCurrentOptionalText(frontmatter, 'projectSlug'), nextValue: values.projectSlug.trim() || undefined },
     { field: 'kind', path: ['kind'], currentValue: getCurrentOptionalText(frontmatter, 'kind'), nextValue: values.kind.trim() || undefined },
     { field: 'description', path: ['description'], currentValue: getCurrentOptionalText(frontmatter, 'description'), nextValue: values.description.trim() || undefined },
     // 没有 links 字段：外链直接写正文 markdown，不写回 frontmatter
@@ -763,6 +784,7 @@ export const parseAdminDevlogEditorInput = (
     'title',
     'date',
     'project',
+    'projectSlug',
     'kind',
     'description'
   ]);

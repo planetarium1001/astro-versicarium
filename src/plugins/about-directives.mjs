@@ -5,7 +5,7 @@ const FRIEND_MARKER = '__aboutFriendCard';
 const FAQ_MARKER = '__aboutFaqItem';
 const LOCAL_IMAGE_EXT_RE = /\.(?:avif|gif|jpe?g|png|svg|webp)$/i;
 const DATA_URL_RE = /^data:/i;
-const ABOUT_SOURCE_PATH_RE = /(?:^|\/)src\/content\/about\/index\.md(?:$|[?#])/i;
+const ABOUT_SOURCE_PATH_RE = /(?:^|\/)content\/about\/index\.md(?:$|[?#])/i;
 
 const toOptionalString = (value) =>
   typeof value === 'string' ? value.trim() : '';

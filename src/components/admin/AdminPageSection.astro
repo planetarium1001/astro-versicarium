@@ -1,7 +1,12 @@
 ---
 import AdminIcon from './AdminIcon.astro';
 import UiIcon from '../UiIcon.astro';
-import { ADMIN_ARTICLE_META_DATE_LABEL_MAX_LENGTH, ADMIN_VIEW_STATS_LABEL_MAX_LENGTH } from '../../lib/admin-console/theme-shared';
+import {
+  ADMIN_ARCHIVE_VERSION_MODE_OPTIONS,
+  ADMIN_ARTICLE_DATE_DISPLAY_OPTIONS,
+  ADMIN_ARTICLE_META_DATE_LABEL_MAX_LENGTH,
+  ADMIN_VIEW_STATS_LABEL_MAX_LENGTH
+} from '../../lib/admin-console/theme-shared';
 
 interface Props {
   pageTitleMaxLength: number;
@@ -72,6 +77,20 @@ const viewStatsInlineFields = [
   </div>
 
   <div class="admin-subgroup">
+    <label class="admin-field">
+      <span class="admin-label">
+        <span class="admin-label__main">归档版本</span>
+        <span class="admin-label__hint">（/archive/ 显示全部历史版本或每个系列只显示最新版）</span>
+      </span>
+      <select class="admin-field__control" id="page-archive-version-mode">
+        {ADMIN_ARCHIVE_VERSION_MODE_OPTIONS.map((option) => (
+          <option value={option.id}>{option.label}</option>
+        ))}
+      </select>
+    </label>
+  </div>
+
+  <div class="admin-subgroup">
     <p class="admin-subtitle">
       <span class="admin-subtitle__main">文章元信息</span>
       <span class="admin-subtitle__hint">（字数/时长仅详情页，移动端隐藏）</span>
@@ -94,7 +113,24 @@ const viewStatsInlineFields = [
             placeholder="发布于："
           />
         </label>
+        <span class="admin-toggle-row__sep" aria-hidden="true">|</span>
+        <label class="admin-inline-field" for="ui-article-meta-date-display">
+          <span class="admin-inline-field__label">日期：</span>
+          <select id="ui-article-meta-date-display" class="admin-inline-field__input">
+            {ADMIN_ARTICLE_DATE_DISPLAY_OPTIONS.map((option) => (
+              <option value={option.id}>{option.label}</option>
+            ))}
+          </select>
+        </label>
       </div>
+      <label class="admin-inline-field" for="ui-card-date-display">
+        <span class="admin-inline-field__label">列表卡片日期：</span>
+        <select id="ui-card-date-display" class="admin-inline-field__input">
+          {ADMIN_ARTICLE_DATE_DISPLAY_OPTIONS.map((option) => (
+            <option value={option.id}>{option.label}</option>
+          ))}
+        </select>
+      </label>
       <label class="admin-toggle-row">
         <input id="ui-article-meta-show-tags" type="checkbox" />
         <span>显示标签</span>

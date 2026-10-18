@@ -15,6 +15,12 @@ if (
   );
 }
 
+/** 内容根目录：作者内容与代码分离；改此常量即可调整内容根名称。 */
+export const CONTENT_ROOT = 'content';
+
+/** 站点默认时区；site.json 的 timezone 与 SITE_TIMEZONE 可覆盖。 */
+export const DEFAULT_SITE_TIMEZONE = 'Asia/Shanghai';
+
 export const site = {
   url: hasSiteUrl ? siteUrl : fallbackSiteUrl,
   title: 'Astro Whono Tweaked',

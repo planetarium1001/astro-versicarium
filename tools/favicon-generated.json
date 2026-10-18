@@ -1,0 +1,11 @@
+{
+  "favicon-16x16.png": true,
+  "favicon-32x32.png": true,
+  "apple-touch-icon.png": true,
+  "icon-192.png": true,
+  "icon-512.png": true,
+  "favicon.ico": true,
+  "rootIco": true,
+  "rootIcoHash": "78f78036a0d32fffe308d0d1271108862667c362ca24db4f9bdeff9326047787",
+  "source": "public/favicon-32x32.png"
+}

@@ -132,7 +132,7 @@ const ADMIN_CONTENT_COLLECTION_CAPABILITIES = {
     consoleSectionHref: '/about/',
     fixedPage: {
       entryId: 'index',
-      sourcePath: 'src/content/about/index.md'
+      sourcePath: 'content/about/index.md'
     },
     visible: true,
     entryWritable: true,

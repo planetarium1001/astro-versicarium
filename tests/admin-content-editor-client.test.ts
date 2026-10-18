@@ -26,7 +26,13 @@ const BlogValues: AdminBlogEditorValues = {
   tagsText: '',
   draft: true,
   slug: '',
-  cover: '',
+  series: '',
+  versionLabel: '',
+  versionName: '',
+  versionSummary: '',
+  versionOrder: '',
+  ogImage: '',
+  ogImageAlt: '',
   badge: ''
 };
 
@@ -43,7 +49,7 @@ describe('content editor client', () => {
           changed: true,
           written: true,
           changedFields: ['entry'],
-          relativePath: 'src/content/blog/new-blog.md',
+          relativePath: 'content/blog/new-blog/index.md',
           editHref: '/admin/content/blog/_edit/new-blog/'
         },
         editHref: '/admin/content/blog/_edit/new-blog/',
@@ -53,7 +59,7 @@ describe('content editor client', () => {
           publicEntryId: 'new-blog',
           defaultPublicSlug: 'new-blog',
           revision: 'rev',
-          relativePath: 'src/content/blog/new-blog.md',
+          relativePath: 'content/blog/new-blog/index.md',
           writable: true,
           readonlyReason: null,
           bodyText: '\n',
@@ -94,7 +100,7 @@ describe('content editor client', () => {
           changed: true,
           written: true,
           changedFields: ['entry'],
-          relativePath: 'src/content/bits/bits-2026-06-09-1430.md',
+          relativePath: 'content/bits/bits-2026-06-09-1430/index.md',
           editHref: '/admin/content/bits/_edit/bits-2026-06-09-1430/'
         },
         editHref: '/admin/content/bits/_edit/bits-2026-06-09-1430/',
@@ -104,7 +110,7 @@ describe('content editor client', () => {
           publicEntryId: 'bits-2026-06-09-1430',
           defaultPublicSlug: 'bits-2026-06-09-1430',
           revision: 'rev',
-          relativePath: 'src/content/bits/bits-2026-06-09-1430.md',
+          relativePath: 'content/bits/bits-2026-06-09-1430/index.md',
           writable: true,
           readonlyReason: null,
           bodyText: '\n',
@@ -151,7 +157,7 @@ describe('content editor client', () => {
           changed: true,
           written: true,
           changedFields: ['body'],
-          relativePath: 'src/content/about/index.md'
+          relativePath: 'content/about/index.md'
         },
         payload: {
           collection: 'about',
@@ -159,7 +165,7 @@ describe('content editor client', () => {
           publicEntryId: 'index',
           defaultPublicSlug: 'index',
           revision: 'next-rev',
-          relativePath: 'src/content/about/index.md',
+          relativePath: 'content/about/index.md',
           writable: true,
           readonlyReason: null,
           bodyText: 'About body',
@@ -202,7 +208,7 @@ describe('content editor client', () => {
           changed: false,
           written: false,
           changedFields: [],
-          relativePath: 'src/content/bits/demo.md'
+          relativePath: 'content/bits/demo/index.md'
         }
       }), {
         status: 200,
@@ -239,7 +245,7 @@ describe('content editor client', () => {
         publicEntryId: 'demo',
         defaultPublicSlug: 'demo',
         revision: 'latest-revision',
-        relativePath: 'src/content/bits/demo.md',
+        relativePath: 'content/bits/demo/index.md',
         writable: true,
         readonlyReason: null,
         bodyText: '\nexternal body\n',

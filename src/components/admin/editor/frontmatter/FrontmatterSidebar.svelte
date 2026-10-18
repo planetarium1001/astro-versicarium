@@ -372,19 +372,63 @@ const bitsAuthorAvatarFallback = $derived(
         <p id={getFieldIssueId('slug')} class="admin-content-editor__error" hidden={!getIssue('slug')}>{getIssue('slug')}</p>
       </div>
 
-      <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('cover'))}>
-        <span class="admin-field__label">封面图</span>
+
+      <div class="admin-field-row">
+        <label class="admin-field admin-content-editor__field">
+          <span class="admin-field__label">series</span>
+          <input class="admin-field__control" name="series" type="text" bind:value={value.series} spellcheck="false" {disabled} />
+        </label>
+        <label class="admin-field admin-content-editor__field">
+          <span class="admin-field__label">versionOrder</span>
+          <input class="admin-field__control" name="versionOrder" type="number" min="0" step="1" bind:value={value.versionOrder} {disabled} />
+        </label>
+      </div>
+
+      <div class="admin-field-row">
+        <label class="admin-field admin-content-editor__field">
+          <span class="admin-field__label">versionLabel</span>
+          <input class="admin-field__control" name="versionLabel" type="text" bind:value={value.versionLabel} spellcheck="false" placeholder="v2.0.0" {disabled} />
+        </label>
+        <label class="admin-field admin-content-editor__field">
+          <span class="admin-field__label">versionName</span>
+          <input class="admin-field__control" name="versionName" type="text" bind:value={value.versionName} spellcheck="false" {disabled} />
+        </label>
+      </div>
+
+      <label class="admin-field admin-content-editor__field">
+        <span class="admin-field__label">versionSummary</span>
+        <textarea class="admin-field__control" name="versionSummary" rows="2" bind:value={value.versionSummary} {disabled}></textarea>
+      </label>
+
+      <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('ogImage'))}>
+        <span class="admin-field__label">分享图 ogImage</span>
         <input
           class="admin-field__control"
-          name="cover"
+          name="ogImage"
           type="text"
-          bind:value={value.cover}
+          bind:value={value.ogImage}
           spellcheck="false"
-          aria-invalid={getIssue('cover') ? 'true' : undefined}
-          aria-describedby={getFieldDescribedBy('cover')}
+          placeholder="./images/og.webp 或 https://..."
+          aria-invalid={getIssue('ogImage') ? 'true' : undefined}
+          aria-describedby={getFieldDescribedBy('ogImage')}
           {disabled}
         />
-        <p id={getFieldIssueId('cover')} class="admin-content-editor__error" hidden={!getIssue('cover')}>{getIssue('cover')}</p>
+        <p id={getFieldIssueId('ogImage')} class="admin-content-editor__error" hidden={!getIssue('ogImage')}>{getIssue('ogImage')}</p>
+      </label>
+
+      <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('ogImageAlt'))}>
+        <span class="admin-field__label">分享图描述 ogImageAlt</span>
+        <input
+          class="admin-field__control"
+          name="ogImageAlt"
+          type="text"
+          bind:value={value.ogImageAlt}
+          spellcheck="false"
+          aria-invalid={getIssue('ogImageAlt') ? 'true' : undefined}
+          aria-describedby={getFieldDescribedBy('ogImageAlt')}
+          {disabled}
+        />
+        <p id={getFieldIssueId('ogImageAlt')} class="admin-content-editor__error" hidden={!getIssue('ogImageAlt')}>{getIssue('ogImageAlt')}</p>
       </label>
 
       <div class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('tags'))}>
@@ -635,6 +679,19 @@ const bitsAuthorAvatarFallback = $derived(
           {disabled}
         />
         <p id={getFieldIssueId('project')} class="admin-content-editor__error" hidden={!getIssue('project')}>{getIssue('project')}</p>
+      </label>
+
+      <label class="admin-field admin-content-editor__field">
+        <span class="admin-field__label">projectSlug（对应 projects 条目 id，可选）</span>
+        <input
+          class="admin-field__control"
+          name="projectSlug"
+          type="text"
+          bind:value={value.projectSlug}
+          spellcheck="false"
+          placeholder="2026-01-08-sample-project"
+          {disabled}
+        />
       </label>
 
       <label class="admin-field admin-content-editor__field">

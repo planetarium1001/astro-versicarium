@@ -3,6 +3,7 @@ import path from 'node:path';
 import {
   resolveAdminContentEntrySourcePath
 } from './content-entry-source';
+import { CONTENT_ROOT } from '../../../site.config.mjs';
 import {
   readAdminContentEntryEditorPayload,
   type AdminContentEditorPayload
@@ -87,7 +88,7 @@ const getTrashDestinationPath = async (
   const pathSegments = sourceRelativePath.split('/').filter(Boolean);
   const timestamp = formatTrashTimestamp(date);
 
-  // 保留原始相对路径，恢复时可以直接把文件移回 src/content 下。
+  // 保留原始相对路径，恢复时可以直接把条目移回 content 根下。
   for (let index = 1; index <= 999; index += 1) {
     const bucket = index === 1 ? timestamp : `${timestamp}-${index}`;
     const bucketPath = path.join(projectRoot, '.trash', 'content', bucket);
@@ -103,15 +104,17 @@ export const moveAdminContentEntryToTrash = async (
   entryId: string
 ): Promise<AdminContentDeleteResult> => {
   const sourcePath = resolveAdminContentEntrySourcePath(collection, entryId);
-  const relativePath = toRelativeProjectPath(sourcePath);
-  const expectedPrefix = `src/content/${collection}/`;
+  const isDirectoryEntry = path.basename(sourcePath) === 'index.md';
+  const movePath = isDirectoryEntry ? path.dirname(sourcePath) : sourcePath;
+  const relativePath = toRelativeProjectPath(movePath);
+  const expectedPrefix = `${CONTENT_ROOT}/${collection}/`;
   if (!relativePath.startsWith(expectedPrefix)) {
-    throw new Error(`拒绝移动 content 根目录外的文件：${relativePath}`);
+    throw new Error(`拒绝移动 content 根目录外的条目：${relativePath}`);
   }
 
   const destinationPath = await getTrashDestinationPath(relativePath);
   await mkdir(path.dirname(destinationPath), { recursive: true });
-  await rename(sourcePath, destinationPath);
+  await rename(movePath, destinationPath);
   invalidateAdminImageCaches();
 
   return {

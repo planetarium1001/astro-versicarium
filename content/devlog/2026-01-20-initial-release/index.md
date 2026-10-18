@@ -2,6 +2,7 @@
 title: 首次发布
 date: 2026-01-20
 project: 示例项目
+projectSlug: 2026-01-08-sample-project
 kind: feature
 description: 记录示例项目的第一条更新。
 ---

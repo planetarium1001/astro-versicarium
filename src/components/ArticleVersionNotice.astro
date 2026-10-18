@@ -1,0 +1,102 @@
+---
+import type { BlogRouteEntry } from '../lib/content';
+import { createWithBase } from '../utils/format';
+
+const { route } = Astro.props as { route: BlogRouteEntry };
+const base = import.meta.env.BASE_URL ?? '/';
+const withBase = createWithBase(base);
+
+const versions = route.versions;
+const currentVersion = versions.find((version) => version.entryId === route.entry.id) ?? versions[0]!;
+const latestVersion = versions.find((version) => version.isLatest) ?? versions[0]!;
+const versionCount = versions.length;
+const shouldShow = Boolean(route.group.series) && versionCount > 1;
+const isLatest = route.isLatest;
+const drawerId = `article-version-drawer-${route.entry.id.replaceAll('/', '-')}`;
+
+const statusLabel = (version: (typeof versions)[number]): string => {
+  const current = version.entryId === route.entry.id;
+  if (version.isLatest && current) return '最新 · 正在查看';
+  if (version.isLatest) return '最新';
+  if (current) return '正在查看';
+  return '历史';
+};
+---
+
+{shouldShow ? (
+  <section
+    class:list={['article-version-notice', isLatest ? 'article-version-notice--latest' : 'article-version-notice--history']}
+    aria-label="版本信息"
+    data-article-version
+  >
+    <p class="article-version-notice__eyebrow">
+      <span class="article-version-notice__mark" aria-hidden="true"></span>
+      {isLatest ? '当前版本' : '历史版本'} · {currentVersion.versionLabel} · {currentVersion.date}
+    </p>
+    <p class="article-version-notice__message">
+      {isLatest
+        ? '这是本系列的最新内容。'
+        : '该版本已归档，部分内容可能过时。'}
+      {!isLatest ? (
+        <a class="article-version-notice__latest" href={withBase(latestVersion.href)}>查看最新版 →</a>
+      ) : null}
+    </p>
+    <button
+      class="article-version-trigger"
+      type="button"
+      data-version-trigger
+      aria-expanded="false"
+      aria-controls={drawerId}
+    >
+      <span>版本历史 ({versionCount})</span>
+      <span class="article-version-trigger__caret" data-version-caret aria-hidden="true">
+        <svg viewBox="0 0 12 12" width="12" height="12" focusable="false">
+          <path d="M2.25 4.5 6 8.25l3.75-3.75" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </span>
+    </button>
+  </section>
+
+  <dialog class="version-drawer" id={drawerId} data-version-drawer aria-label={`版本历史（${versionCount}）`}>
+    <div class="version-drawer__panel">
+      <div class="version-drawer__head">
+        <h2 class="version-drawer__title">版本历史 ({versionCount})</h2>
+        <button class="version-drawer__close" type="button" data-version-close aria-label="关闭版本历史">
+          <span aria-hidden="true">^</span>
+        </button>
+      </div>
+      <ol class="version-list">
+        {versions.map((version) => {
+          const current = version.entryId === route.entry.id;
+          const status = statusLabel(version);
+          return (
+            <li class:list={['version-item', current && 'is-current']}>
+              {current ? (
+                <span class="version-item__main">
+                  <span class="version-item__label">{version.versionLabel}</span>
+                  <span class="version-item__name">{version.versionName}</span>
+                </span>
+              ) : (
+                <a class="version-item__main" href={withBase(version.href)}>
+                  <span class="version-item__label">{version.versionLabel}</span>
+                  <span class="version-item__name">{version.versionName}</span>
+                </a>
+              )}
+              <span class="version-item__meta">
+                <span>{version.date}</span>
+                <span class="version-item__status">{status}</span>
+              </span>
+              {version.versionSummary ? (
+                <span class="version-item__summary">{version.versionSummary}</span>
+              ) : null}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  </dialog>
+
+  <script>
+    import '../scripts/article-version-drawer.ts';
+  </script>
+) : null}

@@ -12,6 +12,55 @@ export function formatISODateUtc(d: Date): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+export type DatePartsInTimeZone = {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+};
+
+export function getDatePartsInTimeZone(date: Date, timeZone: string): DatePartsInTimeZone {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  }).formatToParts(date);
+  const values = new Map(parts.map((part) => [part.type, part.value]));
+  return {
+    year: Number(values.get('year')),
+    month: Number(values.get('month')),
+    day: Number(values.get('day')),
+    hour: Number(values.get('hour')),
+    minute: Number(values.get('minute')),
+    second: Number(values.get('second'))
+  };
+}
+
+export function formatISODateInTimeZone(date: Date, timeZone: string): string {
+  const { year, month, day } = getDatePartsInTimeZone(date, timeZone);
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+export function formatDateTimeInTimeZone(
+  date: Date,
+  timeZone: string,
+  options: { seconds?: boolean } = {}
+): string {
+  const parts = getDatePartsInTimeZone(date, timeZone);
+  const dateText = `${String(parts.year).padStart(4, '0')}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`;
+  const timeText = `${String(parts.hour).padStart(2, '0')}:${String(parts.minute).padStart(2, '0')}`;
+  return options.seconds
+    ? `${dateText} ${timeText}:${String(parts.second).padStart(2, '0')}`
+    : `${dateText} ${timeText}`;
+}
+
 export function createWithBase(base: string) {
   const baseNormalized = base.endsWith('/') ? base : `${base}/`;
   return (path: string) => {

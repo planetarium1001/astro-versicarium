@@ -32,6 +32,9 @@ Thumbs.db
 *.orig
 *.rej
 
+# Generated site icons (rebuilt by npm run dev/build)
+public/images/site/generated/
+
 # Misc
 *.tsbuildinfo
 .trash/

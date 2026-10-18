@@ -159,7 +159,7 @@ export const createAdminImagePicker = (root: ParentNode = document): AdminImageP
   }
 
   const getOriginOptions = (field: AdminImagePickerField): AdminImagePickerOriginOption[] => {
-    const allowedOrigins = getAdminImageFieldAllowedOrigins(field).filter((origin) => origin !== 'src/content');
+    const allowedOrigins = getAdminImageFieldAllowedOrigins(field).filter((origin) => origin !== 'content');
     if (allowedOrigins.length <= 1) return [];
     return [
       { value: 'all', label: '全部' },

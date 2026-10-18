@@ -53,12 +53,16 @@ export type AdminThemeControls = RequiredElements<{
   inputShellTitleNarrow: HTMLInputElement | null;
   inputSiteDescription: HTMLTextAreaElement | null;
   inputSiteDefaultLocale: HTMLInputElement | null;
+  inputSiteTimezone: HTMLInputElement | null;
   inputSiteTitleMaxPercent: HTMLInputElement | null;
   inputSitePageGapPx: HTMLInputElement | null;
   inputPageListRssEnabled: HTMLInputElement | null;
   inputPageListRssBlog: HTMLInputElement | null;
   inputPageListRssBits: HTMLInputElement | null;
   inputPageListRssArchive: HTMLInputElement | null;
+  inputPageArchiveVersionMode: HTMLSelectElement | null;
+  inputUiArticleDateDisplay: HTMLSelectElement | null;
+  inputUiCardDateDisplay: HTMLSelectElement | null;
   pageListRssGroupEl: HTMLElement | null;
   inputSiteFooterStartYear: HTMLInputElement | null;
   inputSiteFooterShowCurrentYear: HTMLInputElement | null;
@@ -172,12 +176,16 @@ export const queryAdminThemeControls = (): AdminThemeControls | null => {
     inputShellTitleNarrow: byId<HTMLInputElement>('shell-title-narrow'),
     inputSiteDescription: byId<HTMLTextAreaElement>('site-description'),
     inputSiteDefaultLocale: byId<HTMLInputElement>('site-default-locale'),
+    inputSiteTimezone: byId<HTMLInputElement>('site-timezone'),
     inputSiteTitleMaxPercent: byId<HTMLInputElement>('site-title-max-percent'),
     inputSitePageGapPx: byId<HTMLInputElement>('site-page-gap-px'),
     inputPageListRssEnabled: byId<HTMLInputElement>('page-list-rss-enabled'),
     inputPageListRssBlog: byId<HTMLInputElement>('page-list-rss-blog'),
     inputPageListRssBits: byId<HTMLInputElement>('page-list-rss-bits'),
     inputPageListRssArchive: byId<HTMLInputElement>('page-list-rss-archive'),
+    inputPageArchiveVersionMode: byId<HTMLSelectElement>('page-archive-version-mode'),
+    inputUiArticleDateDisplay: byId<HTMLSelectElement>('ui-article-meta-date-display'),
+    inputUiCardDateDisplay: byId<HTMLSelectElement>('ui-card-date-display'),
     pageListRssGroupEl: byId<HTMLElement>('page-list-rss-group'),
     inputSiteFooterStartYear: byId<HTMLInputElement>('site-footer-start-year'),
     inputSiteFooterShowCurrentYear: byId<HTMLInputElement>('site-footer-show-current-year'),

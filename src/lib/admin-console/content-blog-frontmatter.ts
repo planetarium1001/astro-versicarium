@@ -36,13 +36,26 @@ export type AdminBlogFrontmatter = {
   tags: string[];
   draft: boolean;
   slug?: string;
-  cover?: string;
+  series?: string;
+  versionLabel?: string;
+  versionName?: string;
+  versionSummary?: string;
+  versionOrder?: number;
+  ogImage?: string;
+  ogImageAlt?: string;
   badge?: string;
 };
 
 export type AdminBlogPublicSlugUsage = ReadonlyMap<string, readonly string[]>;
+export type AdminBlogPublicSlugIndex = {
+  usage: AdminBlogPublicSlugUsage;
+  seriesByEntryId: ReadonlyMap<string, string | null>;
+};
 
 export type AdminBlogOptionalInputMode = 'missing' | 'present';
+
+const getOptionalEditorString = (input: Record<string, unknown>, field: string): string =>
+  typeof input[field] === 'string' ? input[field] : '';
 
 export const parseAdminBlogEditorInput = (
   input: unknown
@@ -77,7 +90,13 @@ export const parseAdminBlogEditorInput = (
     draft: getRequiredBooleanField(input, 'draft', issues),
 
     slug: getRequiredStringField(input, 'slug', issues),
-    cover: getRequiredStringField(input, 'cover', issues),
+    series: getOptionalEditorString(input, 'series'),
+    versionLabel: getOptionalEditorString(input, 'versionLabel'),
+    versionName: getOptionalEditorString(input, 'versionName'),
+    versionSummary: getOptionalEditorString(input, 'versionSummary'),
+    versionOrder: getOptionalEditorString(input, 'versionOrder'),
+    ogImage: getOptionalEditorString(input, 'ogImage'),
+    ogImageAlt: getOptionalEditorString(input, 'ogImageAlt'),
     badge: getRequiredStringField(input, 'badge', issues)
   };
 
@@ -116,15 +135,9 @@ const resolveBlogPublicSlug = (publicEntryId: string, explicitSlug?: string): st
     ? explicitSlug.trim()
     : flattenEntryIdToSlug(publicEntryId);
 
-const findBlogPublicSlugCollisionEntryId = (
-  slugUsage: AdminBlogPublicSlugUsage,
-  publicSlug: string,
-  currentEntryId?: string
-): string | null =>
-  slugUsage.get(publicSlug)?.find((entryId) => entryId !== currentEntryId) ?? null;
-
-export const loadBlogPublicSlugUsage = async (): Promise<AdminBlogPublicSlugUsage> => {
+export const loadBlogPublicSlugIndex = async (): Promise<AdminBlogPublicSlugIndex> => {
   const usage = new Map<string, string[]>();
+  const seriesByEntryId = new Map<string, string | null>();
   const blogFiles = await listAdminCollectionSourceFiles('blog');
   for (const filePath of blogFiles) {
     const candidateEntryId = resolveAdminContentEntryIdFromSourcePath('blog', filePath);
@@ -137,18 +150,23 @@ export const loadBlogPublicSlugUsage = async (): Promise<AdminBlogPublicSlugUsag
     } else {
       usage.set(candidateSlug, [candidateEntryId]);
     }
+    seriesByEntryId.set(candidateEntryId, normalizeOptionalText(frontmatterRecord.series) || null);
   }
-  return usage;
+  return { usage, seriesByEntryId };
 };
+
+export const loadBlogPublicSlugUsage = async (): Promise<AdminBlogPublicSlugUsage> =>
+  (await loadBlogPublicSlugIndex()).usage;
 
 export const validateBlogPublicSlug = async (
   state: {
     entryId?: string;
     publicEntryId: string;
   },
-  frontmatter: Pick<AdminBlogFrontmatter, 'slug'>,
+  frontmatter: Pick<AdminBlogFrontmatter, 'slug' | 'series'>,
   options: {
     slugUsage?: AdminBlogPublicSlugUsage;
+    seriesByEntryId?: ReadonlyMap<string, string | null>;
   } = {}
 ): Promise<AdminContentValidationIssue[]> => {
   const issues: AdminContentValidationIssue[] = [];
@@ -179,8 +197,16 @@ export const validateBlogPublicSlug = async (
   }
 
   try {
-    const slugUsage = options.slugUsage ?? await loadBlogPublicSlugUsage();
-    const collisionEntryId = findBlogPublicSlugCollisionEntryId(slugUsage, publicSlug, state.entryId);
+    const slugIndex = options.slugUsage && options.seriesByEntryId
+      ? { usage: options.slugUsage, seriesByEntryId: options.seriesByEntryId }
+      : await loadBlogPublicSlugIndex();
+    const currentSeries = frontmatter.series?.trim() || null;
+    const collisionEntryId = slugIndex.usage
+      .get(publicSlug)
+      ?.find((entryId) => {
+        if (entryId === state.entryId) return false;
+        return !currentSeries || slugIndex.seriesByEntryId.get(entryId) !== currentSeries;
+      }) ?? null;
     if (collisionEntryId) {
       issues.push(
         createIssue(
@@ -224,7 +250,7 @@ export const buildBlogFrontmatterFromValues = (
   const hasExplicitPublishedAt = explicitPublishedAt.length > 0;
   const publishedAt = hasExplicitPublishedAt
     ? parseBlogPublishedAtInput(explicitPublishedAt)
-    : dateResult?.publishedAt;
+    : null;
 
   if (hasExplicitPublishedAt && !publishedAt) {
     issues.push(createIssue('publishedAt', 'blog.publishedAt 必须是带时区的 ISO 8601 日期时间'));
@@ -243,6 +269,12 @@ export const buildBlogFrontmatterFromValues = (
   const tags = parseTagsText(values.tagsText);
   issues.push(...validateRoutableTags(tags));
 
+  const versionOrderText = values.versionOrder.trim();
+  const versionOrder = versionOrderText ? Number(versionOrderText) : undefined;
+  if (versionOrderText && (versionOrder === undefined || !Number.isInteger(versionOrder) || versionOrder < 0)) {
+    issues.push(createIssue('versionOrder', 'versionOrder 必须是非负整数'));
+  }
+
   if (!dateResult || issues.length > 0) {
     return { issues };
   }
@@ -252,20 +284,18 @@ export const buildBlogFrontmatterFromValues = (
   const preservedUpdatedAt = normalizeOptionalText(options.preservedUpdatedAt);
   const publishedAtText = hasExplicitPublishedAt
     ? explicitPublishedAt
-    : dateResult.publishedAtText || preservedPublishedAt;
+    : preservedPublishedAt;
   const updatedAtText = hasExplicitUpdatedAt
     ? updatedAtResult?.dateText
     : preservedUpdatedAt;
-  const publishedAtDateResult = publishedAtText ? parseBlogDateInput(publishedAtText) : null;
-  const date = publishedAtDateResult?.dateText ?? dateResult.dateText;
-  const effectiveDateResult = publishedAtDateResult ?? dateResult;
+  const date = dateResult.dateText;
   const finalUpdatedAtResult = hasExplicitUpdatedAt
     ? updatedAtResult
     : updatedAtText
       ? parseBlogDateInput(updatedAtText)
       : null;
 
-  if (finalUpdatedAtResult && finalUpdatedAtResult.date.valueOf() < effectiveDateResult.date.valueOf()) {
+  if (finalUpdatedAtResult && finalUpdatedAtResult.date.valueOf() < dateResult.date.valueOf()) {
     issues.push(createIssue('updatedAt', 'blog.updatedAt 不能早于 blog.date'));
     return { issues };
   }
@@ -282,7 +312,13 @@ export const buildBlogFrontmatterFromValues = (
       draft: values.draft === true,
 
       ...(slug ? { slug } : {}),
-      ...(values.cover.trim() ? { cover: values.cover.trim() } : {}),
+      ...(values.series.trim() ? { series: values.series.trim() } : {}),
+      ...(values.versionLabel.trim() ? { versionLabel: values.versionLabel.trim() } : {}),
+      ...(values.versionName.trim() ? { versionName: values.versionName.trim() } : {}),
+      ...(values.versionSummary.trim() ? { versionSummary: values.versionSummary.trim() } : {}),
+      ...(versionOrder !== undefined ? { versionOrder } : {}),
+      ...(values.ogImage.trim() ? { ogImage: values.ogImage.trim() } : {}),
+      ...(values.ogImageAlt.trim() ? { ogImageAlt: values.ogImageAlt.trim() } : {}),
       ...(values.badge.trim() ? { badge: values.badge.trim() } : {})
     }
   };

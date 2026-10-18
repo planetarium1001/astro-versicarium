@@ -1,7 +1,9 @@
 import type { CollectionEntry } from 'astro:content';
 import { getPublished, type GetPublishedOptions } from './content';
-import { createWithBase, formatDateTime } from '../utils/format';
+import { createWithBase, formatDateTimeInTimeZone, formatISODateInTimeZone } from '../utils/format';
+import { getSiteTimezone } from '../utils/site-timezone';
 import { deriveBitsCardText } from './bits-card-view-model';
+import { getContentImageDimensions, resolveContentImageSrc } from './content-image';
 import {
   buildPublishedBitsHrefMap,
   compareBitsForRouting,
@@ -88,7 +90,9 @@ const buildBitsYearOptions = (bits: readonly BitsEntry[]): BitsYearOption[] => {
   const yearCountMap = new Map<number, number>();
 
   for (const bit of bits) {
-    const year = bit.data.date.getFullYear();
+    const dateText = bit.data.dateText ?? formatISODateInTimeZone(bit.data.date, getSiteTimezone());
+    const year = Number.parseInt(dateText.slice(0, 4), 10);
+    if (!Number.isFinite(year)) continue;
     yearCountMap.set(year, (yearCountMap.get(year) ?? 0) + 1);
   }
 
@@ -165,16 +169,21 @@ const buildBitsIndex = async () => {
       text: derivedText.text,
       excerpt: derivedText.excerpt,
       date: bit.data.date ? bit.data.date.toISOString() : null,
-      dateLabel: bit.data.date ? formatDateTime(bit.data.date) : null,
-      year: bit.data.date ? bit.data.date.getFullYear() : null,
+      dateLabel: bit.data.date ? formatDateTimeInTimeZone(bit.data.date, getSiteTimezone()) : null,
+      year: bit.data.date ? Number.parseInt((bit.data.dateText ?? formatISODateInTimeZone(bit.data.date, getSiteTimezone())).slice(0, 4), 10) : null,
       href: withBase(hrefPath),
       thumbnail: firstImage
-        ? {
-            src: withBase(firstImage.src),
-            ...(firstImage.width ? { width: firstImage.width } : {}),
-            ...(firstImage.height ? { height: firstImage.height } : {}),
-            alt: firstImage.alt ?? ''
-          }
+        ? (() => {
+            const src = resolveContentImageSrc(firstImage.src, base);
+            if (!src) return null;
+            const dimensions = getContentImageDimensions(firstImage.src);
+            return {
+              src,
+              ...(dimensions.width ? { width: dimensions.width } : {}),
+              ...(dimensions.height ? { height: dimensions.height } : {}),
+              alt: firstImage.alt ?? ''
+            };
+          })()
         : null
     };
   });

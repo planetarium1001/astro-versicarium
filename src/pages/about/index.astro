@@ -8,7 +8,7 @@ import { replaceAboutContactLinksPlaceholderHtml } from '../../lib/about-contact
 
 const entry = await getEntry('about', 'index');
 if (!entry) {
-  throw new Error('Missing about page entry: src/content/about/index.md');
+  throw new Error('Missing about page entry: content/about/index.md');
 }
 
 const { settings } = getThemeSettings();

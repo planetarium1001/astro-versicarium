@@ -1,16 +1,18 @@
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { access, open, readFile, readdir } from 'node:fs/promises';
+import { open, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 import {
   contentSourceEntryIdToPublicEntryId,
   flattenEntryIdToSlug
 } from '../../utils/slug-rules';
+import { CONTENT_ROOT } from '../../../site.config.mjs';
+import { resolveCollectionEntryFiles } from '../content-entry-files';
 import {
   parseMarkdownFrontmatterDocument,
   splitMarkdownFrontmatter
-} from './frontmatter';
+} from '../frontmatter';
 import {
   getAdminContentCollectionCapability,
   getAdminContentFixedPageCapability,
@@ -50,7 +52,7 @@ export type AdminContentSourceState = {
 };
 
 const getProjectRoot = (): string => process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
-const getContentRoot = (): string => path.join(getProjectRoot(), 'src', 'content');
+const getContentRoot = (): string => path.join(getProjectRoot(), CONTENT_ROOT);
 const getCollectionRoot = (collection: AdminContentCollectionKey): string => path.join(getContentRoot(), collection);
 
 export const toAdminContentAbsoluteProjectPath = (filePath: string): string =>
@@ -184,7 +186,7 @@ export const getAdminContentEntrySourcePathCandidates = (
   const basePath = path.join(getContentRoot(), collection, ...normalizedEntryId.split('/'));
   return CANONICAL_MARKDOWN_SOURCE_EXT_RE.test(normalizedEntryId)
     ? [basePath]
-    : [`${basePath}.md`, path.join(basePath, 'index.md')];
+    : [path.join(basePath, 'index.md')];
 };
 
 export const resolveAdminContentEntrySourcePath = (
@@ -266,35 +268,16 @@ export const listAdminCollectionSourceFiles = async (
   if (!existsSync(root)) return [];
 
   const fixedPage = getAdminContentFixedPageCapability(collection);
-  if (fixedPage) {
-    const candidates = [toAdminContentAbsoluteProjectPath(fixedPage.sourcePath)];
-    const files: string[] = [];
-    for (const filePath of candidates) {
-      try {
-        await access(filePath);
-        files.push(filePath);
-      } catch {
-        // 固定页面源不存在时保持空 manifest。
-      }
-    }
-    return files;
-  }
-
-  const walk = async (dirPath: string): Promise<string[]> => {
-    const entries = await readdir(dirPath, { withFileTypes: true });
-    const nested = await Promise.all(
-      entries.map(async (entry) => {
-        const fullPath = path.join(dirPath, entry.name);
-        if (entry.isDirectory()) {
-          return walk(fullPath);
-        }
-        return entry.isFile() && CANONICAL_MARKDOWN_SOURCE_EXT_RE.test(entry.name) ? [fullPath] : [];
-      })
+  try {
+    const files = await resolveCollectionEntryFiles(
+      getProjectRoot(),
+      root,
+      fixedPage?.sourcePath
     );
-    return nested.flat();
-  };
-
-  return walk(root);
+    return files.map((file) => file.filePath);
+  } catch {
+    return [];
+  }
 };
 
 export const readAdminSourceFrontmatterRecord = async (

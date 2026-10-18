@@ -14,7 +14,7 @@ import {
   AdminContentEntryResolutionError,
   loadAdminContentSourceState
 } from './content-entry-source';
-import { patchMarkdownFrontmatter } from './frontmatter';
+import { patchMarkdownFrontmatter } from '../frontmatter';
 import { withAdminContentWriteLock } from './content-write-lock';
 
 class AdminContentBulkStatusConflictError extends Error {

@@ -116,10 +116,10 @@ describe('admin images api', () => {
     await mkdir(path.join(tempRoot, 'public', 'author'), { recursive: true });
     await mkdir(path.join(tempRoot, 'public', 'bits'), { recursive: true });
     await mkdir(path.join(tempRoot, 'public', 'images', 'archive'), { recursive: true });
-    await mkdir(path.join(tempRoot, 'src', 'content', 'blog', 'guide-assets'), { recursive: true });
-    await mkdir(path.join(tempRoot, 'src', 'content', 'blog', 'no-assets'), { recursive: true });
-    await mkdir(path.join(tempRoot, 'src', 'content', 'bits'), { recursive: true });
-    await mkdir(path.join(tempRoot, 'src', 'content', 'about'), { recursive: true });
+    await mkdir(path.join(tempRoot, 'content', 'blog', 'guide'), { recursive: true });
+    await mkdir(path.join(tempRoot, 'content', 'blog', 'no-assets'), { recursive: true });
+    await mkdir(path.join(tempRoot, 'content', 'bits', 'demo'), { recursive: true });
+    await mkdir(path.join(tempRoot, 'content', 'about'), { recursive: true });
     await mkdir(path.join(tempRoot, 'src', 'assets'), { recursive: true });
 
     await writeFile(path.join(tempRoot, 'public', 'favicon.png'), PNG_1X1);
@@ -128,22 +128,23 @@ describe('admin images api', () => {
     await writeFile(path.join(tempRoot, 'public', 'bits', 'demo.png'), PNG_1X1);
     await writeFile(path.join(tempRoot, 'public', 'images', 'archive', 'cover.png'), PNG_1X1);
     await writeFile(
-      path.join(tempRoot, 'src', 'content', 'blog', 'guide.md'),
+      path.join(tempRoot, 'content', 'blog', 'guide', 'index.md'),
       ['---', 'title: 附件映射测试', '---', '', '![封面](./guide-assets/hero.png)'].join('\n')
     );
     await writeFile(
-      path.join(tempRoot, 'src', 'content', 'blog', 'no-assets', 'index.md'),
+      path.join(tempRoot, 'content', 'blog', 'no-assets', 'index.md'),
       ['---', 'title: 无附件条目', '---', '', '这里只是普通正文，没有图片。'].join('\n')
     );
     await writeFile(
-      path.join(tempRoot, 'src', 'content', 'bits', 'demo.md'),
+      path.join(tempRoot, 'content', 'bits', 'demo', 'index.md'),
       ['---', 'title: Bits 图片上传测试', 'date: 2026-05-26T10:00:00+08:00', '---', '', '短内容。'].join('\n')
     );
     await writeFile(
-      path.join(tempRoot, 'src', 'content', 'about', 'index.md'),
+      path.join(tempRoot, 'content', 'about', 'index.md'),
       ['---', '---', '', 'about body'].join('\n')
     );
-    await writeFile(path.join(tempRoot, 'src', 'content', 'blog', 'guide-assets', 'hero.png'), PNG_1X1);
+    await mkdir(path.join(tempRoot, 'content', 'blog', 'guide', 'guide-assets'), { recursive: true });
+    await writeFile(path.join(tempRoot, 'content', 'blog', 'guide', 'guide-assets', 'hero.png'), PNG_1X1);
     await writeFile(path.join(tempRoot, 'src', 'assets', 'hero.png'), PNG_1X1);
   });
 
@@ -479,19 +480,19 @@ describe('admin images api', () => {
 
     const response = await GET({
       url: new URL(
-        'http://127.0.0.1:4321/api/admin/images/list?dir=src/content&owner=src/content/blog/guide&page=1&limit=10'
+        'http://127.0.0.1:4321/api/admin/images/list?dir=content&owner=content/blog/guide&page=1&limit=10'
       )
     } as never);
 
     expect(response.status).toBe(200);
     const payload = JSON.parse(await response.text());
     expect(payload.ok).toBe(true);
-    expect(payload.result.directory).toBe('src/content');
-    expect(payload.result.owner).toBe('src/content/blog/guide');
+    expect(payload.result.directory).toBe('content');
+    expect(payload.result.owner).toBe('content/blog/guide');
     expect(payload.result.ownerOptions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          value: 'src/content/blog/guide',
+          value: 'content/blog/guide',
           label: '博客 · 附件映射测试',
           count: 1
         })
@@ -500,22 +501,22 @@ describe('admin images api', () => {
     expect(payload.result.ownerOptions).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          value: 'src/content/blog/no-assets/index'
+          value: 'content/blog/no-assets'
         })
       ])
     );
     expect(payload.result.items).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          path: 'src/content/blog/guide-assets/hero.png',
-          value: 'src/content/blog/guide-assets/hero.png',
-          origin: 'src/content',
-          owner: 'src/content/blog/guide',
+          path: 'content/blog/guide/guide-assets/hero.png',
+          value: 'content/blog/guide/guide-assets/hero.png',
+          origin: 'content',
+          owner: 'content/blog/guide',
           ownerLabel: '博客 · 附件映射测试'
         })
       ])
     );
-    expect(payload.result.items.every((item: { owner: string | null }) => item.owner === 'src/content/blog/guide')).toBe(true);
+    expect(payload.result.items.every((item: { owner: string | null }) => item.owner === 'content/blog/guide')).toBe(true);
   });
 
   it('returns metadata for field values and keeps remote urls readonly-compatible', async () => {
@@ -599,7 +600,7 @@ describe('admin images api', () => {
     expect(Array.isArray(unsafePayload.errors)).toBe(true);
   });
 
-  it('uploads blog body images to public/images/<collection>/<slug>/', async () => {
+  it('uploads blog body images to content/<collection>/<entry>/images/', async () => {
     const { POST } = await import('../src/pages/api/admin/images/upload');
     const formData = new FormData();
     formData.set('collection', 'blog');
@@ -616,9 +617,9 @@ describe('admin images api', () => {
     expect(payload.ok).toBe(true);
     expect(payload.result).toEqual(
       expect.objectContaining({
-        // 落点统一为 public/images/{collection}/{slug}/。
-        src: '/images/blog/guide/hero-shot.png',
-        path: 'public/images/blog/guide/hero-shot.png',
+        // 条目图片落在 content/{collection}/{entry}/images/，字段值相对条目目录。
+        src: './images/hero-shot.png',
+        path: 'content/blog/guide/images/hero-shot.png',
         fileName: 'hero-shot.png',
         width: 1,
         height: 1,
@@ -626,13 +627,13 @@ describe('admin images api', () => {
       })
     );
     await expect(
-      readFile(path.join(tempRoot, 'public', 'images', 'blog', 'guide', 'hero-shot.png'))
+      readFile(path.join(tempRoot, 'content', 'blog', 'guide', 'images', 'hero-shot.png'))
     ).resolves.toEqual(PNG_1X1);
   });
 
   it('keeps uploads non-blocking by auto-renaming conflicts', async () => {
     // 先放一个同名文件，验证本地自增去重。
-    const existingDir = path.join(tempRoot, 'public', 'images', 'blog', 'guide');
+    const existingDir = path.join(tempRoot, 'content', 'blog', 'guide', 'images');
     await mkdir(existingDir, { recursive: true });
     await writeFile(path.join(existingDir, 'hero.png'), PNG_1X1);
 
@@ -651,13 +652,13 @@ describe('admin images api', () => {
     const payload = JSON.parse(await response.text());
     expect(payload.ok).toBe(true);
     // 冲突时本地自增去重仍然生效。
-    expect(payload.result.src).toBe('/images/blog/guide/hero-2.png');
+    expect(payload.result.src).toBe('./images/hero-2.png');
     await expect(
-      readFile(path.join(tempRoot, 'public', 'images', 'blog', 'guide', 'hero-2.png'))
+      readFile(path.join(tempRoot, 'content', 'blog', 'guide', 'images', 'hero-2.png'))
     ).resolves.toEqual(PNG_1X1);
   });
 
-  it('uploads bits images to public/images/bits/<slug>/ with field-ready src', async () => {
+  it('uploads bits images to content/bits/<entry>/images/ with field-ready src', async () => {
     const { POST } = await import('../src/pages/api/admin/images/upload');
     const formData = new FormData();
     formData.set('collection', 'bits');
@@ -674,17 +675,16 @@ describe('admin images api', () => {
     expect(payload.ok).toBe(true);
     expect(payload.result).toEqual(
       expect.objectContaining({
-        // bits.images 字段值是不带前导 / 的 public 相对路径（schema 约束），
-        // 落点为 public/images/bits/<slug>/。
-        src: 'images/bits/demo/bit-cover.png',
-        path: 'public/images/bits/demo/bit-cover.png',
+        // bits.images 字段值是相对条目目录的路径。
+        src: './images/bit-cover.png',
+        path: 'content/bits/demo/images/bit-cover.png',
         fileName: 'bit-cover.png',
         width: 1,
         height: 1,
         mimeType: 'image/png'
       })
     );
-    await expect(readFile(path.join(tempRoot, 'public', 'images', 'bits', 'demo', 'bit-cover.png'))).resolves.toEqual(PNG_1X1);
+    await expect(readFile(path.join(tempRoot, 'content', 'bits', 'demo', 'images', 'bit-cover.png'))).resolves.toEqual(PNG_1X1);
   });
 
   it('uploads images to configured S3-compatible cloud storage and returns a public url', async () => {
@@ -868,7 +868,7 @@ describe('admin images api', () => {
     const savePayload = JSON.parse(await saveResponse.text());
     expect(savePayload.ok).toBe(true);
     expect(savePayload.result.changedFields).toContain('images');
-    const savedBits = await readFile(path.join(tempRoot, 'src', 'content', 'bits', 'demo.md'), 'utf8');
+    const savedBits = await readFile(path.join(tempRoot, 'content', 'bits', 'demo', 'index.md'), 'utf8');
     expect(savedBits).toContain(`src: ${uploadPayload.result.src}`);
     expect(savedBits).not.toContain('width:');
     expect(savedBits).not.toContain('height:');
@@ -894,7 +894,7 @@ describe('admin images api', () => {
         expect.stringContaining('当前仅支持博客 / 项目 / 更新正文图片或动态配图上传')
       ])
     );
-    await expect(readFile(path.join(tempRoot, 'src', 'content', 'about', 'about-shot.png'))).rejects.toThrow();
+    await expect(readFile(path.join(tempRoot, 'content', 'about', 'about-shot.png'))).rejects.toThrow();
   });
 
   it('rejects non-image uploads without writing files', async () => {
@@ -926,7 +926,7 @@ describe('admin images api', () => {
     await touch('public/author/avatar.png', '2026-04-01T00:00:00.000Z');
     await touch('public/bits/demo.png', '2026-04-02T00:00:00.000Z');
     await touch('public/images/archive/cover.png', '2026-04-03T00:00:00.000Z');
-    await touch('src/content/blog/guide-assets/hero.png', '2026-03-31T00:00:00.000Z');
+    await touch('content/blog/guide/guide-assets/hero.png', '2026-03-31T00:00:00.000Z');
     await touch('src/assets/hero.png', '2026-04-04T00:00:00.000Z');
     await touch('public/apple-touch-icon.png', '2026-04-05T00:00:00.000Z');
     // Theme Console 站点图标托管目录整体隐藏，最新文件也不进入 recent。
@@ -942,7 +942,7 @@ describe('admin images api', () => {
       'public/bits/demo.png',
       'public/author/avatar.png'
     ]);
-    expect(scopeIndex.recent).toContain('src/content/blog/guide-assets/hero.png');
+    expect(scopeIndex.recent).toContain('content/blog/guide/guide-assets/hero.png');
     expect(scopeIndex.recent).not.toContain('public/favicon.png');
     expect(scopeIndex.recent).not.toContain('public/apple-touch-icon.png');
     expect(scopeIndex.recent).not.toContain('public/images/site/favicon-64x64-a1b2c3d4.png');

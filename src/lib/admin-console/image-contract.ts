@@ -1,4 +1,4 @@
-export type AdminImageOrigin = 'public' | 'src/assets' | 'src/content' | 'cloud';
+export type AdminImageOrigin = 'public' | 'src/assets' | 'content' | 'cloud';
 export type AdminImageBrowseGroup =
   | 'all'
   | 'blog'
@@ -42,7 +42,7 @@ export const ADMIN_IMAGE_SCOPE_LABELS = {
 } as const satisfies Record<AdminImageScopeKey, string>;
 
 export const isAdminImageOrigin = (value: unknown): value is AdminImageOrigin =>
-  value === 'public' || value === 'src/assets' || value === 'src/content' || value === 'cloud';
+  value === 'public' || value === 'src/assets' || value === 'content' || value === 'cloud';
 
 export const isAdminImageBrowseGroup = (value: unknown): value is AdminImageBrowseGroup =>
   typeof value === 'string' && value in ADMIN_IMAGE_BROWSE_GROUP_LABELS;

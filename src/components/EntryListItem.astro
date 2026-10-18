@@ -1,5 +1,6 @@
 ---
-import { formatISODateUtc } from '../utils/format';
+import { getSiteTimezone } from '../utils/site-timezone';
+import { resolveArticleDateItems } from '../lib/display-date';
 import type { ArticleMetaSettings } from '../lib/theme-settings';
 
 const {
@@ -7,26 +8,61 @@ const {
   title,
   excerpt,
   date,
+  dateText,
+  dateHasTime = false,
+  publishedAt = null,
+  publishedAtText,
+  publishedAtHasTime = false,
   updatedAt = null,
+  updatedAtText,
+  updatedAtHasTime = false,
+  dateDisplay,
   visibleTags = [],
+  versionLabel = '',
+  versionCount = 1,
+  isLatest = true,
   articleMetaSettings
 } = Astro.props as {
   href: string;
   title: string;
   excerpt?: string | null;
   date: Date;
+  dateText?: string;
+  dateHasTime?: boolean;
+  publishedAt?: Date | null;
+  publishedAtText?: string;
+  publishedAtHasTime?: boolean;
   updatedAt?: Date | null;
+  updatedAtText?: string;
+  updatedAtHasTime?: boolean;
+  dateDisplay?: 'published' | 'updated' | 'both';
   visibleTags?: string[];
+  versionLabel?: string;
+  versionCount?: number;
+  isLatest?: boolean;
   articleMetaSettings: ArticleMetaSettings;
 };
 
 const shouldShowMetaLine = articleMetaSettings.showDate || (articleMetaSettings.showTags && visibleTags.length > 0);
-const displayDate = updatedAt ?? date;
-const displayDateLabel = updatedAt ? '更新于：' : (articleMetaSettings.dateLabel ?? '');
+const timeZone = getSiteTimezone();
+const dateItems = resolveArticleDateItems({
+  mode: dateDisplay ?? articleMetaSettings.dateDisplay ?? 'updated',
+  timeZone,
+  date: { date, text: dateText, hasTime: dateHasTime },
+  publishedAt: publishedAt ? { date: publishedAt, text: publishedAtText, hasTime: publishedAtHasTime } : undefined,
+  updatedAt: updatedAt ? { date: updatedAt, text: updatedAtText, hasTime: updatedAtHasTime } : undefined,
+  publishedLabel: articleMetaSettings.dateLabel ?? '发布于：'
+});
 ---
 
 <a class="list-item list-item--link" href={href}>
   <div class="list-item__row">
+    {versionCount > 1 ? (
+      <>
+        <span class="badge badge--version">{versionLabel}</span>
+        {!isLatest ? <span class="badge badge--history">历史</span> : null}
+      </>
+    ) : null}
     <h3 class="list-item__title">{title}</h3>
   </div>
   {excerpt ? <p class="list-item__excerpt">{excerpt}</p> : null}
@@ -34,7 +70,19 @@ const displayDateLabel = updatedAt ? '更新于：' : (articleMetaSettings.dateL
     <div class="meta-line meta-line--items">
       {articleMetaSettings.showDate ? (
         <span class="meta-line__item">
-          <time datetime={displayDate.toISOString()}>{`${displayDateLabel}${formatISODateUtc(displayDate)}`}</time>
+          {dateItems.map((item, index) => (
+            <>
+              {index > 0 ? <span aria-hidden="true"> · </span> : null}
+              <time
+                datetime={item.iso}
+                data-site-timezone={item.timeZone}
+                data-date-kind={item.hasTime ? 'datetime' : 'date'}
+                data-date-label={item.label}
+                data-site-offset={item.timeZoneLabel}
+                title={item.hasTime ? `${item.timeZoneLabel} · ${item.timeZone}` : undefined}
+              >{`${item.label}${item.text}`}</time>
+            </>
+          ))}
         </span>
       ) : null}
       {articleMetaSettings.showTags && visibleTags.length ? (

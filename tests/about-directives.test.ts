@@ -11,7 +11,7 @@ const renderAboutMarkdown = async (
   source: string,
   {
     base = '/',
-    path = new URL('../src/content/about/index.md', import.meta.url),
+    path = new URL('../content/about/index.md', import.meta.url),
     enabled
   }: { base?: string; path?: URL | string; enabled?: boolean } = {}
 ): Promise<string> => {
@@ -124,7 +124,7 @@ describe('about directives markdown transform', () => {
         '',
         '::contact-links'
       ].join('\n'),
-      { path: new URL('../src/content/blog/demo.md', import.meta.url) }
+      { path: new URL('../content/blog/demo/index.md', import.meta.url) }
     );
 
     expect(html).not.toContain('qa-list');

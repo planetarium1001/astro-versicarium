@@ -45,7 +45,7 @@ const getMarkdownReference = (
     const webPath = `/${item.path.slice('public/'.length)}`;
     return { value: `![](${encodeMarkdownImageDestination(webPath)})` };
   }
-  if (item.origin === 'src/content') {
+  if (item.origin === 'content') {
     return { disabledReason: '该图需在所属文章中使用相对路径引用' };
   }
   return { disabledReason: '站点素材需在代码中导入，暂不支持正文引用' };

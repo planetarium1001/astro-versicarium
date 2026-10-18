@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createJsonRequest, setupAdminContentWriteFixture } from './admin-content-write-fixture';
 
@@ -41,7 +41,7 @@ describe('admin content entry payload contract', () => {
 
     expect(current.entryId).toBe('admin-console-guide copy');
     expect(current.defaultPublicSlug).toBe('admin-console-guide-copy');
-    expect(current.relativePath).toBe('src/content/blog/admin-console-guide copy.md');
+    expect(current.relativePath).toBe('content/blog/admin-console-guide copy/index.md');
 
     const response = await POST({
       request: createJsonRequest('http://127.0.0.1:4321/api/admin/content/entry?dryRun=1', {
@@ -63,8 +63,10 @@ describe('admin content entry payload contract', () => {
   });
 
   it('loads legacy blog datetime dates for compatibility', async () => {
+    const legacyDirectory = path.join(getTempRoot(), 'content', 'blog', 'legacy-datetime');
+    await mkdir(legacyDirectory, { recursive: true });
     await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'blog', 'legacy-datetime.md'),
+      path.join(legacyDirectory, 'index.md'),
       [
         '---',
         'title: Legacy Datetime',
@@ -83,13 +85,15 @@ describe('admin content entry payload contract', () => {
 
     if (payload.collection === 'blog') {
       expect(payload.values.date).toBe('2024-11-23');
-      expect(payload.values.publishedAt).toBe('2024-11-23T18:00:00+08:00');
+      expect(payload.values.publishedAt).toBe('');
     }
   });
 
   it('loads optional blog updatedAt as editable date text', async () => {
+    const updatedDirectory = path.join(getTempRoot(), 'content', 'blog', 'updated-date');
+    await mkdir(updatedDirectory, { recursive: true });
     await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'blog', 'updated-date.md'),
+      path.join(updatedDirectory, 'index.md'),
       [
         '---',
         'title: Updated Date',
@@ -113,8 +117,10 @@ describe('admin content entry payload contract', () => {
   });
 
   it('does not load .mdx entries into the writable editor path', async () => {
+    const legacyMdxDirectory = path.join(getTempRoot(), 'content', 'bits', 'legacy-mdx');
+    await mkdir(legacyMdxDirectory, { recursive: true });
     await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'bits', 'legacy-mdx.mdx'),
+      path.join(legacyMdxDirectory, 'index.mdx'),
       ['---', 'date: 2025-02-03T22:30:00+08:00', '---', '', '<Aside />', ''].join('\n'),
       'utf8'
     );

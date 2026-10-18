@@ -190,6 +190,7 @@ const createPreviewProcessor = (collection: AdminContentCollectionKey, sourceFil
     rehypeRawHtml,
     rehypeRestoreMathBoundary,
     rehypeAbout,
+    rehypeContentAssetLinks,
     rehypeSanitizeSchema,
     rehypeRenderKatex
   ] = createProjectMarkdownRehypePlugins({
@@ -213,6 +214,7 @@ const createPreviewProcessor = (collection: AdminContentCollectionKey, sourceFil
   useProcessorPlugin(processor, rehypeRestoreMathBoundary);
   processor.use(createPreviewImageSrcPlugin(sourceFilePath));
   useProcessorPlugin(processor, rehypeAbout);
+  useProcessorPlugin(processor, rehypeContentAssetLinks);
   useProcessorPlugin(processor, rehypeSanitizeSchema);
   useProcessorPlugin(processor, rehypeRenderKatex);
 

@@ -2,11 +2,11 @@ import { readFile, stat } from 'node:fs/promises';
 import { deriveMarkdownText, truncateText } from '../../utils/excerpt';
 import {
   buildSearchHaystack,
-  formatDateTime,
-  formatISODate,
-  formatISODateUtc
+  formatDateTimeInTimeZone,
+  formatISODateInTimeZone
 } from '../../utils/format';
-import { parseBlogDateInput } from '../../utils/date-only';
+import { parseContentDateInput, type ParsedContentDate } from '../../utils/date-only';
+import { getSiteTimezone } from '../../utils/site-timezone';
 import {
   contentSourceEntryIdToPublicEntryId,
   flattenEntryIdToSlug
@@ -30,7 +30,7 @@ import {
 import {
   parseMarkdownFrontmatterDocument,
   splitMarkdownFrontmatter
-} from './frontmatter';
+} from '../frontmatter';
 import { getStringArray } from './content-editor-payload';
 import { isRecord, normalizeOptionalText } from './content-entry-utils';
 import { compareByNullableDateDesc } from './content-shared';
@@ -109,44 +109,43 @@ const normalizeFieldValue = (value: unknown, fallback = UNTITLED_VALUE): string 
   return normalized || fallback;
 };
 
-const parseDateTimeInput = (value: unknown): Date | null => {
-  if (value instanceof Date) {
-    return Number.isFinite(value.valueOf()) ? new Date(value.valueOf()) : null;
-  }
-
-  if (typeof value !== 'string' && typeof value !== 'number') return null;
-  const date = new Date(value);
-  return Number.isFinite(date.valueOf()) ? date : null;
-};
+const parseDateTimeInput = (value: unknown): ParsedContentDate | null =>
+  parseContentDateInput(value);
 
 const getUnsetSourceDateMeta = (): SourceDateMeta => ({
   label: '未设置日期',
   year: null
 });
 
-const getBlogSourceDateMeta = (date: Date | null): SourceDateMeta =>
-  date
-    ? {
-      label: formatISODateUtc(date),
-      year: date.getUTCFullYear()
-    }
-    : getUnsetSourceDateMeta();
+const getBlogSourceDateMeta = (date: ParsedContentDate | null): SourceDateMeta => {
+  if (!date) return getUnsetSourceDateMeta();
+  const year = Number.parseInt(date.dateText.slice(0, 4), 10);
+  return {
+    label: date.dateText,
+    year: Number.isFinite(year) ? year : null
+  };
+};
 
-const getBitsSourceDateMeta = (date: Date | null): SourceDateMeta =>
-  date
-    ? {
-      label: formatDateTime(date),
-      year: date.getFullYear()
-    }
-    : getUnsetSourceDateMeta();
+const getBitsSourceDateMeta = (date: ParsedContentDate | null): SourceDateMeta => {
+  if (!date) return getUnsetSourceDateMeta();
+  const year = Number.parseInt(date.dateText.slice(0, 4), 10);
+  return {
+    label: date.hasTime
+      ? formatDateTimeInTimeZone(date.date, getSiteTimezone())
+      : date.dateText,
+    year: Number.isFinite(year) ? year : null
+  };
+};
 
-const getFileSourceDateMeta = (date: Date | null): SourceDateMeta =>
-  date
-    ? {
-      label: formatISODate(date),
-      year: date.getFullYear()
-    }
-    : getUnsetSourceDateMeta();
+const getFileSourceDateMeta = (date: Date | null): SourceDateMeta => {
+  if (!date) return getUnsetSourceDateMeta();
+  const dateText = formatISODateInTimeZone(date, getSiteTimezone());
+  const year = Number.parseInt(dateText.slice(0, 4), 10);
+  return {
+    label: dateText,
+    year: Number.isFinite(year) ? year : null
+  };
+};
 
 const resolvePublicEntryId = (entryId: string): string =>
   contentSourceEntryIdToPublicEntryId(entryId) || entryId;
@@ -221,9 +220,9 @@ const createBlogSourceIndexItem: FrontmatterAdapter = (record) => {
   const frontmatter = record.frontmatter;
   const hasSourceError = record.sourceError !== null;
   const title = normalizeFieldValue(frontmatter.title, record.entryId);
-  const dateResult = parseBlogDateInput(frontmatter.date);
+  const dateResult = parseDateTimeInput(frontmatter.date);
   const date = dateResult?.date ?? null;
-  const { label, year } = getBlogSourceDateMeta(date);
+  const { label, year } = getBlogSourceDateMeta(dateResult);
   const tags = getStringArray(frontmatter.tags);
   const explicitSlug = normalizeOptionalText(frontmatter.slug);
   const slug = explicitSlug || flattenEntryIdToSlug(record.publicEntryId);
@@ -266,8 +265,9 @@ const createBitsSourceIndexItem: FrontmatterAdapter = (record, context) => {
     ? truncateText(bodyDerived.excerpt || bodyDerived.plainText, 48) || record.entryId
     : record.entryId;
   const title = normalizeFieldValue(frontmatter.title, fallbackTitle);
-  const date = parseDateTimeInput(frontmatter.date);
-  const { label, year } = getBitsSourceDateMeta(date);
+  const dateResult = parseDateTimeInput(frontmatter.date);
+  const date = dateResult?.date ?? null;
+  const { label, year } = getBitsSourceDateMeta(dateResult);
   const tags = getStringArray(frontmatter.tags);
   const slug = normalizeOptionalText(frontmatter.slug) || record.publicEntryId;
   const author = isRecord(frontmatter.author) ? frontmatter.author : null;
@@ -337,7 +337,8 @@ const createProjectsSourceIndexItem: FrontmatterAdapter = (record) => {
   const frontmatter = record.frontmatter;
   const hasSourceError = record.sourceError !== null;
   const title = normalizeFieldValue(frontmatter.title, record.entryId);
-  const date = parseDateTimeInput(frontmatter.date);
+  const dateResult = parseDateTimeInput(frontmatter.date);
+  const date = dateResult?.date ?? null;
   const { label, year } = getFileSourceDateMeta(date);
   const type = normalizeOptionalText(frontmatter.type);
   const description = normalizeOptionalText(frontmatter.description);
@@ -381,7 +382,8 @@ const createDevlogSourceIndexItem: FrontmatterAdapter = (record) => {
   const frontmatter = record.frontmatter;
   const hasSourceError = record.sourceError !== null;
   const title = normalizeFieldValue(frontmatter.title, record.entryId);
-  const date = parseDateTimeInput(frontmatter.date);
+  const dateResult = parseDateTimeInput(frontmatter.date);
+  const date = dateResult?.date ?? null;
   const { label, year } = getFileSourceDateMeta(date);
   const project = normalizeOptionalText(frontmatter.project);
   const kind = normalizeOptionalText(frontmatter.kind);
@@ -502,7 +504,7 @@ const buildBitsHrefMap = (records: readonly SourceRecord[]): Map<string, string>
   const routingItems: BitPublicOrderItem[] = [];
 
   for (const record of records) {
-    const date = parseDateTimeInput(record.frontmatter.date);
+    const date = parseDateTimeInput(record.frontmatter.date)?.date;
     if (!date) continue;
 
     routingItems.push({

@@ -5,6 +5,8 @@ import type {
   SidebarDividerVariant,
   SidebarNavId,
   SiteFilingsScope,
+  ArticleDateDisplayMode,
+  ArchiveVersionMode,
   SiteSocialIconKey,
   SiteSocialPresetId,
   SiteSocialPresetOrder,
@@ -17,6 +19,7 @@ import {
   getThemeFontOptionsForRole,
   isThemeFontIdForRole
 } from '../fonts/registry';
+import { isValidIanaTimeZone } from '../../utils/timezone';
 import {
   getBitsAvatarLocalFilePath as getAdminBitsAvatarLocalFilePath,
   getHeroImageLocalFilePath as getAdminHeroImageLocalFilePath,
@@ -59,6 +62,31 @@ const ADMIN_HERO_PRESETS = ['default', 'none'] as const satisfies readonly HeroP
 export const ADMIN_HERO_PRESET_SET: ReadonlySet<HeroPresetId> = new Set(ADMIN_HERO_PRESETS);
 export const ADMIN_HERO_IMAGE_ALT_DEFAULT = 'Whono theme preview';
 export const ADMIN_HERO_IMAGE_ALT_MAX_LENGTH = 120;
+
+export const ADMIN_SITE_TIMEZONE_DEFAULT = 'Asia/Shanghai';
+
+export const ADMIN_ARTICLE_DATE_DISPLAY_OPTIONS = [
+  { id: 'published', label: '发布于' },
+  { id: 'updated', label: '更新于' },
+  { id: 'both', label: '同时显示' }
+] as const satisfies readonly { id: ArticleDateDisplayMode; label: string }[];
+export const ADMIN_ARTICLE_DATE_DISPLAY_DEFAULT: ArticleDateDisplayMode = 'updated';
+const ADMIN_ARTICLE_DATE_DISPLAY_SET = new Set<ArticleDateDisplayMode>(
+  ADMIN_ARTICLE_DATE_DISPLAY_OPTIONS.map((option) => option.id)
+);
+export const isAdminArticleDateDisplayMode = (value: unknown): value is ArticleDateDisplayMode =>
+  typeof value === 'string' && ADMIN_ARTICLE_DATE_DISPLAY_SET.has(value as ArticleDateDisplayMode);
+
+export const ADMIN_ARCHIVE_VERSION_MODE_OPTIONS = [
+  { id: 'all', label: '显示全部版本' },
+  { id: 'latest', label: '仅显示最新版' }
+] as const satisfies readonly { id: ArchiveVersionMode; label: string }[];
+export const ADMIN_ARCHIVE_VERSION_MODE_DEFAULT: ArchiveVersionMode = 'all';
+const ADMIN_ARCHIVE_VERSION_MODE_SET = new Set<ArchiveVersionMode>(
+  ADMIN_ARCHIVE_VERSION_MODE_OPTIONS.map((option) => option.id)
+);
+export const isAdminArchiveVersionMode = (value: unknown): value is ArchiveVersionMode =>
+  typeof value === 'string' && ADMIN_ARCHIVE_VERSION_MODE_SET.has(value as ArchiveVersionMode);
 
 export const ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT = '发布于：';
 export const ADMIN_ARTICLE_META_DATE_LABEL_MAX_LENGTH = 20;
@@ -472,6 +500,7 @@ export const canonicalizeAdminThemeSettings = (
   const socialLinks = isRecord(site.socialLinks) ? site.socialLinks : {};
   const customItems = Array.isArray(socialLinks.custom) ? socialLinks.custom : [];
   const bitsPage = isRecord(page.bits) ? page.bits : {};
+  const pageArchive = isRecord(page.archive) ? page.archive : {};
   const rawListRss = isRecord(page.listRss) ? page.listRss : {};
   const bitsDefaultAuthor = isRecord(bitsPage.defaultAuthor) ? bitsPage.defaultAuthor : {};
   const rawPresetOrder = isRecord(socialLinks.presetOrder) ? socialLinks.presetOrder : {};
@@ -581,6 +610,7 @@ export const canonicalizeAdminThemeSettings = (
       title: normalizeTrimmed(site.title),
       description: normalizeMultiline(String(site.description ?? '')).trim(),
       defaultLocale: normalizeTrimmed(site.defaultLocale),
+      timezone: normalizeTrimmed(site.timezone),
       footer: {
         startYear: parseInteger(siteFooter.startYear as string | number | null | undefined) ?? footerStartYearMax,
         showCurrentYear: Boolean(siteFooter.showCurrentYear),
@@ -665,7 +695,10 @@ export const canonicalizeAdminThemeSettings = (
       },
       archive: {
         title: normalizeOptionalSingleLine(String(isRecord(page.archive) ? page.archive.title ?? '' : '')),
-        subtitle: normalizeOptionalSingleLine(String(isRecord(page.archive) ? page.archive.subtitle ?? '' : ''))
+        subtitle: normalizeOptionalSingleLine(String(isRecord(page.archive) ? page.archive.subtitle ?? '' : '')),
+        versionMode: isAdminArchiveVersionMode(pageArchive.versionMode)
+          ? pageArchive.versionMode
+          : ADMIN_ARCHIVE_VERSION_MODE_DEFAULT
       },
       bits: {
         title: normalizeOptionalSingleLine(String(bitsPage.title ?? '')),
@@ -726,12 +759,18 @@ export const canonicalizeAdminThemeSettings = (
       articleMeta: {
         showDate: typeof rawUiArticleMeta.showDate === 'boolean' ? rawUiArticleMeta.showDate : true,
         dateLabel: normalizeSingleLine(rawUiArticleMeta.dateLabel, ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT),
+        dateDisplay: isAdminArticleDateDisplayMode(rawUiArticleMeta.dateDisplay)
+          ? rawUiArticleMeta.dateDisplay
+          : ADMIN_ARTICLE_DATE_DISPLAY_DEFAULT,
         showTags: typeof rawUiArticleMeta.showTags === 'boolean' ? rawUiArticleMeta.showTags : true,
         showWordCount: typeof rawUiArticleMeta.showWordCount === 'boolean' ? rawUiArticleMeta.showWordCount : true,
         showReadingTime: typeof rawUiArticleMeta.showReadingTime === 'boolean'
           ? rawUiArticleMeta.showReadingTime
           : true
       },
+      cardDateDisplay: isAdminArticleDateDisplayMode(ui.cardDateDisplay)
+        ? ui.cardDateDisplay
+        : ADMIN_ARTICLE_DATE_DISPLAY_DEFAULT,
       layout: {
         sidebarDivider: isAdminSidebarDividerVariant(rawSidebarDivider)
           ? rawSidebarDivider
@@ -755,6 +794,7 @@ export const createAdminWritableThemeSettingsGroups = (
     title: settings.site.title,
     description: settings.site.description,
     defaultLocale: settings.site.defaultLocale,
+    timezone: settings.site.timezone,
     titleMaxPercent: settings.site.titleMaxPercent,
     pageGapPx: settings.site.pageGapPx,
     footer: {
@@ -813,6 +853,7 @@ export const createAdminWritableThemeSettingsGroups = (
     viewStats: { ...settings.ui.viewStats },
     sidebarActions: { ...settings.ui.sidebarActions },
     articleMeta: { ...settings.ui.articleMeta },
+    cardDateDisplay: settings.ui.cardDateDisplay,
     layout: { ...settings.ui.layout },
     typography: { ...settings.ui.typography }
   }
@@ -846,10 +887,20 @@ export const validateAdminThemeSettings = (
 
   if (!settings.site.title) pushIssue('site.title', '站点标题不能为空');
   if (!settings.site.description) pushIssue('site.description', '站点描述不能为空');
+  if (!isAdminArchiveVersionMode(settings.page.archive.versionMode)) {
+    pushIssue('page.archive.versionMode', '归档版本模式无效');
+  }
+
   if (!settings.site.defaultLocale) {
     pushIssue('site.defaultLocale', '默认语言不能为空');
   } else if (!ADMIN_LOCALE_RE.test(settings.site.defaultLocale)) {
     pushIssue('site.defaultLocale', '默认语言格式无效（示例：zh-CN）');
+  }
+
+  if (!settings.site.timezone) {
+    pushIssue('site.timezone', '站点时区不能为空');
+  } else if (!isValidIanaTimeZone(settings.site.timezone)) {
+    pushIssue('site.timezone', '站点时区必须是有效的 IANA 时区（示例：Asia/Shanghai）');
   }
 
   if (!Number.isInteger(settings.site.footer?.startYear)) {
@@ -863,6 +914,13 @@ export const validateAdminThemeSettings = (
 
   if (typeof settings.site.footer?.showCurrentYear !== 'boolean') {
     pushIssue('site.footer.showCurrentYear', '是否显示当前年必须是布尔值');
+  }
+
+  if (!isAdminArticleDateDisplayMode(settings.ui.articleMeta.dateDisplay)) {
+    pushIssue('ui.articleMeta.dateDisplay', '文章日期显示模式无效');
+  }
+  if (!isAdminArticleDateDisplayMode(settings.ui.cardDateDisplay)) {
+    pushIssue('ui.cardDateDisplay', '卡片日期显示模式无效');
   }
 
   if (!Number.isInteger(settings.site.titleMaxPercent)) {
@@ -1490,6 +1548,10 @@ const fillAdminThemeSettingsSiteCompatibilityDefaults = (
 ): LooseRecord => {
   let next = rawSite;
 
+  if (next.timezone === undefined) {
+    next = { ...next, timezone: canonicalSite.timezone };
+  }
+
   const canonicalAdminOverview = canonicalSite.adminOverview;
   if (isRecord(canonicalAdminOverview)) {
     const rawAdminOverview = next.adminOverview;
@@ -1554,7 +1616,8 @@ const UI_COMPATIBILITY_GROUP_FIELDS: ReadonlyArray<readonly [string, readonly st
     'viewStats',
     ['showPv', 'pvLabel', 'showUv', 'uvLabel', 'onArticleMeta', 'onIndexPages']
   ],
-  ['typography', ['readable', 'copy', 'mono', 'brand']]
+  ['typography', ['readable', 'copy', 'mono', 'brand']],
+  ['articleMeta', ['showDate', 'dateLabel', 'dateDisplay', 'showTags', 'showWordCount', 'showReadingTime']]
 ];
 
 const fillAdminThemeSettingsShellCompatibilityDefaults = (
@@ -1568,6 +1631,23 @@ const fillAdminThemeSettingsShellCompatibilityDefaults = (
     next = { ...next, titleNarrow: canonicalShell.titleNarrow };
   }
 
+  return next;
+};
+
+const fillAdminThemeSettingsPageCompatibilityDefaults = (
+  rawPage: LooseRecord,
+  canonicalPage: LooseRecord
+): LooseRecord => {
+  let next = rawPage;
+  const canonicalArchive = canonicalPage.archive;
+  if (isRecord(canonicalArchive)) {
+    const rawArchive = next.archive;
+    if (rawArchive === undefined) {
+      next = { ...next, archive: canonicalArchive };
+    } else if (isRecord(rawArchive) && rawArchive.versionMode === undefined) {
+      next = { ...next, archive: { ...canonicalArchive, ...rawArchive } };
+    }
+  }
   return next;
 };
 
@@ -1601,6 +1681,7 @@ export const fillAdminThemeSettingsGroupCompatibilityDefaults = (
   if (!isRecord(rawGroup) || !isRecord(canonicalGroup)) return rawGroup;
   if (group === 'site') return fillAdminThemeSettingsSiteCompatibilityDefaults(rawGroup, canonicalGroup);
   if (group === 'shell') return fillAdminThemeSettingsShellCompatibilityDefaults(rawGroup, canonicalGroup);
+  if (group === 'page') return fillAdminThemeSettingsPageCompatibilityDefaults(rawGroup, canonicalGroup);
   if (group === 'ui') return fillAdminThemeSettingsUiCompatibilityDefaults(rawGroup, canonicalGroup);
   return rawGroup;
 };
@@ -1611,7 +1692,7 @@ export const fillAdminThemeSettingsCompatibilityDefaults = (
 ): unknown => {
   if (!isRecord(settings)) return settings;
 
-  return {
+  const filled = {
     ...settings,
     ...(isRecord(settings.site)
       ? {
@@ -1629,6 +1710,14 @@ export const fillAdminThemeSettingsCompatibilityDefaults = (
           )
         }
       : {}),
+    ...(isRecord(settings.page)
+      ? {
+          page: fillAdminThemeSettingsPageCompatibilityDefaults(
+            settings.page,
+            canonicalSettings.page as unknown as LooseRecord
+          )
+        }
+      : {}),
     ...(isRecord(settings.ui)
       ? {
           ui: fillAdminThemeSettingsUiCompatibilityDefaults(
@@ -1638,6 +1727,9 @@ export const fillAdminThemeSettingsCompatibilityDefaults = (
         }
       : {})
   };
+  return isRecord(filled.ui) && filled.ui.cardDateDisplay === undefined
+    ? { ...filled, ui: { ...filled.ui, cardDateDisplay: canonicalSettings.ui.cardDateDisplay } }
+    : filled;
 };
 
 const collectChangePreviews = (

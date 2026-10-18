@@ -1,5 +1,7 @@
 ---
-import { createWithBase, formatISODateUtc } from '../utils/format';
+import { createWithBase } from '../utils/format';
+import { getSiteTimezone } from '../utils/site-timezone';
+import { resolveArticleDateItems } from '../lib/display-date';
 import { isRoutableTagKey, toTagKey } from '../lib/tags';
 import type { ArticleMetaSettings } from '../lib/theme-settings';
 
@@ -8,26 +10,55 @@ const {
   title,
   excerpt,
   date,
+  dateText,
+  dateHasTime = false,
+  publishedAt = null,
+  publishedAtText,
+  publishedAtHasTime = false,
   updatedAt = null,
+  updatedAtText,
+  updatedAtHasTime = false,
+  dateDisplay,
   visibleTags = [],
   badge = '随笔',
   slug = '',
+  versionLabel = '',
+  versionCount = 1,
+  isLatest = true,
   articleMetaSettings
 } = Astro.props as {
   href: string;
   title: string;
   excerpt?: string | null;
   date: Date;
+  dateText?: string;
+  dateHasTime?: boolean;
+  publishedAt?: Date | null;
+  publishedAtText?: string;
+  publishedAtHasTime?: boolean;
   updatedAt?: Date | null;
+  updatedAtText?: string;
+  updatedAtHasTime?: boolean;
+  dateDisplay?: 'published' | 'updated' | 'both';
   visibleTags?: string[];
   badge?: string;
   slug?: string;
+  versionLabel?: string;
+  versionCount?: number;
+  isLatest?: boolean;
   articleMetaSettings: ArticleMetaSettings;
 };
 const displayBadge = badge.trim() ? badge : '随笔';
 const shouldShowMetaLine = articleMetaSettings.showDate || (articleMetaSettings.showTags && visibleTags.length > 0);
-const displayDate = updatedAt ?? date;
-const displayDateLabel = updatedAt ? '更新于：' : (articleMetaSettings.dateLabel ?? '');
+const timeZone = getSiteTimezone();
+const dateItems = resolveArticleDateItems({
+  mode: dateDisplay ?? articleMetaSettings.dateDisplay ?? 'updated',
+  timeZone,
+  date: { date, text: dateText, hasTime: dateHasTime },
+  publishedAt: publishedAt ? { date: publishedAt, text: publishedAtText, hasTime: publishedAtHasTime } : undefined,
+  updatedAt: updatedAt ? { date: updatedAt, text: updatedAtText, hasTime: updatedAtHasTime } : undefined,
+  publishedLabel: articleMetaSettings.dateLabel ?? '发布于：'
+});
 
 // 卡片标签指向 `/blog/?tags=<key>`，与详情页一致。
 const base = import.meta.env.BASE_URL ?? '/';
@@ -54,6 +85,12 @@ const tagLinks = visibleTags.map((tag) => {
   <div class="list-item__row">
     <div style="display:flex; align-items:center; gap:10px; min-width:0;">
       <span class="badge">{displayBadge}</span>
+      {versionCount > 1 ? (
+        <>
+          <span class="badge badge--version">{versionLabel}</span>
+          {!isLatest ? <span class="badge badge--history">历史</span> : null}
+        </>
+      ) : null}
       <h2 class="list-item__title" style="margin:0; min-width:0;">
         <a class="list-item__stretch" href={href}>{title}</a>
       </h2>
@@ -64,7 +101,19 @@ const tagLinks = visibleTags.map((tag) => {
     <div class="meta-line meta-line--items">
       {articleMetaSettings.showDate ? (
         <span class="meta-line__item">
-          <time datetime={displayDate.toISOString()}>{`${displayDateLabel}${formatISODateUtc(displayDate)}`}</time>
+          {dateItems.map((item, index) => (
+            <>
+              {index > 0 ? <span aria-hidden="true"> · </span> : null}
+              <time
+                datetime={item.iso}
+                data-site-timezone={item.timeZone}
+                data-date-kind={item.hasTime ? 'datetime' : 'date'}
+                data-date-label={item.label}
+                data-site-offset={item.timeZoneLabel}
+                title={item.hasTime ? `${item.timeZoneLabel} · ${item.timeZone}` : undefined}
+              >{`${item.label}${item.text}`}</time>
+            </>
+          ))}
         </span>
       ) : null}
       {articleMetaSettings.showTags && tagLinks.length ? (

@@ -3,7 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import TagFilterHeader from '../../components/TagFilterHeader.astro';
 import { getVisibleDevlogs } from '../../lib/content';
 import { getThemeSettings } from '../../lib/theme-settings';
-import { joinPageSubtitleText, formatISODateUtc } from '../../utils/format';
+import { joinPageSubtitleText } from '../../utils/format';
 import { deriveEntryDescription, renderEntryBody } from '../../lib/entry-body';
 import '../../styles/devlog-page.css';
 
@@ -48,7 +48,7 @@ const rows: DevlogRow[] = await Promise.all(
     return {
       id: entry.id,
       title: entry.data.title,
-      dateLabel: formatISODateUtc(entry.data.date),
+      dateLabel: entry.data.dateText ?? entry.data.date.toISOString().slice(0, 10),
       project: entry.data.project,
       kind: entry.data.kind?.trim() || null,
       description: deriveEntryDescription(entry.data.description, body),

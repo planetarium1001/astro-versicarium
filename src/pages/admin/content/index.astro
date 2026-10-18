@@ -23,6 +23,7 @@ import type {
 import type { AdminContentCreatableCollectionKey } from '../../../lib/admin-console/content-collections';
 import {
   ADMIN_CONTENT_CREATE_API_PATH,
+  ADMIN_CONTENT_CREATE_VERSION_API_PATH,
   ADMIN_CONTENT_DELETE_API_PATH,
   ADMIN_CONTENT_ENTRY_API_PATH,
   ADMIN_CONTENT_EXPORT_API_PATH,
@@ -78,6 +79,7 @@ const contentConsoleSubtitle = '内容管理';
 const resetHref = withBase(contentHref);
 const adminContentEntryEndpoint = withBase(ADMIN_CONTENT_ENTRY_API_PATH);
 const adminContentCreateEndpoint = withBase(ADMIN_CONTENT_CREATE_API_PATH);
+const adminContentCreateVersionEndpoint = withBase(ADMIN_CONTENT_CREATE_VERSION_API_PATH);
 const adminContentExportEndpoint = withBase(ADMIN_CONTENT_EXPORT_API_PATH);
 const adminContentDeleteEndpoint = withBase(ADMIN_CONTENT_DELETE_API_PATH);
 const adminContentBulkStatusEndpoint = withBase(ADMIN_CONTENT_BULK_STATUS_API_PATH);
@@ -248,6 +250,7 @@ const getContentCreateAction = (
           base={base}
           endpoint={adminContentEntryEndpoint}
           createEndpoint={adminContentCreateEndpoint}
+          createVersionEndpoint={adminContentCreateVersionEndpoint}
           deleteEndpoint={adminContentDeleteEndpoint}
           bitsDefaultAuthor={bitsDefaultAuthor}
         />
@@ -652,6 +655,17 @@ const getContentCreateAction = (
                                           <AdminIcon name="link" size={14} />
                                           <span>{getContentPublicLinkLabel(item)}</span>
                                         </a>
+                                        {item.collection === 'blog' ? (
+                                          <button
+                                            type="button"
+                                            class="admin-content-menu-item"
+                                            data-admin-content-create-version-action
+                                            data-entry-id={item.id}
+                                          >
+                                            <AdminIcon name="admin-page" size={14} />
+                                            <span>新建版本</span>
+                                          </button>
+                                        ) : null}
                                         <a
                                           class="admin-content-menu-item"
                                           href={exportHref}

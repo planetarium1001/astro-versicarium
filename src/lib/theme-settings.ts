@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { site as legacySite } from '../../site.config.mjs';
+import { site as legacySite, DEFAULT_SITE_TIMEZONE } from '../../site.config.mjs';
 import { asThemeFontIdForRole, type ThemeFontId } from './fonts/registry';
 import {
   getHeroImageLocalFilePath,
@@ -14,7 +14,8 @@ import {
   normalizeSiteFaviconPath,
   type SiteFaviconSlot
 } from '../utils/format';
-import { DEFAULT_SITE_FAVICON } from '../utils/favicon-defaults';
+import { DEFAULT_SITE_FAVICON, GENERATED_SITE_FAVICON } from '../utils/favicon-defaults';
+import { isValidIanaTimeZone } from '../utils/timezone';
 import {
   ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT,
   ADMIN_ARTICLE_META_DATE_LABEL_MAX_LENGTH,
@@ -70,6 +71,8 @@ type SettingSource = 'new' | 'legacy' | 'default';
 export type SidebarNavId = 'blog' | 'projects' | 'bits' | 'devlog' | 'archive' | 'about';
 export type HeroPresetId = 'default' | 'none';
 export type SidebarDividerVariant = 'default' | 'subtle' | 'none';
+export type ArticleDateDisplayMode = 'published' | 'updated' | 'both';
+export type ArchiveVersionMode = 'all' | 'latest';
 /** 备案信息显示范围：'all' 所有公开页面（默认），'root' 仅站点根目录。 */
 export type SiteFilingsScope = 'all' | 'root';
 // ThemeFontId 从字体注册表条目 id 派生：添加字体只需在 registry.ts 增加条目，无需改这里。
@@ -172,9 +175,9 @@ interface SiteFaviconSettings {
 }
 
 interface SiteFaviconLink {
-  rel: 'icon' | 'apple-touch-icon';
+  rel: 'icon' | 'apple-touch-icon' | 'manifest';
   href: string;
-  type?: string;
+  type?: 'image/svg+xml' | 'image/png' | 'image/x-icon';
   sizes?: string;
 }
 
@@ -198,6 +201,7 @@ interface SiteSettings {
   title: string;
   description: string;
   defaultLocale: string;
+  timezone: string;
   /**
    * 窄屏顶栏里站点标题可渲染宽度的上限（占页面宽度的百分比）。
    * 默认 35%，范围 10–100，由后台「主题 → 站点设置」维护。
@@ -255,7 +259,9 @@ interface BitsPageSettings extends PageHeadingSettings {
 interface PageSettings {
   blog: PageHeadingSettings;
   projects: PageHeadingSettings;
-  archive: PageHeadingSettings;
+  archive: PageHeadingSettings & {
+    versionMode: ArchiveVersionMode;
+  };
   bits: BitsPageSettings;
   devlog: PageHeadingSettings;
   about: PageHeadingSettings;
@@ -270,6 +276,7 @@ interface PageSettings {
 export interface ArticleMetaSettings {
   showDate: boolean;
   dateLabel: string;
+  dateDisplay: ArticleDateDisplayMode;
   showTags: boolean;
   showWordCount: boolean;
   showReadingTime: boolean;
@@ -315,6 +322,7 @@ interface UiSettings {
   viewStats: ViewStatsSettings;
   sidebarActions: SidebarActionsSettings;
   articleMeta: ArticleMetaSettings;
+  cardDateDisplay: ArticleDateDisplayMode;
   layout: {
     sidebarDivider: SidebarDividerVariant;
   };
@@ -334,6 +342,7 @@ interface ThemeSettingsSources {
     title: SettingSource;
     description: SettingSource;
     defaultLocale: SettingSource;
+    timezone: SettingSource;
     footerStartYear: SettingSource;
     footerShowCurrentYear: SettingSource;
     footerCopyright: SettingSource;
@@ -379,6 +388,7 @@ interface ThemeSettingsSources {
     projectsSubtitle: SettingSource;
     archiveTitle: SettingSource;
     archiveSubtitle: SettingSource;
+    archiveVersionMode: SettingSource;
     bitsTitle: SettingSource;
     bitsSubtitle: SettingSource;
     bitsDefaultAuthorName: SettingSource;
@@ -404,6 +414,8 @@ interface ThemeSettingsSources {
     sidebarActionsShowAdminEntry: SettingSource;
     articleMetaShowDate: SettingSource;
     articleMetaDateLabel: SettingSource;
+    articleMetaDateDisplay: SettingSource;
+    cardDateDisplay: SettingSource;
     articleMetaShowTags: SettingSource;
     articleMetaShowWordCount: SettingSource;
     articleMetaShowReadingTime: SettingSource;
@@ -581,6 +593,7 @@ const DEFAULT_SITE: SiteSettings = {
   title: 'Whono',
   description: '一个 Astro 主题的展示站：轻量、可维护、可复用。',
   defaultLocale: 'zh-CN',
+  timezone: DEFAULT_SITE_TIMEZONE,
   titleMaxPercent: ADMIN_SITE_TITLE_PERCENT_DEFAULT,
   pageGapPx: ADMIN_SITE_PAGE_GAP_DEFAULT,
   footer: {
@@ -641,7 +654,8 @@ const DEFAULT_PAGE: PageSettings = {
   },
   archive: {
     title: LEGACY_ARCHIVE_TITLE,
-    subtitle: '按年份分组的归档目录'
+    subtitle: '按年份分组的归档目录',
+    versionMode: 'all'
   },
   bits: {
     title: LEGACY_BITS_TITLE,
@@ -694,10 +708,12 @@ const DEFAULT_UI: UiSettings = {
   articleMeta: {
     showDate: true,
     dateLabel: ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT,
+    dateDisplay: 'updated',
     showTags: true,
     showWordCount: true,
     showReadingTime: true
   },
+  cardDateDisplay: 'updated',
   layout: {
     sidebarDivider: ADMIN_SIDEBAR_DIVIDER_DEFAULT
   },
@@ -747,6 +763,21 @@ const asNonEmptyString = (value: unknown): string | undefined => {
 const asLocale = (value: unknown): string | undefined => {
   const next = asNonEmptyString(value);
   return next && ADMIN_LOCALE_RE.test(next) ? next : undefined;
+};
+
+const asTimezone = (value: unknown): string | undefined => {
+  const next = asNonEmptyString(value);
+  return next && isValidIanaTimeZone(next) ? next : undefined;
+};
+
+const asArticleDateDisplayMode = (value: unknown): ArticleDateDisplayMode | undefined => {
+  const next = asNonEmptyString(value);
+  return next === 'published' || next === 'updated' || next === 'both' ? next : undefined;
+};
+
+const asArchiveVersionMode = (value: unknown): ArchiveVersionMode | undefined => {
+  const next = asNonEmptyString(value);
+  return next === 'all' || next === 'latest' ? next : undefined;
 };
 
 const asSingleLineString = (value: unknown, maxLength?: number): string | undefined => {
@@ -1368,6 +1399,11 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
     undefined,
     DEFAULT_SITE.defaultLocale
   );
+  const timezone = resolveValue(
+    asTimezone(siteJson?.timezone),
+    undefined,
+    DEFAULT_SITE.timezone
+  );
   const footerCopyright = resolveValue(
     asNonEmptyString(siteFooterJson?.copyright),
     LEGACY_FOOTER_COPYRIGHT,
@@ -1578,6 +1614,11 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
     undefined,
     DEFAULT_PAGE.archive.subtitle
   );
+  const archiveVersionMode = resolveValue(
+    asArchiveVersionMode(pageArchiveJson?.versionMode),
+    undefined,
+    DEFAULT_PAGE.archive.versionMode
+  );
   const bitsTitle = resolveValue(
     asNullableString(pageBitsJson?.title),
     undefined,
@@ -1703,6 +1744,16 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
     undefined,
     DEFAULT_UI.articleMeta.dateLabel
   );
+  const articleDateDisplay = resolveValue(
+    asArticleDateDisplayMode(uiArticleMeta?.dateDisplay),
+    undefined,
+    DEFAULT_UI.articleMeta.dateDisplay
+  );
+  const cardDateDisplay = resolveValue(
+    asArticleDateDisplayMode(uiJson?.cardDateDisplay),
+    undefined,
+    DEFAULT_UI.cardDateDisplay
+  );
   const showArticleTags = resolveValue(
     asBoolean(uiArticleMeta?.showTags),
     undefined,
@@ -1771,6 +1822,7 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         title: title.value,
         description: description.value,
         defaultLocale: defaultLocale.value,
+        timezone: timezone.value,
         titleMaxPercent: siteTitlePercent.value,
         pageGapPx: sitePageGap.value,
         footer: {
@@ -1835,7 +1887,8 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         },
         archive: {
           title: archiveTitle.value,
-          subtitle: archiveSubtitle.value
+          subtitle: archiveSubtitle.value,
+          versionMode: archiveVersionMode.value
         },
         bits: {
           title: bitsTitle.value,
@@ -1884,9 +1937,11 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
           showThemeToggle: showThemeToggle.value,
           showAdminEntry: showAdminEntry.value
         },
+        cardDateDisplay: cardDateDisplay.value,
         articleMeta: {
           showDate: showArticleDate.value,
           dateLabel: articleDateLabel.value,
+          dateDisplay: articleDateDisplay.value,
           showTags: showArticleTags.value,
           showWordCount: showArticleWordCount.value,
           showReadingTime: showArticleReadingTime.value
@@ -1907,6 +1962,7 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         title: title.source,
         description: description.source,
         defaultLocale: defaultLocale.source,
+        timezone: timezone.source,
         footerStartYear: footerStartYear.source,
         footerShowCurrentYear: footerShowCurrentYear.source,
         footerCopyright: footerCopyright.source,
@@ -1952,6 +2008,7 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         projectsSubtitle: projectsSubtitle.source,
         archiveTitle: archiveTitle.source,
         archiveSubtitle: archiveSubtitle.source,
+        archiveVersionMode: archiveVersionMode.source,
         bitsTitle: bitsTitle.source,
         bitsSubtitle: bitsSubtitle.source,
         bitsDefaultAuthorName: bitsDefaultAuthorName.source,
@@ -1977,6 +2034,8 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         sidebarActionsShowAdminEntry: showAdminEntry.source,
         articleMetaShowDate: showArticleDate.source,
         articleMetaDateLabel: articleDateLabel.source,
+        articleMetaDateDisplay: articleDateDisplay.source,
+        cardDateDisplay: cardDateDisplay.source,
         articleMetaShowTags: showArticleTags.source,
         articleMetaShowWordCount: showArticleWordCount.source,
         articleMetaShowReadingTime: showArticleReadingTime.source,
@@ -2023,6 +2082,7 @@ const buildEditableThemeSettingsSnapshot = (
       title: resolved.settings.site.title,
       description: resolved.settings.site.description,
       defaultLocale: resolved.settings.site.defaultLocale,
+      timezone: resolved.settings.site.timezone,
       titleMaxPercent: resolved.settings.site.titleMaxPercent,
       pageGapPx: resolved.settings.site.pageGapPx,
       footer: {
@@ -2079,6 +2139,7 @@ const buildEditableThemeSettingsSnapshot = (
       viewStats: { ...resolved.settings.ui.viewStats },
       sidebarActions: { ...resolved.settings.ui.sidebarActions },
       articleMeta: { ...resolved.settings.ui.articleMeta },
+      cardDateDisplay: resolved.settings.ui.cardDateDisplay,
       layout: { ...resolved.settings.ui.layout },
       typography: { ...resolved.settings.ui.typography }
     }
@@ -2145,34 +2206,66 @@ export const getSiteFaviconLinks = (favicon: SiteFaviconSettings): SiteFaviconLi
   const svg = resolveRenderableFaviconPath(favicon.svg);
   const png = resolveRenderableFaviconPath(favicon.png);
   const appleTouchIcon = resolveRenderableFaviconPath(favicon.appleTouchIcon);
+  const generatedIco = resolveRenderableFaviconPath(GENERATED_SITE_FAVICON.ico);
+  const generatedPng16 = resolveRenderableFaviconPath(GENERATED_SITE_FAVICON.png16);
+  const generatedPng32 = resolveRenderableFaviconPath(GENERATED_SITE_FAVICON.png32);
+  const generatedAppleTouchIcon = resolveRenderableFaviconPath(GENERATED_SITE_FAVICON.appleTouchIcon);
+  const generatedIcon192 = resolveRenderableFaviconPath(GENERATED_SITE_FAVICON.icon192);
+  const generatedIcon512 = resolveRenderableFaviconPath(GENERATED_SITE_FAVICON.icon512);
+  const generatedManifest = resolveRenderableFaviconPath(GENERATED_SITE_FAVICON.manifest);
   const hasCustomTabIcon = Boolean(svg || png);
 
   const links: SiteFaviconLink[] = [];
   if (!hasCustomTabIcon) {
-    if (hasDefaultFaviconFile(DEFAULT_SITE_FAVICON.svg)) {
-      links.push(createIconLink(DEFAULT_SITE_FAVICON.svg, 'image/svg+xml', 'any'));
-    }
-    if (hasDefaultFaviconFile(DEFAULT_SITE_FAVICON.png)) {
-      links.push(createIconLink(DEFAULT_SITE_FAVICON.png, 'image/png', '32x32'));
+    if (generatedPng16) links.push(createIconLink(generatedPng16, 'image/png', '16x16'));
+    if (generatedPng32) links.push(createIconLink(generatedPng32, 'image/png', '32x32'));
+    if (!generatedPng16 && !generatedPng32) {
+      if (hasDefaultFaviconFile(DEFAULT_SITE_FAVICON.svg)) {
+        links.push(createIconLink(DEFAULT_SITE_FAVICON.svg, 'image/svg+xml', 'any'));
+      }
+      if (hasDefaultFaviconFile(DEFAULT_SITE_FAVICON.png)) {
+        links.push(createIconLink(DEFAULT_SITE_FAVICON.png, 'image/png', '32x32'));
+      }
     }
   } else {
     if (svg) links.push(createIconLink(svg, 'image/svg+xml', 'any'));
     if (png) links.push(createIconLink(png, 'image/png', getSiteFaviconSizesFromPath(png) ?? undefined));
   }
 
-  // 触摸图标优先显式配置，留空时复用标签页 PNG；无自定义标签页图标时才回退默认。
+  // ICO 兜底：Safari/旧浏览器会隐式请求 /favicon.ico；用户文件优先，生成器只在缺失时写入。
+  if (generatedIco) {
+    links.push({
+      rel: 'icon',
+      type: 'image/x-icon',
+      href: generatedIco
+    });
+  }
+
+  if (generatedIcon192) {
+    links.push(createIconLink(generatedIcon192, 'image/png', '192x192'));
+  }
+  if (generatedIcon512) {
+    links.push(createIconLink(generatedIcon512, 'image/png', '512x512'));
+  }
+  if (generatedManifest) {
+    links.push({ rel: 'manifest', href: generatedManifest });
+  }
+
   const defaultAppleTouchIcon = !hasCustomTabIcon
     && hasDefaultFaviconFile(DEFAULT_SITE_FAVICON.appleTouchIcon)
     ? DEFAULT_SITE_FAVICON.appleTouchIcon
     : null;
-  const touchHref = appleTouchIcon ?? png ?? defaultAppleTouchIcon;
+  const touchHref = appleTouchIcon
+    ?? png
+    ?? generatedAppleTouchIcon
+    ?? defaultAppleTouchIcon;
   if (touchHref) {
     const isReusedTabIcon = !appleTouchIcon && touchHref === png;
     const touchSizes = appleTouchIcon
       ? getSiteFaviconSizesFromPath(appleTouchIcon)
       : isReusedTabIcon
         ? null
-        : '180x180';
+        : getSiteFaviconSizesFromPath(touchHref) ?? '180x180';
     links.push({
       rel: 'apple-touch-icon',
       ...(touchSizes ? { sizes: touchSizes } : {}),

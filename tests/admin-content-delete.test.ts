@@ -11,33 +11,25 @@ describe('admin content delete api', () => {
   const getTempRoot = setupTempProjectRoot('astro-whono-content-delete-');
 
   beforeEach(async () => {
-    await mkdir(path.join(getTempRoot(), 'src', 'content', 'blog'), { recursive: true });
-    await mkdir(path.join(getTempRoot(), 'src', 'content', 'bits'), { recursive: true });
-    await mkdir(path.join(getTempRoot(), 'src', 'content', 'about'), { recursive: true });
-    await mkdir(path.join(getTempRoot(), 'src', 'content', 'blog', 'series', 'intro'), { recursive: true });
+    const contentRoot = path.join(getTempRoot(), 'content');
+    const writeEntry = async (collection: string, entryId: string, lines: string[]): Promise<string> => {
+      const entryDirectory = path.join(contentRoot, collection, ...entryId.split('/'));
+      await mkdir(entryDirectory, { recursive: true });
+      const filePath = path.join(entryDirectory, 'index.md');
+      await writeFile(filePath, lines.join('\n'), 'utf8');
+      return filePath;
+    };
 
+    await mkdir(path.join(contentRoot, 'blog'), { recursive: true });
+    await mkdir(path.join(contentRoot, 'bits'), { recursive: true });
+    await mkdir(path.join(contentRoot, 'about'), { recursive: true });
+
+    await writeEntry('blog', 'demo', ['---', 'title: Demo blog', 'date: 2026-03-18', 'draft: false', '---', '', '# Demo', '']);
+    await writeEntry('blog', 'admin-console-guide copy', ['---', 'title: Space Name blog', 'date: 2026-03-21', 'draft: false', '---', '', '# Space Name', '']);
+    await writeEntry('blog', 'series/intro', ['---', 'title: Intro blog', 'date: 2026-03-19', 'draft: false', '---', '', '# Intro', '']);
+    await writeEntry('bits', 'demo', ['---', 'date: 2025-02-03T22:30:00+08:00', 'draft: false', '---', '', 'Visible bit', '']);
     await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'blog', 'demo.md'),
-      ['---', 'title: Demo blog', 'date: 2026-03-18', 'draft: false', '---', '', '# Demo', ''].join('\n'),
-      'utf8'
-    );
-    await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'blog', 'admin-console-guide copy.md'),
-      ['---', 'title: Space Name blog', 'date: 2026-03-21', 'draft: false', '---', '', '# Space Name', ''].join('\n'),
-      'utf8'
-    );
-    await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'blog', 'series', 'intro', 'index.md'),
-      ['---', 'title: Intro blog', 'date: 2026-03-19', 'draft: false', '---', '', '# Intro', ''].join('\n'),
-      'utf8'
-    );
-    await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'bits', 'demo.md'),
-      ['---', 'date: 2025-02-03T22:30:00+08:00', 'draft: false', '---', '', 'Visible bit', ''].join('\n'),
-      'utf8'
-    );
-    await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'about', 'index.md'),
+      path.join(contentRoot, 'about', 'index.md'),
       ['---', '---', '', 'about body', ''].join('\n'),
       'utf8'
     );
@@ -67,12 +59,12 @@ describe('admin content delete api', () => {
         collection: 'blog',
         entryId: 'demo',
         deleted: true,
-        relativePath: 'src/content/blog/demo.md'
+        relativePath: 'content/blog/demo'
       })
     );
-    expect(payload.result.trashedPath).toMatch(/^\.trash\/content\/\d{8}-\d{9}(?:-\d+)?\/src\/content\/blog\/demo\.md$/);
-    await expect(access(path.join(getTempRoot(), 'src', 'content', 'blog', 'demo.md'))).rejects.toThrow();
-    await expect(readFile(toAbsoluteTestPath(getTempRoot(), payload.result.trashedPath), 'utf8')).resolves.toContain('# Demo');
+    expect(payload.result.trashedPath).toMatch(/^\.trash\/content\/\d{8}-\d{9}(?:-\d+)?\/content\/blog\/demo$/);
+    await expect(access(path.join(getTempRoot(), 'content', 'blog', 'demo'))).rejects.toThrow();
+    await expect(readFile(path.join(toAbsoluteTestPath(getTempRoot(), payload.result.trashedPath), 'index.md'), 'utf8')).resolves.toContain('# Demo');
   });
 
   it('deletes a source file whose file name contains spaces', async () => {
@@ -97,11 +89,11 @@ describe('admin content delete api', () => {
       expect.objectContaining({
         collection: 'blog',
         entryId: 'admin-console-guide copy',
-        relativePath: 'src/content/blog/admin-console-guide copy.md'
+        relativePath: 'content/blog/admin-console-guide copy'
       })
     );
-    await expect(access(path.join(getTempRoot(), 'src', 'content', 'blog', 'admin-console-guide copy.md'))).rejects.toThrow();
-    await expect(readFile(toAbsoluteTestPath(getTempRoot(), payload.result.trashedPath), 'utf8')).resolves.toContain('# Space Name');
+    await expect(access(path.join(getTempRoot(), 'content', 'blog', 'admin-console-guide copy'))).rejects.toThrow();
+    await expect(readFile(path.join(toAbsoluteTestPath(getTempRoot(), payload.result.trashedPath), 'index.md'), 'utf8')).resolves.toContain('# Space Name');
   });
 
   it('keeps nested index entry paths restorable inside trash', async () => {
@@ -109,10 +101,10 @@ describe('admin content delete api', () => {
 
     const result = await moveAdminContentEntryToTrash('blog', 'series/intro');
 
-    expect(result.relativePath).toBe('src/content/blog/series/intro/index.md');
-    expect(result.trashedPath).toMatch(/\/src\/content\/blog\/series\/intro\/index\.md$/);
-    await expect(access(path.join(getTempRoot(), 'src', 'content', 'blog', 'series', 'intro', 'index.md'))).rejects.toThrow();
-    await expect(readFile(toAbsoluteTestPath(getTempRoot(), result.trashedPath), 'utf8')).resolves.toContain('# Intro');
+    expect(result.relativePath).toBe('content/blog/series/intro');
+    expect(result.trashedPath).toMatch(/\/content\/blog\/series\/intro$/);
+    await expect(access(path.join(getTempRoot(), 'content', 'blog', 'series', 'intro'))).rejects.toThrow();
+    await expect(readFile(path.join(toAbsoluteTestPath(getTempRoot(), result.trashedPath), 'index.md'), 'utf8')).resolves.toContain('# Intro');
   });
 
   it('rejects about delete requests because about is a fixed readonly page', async () => {
@@ -124,7 +116,7 @@ describe('admin content delete api', () => {
         collection: 'about',
         entryId: 'index',
         revision: 'stale',
-        expectedRelativePath: 'src/content/about/index.md'
+        expectedRelativePath: 'content/about/index.md'
       }),
       url: new URL(url)
     } as never);
@@ -133,7 +125,7 @@ describe('admin content delete api', () => {
     const payload = JSON.parse(await response.text());
     expect(payload.ok).toBe(false);
     expect(payload.errors[0]).toContain('about 是固定单页内容');
-    await expect(readFile(path.join(getTempRoot(), 'src', 'content', 'about', 'index.md'), 'utf8')).resolves.toContain('about body');
+    await expect(readFile(path.join(getTempRoot(), 'content', 'about', 'index.md'), 'utf8')).resolves.toContain('about body');
   });
 
   it('rejects stale revisions and leaves the source file in place', async () => {
@@ -156,7 +148,7 @@ describe('admin content delete api', () => {
     const payload = JSON.parse(await response.text());
     expect(payload.ok).toBe(false);
     expect(payload.errors[0]).toContain('已拒绝删除');
-    await expect(readFile(path.join(getTempRoot(), 'src', 'content', 'bits', 'demo.md'), 'utf8')).resolves.toContain('Visible bit');
+    await expect(readFile(path.join(getTempRoot(), 'content', 'bits', 'demo', 'index.md'), 'utf8')).resolves.toContain('Visible bit');
   });
 
   it('rejects mismatched confirmed source paths', async () => {
@@ -170,7 +162,7 @@ describe('admin content delete api', () => {
         collection: 'blog',
         entryId: 'demo',
         revision: current.revision,
-        expectedRelativePath: 'src/content/blog/other.md'
+        expectedRelativePath: 'content/blog/other/index.md'
       }),
       url: new URL(url)
     } as never);
@@ -179,6 +171,6 @@ describe('admin content delete api', () => {
     const payload = JSON.parse(await response.text());
     expect(payload.ok).toBe(false);
     expect(payload.errors[0]).toContain('路径与确认时不一致');
-    await expect(readFile(path.join(getTempRoot(), 'src', 'content', 'blog', 'demo.md'), 'utf8')).resolves.toContain('# Demo');
+    await expect(readFile(path.join(getTempRoot(), 'content', 'blog', 'demo', 'index.md'), 'utf8')).resolves.toContain('# Demo');
   });
 });

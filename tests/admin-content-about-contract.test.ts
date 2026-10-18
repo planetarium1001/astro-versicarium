@@ -13,7 +13,7 @@ const sourceState = {
   publicEntryId: 'index',
   defaultPublicSlug: 'index',
   revision: 'about-rev',
-  relativePath: 'src/content/about/index.md',
+  relativePath: 'content/about/index.md',
   bodyText: '\nabout body\n'
 };
 
@@ -34,7 +34,7 @@ describe('admin about content contract', () => {
     expect(payload).toMatchObject({
       collection: 'about',
       entryId: 'index',
-      relativePath: 'src/content/about/index.md',
+      relativePath: 'content/about/index.md',
       writable: true,
       readonlyReason: null,
       bodyText: '\nabout body\n',

@@ -30,6 +30,7 @@ import {
   ADMIN_SIDEBAR_DIVIDER_DEFAULT,
   ADMIN_SITE_PAGE_GAP_DEFAULT,
   ADMIN_SITE_TITLE_PERCENT_DEFAULT,
+  ADMIN_SITE_TIMEZONE_DEFAULT,
   ADMIN_SOCIAL_PRESET_ORDER_DEFAULT,
   ADMIN_TYPOGRAPHY_DEFAULT,
   ADMIN_VIEW_STATS_PV_LABEL_DEFAULT,
@@ -71,12 +72,16 @@ type FormCodecContext = {
   inputShellTitleNarrow: HTMLInputElement;
   inputSiteDescription: HTMLTextAreaElement;
   inputSiteDefaultLocale: HTMLInputElement;
+  inputSiteTimezone: HTMLInputElement;
   inputSiteTitleMaxPercent: HTMLInputElement;
   inputSitePageGapPx: HTMLInputElement;
   inputPageListRssEnabled: HTMLInputElement;
   inputPageListRssBlog: HTMLInputElement;
   inputPageListRssBits: HTMLInputElement;
   inputPageListRssArchive: HTMLInputElement;
+  inputPageArchiveVersionMode: HTMLSelectElement;
+  inputUiArticleDateDisplay: HTMLSelectElement;
+  inputUiCardDateDisplay: HTMLSelectElement;
   pageListRssGroupEl: HTMLElement;
   inputSiteFooterStartYear: HTMLInputElement;
   inputSiteFooterShowCurrentYear: HTMLInputElement;
@@ -219,12 +224,16 @@ export const createFormCodec = ({
   inputShellTitleNarrow,
   inputSiteDescription,
   inputSiteDefaultLocale,
+  inputSiteTimezone,
   inputSiteTitleMaxPercent,
   inputSitePageGapPx,
   inputPageListRssEnabled,
   inputPageListRssBlog,
   inputPageListRssBits,
   inputPageListRssArchive,
+  inputPageArchiveVersionMode,
+  inputUiArticleDateDisplay,
+  inputUiCardDateDisplay,
   pageListRssGroupEl,
   inputSiteFooterStartYear,
   inputSiteFooterShowCurrentYear,
@@ -647,6 +656,7 @@ export const createFormCodec = ({
         title: inputSiteTitle.value.trim(),
         description: normalizeMultiline(inputSiteDescription.value).trim(),
         defaultLocale: inputSiteDefaultLocale.value.trim(),
+        timezone: inputSiteTimezone.value.trim() || ADMIN_SITE_TIMEZONE_DEFAULT,
         /* 窄屏站点标题宽度百分比（与页面外缘间隙同一行） */
         titleMaxPercent: parseInteger(inputSiteTitleMaxPercent.value) ?? ADMIN_SITE_TITLE_PERCENT_DEFAULT,
         /* 页面外缘间隙（px，内容盒到浏览器边缘的距离） */
@@ -723,7 +733,8 @@ export const createFormCodec = ({
         },
         archive: {
           title: normalizeOptionalSingleLine(inputPageArchiveTitle.value),
-          subtitle: normalizeOptionalSingleLine(inputPageArchiveSubtitle.value)
+          subtitle: normalizeOptionalSingleLine(inputPageArchiveSubtitle.value),
+          versionMode: inputPageArchiveVersionMode.value as 'all' | 'latest'
         },
         bits: {
           title: normalizeOptionalSingleLine(inputPageBitsTitle.value),
@@ -769,10 +780,12 @@ export const createFormCodec = ({
         articleMeta: {
           showDate: Boolean(inputArticleMetaShowDate.checked),
           dateLabel: normalizeSingleLine(inputArticleMetaDateLabel.value),
+          dateDisplay: inputUiArticleDateDisplay.value as 'published' | 'updated' | 'both',
           showTags: Boolean(inputArticleMetaShowTags.checked),
           showWordCount: Boolean(inputArticleMetaShowWordCount.checked),
           showReadingTime: Boolean(inputArticleMetaShowReadingTime.checked)
         },
+        cardDateDisplay: inputUiCardDateDisplay.value as 'published' | 'updated' | 'both',
         layout: {
           sidebarDivider: getSelectedSidebarDividerVariant()
         },
@@ -791,6 +804,7 @@ export const createFormCodec = ({
     inputShellTitleNarrow.value = settings.shell.titleNarrow || '';
     inputSiteDescription.value = settings.site.description || '';
     inputSiteDefaultLocale.value = settings.site.defaultLocale || '';
+    inputSiteTimezone.value = settings.site.timezone || ADMIN_SITE_TIMEZONE_DEFAULT;
     inputSiteTitleMaxPercent.value = String(settings.site.titleMaxPercent ?? ADMIN_SITE_TITLE_PERCENT_DEFAULT);
     inputSitePageGapPx.value = String(settings.site.pageGapPx ?? ADMIN_SITE_PAGE_GAP_DEFAULT);
     inputPageListRssEnabled.checked = settings.page.listRss.enabled !== false;
@@ -851,6 +865,7 @@ export const createFormCodec = ({
     inputPageProjectsSubtitle.value = settings.page.projects?.subtitle || '';
     inputPageArchiveTitle.value = settings.page.archive?.title || '';
     inputPageArchiveSubtitle.value = settings.page.archive?.subtitle || '';
+    inputPageArchiveVersionMode.value = settings.page.archive?.versionMode ?? 'all';
     inputPageBitsTitle.value = settings.page.bits?.title || '';
     inputPageBitsSubtitle.value = settings.page.bits?.subtitle || '';
     inputPageDevlogTitle.value = settings.page.devlog?.title || '';
@@ -880,6 +895,8 @@ export const createFormCodec = ({
     syncSidebarActionControls();
     inputArticleMetaShowDate.checked = settings.ui?.articleMeta?.showDate !== false;
     inputArticleMetaDateLabel.value = settings.ui?.articleMeta?.dateLabel ?? ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT;
+    inputUiArticleDateDisplay.value = settings.ui?.articleMeta?.dateDisplay ?? 'updated';
+    inputUiCardDateDisplay.value = settings.ui?.cardDateDisplay ?? 'updated';
     inputArticleMetaShowTags.checked = settings.ui?.articleMeta?.showTags !== false;
     inputArticleMetaShowWordCount.checked = settings.ui?.articleMeta?.showWordCount !== false;
     inputArticleMetaShowReadingTime.checked = settings.ui?.articleMeta?.showReadingTime !== false;

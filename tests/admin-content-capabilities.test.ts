@@ -50,7 +50,7 @@ describe('admin content collection capabilities', () => {
 
     expect(getAdminContentFixedPageCapability('about')).toEqual({
       entryId: 'index',
-      sourcePath: 'src/content/about/index.md'
+      sourcePath: 'content/about/index.md'
     });
     expect(getAdminContentCollectionCapability('blog').create).toBe(true);
     expect(getAdminContentCollectionCapability('about')).toMatchObject({

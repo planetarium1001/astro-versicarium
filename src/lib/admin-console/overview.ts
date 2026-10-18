@@ -10,12 +10,12 @@ import {
   getBlogDerivedText,
   getBlogSlug,
   getSortedblogs,
-  isVisibleBlogEntry,
   type BlogEntry
 } from '../content';
 import { collectTagSummary, getTagPath } from '../tags';
 import { compareByNullableDateDesc } from './content-shared';
-import { formatDateTime, formatISODate, formatISODateUtc } from '../../utils/format';
+import { formatDateTimeInTimeZone, formatISODateInTimeZone } from '../../utils/format';
+import { getSiteTimezone } from '../../utils/site-timezone';
 import { cleanMarkdownToText } from '../../utils/excerpt';
 import packageJson from '../../../package.json';
 
@@ -209,13 +209,12 @@ const DEPLOY_TARGET_ALIASES = new Map<string, AdminOverviewDeployTarget>([
   ['static-host', 'static-host']
 ]);
 
-const formatCompactDate = (date: Date) => formatISODate(date).replace(/-/g, '.');
-const formatCompactDateUtc = (date: Date) => formatISODateUtc(date).replace(/-/g, '.');
+const formatCompactDate = (date: Date) => formatISODateInTimeZone(date, getSiteTimezone()).replace(/-/g, '.');
+const formatCompactDateUtc = (date: Date) => formatISODateInTimeZone(date, getSiteTimezone()).replace(/-/g, '.');
 
-const formatShortDate = (date: Date | null, useUtc = false): string => {
+const formatShortDate = (date: Date | null, _useUtc = false): string => {
   if (!date) return '--.--';
-  const source = useUtc ? formatISODateUtc(date) : formatISODate(date);
-  return source.slice(5).replace('-', '.');
+  return formatISODateInTimeZone(date, getSiteTimezone()).slice(5).replace('-', '.');
 };
 
 const orderByEntryDateDesc = <Entry extends { data: { date: Date } }>(a: Entry, b: Entry): number =>
@@ -273,7 +272,7 @@ const getRecentBitsPublication = (
     href: isDraft ? null : bitsHrefById.get(entry.id) ?? null,
     isDraft,
     date: entry.data.date,
-    dateLabel: formatDateTime(entry.data.date),
+    dateLabel: formatDateTimeInTimeZone(entry.data.date, getSiteTimezone()),
     shortDateLabel: formatShortDate(entry.data.date)
   };
 };
@@ -420,7 +419,7 @@ const getHostTargetLabel = (env: Record<string, string | undefined>): string => 
   return DEPLOY_TARGET_LABELS['static-host'];
 };
 
-const formatBuildDateLabel = (date: Date): string => formatDateTime(date);
+const formatBuildDateLabel = (date: Date): string => formatDateTimeInTimeZone(date, getSiteTimezone());
 
 const buildWritingActivity = (
   blogs: readonly BlogEntry[],
@@ -437,13 +436,13 @@ const buildWritingActivity = (
   const counts = new Map<string, number>();
 
   for (const date of datedEntries) {
-    const key = formatISODateUtc(date);
+    const key = formatISODateInTimeZone(date, getSiteTimezone());
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
 
   return Array.from({ length: ACTIVITY_DAY_COUNT }, (_, index) => {
     const date = addUtcDays(anchor, index - (ACTIVITY_DAY_COUNT - 1));
-    const key = formatISODateUtc(date);
+    const key = formatISODateInTimeZone(date, getSiteTimezone());
     const count = counts.get(key) ?? 0;
     return {
       date: key,
@@ -582,7 +581,7 @@ const loadAdminOverviewSource = async (
 
   const publicSource: AdminOverviewPublicSource = {
     blogs,
-    archiveblogs: blogs.filter(isVisibleBlogEntry),
+    archiveblogs: blogs,
     projects,
     bits,
     devlogs,

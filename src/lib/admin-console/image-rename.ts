@@ -19,7 +19,7 @@ const IMAGE_EXTENSIONS: ReadonlySet<string> = new Set([
 
 /** 会被扫描并改写引用的源（与 `scripts/check-image-references.mjs` 的 SOURCE_DIRS 对齐）。 */
 const SOURCE_DIRS: readonly { dir: string; exts: readonly string[] }[] = [
-  { dir: 'src/content', exts: ['.md'] },
+  { dir: 'content', exts: ['.md'] },
   { dir: 'src/test-fixtures', exts: ['.md'] },
   { dir: 'src/data/settings', exts: ['.json'] },
   { dir: 'src/pages', exts: ['.astro'] },
@@ -60,7 +60,10 @@ const getProjectRoot = (projectRoot?: string): string =>
   || process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim()
   || process.cwd();
 
-/** 把控制台给出的路径归一为 `images/...`（去前导斜杠、统一分隔符、去 `public/` 前缀）。 */
+/**
+ * 把控制台给出的路径归一为 `images/...`（public 图片）或 `content/...`（条目图片）。
+ * 去前导斜杠、统一分隔符、去 `public/` 前缀。
+ */
 export const normalizeAdminImageRenamePath = (value: string): string => {
   const normalized = (value ?? '')
     .trim()
@@ -69,11 +72,11 @@ export const normalizeAdminImageRenamePath = (value: string): string => {
     .replace(/^public\//, '')
     .replace(/\/+$/, '');
 
-  if (!normalized.startsWith('images/')) {
+  if (!normalized.startsWith('images/') && !normalized.startsWith('content/')) {
     throw new AdminImageRenameError(
       'invalid-source',
       400,
-      `只能重命名 public/images/ 下的图片：${value}`
+      `只能重命名 public/images/ 或 content/ 下的图片：${value}`
     );
   }
   if (normalized.split('/').some((segment) => segment === '' || segment === '.' || segment === '..')) {
@@ -152,7 +155,10 @@ export const renameAdminImage = async (
 ): Promise<AdminImageRenameResult> => {
   const root = getProjectRoot(options.projectRoot);
   const from = normalizeAdminImageRenamePath(input.from);
-  const sourceAbsolute = path.join(root, 'public', from);
+  const isContentPath = from.startsWith('content/');
+  const sourceAbsolute = isContentPath
+    ? path.join(root, ...from.split('/'))
+    : path.join(root, 'public', from);
 
   if (!existsSync(sourceAbsolute)) {
     throw new AdminImageRenameError('source-not-found', 404, `图片不存在：${from}`);
@@ -166,7 +172,9 @@ export const renameAdminImage = async (
 
   const fromDir = from.slice(0, from.length - currentFileName.length);
   const to = `${fromDir}${fileName}`;
-  const targetAbsolute = path.join(root, 'public', to);
+  const targetAbsolute = isContentPath
+    ? path.join(root, ...to.split('/'))
+    : path.join(root, 'public', to);
   if (existsSync(targetAbsolute)) {
     throw new AdminImageRenameError('target-exists', 409, `目标文件已存在，未做任何改动：${to}`);
   }
@@ -183,6 +191,18 @@ export const renameAdminImage = async (
     [`/${encodedFrom}`, `/${encodedTo}`],
     [encodedFrom, encodedTo]
   ];
+  if (isContentPath) {
+    const fromSegments = from.split('/');
+    const toSegments = to.split('/');
+    const ownerDepth = Math.min(3, fromSegments.length);
+    const relativeFrom = fromSegments.slice(ownerDepth).join('/');
+    const relativeTo = toSegments.slice(ownerDepth).join('/');
+    if (relativeFrom && relativeTo && relativeFrom !== relativeTo) {
+      candidates.push([relativeFrom, relativeTo]);
+      candidates.push([`./${relativeFrom}`, `./${relativeTo}`]);
+    }
+  }
+
   const replacements = candidates.filter(([pattern, next]) => pattern !== next);
 
   const rewritten: AdminImageRenameRewrite[] = [];

@@ -8,7 +8,8 @@ import {
   loadAdminContentSourceIndexWithBody,
   loadAdminContentSourceManifest
 } from '../src/lib/admin-console/content-source-index';
-import { formatDateTime } from '../src/utils/format';
+import { formatDateTimeInTimeZone } from '../src/utils/format';
+import { DEFAULT_SITE_TIMEZONE } from '../site.config.mjs';
 
 const { deriveMarkdownTextMock, readFileMock } = vi.hoisted(() => ({
   deriveMarkdownTextMock: vi.fn(),
@@ -60,9 +61,9 @@ describe('admin-console/content-source-index', () => {
     tempRoot = await mkdtemp(path.join(tmpdir(), 'astro-whono-admin-content-source-'));
     process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT = tempRoot;
     await Promise.all([
-      mkdir(path.join(tempRoot, 'src/content/blog'), { recursive: true }),
-      mkdir(path.join(tempRoot, 'src/content/bits'), { recursive: true }),
-      mkdir(path.join(tempRoot, 'src/content/about'), { recursive: true })
+      mkdir(path.join(tempRoot, 'content/blog'), { recursive: true }),
+      mkdir(path.join(tempRoot, 'content/bits'), { recursive: true }),
+      mkdir(path.join(tempRoot, 'content/about'), { recursive: true })
     ]);
   });
 
@@ -74,17 +75,17 @@ describe('admin-console/content-source-index', () => {
   });
 
   const writeContent = async (collection: 'blog' | 'bits' | 'about', entryPath: string, sourceText: string) => {
-    const filePath = path.join(tempRoot, 'src/content', collection, ...entryPath.split('/'));
+    const filePath = path.join(tempRoot, 'content', collection, ...entryPath.split('/'));
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, sourceText, 'utf8');
     return filePath;
   };
 
   it('loads a .md-only manifest and derives counts without reparsing frontmatter', async () => {
-    await writeContent('blog', 'plain.md', markdown('title: Plain\ndate: 2026-05-01'));
+    await writeContent('blog', 'plain/index.md', markdown('title: Plain\ndate: 2026-05-01'));
     await writeContent('blog', 'nested/index.md', markdown('title: Nested\ndate: 2026-05-02'));
-    await writeContent('blog', 'draft.mdx', markdown('title: MDX\ndate: 2026-05-03'));
-    await writeContent('bits', 'bit.md', markdown('date: 2026-05-01T12:00:00.000Z'));
+    await writeContent('blog', 'draft/index.mdx', markdown('title: MDX\ndate: 2026-05-03'));
+    await writeContent('bits', 'bit/index.md', markdown('date: 2026-05-01T12:00:00.000Z'));
 
     const manifest = await loadAdminContentSourceManifest();
 
@@ -100,7 +101,7 @@ describe('admin-console/content-source-index', () => {
   });
 
   it('builds source index items with stable source identity and public fields', async () => {
-    await writeContent('blog', 'Space Name.md', markdown(`
+    await writeContent('blog', 'Space Name/index.md', markdown(`
       title: Source blog
       description: blog description
       date: 2026-05-01
@@ -108,7 +109,7 @@ describe('admin-console/content-source-index', () => {
       draft: false
       slug: source-blog
     `));
-    await writeContent('bits', 'bits-2026-05-01-1200.md', markdown(`
+    await writeContent('bits', 'bits-2026-05-01-1200/index.md', markdown(`
       title: Source Bit
       description: Bit description
       date: 2026-05-01T12:00:00.000Z
@@ -131,7 +132,7 @@ describe('admin-console/content-source-index', () => {
       publicEntryId: 'space-name',
       title: 'Source blog',
       slug: 'source-blog',
-      relativePath: 'src/content/blog/Space Name.md',
+      relativePath: 'content/blog/Space Name/index.md',
       publicHref: '/blog/source-blog/',
       isDraft: false,
       dateLabel: '2026-05-01',
@@ -171,11 +172,11 @@ describe('admin-console/content-source-index', () => {
   it('keeps collection-specific date semantics in source index items', async () => {
     const bitsDateText = '2025-01-01T00:30:00+08:00';
     const bitsDate = new Date(bitsDateText);
-    await writeContent('blog', 'legacy-datetime.md', markdown(`
+    await writeContent('blog', 'legacy-datetime/index.md', markdown(`
       title: Legacy Datetime blog
       date: 2025-01-01T00:30:00+08:00
     `));
-    await writeContent('bits', 'timezone-edge.md', markdown(`
+    await writeContent('bits', 'timezone-edge/index.md', markdown(`
       title: Timezone Edge Bit
       date: ${bitsDateText}
     `));
@@ -189,13 +190,13 @@ describe('admin-console/content-source-index', () => {
       year: 2025
     });
     expect(bit).toMatchObject({
-      dateLabel: formatDateTime(bitsDate),
-      year: bitsDate.getFullYear()
+      dateLabel: formatDateTimeInTimeZone(bitsDate, DEFAULT_SITE_TIMEZONE),
+      year: 2025
     });
   });
 
   it('uses the published bits routing helper for draft exclusion and page boundaries', async () => {
-    await writeContent('bits', 'draft-newest.md', markdown(`
+    await writeContent('bits', 'draft-newest/index.md', markdown(`
       title: Draft
       date: 2026-06-01T00:00:00.000Z
       draft: true
@@ -204,7 +205,7 @@ describe('admin-console/content-source-index', () => {
     await Promise.all(
       Array.from({ length: 21 }, (_, index) => {
         const day = String(31 - index).padStart(2, '0');
-        return writeContent('bits', `published-${String(index + 1).padStart(2, '0')}.md`, markdown(`
+        return writeContent('bits', `published-${String(index + 1).padStart(2, '0')}/index.md`, markdown(`
           title: Published ${index + 1}
           date: 2026-05-${day}T00:00:00.000Z
           draft: false
@@ -221,8 +222,8 @@ describe('admin-console/content-source-index', () => {
   });
 
   it('keeps malformed frontmatter and missing required fields as placeholder rows', async () => {
-    await writeContent('blog', 'bad-yaml.md', '---\ntitle: [\n---\nBody');
-    await writeContent('bits', 'missing-date.md', markdown('title: Missing date'));
+    await writeContent('blog', 'bad-yaml/index.md', '---\ntitle: [\n---\nBody');
+    await writeContent('bits', 'missing-date/index.md', markdown('title: Missing date'));
 
     const manifest = await loadAdminContentSourceManifest();
     const blog = (await loadAdminContentSourceIndex(manifest, 'blog'))[0];
@@ -241,7 +242,7 @@ describe('admin-console/content-source-index', () => {
   });
 
   it('derives body text only for body-augmented index calls', async () => {
-    await writeContent('bits', 'untitled.md', markdown(`
+    await writeContent('bits', 'untitled/index.md', markdown(`
       date: 2026-05-01T00:00:00.000Z
       draft: false
     `, 'Body-only marker for untitled bits.'));
@@ -279,9 +280,9 @@ describe('admin-console/content-source-index', () => {
   });
 
   it('treats the manifest as a page-request snapshot', async () => {
-    await writeContent('blog', 'first.md', markdown('title: First\ndate: 2026-05-01'));
+    await writeContent('blog', 'first/index.md', markdown('title: First\ndate: 2026-05-01'));
     const manifest = await loadAdminContentSourceManifest();
-    await writeContent('blog', 'second.md', markdown('title: Second\ndate: 2026-05-02'));
+    await writeContent('blog', 'second/index.md', markdown('title: Second\ndate: 2026-05-02'));
 
     expect(getAdminContentSourceCounts(manifest).blog).toBe(1);
     expect(await loadAdminContentSourceIndex(manifest, 'blog')).toHaveLength(1);

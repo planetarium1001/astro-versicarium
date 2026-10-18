@@ -1,6 +1,8 @@
-import { createWithBase, formatDateTime } from '../utils/format';
+import { createWithBase, formatDateTimeInTimeZone } from '../utils/format';
+import { DEFAULT_SITE_TIMEZONE } from '../../site.config.mjs';
 import { deriveMarkdownText, truncateTextAtWord } from '../utils/excerpt';
 import { normalizeBitsImageSource } from './bits-image-source';
+import { getContentImageDimensions, getContentImageSrc, type ContentImageValue } from './content-image';
 import { getBitsPagePath } from './bits-public-routing';
 import { isRoutableTagKey, toTagKey } from './tags';
 
@@ -20,7 +22,7 @@ export const BITS_CARD_FULL_RENDER_LIMIT = BITS_CARD_BODY_LINES * BITS_CARD_CHAR
 export const BITS_CARD_VISIBLE_IMAGE_LIMIT = 4;
 
 export type BitsCardImageInput = {
-  src?: string | undefined;
+  src?: ContentImageValue;
   width?: number | string | undefined;
   height?: number | string | undefined;
   alt?: string | undefined;
@@ -63,6 +65,7 @@ type BitsCardViewModelInput = {
   author?: BitsCardAuthorInput | null | undefined;
   defaultAuthor?: BitsCardAuthorInput | null | undefined;
   base?: string | undefined;
+  timeZone?: string | undefined;
   draft?: boolean | undefined;
 };
 
@@ -109,13 +112,15 @@ const toPositiveInteger = (value: number | string | undefined): number | undefin
   return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 };
 
-const toDateLabel = (value: Date | string | null | undefined): string => {
-  if (value instanceof Date) return Number.isNaN(value.valueOf()) ? '' : formatDateTime(value);
+const toDateLabel = (value: Date | string | null | undefined, timeZone: string): string => {
+  if (value instanceof Date) {
+    return Number.isNaN(value.valueOf()) ? '' : formatDateTimeInTimeZone(value, timeZone);
+  }
   if (typeof value !== 'string') return '';
   const trimmed = value.trim();
   if (!trimmed) return '';
   const parsed = new Date(trimmed);
-  return Number.isNaN(parsed.valueOf()) ? trimmed : formatDateTime(parsed);
+  return Number.isNaN(parsed.valueOf()) ? trimmed : formatDateTimeInTimeZone(parsed, timeZone);
 };
 
 export const deriveBitsCardText = (bodyText: string): BitsCardText => {
@@ -138,6 +143,7 @@ export const buildBitsCardViewModel = ({
   author = null,
   defaultAuthor = null,
   base = '/',
+  timeZone = DEFAULT_SITE_TIMEZONE,
   draft = false
 }: BitsCardViewModelInput): BitsCardViewModel => {
   const withBase = createWithBase(base);
@@ -146,12 +152,18 @@ export const buildBitsCardViewModel = ({
   const authorAvatarRaw = (author?.avatar?.trim() || defaultAuthor?.avatar?.trim() || '');
   const imageItems = images
     .map((image) => {
-      const src = normalizeBitsImageSource(image.src ?? '');
+      const rawSrc = image.src;
+      const src = getContentImageSrc(rawSrc);
       if (!src) return null;
-      const width = toPositiveInteger(image.width);
-      const height = toPositiveInteger(image.height);
+      const normalized = typeof rawSrc === 'string'
+        ? normalizeBitsImageSource(src)
+        : src;
+      if (!normalized) return null;
+      const importedDimensions = getContentImageDimensions(rawSrc);
+      const width = toPositiveInteger(image.width ?? importedDimensions.width);
+      const height = toPositiveInteger(image.height ?? importedDimensions.height);
       return {
-        src: withBase(src),
+        src: withBase(normalized),
         ...(width ? { width } : {}),
         ...(height ? { height } : {}),
         alt: (image.alt ?? '').trim()
@@ -176,7 +188,7 @@ export const buildBitsCardViewModel = ({
     placeTag: placeTag && placeText ? toTagLink(placeText, withBase, placeTag) : null,
     normalTagItems,
     hasTags: Boolean(placeText || normalTagItems.length),
-    dateLabel: toDateLabel(date),
+    dateLabel: toDateLabel(date, timeZone),
     imageItems,
     visibleImages: imageItems.slice(0, BITS_CARD_VISIBLE_IMAGE_LIMIT),
     firstImage: totalImages === 1 ? imageItems[0] ?? null : null,

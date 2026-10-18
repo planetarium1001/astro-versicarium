@@ -2,26 +2,26 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import TagFilterHeader from './TagFilterHeader.astro';
 import BlogCard from './BlogCard.astro';
-import { createWithBase, getBlogDerivedText, getBlogSlug, type BlogEntry } from '../lib/content';
+import { createWithBase, getBlogDerivedText, type BlogListItem } from '../lib/content';
 import { getThemeSettings, getVisibleArticleMetaTags } from '../lib/theme-settings';
 import { collectTagSummary, type TagSummary } from '../lib/tags';
 import { joinPageSubtitleText } from '../utils/format';
 import { PAGE_SIZE_BLOG } from '../../site.config.mjs';
 
 const { items, resultCount } = Astro.props as {
-  items: BlogEntry[];
+  items: BlogListItem[];
   resultCount: number;
 };
 
 /** `/blog/` 的标签入口：不传 tagOptions 时 TagFilterHeader 不渲染标签 dialog。 */
-const tagOptions: TagSummary[] = collectTagSummary(items);
+const tagOptions: TagSummary[] = collectTagSummary(items.map((item) => item.entry));
 
 const base = import.meta.env.BASE_URL ?? '/';
 const withBase = createWithBase(base);
 const {
   settings: {
     page,
-    ui: { articleMeta }
+    ui: { articleMeta, cardDateDisplay }
   }
 } = getThemeSettings();
 /** 列表页描述行里的 RSS 由后台「内页设置 → RSS 订阅」控制（总开关且本页开关）。 */
@@ -59,17 +59,28 @@ const fallbackListId = 'blog-tag-list';
   </div>
 
   <div class="list" data-entry-list>
-    {items.map((entry) => (
+    {items.map((item) => (
       <BlogCard
-        href={withBase(`/blog/${getBlogSlug(entry)}/`)}
-        slug={getBlogSlug(entry)}
-        title={entry.data.title}
-        excerpt={getBlogDerivedText(entry).excerpt}
-        date={entry.data.date}
-        updatedAt={entry.data.updatedAt}
-        visibleTags={getVisibleArticleMetaTags(entry.data.tags, 'list')}
+        href={withBase(item.href)}
+        slug={item.entry.id}
+        title={item.entry.data.title}
+        excerpt={getBlogDerivedText(item.entry).excerpt}
+        date={item.entry.data.date}
+        dateText={item.entry.data.dateText}
+        dateHasTime={item.entry.data.dateHasTime}
+        publishedAt={item.entry.data.publishedAt}
+        publishedAtText={item.entry.data.publishedAtText}
+        publishedAtHasTime={item.entry.data.publishedAtHasTime}
+        updatedAt={item.entry.data.updatedAt}
+        updatedAtText={item.entry.data.updatedAtText}
+        updatedAtHasTime={item.entry.data.updatedAtHasTime}
+        dateDisplay={item.entry.data.cardDateDisplay ?? cardDateDisplay}
+        visibleTags={getVisibleArticleMetaTags(item.entry.data.tags, 'list')}
         articleMetaSettings={articleMeta}
-        badge={entry.data.badge}
+        badge={item.entry.data.badge}
+        versionLabel={item.versionLabel}
+        versionCount={item.versionCount}
+        isLatest={item.isLatest}
       />
     ))}
   </div>

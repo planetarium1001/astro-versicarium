@@ -2,6 +2,7 @@
   "title": "Astro Whono Tweaked",
   "description": "基于 cxro/astro-whono 的极简双栏 Astro 主题模板，面向长文阅读做了增量改造。",
   "defaultLocale": "zh-CN",
+  "timezone": "Asia/Shanghai",
   "titleMaxPercent": 35,
   "pageGapPx": 32,
   "footer": {

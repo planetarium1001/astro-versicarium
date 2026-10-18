@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createJsonRequest, setupAdminContentWriteFixture } from './admin-content-write-fixture';
 
@@ -8,7 +8,7 @@ describe('admin content bits write contract', () => {
 
   it('supports dry-run and real writes for bits body while preserving frontmatter bytes', async () => {
     const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
-    const { splitMarkdownFrontmatter } = await import('../src/lib/admin-console/frontmatter');
+    const { splitMarkdownFrontmatter } = await import('../src/lib/frontmatter');
     const { POST } = await import('../src/pages/api/admin/content/entry');
 
     const current = await readAdminContentEntryEditorPayload('bits', 'demo');
@@ -34,7 +34,7 @@ describe('admin content bits write contract', () => {
     expect(dryRunPayload.dryRun).toBe(true);
     expect(dryRunPayload.result.changedFields).toEqual(['body']);
 
-    const bitsPath = path.join(getTempRoot(), 'src', 'content', 'bits', 'demo.md');
+    const bitsPath = path.join(getTempRoot(), 'content', 'bits', 'demo', 'index.md');
     const before = await readFile(bitsPath, 'utf8');
     const beforeSection = splitMarkdownFrontmatter(before);
 
@@ -172,7 +172,9 @@ describe('admin content bits write contract', () => {
   });
 
   it('repairs semantically invalid current bits frontmatter instead of failing before next validation', async () => {
-    const bitsPath = path.join(getTempRoot(), 'src', 'content', 'bits', 'broken-current.md');
+    const bitsDirectory = path.join(getTempRoot(), 'content', 'bits', 'broken-current');
+    await mkdir(bitsDirectory, { recursive: true });
+    const bitsPath = path.join(bitsDirectory, 'index.md');
     await writeFile(
       bitsPath,
       [
@@ -346,7 +348,7 @@ describe('admin content bits write contract', () => {
     const current = await readAdminContentEntryEditorPayload('bits', 'demo');
 
     await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'bits', 'demo.md'),
+      path.join(getTempRoot(), 'content', 'bits', 'demo', 'index.md'),
       [
         '---',
         'date: 2025-02-03T01:01:45+08:00',

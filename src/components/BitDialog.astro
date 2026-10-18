@@ -2,6 +2,7 @@
 import { type BitsEntry } from '../lib/bits';
 import { buildBitsCardViewModel } from '../lib/bits-card-view-model';
 import { getThemeSettings } from '../lib/theme-settings';
+import { getSiteTimezone } from '../utils/site-timezone';
 import BitAvatar from './BitAvatar.astro';
 import BitTags from './BitTags.astro';
 
@@ -19,7 +20,8 @@ const card = buildBitsCardViewModel({
   images: bitEntry.data.images ?? [],
   ...(bitEntry.data.author ? { author: bitEntry.data.author } : {}),
   defaultAuthor: settings.page.bits.defaultAuthor,
-  base
+  base,
+  timeZone: getSiteTimezone()
 });
 const dialogId = `bit-dialog-${bitEntry.id}`;
 const titleId = `bit-dialog-title-${bitEntry.id}`;

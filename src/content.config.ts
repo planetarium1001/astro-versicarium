@@ -1,116 +1,169 @@
 import { defineCollection } from 'astro:content';
-import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
 import { BLOG_PUBLIC_SLUG_RE } from './utils/slug-rules';
 import { normalizeBitsAvatarPath } from './utils/format';
-import { parseBlogDateInput, parseBlogPublishedAtInput } from './utils/date-only';
-import { normalizeBitsImageSource } from './lib/bits-image-source';
+import { formatContentDateError, parseContentDateInput } from './utils/date-only';
+import { entryDirLoader } from './lib/content-loader';
 
 const slugRule = z
   .string()
+  .trim()
   .regex(BLOG_PUBLIC_SLUG_RE, 'slug must be lowercase kebab-case（允许 CJK）');
 
-const BlogBaseFields = {
-  title: z.string(),
-  description: z.string().optional(),
+const seriesRule = z
+  .string()
+  .trim()
+  .regex(BLOG_PUBLIC_SLUG_RE, 'series must be lowercase kebab-case（允许 CJK）');
+
+const versionOrderRule = z.number().int().min(0);
+
+const baseFields = {
   date: z.unknown(),
-  tags: z.array(z.string()).default([]),
   draft: z.boolean().default(false),
-  publishedAt: z.unknown().optional(),
-  updatedAt: z.unknown().optional(),
-  // Optional custom permalink. If present, it overrides the default public slug
-  // derived from the entry id / path.
-  slug: slugRule.optional()
+  entry: z.boolean().optional()
 };
 
-const BlogShape = {
-  ...BlogBaseFields,
-  cover: z.string().optional(),
-  badge: z.string().optional()
+const blogVersionFields = {
+  series: seriesRule.optional(),
+  versionLabel: z.string().trim().optional(),
+  versionName: z.string().trim().optional(),
+  versionSummary: z.string().trim().optional(),
+  versionOrder: versionOrderRule.optional()
 };
 
-const BlogSchema = z.object(BlogShape).transform((data, ctx) => {
-  const dateResult = parseBlogDateInput(data.date);
-  if (!dateResult) {
+type NormalizedDate = {
+  date: Date;
+  dateText: string;
+  hasTime: boolean;
+};
+
+const parseDateOrReport = (
+  value: unknown,
+  field: string,
+  ctx: z.RefinementCtx
+): NormalizedDate | null => {
+  const parsed = parseContentDateInput(value);
+  if (!parsed) {
     ctx.addIssue({
       code: 'custom',
-      path: ['date'],
-      message: 'date must be a valid YYYY-MM-DD date or ISO 8601 datetime with timezone'
+      path: [field],
+      message: formatContentDateError(field)
     });
-    return z.NEVER;
+    return null;
+  }
+  return parsed;
+};
+
+const hasOwnValue = (value: unknown): boolean =>
+  value != null && !(typeof value === 'string' && value.trim() === '');
+
+const normalizeDateFields = (
+  data: {
+    date: unknown;
+    publishedAt?: unknown;
+    updatedAt?: unknown;
+  },
+  ctx: z.RefinementCtx
+): {
+  date: Date;
+  dateText: string;
+  dateHasTime: boolean;
+  publishedAt?: Date;
+  publishedAtText?: string;
+  publishedAtHasTime?: boolean;
+  updatedAt?: Date;
+  updatedAtText?: string;
+  updatedAtHasTime?: boolean;
+} | null => {
+  const date = parseDateOrReport(data.date, 'date', ctx);
+  if (!date) return null;
+
+  let publishedAt: NormalizedDate | null = null;
+  if (hasOwnValue(data.publishedAt)) {
+    publishedAt = parseDateOrReport(data.publishedAt, 'publishedAt', ctx);
+    if (!publishedAt) return null;
   }
 
-  const publishedAtInput = data.publishedAt;
-  const hasExplicitPublishedAt =
-    publishedAtInput != null &&
-    !(typeof publishedAtInput === 'string' && publishedAtInput.trim() === '');
-  const publishedAt = hasExplicitPublishedAt
-    ? parseBlogPublishedAtInput(publishedAtInput)
-    : dateResult.publishedAt;
-
-  if (hasExplicitPublishedAt && !publishedAt) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['publishedAt'],
-      message: 'publishedAt must be a valid ISO 8601 datetime with timezone'
-    });
-    return z.NEVER;
+  let updatedAt: NormalizedDate | null = null;
+  if (hasOwnValue(data.updatedAt)) {
+    updatedAt = parseDateOrReport(data.updatedAt, 'updatedAt', ctx);
+    if (!updatedAt) return null;
   }
 
-  const hasExplicitUpdatedAt =
-    data.updatedAt != null &&
-    !(typeof data.updatedAt === 'string' && data.updatedAt.trim() === '');
-  const updatedAtInput = data.updatedAt;
-  const updatedAtResult = hasExplicitUpdatedAt ? parseBlogDateInput(updatedAtInput) : null;
-
-  if (hasExplicitUpdatedAt && !updatedAtResult) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['updatedAt'],
-      message: 'updatedAt must be a valid YYYY-MM-DD date or ISO 8601 datetime with timezone'
-    });
-    return z.NEVER;
-  }
-
-  if (updatedAtResult && updatedAtResult.date.valueOf() < dateResult.date.valueOf()) {
+  if (updatedAt && updatedAt.date.valueOf() < date.date.valueOf()) {
     ctx.addIssue({
       code: 'custom',
       path: ['updatedAt'],
       message: 'updatedAt must not be earlier than date'
     });
-    return z.NEVER;
+    return null;
   }
 
-  const {
-    publishedAt: _publishedAt,
-    updatedAt: _updatedAt,
-    ...normalizedData
-  } = data;
-
   return {
-    ...normalizedData,
-    date: dateResult.date,
-    ...(publishedAt ? { publishedAt } : {}),
-    ...(updatedAtResult ? { updatedAt: updatedAtResult.date } : {})
+    date: date.date,
+    dateText: date.dateText,
+    dateHasTime: date.hasTime,
+    ...(publishedAt
+      ? {
+          publishedAt: publishedAt.date,
+          publishedAtText: publishedAt.dateText,
+          publishedAtHasTime: publishedAt.hasTime
+        }
+      : {}),
+    ...(updatedAt
+      ? {
+          updatedAt: updatedAt.date,
+          updatedAtText: updatedAt.dateText,
+          updatedAtHasTime: updatedAt.hasTime
+        }
+      : {})
   };
-});
+};
 
-const bitsImage = z.object({
-  src: z
-    .string()
-    .superRefine((value, ctx) => {
-      if (!normalizeBitsImageSource(value)) {
-        ctx.addIssue({
-          code: 'custom',
-          message: 'images[].src 只允许 public/** 下的相对图片路径或 https:// 远程 URL，不要带 public/、不要以 / 开头，也不要使用 http、..、?、#'
-        });
-      }
-    })
-    .transform((value) => normalizeBitsImageSource(value) ?? value),
-  width: z.number().int().positive().optional(),
-  height: z.number().int().positive().optional(),
-  alt: z.string().optional()
-});
+const stripRawDateFields = <T extends Record<string, unknown>>(
+  data: T
+): Omit<T, 'date' | 'publishedAt' | 'updatedAt'> => {
+  const { date: _date, publishedAt: _publishedAt, updatedAt: _updatedAt, ...rest } = data;
+  return rest;
+};
+
+type ContentImageMetadata = {
+  src: string;
+  width: number;
+  height: number;
+  format: string;
+};
+
+type EntryImageFunction = () => z.ZodType<ContentImageMetadata>;
+
+const httpsUrlRule = z
+  .string()
+  .trim()
+  .url('image URL must be a valid URL')
+  .refine((value) => value.startsWith('https://'), 'image URL must use https://');
+
+const createEntryImage = (
+  image: EntryImageFunction
+): z.ZodType<ContentImageMetadata | string> => z.union([image(), httpsUrlRule]);
+
+const createOptionalEntryImage = (
+  image: EntryImageFunction
+): z.ZodType<ContentImageMetadata | string | null | undefined> =>
+  createEntryImage(image).nullable().optional();
+
+const createOptionalOgImage = (
+  image: EntryImageFunction
+): z.ZodType<ContentImageMetadata | string | null | undefined> =>
+  z
+    .union([z.literal('none'), createEntryImage(image)])
+    .optional()
+    .transform((value) => (value === 'none' ? null : value));
+
+const bitsImage = (image: EntryImageFunction) =>
+  z.object({
+    src: createEntryImage(image),
+    alt: z.string().trim().optional()
+  });
 
 const bitsAuthorAvatar = z
   .string()
@@ -121,79 +174,130 @@ const bitsAuthorAvatar = z
         code: 'custom',
         message: 'author.avatar 只允许相对图片路径（例如 author/avatar.webp），不要带 public/、不要以 / 开头，也不要使用 URL、..、?、#'
       });
-      return;
     }
   })
   .transform((value) => normalizeBitsAvatarPath(value) ?? value);
 
 const bitsAuthor = z.object({
-  name: z.string().optional(),
+  name: z.string().trim().optional(),
   avatar: bitsAuthorAvatar.optional()
 });
 
+const commonDateShape = {
+  ...baseFields
+};
+
 const blog = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/blog' }),
-  schema: BlogSchema
+  loader: entryDirLoader({ collection: 'blog' }),
+  schema: ({ image }) =>
+    z
+      .object({
+        ...commonDateShape,
+        ...blogVersionFields,
+        title: z.string().trim(),
+        description: z.string().trim().optional(),
+        publishedAt: z.unknown().optional(),
+        updatedAt: z.unknown().optional(),
+        tags: z.array(z.string()).default([]),
+        slug: slugRule.optional(),
+        ogImage: createOptionalOgImage(image),
+        ogImageAlt: z.string().trim().optional(),
+        articleDateDisplay: z.enum(['published', 'updated', 'both']).optional(),
+        cardDateDisplay: z.enum(['published', 'updated', 'both']).optional(),
+        badge: z.string().trim().optional()
+      })
+      .transform((data, ctx) => {
+        const dates = normalizeDateFields(data, ctx);
+        if (!dates) return z.NEVER;
+        const { ogImage, ...rest } = stripRawDateFields(data);
+        return {
+          ...rest,
+          ...dates,
+          ogImage
+        };
+      })
 });
 
 const bits = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/bits' }),
-  schema: z.object({
-    // Bits can be untitled.
-    title: z.string().optional(),
-    description: z.string().optional(),
-    date: z.coerce.date(),
-    tags: z.array(z.string()).default([]),
-    draft: z.boolean().default(false),
-    slug: slugRule.optional(),
-
-    // Optional media for card display.
-    images: z.array(bitsImage).optional(),
-    author: bitsAuthor.optional()
-  })
+  loader: entryDirLoader({ collection: 'bits' }),
+  schema: ({ image }) =>
+    z
+      .object({
+        date: z.unknown(),
+        title: z.string().trim().optional(),
+        description: z.string().trim().optional(),
+        tags: z.array(z.string()).default([]),
+        draft: z.boolean().default(false),
+        entry: z.boolean().optional(),
+        slug: slugRule.optional(),
+        images: z.array(bitsImage(image)).optional(),
+        author: bitsAuthor.optional()
+      })
+      .transform((data, ctx) => {
+        const date = parseDateOrReport(data.date, 'date', ctx);
+        if (!date) return z.NEVER;
+        return {
+          ...data,
+          date: date.date,
+          dateText: date.dateText,
+          dateHasTime: date.hasTime
+        };
+      })
 });
 
 const projects = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/projects' }),
-  schema: z.object({
-    title: z.string(),
-    subtitle: z.string().optional(),
-    description: z.string().optional(),
-    // type 完全开放：写什么显示什么，渲染为标题前小胶囊。
-    type: z.string().optional(),
-    icon: z.string().optional(),
-    /** 展示图：卡片里与文字同列、左对齐的缩略图，路径写法与 icon 一致。 */
-    image: z.string().optional(),
-    /**
-     * 没有 tags 与 repo/demo：仓库、演示等外链统一写在正文末尾的链接组里
-     * （见 src/lib/trailing-links.ts），列表卡片与弹窗渲染成右对齐链接行。
-     */
-    date: z.coerce.date(),
-    draft: z.boolean().default(false)
-  })
+  loader: entryDirLoader({ collection: 'projects' }),
+  schema: ({ image }) =>
+    z
+      .object({
+        title: z.string().trim(),
+        subtitle: z.string().trim().optional(),
+        description: z.string().trim().optional(),
+        type: z.string().trim().optional(),
+        icon: createOptionalEntryImage(image),
+        image: createOptionalEntryImage(image),
+        ...commonDateShape
+      })
+      .transform((data, ctx) => {
+        const date = parseDateOrReport(data.date, 'date', ctx);
+        if (!date) return z.NEVER;
+        return {
+          ...data,
+          date: date.date,
+          dateText: date.dateText,
+          dateHasTime: date.hasTime
+        };
+      })
 });
 
 const devlog = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/devlog' }),
-  schema: z.object({
-    title: z.string(),
-    date: z.coerce.date(),
-    // project 为自由字符串，不做链接。
-    project: z.string(),
-    // kind 完全开放（建议 feature / fix / improvement / breaking / docs）。
-    kind: z.string().optional(),
-    description: z.string().optional(),
-    /**
-     * 没有 links 字段：外链写进正文 markdown 末尾的链接组（可多行 `[文字](https://…)`），
-     * 便于整条内容直接粘贴到 GitHub release 或 commit。渲染时由共享的末尾链接机制
-     * 解析成右对齐链接行（见 src/lib/trailing-links.ts）。
-     */
-    draft: z.boolean().default(false)
-  })
+  loader: entryDirLoader({ collection: 'devlog' }),
+  schema: z
+    .object({
+      title: z.string().trim(),
+      project: z.string().trim(),
+      projectSlug: seriesRule.optional(),
+      kind: z.string().trim().optional(),
+      description: z.string().trim().optional(),
+      ...commonDateShape
+    })
+    .transform((data, ctx) => {
+      const date = parseDateOrReport(data.date, 'date', ctx);
+      if (!date) return z.NEVER;
+      return {
+        ...data,
+        date: date.date,
+        dateText: date.dateText,
+        dateHasTime: date.hasTime
+      };
+    })
 });
 
 const about = defineCollection({
-  loader: glob({ pattern: 'index.md', base: './src/content/about' }),
+  loader: entryDirLoader({
+    collection: 'about',
+    fixedPage: { entryId: 'index', sourcePath: 'content/about/index.md' }
+  }),
   schema: z.looseObject({})
 });
 

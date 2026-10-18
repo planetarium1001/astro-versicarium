@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { access, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import {
@@ -10,12 +9,14 @@ import { buildAdminContentEntryEditorPayloadFromState } from './content-editor-p
 import type { AdminBitsEditorValues, AdminBlogEditorValues } from './content-editor-payload';
 import {
   buildBlogFrontmatterFromValues,
-  loadBlogPublicSlugUsage,
+  loadBlogPublicSlugIndex,
   type AdminBlogFrontmatter,
-  type AdminBlogPublicSlugUsage,
+  type AdminBlogPublicSlugIndex,
   parseAdminBlogEditorInput,
   validateBlogPublicSlug
 } from './content-blog-frontmatter';
+import { suggestAvailableBlogSlug } from '../blog-routing';
+import { parseBlogDateInput } from '../../utils/date-only';
 import type { AdminContentValidationIssue } from './content-entry-contract';
 import {
   type AdminContentCreatableCollectionKey
@@ -36,7 +37,7 @@ import {
   parseAdminDevlogEditorInput,
   parseAdminProjectsEditorInput
 } from './content-write-plan';
-import { patchMarkdownFrontmatter } from './frontmatter';
+import { patchMarkdownFrontmatter } from '../frontmatter';
 
 type AdminContentCreateBaseInput = {
   frontmatter: unknown;
@@ -74,7 +75,6 @@ type AdminContentCreatePlan = {
 };
 
 const EMPTY_MARKDOWN_SOURCE = '---\n---\n\n';
-const AUTO_SLUG_HASH_LENGTHS = [4, 5, 6] as const;
 const BITS_CREATE_DATETIME_RE = /^(\d{4})-(0[1-9]|1[0-2])-(\d{2})T([01]\d|2[0-3]):([0-5]\d)(?::00)?(Z|[+-](?:[01]\d|2[0-3]):?[0-5]\d)$/;
 
 /**
@@ -120,76 +120,26 @@ const buildBitsCreateValues = (date: string): AdminBitsEditorValues => ({
   imagesText: ''
 });
 
-const getShortBlogDateSlugPart = (date: string): string => {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
-  if (!match) return '000000';
-
-  const year = match[1] ?? '0000';
-  const month = match[2] ?? '00';
-  const day = match[3] ?? '00';
-  return `${year.slice(-2)}${month}${day}`;
-};
-
-const buildStableSlugHash = (
-  parts: readonly string[],
-  length: number
-): string => {
-  const digest = createHash('sha1').update(parts.join('\n')).digest('hex').slice(0, 12);
-  return Number.parseInt(digest, 16).toString(36).padStart(length, '0').slice(0, length);
-};
-
-const isBlogPublicSlugAvailable = async (
-  publicEntryId: string,
-  slugUsage: AdminBlogPublicSlugUsage,
-  slug?: string
-): Promise<boolean> => {
-  const frontmatter: Pick<AdminBlogFrontmatter, 'slug'> = slug === undefined ? {} : { slug };
-  return (await validateBlogPublicSlug({ publicEntryId }, frontmatter, { slugUsage })).length === 0;
-};
-
-const buildFallbackBlogPublicSlug = (
-  frontmatter: AdminBlogFrontmatter,
-  entryId: string,
-  hashLength: number
-): string =>
-  `blog-${getShortBlogDateSlugPart(frontmatter.date)}-${buildStableSlugHash(
-    [frontmatter.title, frontmatter.date, entryId],
-    hashLength
-  )}`;
-
-const resolveBlogCreateFrontmatterSlug = async ({
-  entryId,
+const resolveBlogCreateFrontmatterSlug = ({
   publicEntryId,
   frontmatter,
-  slugUsage
+  slugIndex
 }: {
-  entryId: string;
   publicEntryId: string;
   frontmatter: AdminBlogFrontmatter;
-  slugUsage: AdminBlogPublicSlugUsage;
-}): Promise<AdminBlogFrontmatter> => {
-  if (frontmatter.slug?.trim()) return frontmatter;
-  if (await isBlogPublicSlugAvailable(publicEntryId, slugUsage)) return frontmatter;
+  slugIndex: AdminBlogPublicSlugIndex;
+}): AdminBlogFrontmatter => {
+  const explicitSlug = frontmatter.slug?.trim() || '';
+  const defaultSlug = flattenEntryIdToSlug(contentSourceEntryIdToPublicEntryId(publicEntryId));
+  const usedSlugs = new Set(slugIndex.usage.keys());
+  if (explicitSlug && !usedSlugs.has(explicitSlug)) return frontmatter;
+  if (!explicitSlug && !usedSlugs.has(defaultSlug)) return frontmatter;
 
-  const titleSlug = flattenEntryIdToSlug(contentSourceEntryIdToPublicEntryId(frontmatter.title));
-  if (titleSlug && await isBlogPublicSlugAvailable(publicEntryId, slugUsage, titleSlug)) {
-    return { ...frontmatter, slug: titleSlug };
-  }
-
-  for (const hashLength of AUTO_SLUG_HASH_LENGTHS) {
-    const slug = buildFallbackBlogPublicSlug(frontmatter, entryId, hashLength);
-    if (await isBlogPublicSlugAvailable(publicEntryId, slugUsage, slug)) {
-      return { ...frontmatter, slug };
-    }
-  }
-
+  const dateText = parseBlogDateInput(frontmatter.date)?.dateText ?? '';
+  const baseSlug = explicitSlug || defaultSlug;
   return {
     ...frontmatter,
-    slug: buildFallbackBlogPublicSlug(
-      frontmatter,
-      entryId,
-      AUTO_SLUG_HASH_LENGTHS.at(-1) ?? 6
-    )
+    slug: suggestAvailableBlogSlug({ slug: baseSlug, dateText, usedSlugs })
   };
 };
 
@@ -311,15 +261,17 @@ const buildBlogContentCreatePlan = async (
     };
   }
 
-  const slugUsage = await loadBlogPublicSlugUsage();
-  const frontmatter = await resolveBlogCreateFrontmatterSlug({
-    entryId,
+  const slugIndex = await loadBlogPublicSlugIndex();
+  const frontmatter = resolveBlogCreateFrontmatterSlug({
     publicEntryId,
     frontmatter: next.frontmatter,
-    slugUsage
+    slugIndex
   });
 
-  const slugIssues = await validateBlogPublicSlug({ publicEntryId }, frontmatter, { slugUsage });
+  const slugIssues = await validateBlogPublicSlug({ publicEntryId }, frontmatter, {
+    slugUsage: slugIndex.usage,
+    seriesByEntryId: slugIndex.seriesByEntryId
+  });
   if (slugIssues.length > 0) {
     return {
       collection,

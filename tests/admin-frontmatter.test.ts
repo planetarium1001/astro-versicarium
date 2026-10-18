@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import YAML from 'yaml';
-import { patchMarkdownFrontmatter, replaceMarkdownBody, splitMarkdownFrontmatter } from '../src/lib/admin-console/frontmatter';
+import { patchMarkdownFrontmatter, replaceMarkdownBody, splitMarkdownFrontmatter } from '../src/lib/frontmatter';
 
 const getFrontmatter = (source: string): Record<string, unknown> => {
   const section = splitMarkdownFrontmatter(source);

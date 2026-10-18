@@ -31,7 +31,7 @@ export type AdminImageDirectory =
   | 'public/author'
   | 'public/images'
   | 'src/assets'
-  | 'src/content';
+  | 'content';
 
 export type AdminImageDirectoryOption = {
   value: AdminImageDirectory;
@@ -68,20 +68,39 @@ export type AdminImageMetaInput =
 type AdminImageFieldConfig = {
   allowedOrigins: readonly AdminImageOrigin[];
   preferredPrefixes: readonly string[];
-  toValue: (assetPath: string, origin: AdminImageOrigin) => string | null;
+  toValue: (assetPath: string, origin: AdminImageOrigin, owner?: string | null) => string | null;
+};
+
+const toOwnerRelativeAssetValue = (assetPath: string, owner?: string | null): string => {
+  const assetSegments = assetPath.split('/').filter(Boolean);
+  const ownerSegments = (owner ?? '').split('/').filter(Boolean);
+  let common = 0;
+  while (
+    common < assetSegments.length
+    && common < ownerSegments.length
+    && assetSegments[common] === ownerSegments[common]
+  ) {
+    common += 1;
+  }
+  const relative = assetSegments.slice(common).join('/') || assetSegments.at(-1) || '';
+  return relative.startsWith('.') ? relative : `./${relative}`;
 };
 
 export const IMAGE_LOCAL_EXT_RE = /\.(?:avif|gif|jpe?g|png|svg|webp)$/i;
 
 /** 仓库内相对图片路径的统一校验文案，元数据读取与路径解析共用。 */
 export const ADMIN_IMAGE_LOCAL_PATH_MESSAGE =
-  '图片路径必须是 public/**、src/assets/** 或 src/content/** 下的规范仓库相对图片路径';
+  '图片路径必须是 public/**、src/assets/** 或 content/** 下的规范仓库相对图片路径';
 
 const FIELD_CONFIG: Record<AdminImageFieldContext, AdminImageFieldConfig> = {
   'bits.images': {
-    allowedOrigins: ['public'],
-    preferredPrefixes: ['public/images/bits/', 'public/images/', 'public/author/', 'public/'],
-    toValue: (assetPath, origin) => (origin === 'public' ? assetPath.slice('public/'.length) : null)
+    allowedOrigins: ['public', 'content'],
+    preferredPrefixes: ['content/bits/', 'public/images/bits/', 'public/images/', 'public/author/', 'public/'],
+    toValue: (assetPath, origin, owner) => {
+      if (origin === 'public') return assetPath.slice('public/'.length);
+      if (origin === 'content') return toOwnerRelativeAssetValue(assetPath, owner);
+      return null;
+    }
   },
   'home.heroImageSrc': {
     allowedOrigins: ['src/assets', 'public'],
@@ -98,14 +117,18 @@ const FIELD_CONFIG: Record<AdminImageFieldContext, AdminImageFieldConfig> = {
     toValue: (assetPath, origin) => (origin === 'public' ? assetPath.slice('public/'.length) : null)
   },
   'projects.icon': {
-    allowedOrigins: ['public'],
-    preferredPrefixes: ['public/images/projects/', 'public/images/', 'public/'],
-    toValue: (assetPath, origin) => (origin === 'public' ? `/${assetPath.slice('public/'.length)}` : null)
+    allowedOrigins: ['public', 'content'],
+    preferredPrefixes: ['content/projects/', 'public/images/projects/', 'public/images/', 'public/'],
+    toValue: (assetPath, origin, owner) => {
+      if (origin === 'public') return `/${assetPath.slice('public/'.length)}`;
+      if (origin === 'content') return toOwnerRelativeAssetValue(assetPath, owner);
+      return null;
+    }
   }
 };
 
 const ADMIN_IMAGE_FIELD_CONTEXTS = Object.freeze(Object.keys(FIELD_CONFIG) as AdminImageFieldContext[]);
-const ADMIN_IMAGE_ALL_ORIGINS = ['public', 'src/assets', 'src/content'] as const satisfies readonly AdminImageOrigin[];
+const ADMIN_IMAGE_ALL_ORIGINS = ['public', 'src/assets', 'content'] as const satisfies readonly AdminImageOrigin[];
 
 export const ADMIN_IMAGE_DIRECTORY_OPTIONS = [
   {
@@ -134,7 +157,7 @@ export const ADMIN_IMAGE_DIRECTORY_OPTIONS = [
     description: '查看站点主题和首页使用的本地素材。'
   },
   {
-    value: 'src/content',
+    value: 'content',
     label: '文章附件',
     description: '查看文章或笔记同目录下的图片附件。'
   }
@@ -200,12 +223,13 @@ export const normalizeAdminImageDirectory = (value: string | null | undefined): 
 export const getAdminImageFieldValue = (
   field: AdminImageFieldContext | null,
   assetPath: string,
-  origin: AdminImageOrigin
+  origin: AdminImageOrigin,
+  owner?: string | null
 ): string | null => {
   if (!field) return assetPath;
   const config = FIELD_CONFIG[field];
   if (!config.allowedOrigins.includes(origin)) return null;
-  return config.toValue(assetPath, origin);
+  return config.toValue(assetPath, origin, owner);
 };
 
 export const getAdminImageFieldAllowedOrigins = (
@@ -224,12 +248,13 @@ export const getAdminImageFieldSortRank = (
 
 export const getAdminImageCompatibleFieldValues = (
   assetPath: string,
-  origin: AdminImageOrigin
+  origin: AdminImageOrigin,
+  owner?: string | null
 ): string[] =>
   Array.from(
     new Set(
       ADMIN_IMAGE_FIELD_CONTEXTS
-        .map((field) => getAdminImageFieldValue(field, assetPath, origin))
+        .map((field) => getAdminImageFieldValue(field, assetPath, origin, owner))
         .filter((value): value is string => typeof value === 'string' && value.length > 0)
     )
   );

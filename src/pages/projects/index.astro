@@ -1,13 +1,14 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { createWithBase, getVisibleProjects } from '../../lib/content';
+import { createWithBase, getVisibleDevlogs, getVisibleProjects } from '../../lib/content';
 import { getThemeSettings } from '../../lib/theme-settings';
 import { joinPageSubtitleText } from '../../utils/format';
 import { deriveEntryDescription, renderEntryBody } from '../../lib/entry-body';
+import { getContentImageSrc } from '../../lib/content-image';
 import { renderTrailingLinksHtml, type TrailingLink } from '../../lib/trailing-links';
 import '../../styles/projects-page.css';
 
-const items = await getVisibleProjects();
+const [items, devlogs] = await Promise.all([getVisibleProjects(), getVisibleDevlogs()]);
 const base = import.meta.env.BASE_URL ?? '/';
 const withBase = createWithBase(base);
 const {
@@ -36,6 +37,7 @@ type ProjectCard = {
   bodyHtml: string;
   /** 末尾链接组，按书写顺序；卡片在摘要下一行单独渲染 */
   links: TrailingLink[];
+  updates: Array<{ id: string; title: string; dateText: string }>;
 };
 
 const cards: ProjectCard[] = await Promise.all(
@@ -51,11 +53,18 @@ const cards: ProjectCard[] = await Promise.all(
       subtitle: entry.data.subtitle?.trim() || null,
       description: deriveEntryDescription(entry.data.description, body),
       type: entry.data.type?.trim() || null,
-      icon: entry.data.icon?.trim() || null,
-      image: entry.data.image?.trim() || null,
+      icon: getContentImageSrc(entry.data.icon),
+      image: getContentImageSrc(entry.data.image),
       hasBody,
       bodyHtml: html,
-      links
+      links,
+      updates: devlogs
+        .filter((devlog) => devlog.data.projectSlug === entry.id)
+        .map((devlog) => ({
+          id: devlog.id,
+          title: devlog.data.title,
+          dateText: devlog.data.dateText
+        }))
     };
   })
 );
@@ -150,6 +159,19 @@ const cards: ProjectCard[] = await Promise.all(
           ) : (
             <p class="project-dialog__fallback">{card.description ?? '暂无描述。'}</p>
           )}
+          {card.updates.length ? (
+            <section class="project-updates" aria-label={`${card.title}更新日志`}>
+              <h3 class="project-updates__title">更新日志</h3>
+              <ul class="project-updates__list">
+                {card.updates.map((update) => (
+                  <li>
+                    <time datetime={update.dateText}>{update.dateText}</time>
+                    <a href={withBase(`/devlog/#${update.id}`)}>{update.title}</a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
         </div>
       </div>
     </dialog>

@@ -1,51 +1,72 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { CONTENT_ROOT } from '../site.config.mjs';
 
-function pad2(n) {
-  return String(n).padStart(2, '0');
-}
+const pad2 = (value) => String(value).padStart(2, '0');
 
-function formatOffset(date) {
-  const off = -date.getTimezoneOffset(); // minutes east of UTC
-  const sign = off >= 0 ? '+' : '-';
-  const abs = Math.abs(off);
-  const hh = pad2(Math.floor(abs / 60));
-  const mm = pad2(abs % 60);
-  return `${sign}${hh}:${mm}`;
-}
+const readSiteTimezone = () => {
+  const env = (process.env.SITE_TIMEZONE ?? '').trim();
+  if (env) return env;
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src', 'data', 'settings', 'site.json'), 'utf8'));
+    return typeof raw.timezone === 'string' && raw.timezone.trim() ? raw.timezone.trim() : 'Asia/Shanghai';
+  } catch {
+    return 'Asia/Shanghai';
+  }
+};
 
-function formatLocalISO(date) {
-  const yyyy = date.getFullYear();
-  const MM = pad2(date.getMonth() + 1);
-  const dd = pad2(date.getDate());
-  const hh = pad2(date.getHours());
-  const mm = pad2(date.getMinutes());
-  const ss = pad2(date.getSeconds());
-  return `${yyyy}-${MM}-${dd}T${hh}:${mm}:${ss}${formatOffset(date)}`;
-}
+const getZonedParts = (date, timeZone) => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  }).formatToParts(date);
+  const values = new Map(parts.map((part) => [part.type, part.value]));
+  return {
+    year: values.get('year'),
+    month: values.get('month'),
+    day: values.get('day'),
+    hour: values.get('hour'),
+    minute: values.get('minute'),
+    second: values.get('second')
+  };
+};
+
+const getOffsetText = (date, timeZone) => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    timeZoneName: 'longOffset'
+  }).formatToParts(date);
+  const offset = parts.find((part) => part.type === 'timeZoneName')?.value ?? 'GMT+00:00';
+  const match = /^GMT([+-]\d{2}:\d{2})$/.exec(offset);
+  return match?.[1] ?? '+00:00';
+};
 
 const now = new Date();
-const yyyy = now.getFullYear();
-const MM = pad2(now.getMonth() + 1);
-const dd = pad2(now.getDate());
-const hh = pad2(now.getHours());
-const mm = pad2(now.getMinutes());
+const timeZone = readSiteTimezone();
+const parts = getZonedParts(now, timeZone);
+const dateText = `${parts.year}-${parts.month}-${parts.day}`;
+const timeText = `${parts.hour}${parts.minute}`;
+const dateTimeText = `${dateText}T${parts.hour}:${parts.minute}:${parts.second}${getOffsetText(now, timeZone)}`;
 
-const filename = `${yyyy}-${MM}-${dd}-${hh}${mm}.md`;
-const dir = path.join(process.cwd(), 'src', 'content', 'bits');
-const filepath = path.join(dir, filename);
+const entryId = `bits-${dateText}-${timeText}`;
+const directory = path.join(process.cwd(), CONTENT_ROOT, 'bits', entryId);
+const filePath = path.join(directory, 'index.md');
 
-if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
-if (fs.existsSync(filepath)) {
-  console.error(`File already exists: ${filepath}`);
+if (fs.existsSync(filePath)) {
+  console.error(`File already exists: ${filePath}`);
   process.exit(1);
 }
 
-const date = formatLocalISO(now);
+fs.mkdirSync(directory, { recursive: true });
 
-const template = `---\ndraft: true\ndate: ${date}\ntags: []\nimages: []\n---\n\n`;
-fs.writeFileSync(filepath, template, 'utf8');
+const template = `---\ndraft: true\ndate: ${dateTimeText}\ntags: []\nimages: []\n---\n\n`;
+fs.writeFileSync(filePath, template, 'utf8');
 
-console.log(`Created: ${filepath}`);
+console.log(`Created: ${filePath}`);
 console.log('Next: edit the file and run `npm run dev`');

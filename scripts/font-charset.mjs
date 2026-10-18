@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { collectSourceFiles } from './collect-source-files.mjs';
+import { CONTENT_ROOT } from '../site.config.mjs';
 
 const ROOT = process.cwd();
 const OUTPUT_PATH = path.join(ROOT, 'tools', 'charset-common.txt');
@@ -22,7 +23,7 @@ const EXTRA_CHARS = [
 ].join('');
 
 const SOURCE_DIRS = [
-  { dir: 'src/content', exts: ['.md'] },
+  { dir: CONTENT_ROOT, exts: ['.md'] },
   { dir: 'src/pages', exts: ['.astro'] },
   { dir: 'src/components', exts: ['.astro'] },
   { dir: 'src/layouts', exts: ['.astro'] },

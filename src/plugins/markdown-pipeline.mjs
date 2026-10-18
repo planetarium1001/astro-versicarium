@@ -13,6 +13,13 @@ import { rehypeAboutDirectives, remarkAboutDirectives } from './about-directives
 import remarkCallout from './remark-callout.mjs';
 import { sanitizeSchema } from './sanitize-schema.mjs';
 import shikiToolbar from './shiki-toolbar.mjs';
+import { fileURLToPath } from 'node:url';
+import { visit } from 'unist-util-visit';
+import {
+  isAttachmentAssetPath,
+  resolveContentAssetReference,
+  toContentAssetUrl
+} from '../lib/content-asset-paths.mjs';
 
 export const markdownMathOptions = Object.freeze({
   singleDollarTextMath: false
@@ -265,6 +272,35 @@ export const createProjectMarkdownRemarkPlugins = ({ aboutEnabled } = {}) => [
   remarkCallout
 ];
 
+const getProjectRoot = () =>
+  process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
+
+const rehypeContentAssetLinks = ({ base = '/' } = {}) => (tree, file) => {
+  const rawPath = file?.path;
+  const sourceFilePath = rawPath instanceof URL
+    ? fileURLToPath(rawPath)
+    : typeof rawPath === 'string'
+      ? (rawPath.startsWith('file:') ? fileURLToPath(new URL(rawPath)) : rawPath)
+      : null;
+  if (!sourceFilePath) return;
+
+  visit(tree, 'element', (node) => {
+    if (node.tagName !== 'a') return;
+    const href = node.properties?.href;
+    if (typeof href !== 'string') return;
+
+    const resolved = resolveContentAssetReference({
+      reference: href,
+      sourceFilePath,
+      projectRoot: getProjectRoot()
+    });
+    if (!resolved || resolved.kind !== 'local') return;
+    if (!isAttachmentAssetPath(resolved.absolutePath)) return;
+
+    node.properties.href = `${toContentAssetUrl(resolved.contentRelativePath, base)}${resolved.suffix}`;
+  });
+};
+
 /** @param {ProjectMarkdownRehypeOptions} [options] */
 export const createProjectMarkdownRehypePlugins = ({ aboutBase = '/', aboutEnabled } = {}) => [
   rehypeProtectMarkdownMath,
@@ -274,6 +310,7 @@ export const createProjectMarkdownRehypePlugins = ({ aboutBase = '/', aboutEnabl
     base: aboutBase,
     ...(aboutEnabled === undefined ? {} : { enabled: aboutEnabled })
   }],
+  [rehypeContentAssetLinks, { base: aboutBase }],
   [rehypeSanitize, sanitizeSchema],
   rehypeKatex
 ];

@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { CONTENT_ROOT } from '../../../site.config.mjs';
 import {
   ADMIN_IMAGE_BROWSE_GROUP_LABELS,
   type AdminImageBrowseGroup,
@@ -210,9 +211,9 @@ const ADMIN_IMAGE_SCAN_ROOTS = [
     pathSegments: ['src', 'assets']
   },
   {
-    origin: 'src/content',
-    prefix: 'src/content',
-    pathSegments: ['src', 'content']
+    origin: 'content',
+    prefix: CONTENT_ROOT,
+    pathSegments: [CONTENT_ROOT]
   }
 ] as const satisfies readonly {
   origin: AdminImageOrigin;
@@ -312,7 +313,7 @@ const getPreviewSrcFromPath = (assetPath: string): string | null => {
   const safeRemoteUrl = toSafeHttpUrl(assetPath);
   if (safeRemoteUrl.startsWith('https://')) return safeRemoteUrl;
   if (assetPath.startsWith('public/')) return `/${assetPath.slice('public/'.length)}`;
-  if (assetPath.startsWith('src/assets/') || assetPath.startsWith('src/content/')) {
+  if (assetPath.startsWith('src/assets/') || assetPath.startsWith('content/')) {
     return toDevFsPreviewSrc(assetPath);
   }
   return null;
@@ -396,7 +397,7 @@ const extractContentAssetAliases = (source: string, ownerValue: string): string[
     if (!relativeRef) continue;
 
     const resolvedPath = path.posix.normalize(path.posix.join(ownerDirectory, relativeRef));
-    if (!resolvedPath.startsWith('src/content/')) continue;
+    if (!resolvedPath.startsWith('content/')) continue;
 
     aliases.add(resolvedPath);
     const resolvedDirectory = path.posix.dirname(resolvedPath);
@@ -410,7 +411,7 @@ const extractContentAssetAliases = (source: string, ownerValue: string): string[
 
 const loadContentOwnerOptions = async (): Promise<AdminImageContentOwner[]> => {
   const projectRoot = getProjectRoot();
-  const contentRoot = path.join(projectRoot, 'src', 'content');
+  const contentRoot = path.join(projectRoot, CONTENT_ROOT);
   if (!existsSync(contentRoot)) return [];
   const cacheKey = getAdminImageCacheKey('content-owners');
 
@@ -425,21 +426,24 @@ const loadContentOwnerOptions = async (): Promise<AdminImageContentOwner[]> => {
           const relativeFilePath = path.relative(projectRoot, filePath).replace(/\\/g, '/');
           const relativeWithoutExt = relativeFilePath.replace(MARKDOWN_EXT_RE, '');
           const segments = relativeWithoutExt.split('/');
-          const collection = segments[2] as ContentCollectionKey | undefined;
+          const collection = segments[1] as ContentCollectionKey | undefined;
           if (!collection || !(collection in CONTENT_COLLECTION_LABELS)) return null;
 
-          const entryId = segments.slice(3).join('/');
+          const entryId = segments.slice(2).join('/');
           if (!entryId) return null;
 
           const source = await readFile(filePath, 'utf8');
           const title = extractContentTitle(source);
           const fallbackId = entryId.endsWith('/index') ? entryId.slice(0, -'/index'.length) : entryId;
           const normalizedTitle = title || humanizeEntryId(fallbackId || entryId) || entryId;
+          const ownerValue = relativeWithoutExt.endsWith('/index')
+            ? relativeWithoutExt.slice(0, -'/index'.length)
+            : relativeWithoutExt;
 
           return {
-            value: relativeWithoutExt,
+            value: ownerValue,
             label: `${CONTENT_COLLECTION_LABELS[collection]} · ${normalizedTitle}`,
-            aliases: extractContentAssetAliases(source, relativeWithoutExt)
+            aliases: extractContentAssetAliases(source, ownerValue)
           } satisfies AdminImageContentOwner;
         })
       );
@@ -546,7 +550,7 @@ const listAdminImageAssets = async (
     cacheKey,
     async () => {
       const roots = resolveImageScanTargets(directory);
-      const resolvedContentOwners = roots.some((root) => root.origin === 'src/content')
+      const resolvedContentOwners = roots.some((root) => root.origin === 'content')
         ? (contentOwners?.length ? [...contentOwners] : await loadContentOwnerOptions())
         : [];
 
@@ -556,7 +560,7 @@ const listAdminImageAssets = async (
           const files = await walkImageFiles(rootPath);
           return files.map((filePath) => {
             const relativePath = path.relative(projectRoot, filePath).replace(/\\/g, '/');
-            const matchedOwner = origin === 'src/content'
+            const matchedOwner = origin === 'content'
               ? resolveAssetOwner(relativePath, resolvedContentOwners)
               : origin === 'public'
                 ? (() => {
@@ -596,7 +600,7 @@ const sortImageAssets = (field: AdminImageFieldContext | null, left: AdminImageA
 const getCompatibleFieldValues = (record: AdminImageAssetRecord): string[] =>
   record.origin === 'cloud'
     ? [record.cloudMeta?.url ?? record.path].filter((value) => value.length > 0)
-    : getAdminImageCompatibleFieldValues(record.path, record.origin);
+    : getAdminImageCompatibleFieldValues(record.path, record.origin, record.owner);
 
 const getPreferredFieldValue = (record: AdminImageAssetRecord): string | null => {
   const compatibleValues = getCompatibleFieldValues(record);
@@ -623,8 +627,8 @@ const getBitsBrowseSubgroup = (assetPath: string): { browseSubgroup: string; bro
   // bits 落点是 public/images/bits/<slug>/
   const relativePath = assetPath.startsWith('public/images/bits/')
     ? assetPath.slice('public/images/bits/'.length)
-    : assetPath.startsWith('src/content/bits/')
-      ? assetPath.slice('src/content/bits/'.length)
+    : assetPath.startsWith('content/bits/')
+      ? assetPath.slice('content/bits/'.length)
       : '';
   const firstSegment = relativePath.split('/', 1)[0] ?? '';
   if (/^(?:19|20)\d{2}$/.test(firstSegment)) {
@@ -664,13 +668,13 @@ const resolveBrowseMeta = (record: AdminImageAssetRecord): AdminImageAssetBrowse
     };
   }
 
-  if (record.path.startsWith('src/content/blog/') || record.path.startsWith('public/images/blog/')) {
+  if (record.path.startsWith('content/blog/') || record.path.startsWith('public/images/blog/')) {
     return {
       browseGroup: 'blog',
       browseGroupLabel: ADMIN_IMAGE_BROWSE_GROUP_LABELS.blog,
       // 子分组统一用 entryId：owner 形如 `public:blog:<slug>`，与 projects/devlog 的裸 slug 不一致
       browseSubgroup: getEntryIdBrowseSubgroup(record.path, [
-        'src/content/blog/',
+        'content/blog/',
         'public/images/blog/'
       ]),
       browseSubgroupLabel: record.ownerLabel,
@@ -679,29 +683,29 @@ const resolveBrowseMeta = (record: AdminImageAssetRecord): AdminImageAssetBrowse
     };
   }
 
-  if (record.path.startsWith('src/content/projects/') || record.path.startsWith('public/images/projects/')) {
+  if (record.path.startsWith('content/projects/') || record.path.startsWith('public/images/projects/')) {
     return {
       browseGroup: 'projects',
       browseGroupLabel: ADMIN_IMAGE_BROWSE_GROUP_LABELS.projects,
-      browseSubgroup: getEntryIdBrowseSubgroup(record.path, ['src/content/projects/', 'public/images/projects/']),
+      browseSubgroup: getEntryIdBrowseSubgroup(record.path, ['content/projects/', 'public/images/projects/']),
       browseSubgroupLabel: null,
       preferredValue,
       hiddenFromBrowse: false
     };
   }
 
-  if (record.path.startsWith('src/content/devlog/') || record.path.startsWith('public/images/devlog/')) {
+  if (record.path.startsWith('content/devlog/') || record.path.startsWith('public/images/devlog/')) {
     return {
       browseGroup: 'devlog',
       browseGroupLabel: ADMIN_IMAGE_BROWSE_GROUP_LABELS.devlog,
-      browseSubgroup: getEntryIdBrowseSubgroup(record.path, ['src/content/devlog/', 'public/images/devlog/']),
+      browseSubgroup: getEntryIdBrowseSubgroup(record.path, ['content/devlog/', 'public/images/devlog/']),
       browseSubgroupLabel: null,
       preferredValue,
       hiddenFromBrowse: false
     };
   }
 
-  if (record.path.startsWith('src/content/bits/') || record.path.startsWith('public/images/bits/')) {
+  if (record.path.startsWith('content/bits/') || record.path.startsWith('public/images/bits/')) {
     const bitsSubgroup = getBitsBrowseSubgroup(record.path);
     return {
       browseGroup: 'bits',
@@ -1203,11 +1207,11 @@ const resolveLocalTargetFromPath = (assetPath: string): LocalImageTarget => {
     };
   }
 
-  if (canonicalPath.startsWith('src/content/')) {
+  if (canonicalPath.startsWith('content/')) {
     return {
       path: canonicalPath,
       value: canonicalPath,
-      origin: 'src/content',
+      origin: 'content',
       previewSrc: getPreviewSrcFromPath(canonicalPath)
     };
   }
@@ -1347,11 +1351,11 @@ export const listAdminImageItems = async ({
     };
   }
 
-  const contentOwners = directory === 'src/content' ? await loadContentOwnerOptions() : [];
+  const contentOwners = directory === CONTENT_ROOT ? await loadContentOwnerOptions() : [];
   const assets = await listAdminImageAssets(directory, contentOwners);
   const mappedAssets = assets
     .map((asset) => {
-      const value = getAdminImageFieldValue(field, asset.path, asset.origin);
+      const value = getAdminImageFieldValue(field, asset.path, asset.origin, asset.owner);
       if (!value) return null;
       return { ...asset, value };
     })
@@ -1364,7 +1368,7 @@ export const listAdminImageItems = async ({
     counts.set(asset.owner, (counts.get(asset.owner) ?? 0) + 1);
     return counts;
   }, new Map<string, number>());
-  const ownerOptions = directory === 'src/content'
+  const ownerOptions = directory === CONTENT_ROOT
     ? contentOwners
         .map((contentOwner) => ({
           value: contentOwner.value,
@@ -1373,7 +1377,7 @@ export const listAdminImageItems = async ({
         }))
         .filter((option) => option.count > 0)
     : [];
-  const normalizedOwner = directory === 'src/content'
+  const normalizedOwner = directory === CONTENT_ROOT
     ? (() => {
         const candidate = normalizeAdminImageOwnerValue(owner);
         return ownerOptions.some((option) => option.value === candidate) ? candidate : '';

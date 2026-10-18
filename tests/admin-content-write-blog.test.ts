@@ -38,7 +38,7 @@ describe('admin content blog write contract', () => {
     expect(dryRunPayload.dryRun).toBe(true);
     expect(dryRunPayload.result.changedFields).toEqual(['title', 'tags']);
 
-    const before = await readFile(path.join(getTempRoot(), 'src', 'content', 'blog', 'demo.md'), 'utf8');
+    const before = await readFile(path.join(getTempRoot(), 'content', 'blog', 'demo', 'index.md'), 'utf8');
 
     const writeResponse = await POST({
       request: createJsonRequest('http://127.0.0.1:4321/api/admin/content/entry', {
@@ -55,15 +55,17 @@ describe('admin content blog write contract', () => {
     expect(writePayload.ok).toBe(true);
     expect(writePayload.result.written).toBe(true);
 
-    const after = await readFile(path.join(getTempRoot(), 'src', 'content', 'blog', 'demo.md'), 'utf8');
+    const after = await readFile(path.join(getTempRoot(), 'content', 'blog', 'demo', 'index.md'), 'utf8');
     expect(after).toContain('title: Edited blog');
     expect(after).toContain('tags:');
     expect(after.endsWith('# blog\n\n正文保持不变。\n')).toBe(true);
     expect(after).not.toBe(before);
   });
 
-  it('normalizes legacy blog datetime dates to date plus publishedAt on save', async () => {
-    const legacyPath = path.join(getTempRoot(), 'src', 'content', 'blog', 'legacy-datetime.md');
+  it('normalizes legacy blog datetime dates to a date-only field without deriving publishedAt', async () => {
+    const legacyDirectory = path.join(getTempRoot(), 'content', 'blog', 'legacy-datetime');
+    await mkdir(legacyDirectory, { recursive: true });
+    const legacyPath = path.join(legacyDirectory, 'index.md');
     await writeFile(
       legacyPath,
       [
@@ -99,23 +101,26 @@ describe('admin content blog write contract', () => {
     expect(response.status).toBe(200);
     const payload = JSON.parse(await response.text());
     expect(payload.ok).toBe(true);
-    expect(payload.result.changedFields).toEqual(['title', 'date', 'publishedAt']);
+    expect(payload.result.changedFields).toEqual(['title', 'date']);
 
     const after = await readFile(legacyPath, 'utf8');
     expect(after).toContain('title: Legacy Datetime Updated');
     expect(after).toContain('date: 2024-11-23');
-    expect(after).toContain('publishedAt: 2024-11-23T18:00:00+08:00');
+    expect(after).not.toContain('publishedAt:');
     expect(after).not.toContain('date: 2024-11-23T18:00:00+08:00');
   });
 
-  it('preserves derived publishedAt when older blog payloads omit the field', async () => {
-    const legacyPath = path.join(getTempRoot(), 'src', 'content', 'blog', 'legacy-datetime.md');
+  it('preserves explicit publishedAt when older blog payloads omit the field', async () => {
+    const legacyDirectory = path.join(getTempRoot(), 'content', 'blog', 'legacy-published');
+    await mkdir(legacyDirectory, { recursive: true });
+    const legacyPath = path.join(legacyDirectory, 'index.md');
     await writeFile(
       legacyPath,
       [
         '---',
-        'title: Legacy Datetime',
-        'date: 2024-11-23T18:00:00+08:00',
+        'title: Legacy Published',
+        'date: 2024-11-23',
+        'publishedAt: 2024-11-23T18:00:00+08:00',
         'draft: false',
         '---',
         '',
@@ -128,11 +133,11 @@ describe('admin content blog write contract', () => {
     const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
     const { POST } = await import('../src/pages/api/admin/content/entry');
 
-    const current = await readAdminContentEntryEditorPayload('blog', 'legacy-datetime');
+    const current = await readAdminContentEntryEditorPayload('blog', 'legacy-published');
     const response = await POST({
       request: createJsonRequest('http://127.0.0.1:4321/api/admin/content/entry', {
         collection: 'blog',
-        entryId: 'legacy-datetime',
+        entryId: 'legacy-published',
         revision: current.revision,
         frontmatter: {
           ...omitPublishedAt(current.values),
@@ -145,13 +150,12 @@ describe('admin content blog write contract', () => {
     expect(response.status).toBe(200);
     const payload = JSON.parse(await response.text());
     expect(payload.ok).toBe(true);
-    expect(payload.result.changedFields).toEqual(['title', 'date', 'publishedAt']);
+    expect(payload.result.changedFields).toEqual(['title']);
 
     const after = await readFile(legacyPath, 'utf8');
     expect(after).toContain('title: Legacy Payload Updated');
     expect(after).toContain('date: 2024-11-23');
     expect(after).toContain('publishedAt: 2024-11-23T18:00:00+08:00');
-    expect(after).not.toContain('date: 2024-11-23T18:00:00+08:00');
   });
 
   it('does not create publishedAt when older blog payloads omit it for date-only entries', async () => {
@@ -177,7 +181,7 @@ describe('admin content blog write contract', () => {
     expect(payload.ok).toBe(true);
     expect(payload.result.changedFields).toEqual(['title']);
 
-    const after = await readFile(path.join(getTempRoot(), 'src', 'content', 'blog', 'demo.md'), 'utf8');
+    const after = await readFile(path.join(getTempRoot(), 'content', 'blog', 'demo', 'index.md'), 'utf8');
     expect(after).toContain('title: Date Only Legacy Payload');
     expect(after).toContain('date: 2026-03-18');
     expect(after).not.toContain('publishedAt:');
@@ -206,12 +210,12 @@ describe('admin content blog write contract', () => {
     expect(payload.ok).toBe(true);
     expect(payload.result.changedFields).toEqual(['publishedAt']);
 
-    const after = await readFile(path.join(getTempRoot(), 'src', 'content', 'blog', 'demo.md'), 'utf8');
+    const after = await readFile(path.join(getTempRoot(), 'content', 'blog', 'demo', 'index.md'), 'utf8');
     expect(after).toContain('date: 2026-03-18');
     expect(after).toContain('publishedAt: 2026-03-18T19:30:00+08:00');
   });
 
-  it('normalizes blog date from explicit publishedAt instead of blocking the save', async () => {
+  it('keeps blog date independent from an explicit publishedAt', async () => {
     const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
     const { POST } = await import('../src/pages/api/admin/content/entry');
 
@@ -233,14 +237,14 @@ describe('admin content blog write contract', () => {
     expect(response.status).toBe(200);
     const payload = JSON.parse(await response.text());
     expect(payload.ok).toBe(true);
-    expect(payload.result.changedFields).toEqual(['date', 'publishedAt']);
+    expect(payload.result.changedFields).toEqual(['publishedAt']);
 
-    const after = await readFile(path.join(getTempRoot(), 'src', 'content', 'blog', 'demo.md'), 'utf8');
-    expect(after).toContain('date: 2026-03-19');
+    const after = await readFile(path.join(getTempRoot(), 'content', 'blog', 'demo', 'index.md'), 'utf8');
+    expect(after).toContain('date: 2026-03-18');
     expect(after).toContain('publishedAt: 2026-03-19T00:30:00+08:00');
   });
 
-  it('rejects updatedAt earlier than the date normalized from explicit publishedAt', async () => {
+  it('rejects updatedAt earlier than the blog date even when publishedAt is later', async () => {
     const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
     const { POST } = await import('../src/pages/api/admin/content/entry');
 
@@ -254,7 +258,7 @@ describe('admin content blog write contract', () => {
           ...current.values,
           date: '2026-03-18',
           publishedAt: '2026-03-19T00:30:00+08:00',
-          updatedAt: '2026-03-18'
+          updatedAt: '2026-03-17'
         }
       }),
       url: new URL('http://127.0.0.1:4321/api/admin/content/entry?dryRun=1')
@@ -273,7 +277,7 @@ describe('admin content blog write contract', () => {
   });
 
   it('allows blog authors to explicitly clear publishedAt', async () => {
-    const BlogPath = path.join(getTempRoot(), 'src', 'content', 'blog', 'demo.md');
+    const BlogPath = path.join(getTempRoot(), 'content', 'blog', 'demo', 'index.md');
     await writeFile(
       BlogPath,
       [
@@ -371,12 +375,12 @@ describe('admin content blog write contract', () => {
     expect(payload.result.changedFields).toEqual(['updatedAt']);
     expect(payload.payload.values.updatedAt).toBe('2026-03-20');
 
-    const after = await readFile(path.join(getTempRoot(), 'src', 'content', 'blog', 'demo.md'), 'utf8');
+    const after = await readFile(path.join(getTempRoot(), 'content', 'blog', 'demo', 'index.md'), 'utf8');
     expect(after).toContain('updatedAt: 2026-03-20');
   });
 
   it('preserves existing updatedAt when older blog payloads omit the field', async () => {
-    const BlogPath = path.join(getTempRoot(), 'src', 'content', 'blog', 'demo.md');
+    const BlogPath = path.join(getTempRoot(), 'content', 'blog', 'demo', 'index.md');
     await writeFile(
       BlogPath,
       [
@@ -420,8 +424,8 @@ describe('admin content blog write contract', () => {
     expect(after).toContain('updatedAt: 2026-03-20');
   });
 
-  it('rejects preserved updatedAt earlier than the final publish date', async () => {
-    const BlogPath = path.join(getTempRoot(), 'src', 'content', 'blog', 'demo.md');
+  it('rejects preserved updatedAt earlier than the blog date', async () => {
+    const BlogPath = path.join(getTempRoot(), 'content', 'blog', 'demo', 'index.md');
     await writeFile(
       BlogPath,
       [
@@ -449,7 +453,8 @@ describe('admin content blog write contract', () => {
         revision: current.revision,
         frontmatter: {
           ...omitUpdatedAt(current.values),
-          publishedAt: '2026-03-19T00:30:00+08:00'
+          date: '2026-03-19',
+          publishedAt: '2026-03-20T00:30:00+08:00'
         }
       }),
       url: new URL('http://127.0.0.1:4321/api/admin/content/entry?dryRun=1')
@@ -468,7 +473,9 @@ describe('admin content blog write contract', () => {
   });
 
   it('repairs semantically invalid current blog frontmatter instead of failing before next validation', async () => {
-    const BlogPath = path.join(getTempRoot(), 'src', 'content', 'blog', 'broken-current.md');
+    const brokenDirectory = path.join(getTempRoot(), 'content', 'blog', 'broken-current');
+    await mkdir(brokenDirectory, { recursive: true });
+    const BlogPath = path.join(brokenDirectory, 'index.md');
     await writeFile(
       BlogPath,
       [
@@ -539,7 +546,7 @@ describe('admin content blog write contract', () => {
     const payload = JSON.parse(await response.text());
     expect(payload.ok).toBe(true);
     expect(payload.result.changedFields).toEqual(
-      expect.arrayContaining(['title', 'date', 'tags', 'draft', 'cover'])
+      expect.arrayContaining(['title', 'date', 'tags', 'draft'])
     );
 
     const after = await readFile(BlogPath, 'utf8');
@@ -556,7 +563,7 @@ describe('admin content blog write contract', () => {
 
   it('supports dry-run and real writes for blog body while preserving frontmatter bytes', async () => {
     const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
-    const { splitMarkdownFrontmatter } = await import('../src/lib/admin-console/frontmatter');
+    const { splitMarkdownFrontmatter } = await import('../src/lib/frontmatter');
     const { POST } = await import('../src/pages/api/admin/content/entry');
 
     const current = await readAdminContentEntryEditorPayload('blog', 'demo');
@@ -579,7 +586,7 @@ describe('admin content blog write contract', () => {
     expect(dryRunPayload.dryRun).toBe(true);
     expect(dryRunPayload.result.changedFields).toEqual(['body']);
 
-    const before = await readFile(path.join(getTempRoot(), 'src', 'content', 'blog', 'demo.md'), 'utf8');
+    const before = await readFile(path.join(getTempRoot(), 'content', 'blog', 'demo', 'index.md'), 'utf8');
     const beforeSection = splitMarkdownFrontmatter(before);
 
     const writeResponse = await POST({
@@ -600,7 +607,7 @@ describe('admin content blog write contract', () => {
     expect(writePayload.result.changedFields).toEqual(['body']);
     expect(writePayload.payload.bodyText).toBe(nextBody);
 
-    const after = await readFile(path.join(getTempRoot(), 'src', 'content', 'blog', 'demo.md'), 'utf8');
+    const after = await readFile(path.join(getTempRoot(), 'content', 'blog', 'demo', 'index.md'), 'utf8');
     const afterSection = splitMarkdownFrontmatter(after);
     expect(afterSection.frontmatterBlock).toBe(beforeSection.frontmatterBlock);
     expect(afterSection.bodyText).toBe(nextBody);
@@ -610,8 +617,8 @@ describe('admin content blog write contract', () => {
     const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
     const { POST } = await import('../src/pages/api/admin/content/entry');
 
-    await mkdir(path.join(getTempRoot(), 'src', 'content', 'blog', 'demo-assets'), { recursive: true });
-    await writeFile(path.join(getTempRoot(), 'src', 'content', 'blog', 'demo-assets', 'existing.webp'), 'image');
+    await mkdir(path.join(getTempRoot(), 'content', 'blog', 'demo', 'demo-assets'), { recursive: true });
+    await writeFile(path.join(getTempRoot(), 'content', 'blog', 'demo', 'demo-assets', 'existing.webp'), 'image');
     // 校验器检查 `/images/...` 绝对路径，该文件必须真实存在。
     const publicArchiveDir = path.join(getTempRoot(), 'public', 'images', 'archive');
     await mkdir(publicArchiveDir, { recursive: true });
@@ -658,7 +665,7 @@ describe('admin content blog write contract', () => {
     const { POST } = await import('../src/pages/api/admin/content/entry');
 
     await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'blog', 'demo.md'),
+      path.join(getTempRoot(), 'content', 'blog', 'demo', 'index.md'),
       [
         '---',
         'title: Demo blog',
@@ -730,14 +737,14 @@ describe('admin content blog write contract', () => {
     expect(payload.ok).toBe(false);
     expect(payload.errors).toEqual(
       expect.arrayContaining([
-        '正文引用的本地图片不存在：src/content/blog/demo-assets/missing.webp',
-        '正文引用的本地图片不存在：src/content/blog/demo-assets/missing-figure.webp',
-        '正文引用的本地图片不存在：src/content/blog/demo-assets/missing-rich-caption-figure.webp',
-        '正文引用的本地图片不存在：src/content/blog/demo-assets/missing-gallery.webp'
+        '正文引用的本地图片不存在：content/blog/demo/demo-assets/missing.webp',
+        '正文引用的本地图片不存在：content/blog/demo/demo-assets/missing-figure.webp',
+        '正文引用的本地图片不存在：content/blog/demo/demo-assets/missing-rich-caption-figure.webp',
+        '正文引用的本地图片不存在：content/blog/demo/demo-assets/missing-gallery.webp'
       ])
     );
     expect(payload.errors).not.toContain(
-      '正文引用的本地图片不存在：src/content/blog/demo-assets/missing-in-code.webp'
+      '正文引用的本地图片不存在：content/blog/demo/demo-assets/missing-in-code.webp'
     );
     expect(payload.issues).toEqual(
       expect.arrayContaining([
@@ -895,7 +902,7 @@ describe('admin content blog write contract', () => {
     const current = await readAdminContentEntryEditorPayload('blog', 'demo');
 
     await writeFile(
-      path.join(getTempRoot(), 'src', 'content', 'blog', 'demo.md'),
+      path.join(getTempRoot(), 'content', 'blog', 'demo', 'index.md'),
       ['---', 'title: External Change', 'date: 2026-03-18', '---', '', 'changed body', ''].join('\n'),
       'utf8'
     );

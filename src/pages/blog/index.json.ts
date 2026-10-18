@@ -1,14 +1,19 @@
 import type { APIRoute } from 'astro';
-import { getBlogDerivedText, getBlogSlug, getVisibleblogs } from '../../lib/content';
+import { getBlogDerivedText, getVisibleBlogListItems } from '../../lib/content';
 
 export const prerender = true;
 
 export const GET: APIRoute = async () => {
-  const visibleblogs = await getVisibleblogs();
-  const index = visibleblogs.map((entry) => {
+  const items = await getVisibleBlogListItems();
+  const index = items.map(({ entry, href, isLatest, latestHref, series, versionLabel }) => {
     const { text } = getBlogDerivedText(entry);
     return {
-      slug: getBlogSlug(entry),
+      slug: entry.id,
+      href,
+      isLatest,
+      latestHref,
+      series,
+      versionLabel,
       title: entry.data.title ?? '',
       description: entry.data.description ?? '',
       tags: entry.data.tags ?? [],

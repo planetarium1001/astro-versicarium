@@ -139,9 +139,13 @@ describe('markdown pipeline contract', () => {
     expect(pluginOf(rehypePlugins[2])).toBe(rehypeRestoreMarkdownMathBoundary);
     expect(pluginOf(rehypePlugins[3])).toBe(rehypeAboutDirectives);
     expect(optionsOf(rehypePlugins[3])).toEqual({ base: '/blog/', enabled: true });
-    expect(pluginOf(rehypePlugins[4])).toBe(rehypeSanitize);
-    expect(optionsOf(rehypePlugins[4])).toBe(sanitizeSchema);
-    expect(pluginOf(rehypePlugins[5])).toBe(rehypeKatex);
+    // 内容附件链接改写插件插在 about directives 与 sanitize 之间。
+    expect(rehypePlugins).toHaveLength(7);
+    expect(pluginOf(rehypePlugins[4])).not.toBe(rehypeSanitize);
+    expect(optionsOf(rehypePlugins[4])).toEqual({ base: '/blog/' });
+    expect(pluginOf(rehypePlugins[5])).toBe(rehypeSanitize);
+    expect(optionsOf(rehypePlugins[5])).toBe(sanitizeSchema);
+    expect(pluginOf(rehypePlugins[6])).toBe(rehypeKatex);
   });
 
   it('keeps Shiki themes and toolbar transformer in one public factory', () => {

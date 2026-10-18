@@ -1,4 +1,6 @@
 import { slug as githubSlug } from 'github-slugger';
+import { DEFAULT_SITE_TIMEZONE } from '../../site.config.mjs';
+import { formatISODateInTimeZone } from './format';
 
 /** 博客公开 URL 的 slug 规则，由 `content.config.ts` 与 `content.ts` 共用。 */
 
@@ -80,19 +82,16 @@ export const slugifyEntryTitle = (input: string): string => {
   return `${head}-${stableShortHash(slug)}`;
 };
 
-const formatUtcDatePart = (date: Date): string => {
-  const yyyy = String(date.getUTCFullYear());
-  const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const dd = String(date.getUTCDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-};
-
 /**
- * `YYYY-MM-DD-title`：内容 entryId 的唯一构造入口。日期取 UTC 分量。
+ * `YYYY-MM-DD-title`：内容 entryId 的唯一构造入口。日期取站点时区的日历日期。
  * slug 为空 → `untitled`，超长 → 截断 + 短哈希，命中 Windows 保留名 → 追加 `-entry`。
  */
-export const buildContentEntryId = (date: Date, title: string): string => {
+export const buildContentEntryId = (
+  date: Date,
+  title: string,
+  timeZone = DEFAULT_SITE_TIMEZONE
+): string => {
   const slug = slugifyEntryTitle(title) || FALLBACK_ENTRY_ID_SLUG;
-  const entryId = `${formatUtcDatePart(date)}-${slug}`;
+  const entryId = `${formatISODateInTimeZone(date, timeZone)}-${slug}`;
   return isWindowsReservedFileBaseName(entryId) ? `${entryId}-entry` : entryId;
 };

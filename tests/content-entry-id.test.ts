@@ -60,12 +60,12 @@ describe('slugifyEntryTitle', () => {
 });
 
 describe('buildContentEntryId', () => {
-  it('`YYYY-MM-DD-title`，日期取 UTC 分量', () => {
+  it('`YYYY-MM-DD-title`，日期取站点时区日历日期', () => {
     expect(buildContentEntryId(new Date('2026-06-13T00:00:00Z'), 'Content Console 使用指南')).toBe(
       '2026-06-13-content-console-使用指南'
     );
-    // UTC 分量：东八区的 2026-06-13T00:00+08:00 是 UTC 的 06-12
-    expect(buildContentEntryId(new Date('2026-06-13T00:00:00+08:00'), '标题')).toBe('2026-06-12-标题');
+    // 站点时区为 Asia/Shanghai：东八区的 2026-06-13T00:00+08:00 仍属于 06-13
+    expect(buildContentEntryId(new Date('2026-06-13T00:00:00+08:00'), '标题')).toBe('2026-06-13-标题');
   });
 
   it('slug 为空 → untitled', () => {

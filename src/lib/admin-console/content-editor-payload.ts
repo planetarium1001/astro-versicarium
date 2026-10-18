@@ -31,7 +31,13 @@ export type AdminBlogEditorValues = {
   tagsText: string;
   draft: boolean;
   slug: string;
-  cover: string;
+  series: string;
+  versionLabel: string;
+  versionName: string;
+  versionSummary: string;
+  versionOrder: string;
+  ogImage: string;
+  ogImageAlt: string;
   badge: string;
 };
 
@@ -66,6 +72,7 @@ export type AdminDevlogEditorValues = {
   title: string;
   date: string;
   project: string;
+  projectSlug: string;
   kind: string;
   description: string;
   draft: boolean;
@@ -203,12 +210,18 @@ const toBlogEditorValues = (state: AdminContentSourceState): AdminBlogEditorValu
     title: normalizeOptionalText(frontmatter.title),
     description: normalizeOptionalText(frontmatter.description),
     date: dateResult?.dateText ?? rawDate,
-    publishedAt: rawPublishedAt || dateResult?.publishedAtText || '',
+    publishedAt: rawPublishedAt,
     updatedAt: getBlogDateText(frontmatter.updatedAt),
     tagsText: getStringArray(frontmatter.tags).join('\n'),
     draft: frontmatter.draft === true,
     slug: normalizeOptionalText(frontmatter.slug),
-    cover: normalizeOptionalText(frontmatter.cover),
+    series: normalizeOptionalText(frontmatter.series),
+    versionLabel: normalizeOptionalText(frontmatter.versionLabel),
+    versionName: normalizeOptionalText(frontmatter.versionName),
+    versionSummary: normalizeOptionalText(frontmatter.versionSummary),
+    versionOrder: frontmatter.versionOrder == null ? '' : String(frontmatter.versionOrder),
+    ogImage: normalizeOptionalText(frontmatter.ogImage ?? frontmatter.cover),
+    ogImageAlt: normalizeOptionalText(frontmatter.ogImageAlt),
     badge: normalizeOptionalText(frontmatter.badge)
   };
 };
@@ -249,6 +262,7 @@ const toDevlogEditorValues = (state: AdminContentSourceState): AdminDevlogEditor
     title: normalizeOptionalText(frontmatter.title),
     date: getDateString(frontmatter, 'date', ''),
     project: normalizeOptionalText(frontmatter.project),
+    projectSlug: normalizeOptionalText(frontmatter.projectSlug),
     kind: normalizeOptionalText(frontmatter.kind),
     description: normalizeOptionalText(frontmatter.description),
     draft: frontmatter.draft === true

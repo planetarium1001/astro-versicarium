@@ -2,6 +2,7 @@
 title: 第二版调整
 date: 2026-02-05
 project: 第二个项目
+projectSlug: 2026-02-14-second-project
 kind: improvement
 description: 记录第二个项目的一处调整。
 ---

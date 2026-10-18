@@ -77,11 +77,12 @@ type Props = {
   base?: string;
   endpoint: string;
   createEndpoint: string;
+  createVersionEndpoint: string;
   deleteEndpoint: string;
   bitsDefaultAuthor?: BitsCardAuthorInput;
 };
 
-let { base = '/', endpoint, createEndpoint, deleteEndpoint, bitsDefaultAuthor = {} }: Props = $props();
+let { base = '/', endpoint, createEndpoint, createVersionEndpoint, deleteEndpoint, bitsDefaultAuthor = {} }: Props = $props();
 
 let dialog = $state<ArticleInfoDialog | null>(null);
 let open = $state(false);
@@ -109,7 +110,13 @@ const createEmptyBlogFrontmatter = (): AdminBlogEditorValues => ({
   tagsText: '',
   draft: false,
   slug: '',
-  cover: '',
+  series: '',
+  versionLabel: '',
+  versionName: '',
+  versionSummary: '',
+  versionOrder: '',
+  ogImage: '',
+  ogImageAlt: '',
   badge: ''
 });
 
@@ -661,6 +668,36 @@ const handleClick = (event: MouseEvent) => {
       createTrigger,
       isContentInfoCollection(requestedCollection) ? requestedCollection : 'blog'
     );
+    return;
+  }
+
+  const createVersionTrigger = event.target.closest<HTMLElement>('[data-admin-content-create-version-action]');
+  if (createVersionTrigger) {
+    event.preventDefault();
+    const entryId = (createVersionTrigger.dataset.entryId ?? '').trim();
+    if (!entryId) return;
+    if (!window.confirm(`基于 ${entryId} 所属系列的最新版新建一个草稿版本？`)) return;
+    void (async () => {
+      try {
+        const response = await fetch(createVersionEndpoint, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json; charset=utf-8' },
+          body: JSON.stringify({ entryId })
+        });
+        const payload = await response.json() as {
+          ok?: boolean;
+          errors?: string[];
+          result?: { editHref?: string };
+        };
+        if (!response.ok || !payload.ok || !payload.result?.editHref) {
+          dispatchAdminContentStatus('error', payload.errors?.[0] ?? '新建版本失败');
+          return;
+        }
+        window.location.assign(createWithBase(base)(payload.result.editHref));
+      } catch (error) {
+        dispatchAdminContentStatus('error', error instanceof Error ? error.message : '新建版本失败');
+      }
+    })();
     return;
   }
 
