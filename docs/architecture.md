@@ -4,7 +4,7 @@
 
 | 目录 | 职责 |
 | --- | --- |
-| `src/content/` | 内容源文件，按集合分目录 |
+| `content/` | 内容源文件，按集合分目录；条目为 `index.md` + `images/` / `files/` |
 | `src/pages/` | 路由；`admin/` 与 `api/admin/` 仅开发环境可用 |
 | `src/layouts/` | `BaseLayout`、`ArticleLayout` |
 | `src/components/` | 展示组件；`admin/` 为后台界面，前台不引用 |
@@ -25,11 +25,11 @@
 
 | 集合 | 加载器 base | 路由 |
 | --- | --- | --- |
-| `blog` | `src/content/blog` | `/blog/` 列表、`/blog/<slug>/` 详情（`getStaticPaths` 逐条生成） |
-| `projects` | `src/content/projects` | `/projects/` 单页，条目以 `#<entryId>` 锚点定位 |
-| `bits` | `src/content/bits` | `/bits/` 单页，条目以 `#<entryId>` 锚点定位 |
-| `devlog` | `src/content/devlog` | `/devlog/` 单页，条目以 `#<entryId>` 锚点定位 |
-| `about` | `src/content/about` | `/about/`，仅加载 `index.md` |
+| `blog` | `content/blog` | `/blog/` 列表、`/blog/<slug>/` 详情（`getStaticPaths` 逐条生成） |
+| `projects` | `content/projects` | `/projects/` 单页，条目以 `#<entryId>` 锚点定位 |
+| `bits` | `content/bits` | `/bits/` 单页，条目以 `#<entryId>` 锚点定位 |
+| `devlog` | `content/devlog/<projectSlug>` | `/devlog/` 单页，条目以压平后的 `#<entryId>` 锚点定位 |
+| `about` | `content/about` | `/about/`，仅加载 `index.md` |
 
 `/archive/` 是跨集合时间线，聚合博客、项目与更新，按年月分组，不含动态。`/blog/index.json`、`/bits/index.json`、`/archive/index.json` 显式声明 `prerender`，为客户端筛选与计数提供数据。
 

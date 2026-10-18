@@ -67,7 +67,7 @@ npm run preview   # 预览构建结果
 ## 目录结构
 
 ```text
-src/content/        内容源文件，按集合分目录
+content/            作者内容：按集合分目录，条目含 index.md 与 images/、files/
 src/pages/          路由；admin/ 与 api/admin/ 仅开发环境可用
 src/layouts/        BaseLayout、ArticleLayout
 src/components/     展示组件；admin/ 为后台界面
@@ -104,11 +104,11 @@ docs/               仓库文档
 
 | 集合 | 源文件 | 路由 |
 | --- | --- | --- |
-| `blog` | `src/content/blog/*.md` | `/blog/`、`/blog/<slug>/` |
-| `projects` | `src/content/projects/*.md` | `/projects/`（页内锚点） |
-| `bits` | `src/content/bits/*.md` | `/bits/`（页内锚点） |
-| `devlog` | `src/content/devlog/*.md` | `/devlog/`（页内锚点） |
-| `about` | `src/content/about/index.md` | `/about/` |
+| `blog` | `content/blog/<entry>/index.md` | `/blog/`、`/blog/<slug>/` |
+| `projects` | `content/projects/<entry>/index.md` | `/projects/`（页内锚点） |
+| `bits` | `content/bits/<entry>/index.md` | `/bits/`（页内锚点） |
+| `devlog` | `content/devlog/<projectSlug>/<entry>/index.md` | `/devlog/`（页内锚点） |
+| `about` | `content/about/index.md` | `/about/` |
 
 `/archive/` 是跨博客、项目与更新的全站时间线，按年月分组，不含动态。写作入口有三种：后台写作页、直接新增 Markdown 文件、`npm run new:bit` 生成动态草稿。frontmatter、图片路径与 Markdown 扩展见 [docs/writing.md](docs/writing.md)。
 
@@ -129,7 +129,7 @@ npm run theme:update              # 执行合并，并更新 theme.json 的基�
 | 文件为二进制 | 整文件取舍；双方都改过则保留站点版本并报冲突 |
 | 站点自有路径 | 不覆盖，仅在报告中列出 |
 
-站点自有路径包括 `src/content/`、`src/data/settings/`、`public/images/`、`public/author/`、`public/fonts/`、`tools/`、`tests/fixtures/`、`README.md`、`.github/workflows/pages.yml` 与 `theme.json`。
+站点自有路径包括 `content/`、`src/data/settings/`、`public/images/`、`public/author/`、`public/fonts/`、`tools/`、`tests/fixtures/`、`README.md`、`.github/workflows/pages.yml` 与 `theme.json`。
 
 存在冲突时命令以非零状态退出，且不更新 `theme.json`；解决后重跑。主题删除的文件不会自动移除，报告会列出待确认项。合并完成后执行 `npm run verify`。
 

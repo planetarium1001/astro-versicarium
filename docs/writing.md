@@ -4,17 +4,17 @@
 
 | 集合 | 源文件 | 路由 |
 | --- | --- | --- |
-| `blog` | `src/content/blog/*.md` | `/blog/`、`/blog/<slug>/` |
-| `projects` | `src/content/projects/*.md` | `/projects/`（页内锚点） |
-| `bits` | `src/content/bits/*.md` | `/bits/`（页内锚点） |
-| `devlog` | `src/content/devlog/*.md` | `/devlog/`（页内锚点） |
-| `about` | `src/content/about/index.md` | `/about/` |
+| `blog` | `content/blog/<entry>/index.md` | `/blog/`、`/blog/<slug>/` |
+| `projects` | `content/projects/<entry>/index.md` | `/projects/`（页内锚点） |
+| `bits` | `content/bits/<entry>/index.md` | `/bits/`（页内锚点） |
+| `devlog` | `content/devlog/<projectSlug>/<entry>/index.md` | `/devlog/`（页内锚点） |
+| `about` | `content/about/index.md` | `/about/` |
 
 三种写作入口：
 
 - 后台写作页（`/admin/content/`）：新建与编辑，按标题生成条目 ID；仅开发环境可写。
-- 在对应集合目录直接新增 `.md`，文件名遵循 [development.md](development.md) 的 `YYYY-MM-DD-title` 规范。
-- `npm run new:bit`：在 `src/content/bits/` 生成一条带当前时间与 `draft: true` 的动态草稿。
+- 在对应集合目录直接新增条目目录，目录名遵循 [development.md](development.md) 的 `YYYY-MM-DD-title` 规范。
+- `npm run new:bit`：在内容根的 `bits/` 生成一条带当前时间与 `draft: true` 的动态草稿。
 
 `draft: true` 只在本地开发中用于预览，生产构建、公开列表与 RSS 会过滤。
 
@@ -68,15 +68,18 @@
 | `title` | 是 | 标题 |
 | `date` | 是 | 日期 |
 | `project` | 是 | 自由字符串，不做链接 |
+| `projectSlug` | 否 | 对应 `projects` 条目 ID；填写后条目应放在同名项目目录下 |
 | `kind` | 否 | 自由字符串，建议 `feature` / `fix` / `improvement` / `breaking` / `docs` |
 | `description` | 否 | 摘要 |
 | `draft` | 否 | 默认 `false` |
 
 `devlog` 没有 `links` 字段，外链写进正文末尾链接组。
 
-`about` 的 schema 不约束字段，正文写在 `src/content/about/index.md`。
+`devlog` 按项目分目录存放：`content/devlog/<projectSlug>/<YYYY-MM-DD-title>/index.md`。这样在文件树与后台条目 ID 里都能直接看出所属项目；条目在 `/devlog/` 与 `/projects/` 的页内锚点会把目录分隔压成 `-`，例如 `#2026-03-01-whono-astro-主题-2026-03-02-图片系统切换...`。后台新建更新时填写 `projectSlug` 会自动加上项目目录前缀。
 
-所有页面默认用 `/og-default.png` 作为分享图，文章详情页填了 `cover` 时以它覆盖。
+`about` 的 schema 不约束字段，正文写在 `content/about/index.md`。
+
+未填写 `ogImage` 时不输出分享图（不强制站点默认图）；`ogImage: none` 可显式关闭。
 
 ## 图片路径
 

@@ -8,6 +8,7 @@ import {
 } from './content';
 import { getBlogEntryHrefMap } from './blog-routing';
 import { stripTrailingLinks } from './trailing-links';
+import { flattenEntryIdToSlug } from '../utils/slug-rules';
 
 export type ArchiveRowKind = 'blog' | 'projects' | 'devlog';
 
@@ -114,7 +115,7 @@ export const getArchiveRows = async (
       key: `devlog:${entry.id}`,
       id: entry.id,
       title: entry.data.title,
-      href: `/devlog/#${entry.id}`,
+      href: `/devlog/#${flattenEntryIdToSlug(entry.id)}`,
       date: entry.data.date,
       ...meta,
       versionOrder: 0,

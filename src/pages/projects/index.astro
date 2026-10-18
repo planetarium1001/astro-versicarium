@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { createWithBase, getVisibleDevlogs, getVisibleProjects } from '../../lib/content';
 import { getThemeSettings } from '../../lib/theme-settings';
 import { joinPageSubtitleText } from '../../utils/format';
+import { flattenEntryIdToSlug } from '../../utils/slug-rules';
 import { deriveEntryDescription, renderEntryBody } from '../../lib/entry-body';
 import { getContentImageSrc } from '../../lib/content-image';
 import { renderTrailingLinksHtml, type TrailingLink } from '../../lib/trailing-links';
@@ -61,7 +62,7 @@ const cards: ProjectCard[] = await Promise.all(
       updates: devlogs
         .filter((devlog) => devlog.data.projectSlug === entry.id)
         .map((devlog) => ({
-          id: devlog.id,
+          id: flattenEntryIdToSlug(devlog.id),
           title: devlog.data.title,
           dateText: devlog.data.dateText
         }))

@@ -4,6 +4,7 @@ import TagFilterHeader from '../../components/TagFilterHeader.astro';
 import { getVisibleDevlogs } from '../../lib/content';
 import { getThemeSettings } from '../../lib/theme-settings';
 import { joinPageSubtitleText } from '../../utils/format';
+import { flattenEntryIdToSlug } from '../../utils/slug-rules';
 import { deriveEntryDescription, renderEntryBody } from '../../lib/entry-body';
 import '../../styles/devlog-page.css';
 
@@ -46,7 +47,8 @@ const rows: DevlogRow[] = await Promise.all(
     const hasBody = body.trim().length > 0;
     const { html } = hasBody ? await renderEntryBody(body, base) : { html: '' };
     return {
-      id: entry.id,
+      // devlog 按 project 分目录后 entry.id 可能带 `/`；锚点统一压成单段。
+      id: flattenEntryIdToSlug(entry.id),
       title: entry.data.title,
       dateLabel: entry.data.dateText ?? entry.data.date.toISOString().slice(0, 10),
       project: entry.data.project,

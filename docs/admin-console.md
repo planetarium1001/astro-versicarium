@@ -1,6 +1,6 @@
 # 后台控制台
 
-入口为 `/admin/`，只在 `npm run dev` 下具备读写能力。生产产物中的后台是只读静态壳，`/api/admin/*` 一律返回 404。导航包含概览、主题、写作、图片、快照，路由定义在 `src/lib/admin-console/routes.ts`。
+入口为 `/admin/`，只在 `npm run dev` 下具备读写能力。生产产物中的后台是只读静态壳，`/api/admin/*` 一律返回 404。导航包含概览、主题、写作、资源、快照，路由定义在 `src/lib/admin-console/routes.ts`。
 
 ## 概览
 
@@ -30,18 +30,20 @@
 
 编辑页按 `[collection]/[edit]/[...entryId]` 组织，`/admin/content/` 为列表与批量操作入口，对应 API 在 `src/pages/api/admin/content/`。`about` 的正文只有一份，标题与副标题的覆盖值来自 `page.json`。
 
-## 图片
+## 资源
 
-浏览 `public/`、`src/assets/`、`src/content/` 与云端来源下的图片，分组为全部、各集合、配置素材、页面插图、云端图片与未归类，可按最新修改筛选。
+`/admin/resources/` 把图片与附件放在同一个工作区；旧地址 `/admin/images/` 由 `astro.config.mjs` 301 到新地址。左侧内容库按集合 → 系列 → 版本/条目 → 目录展开，默认只展开到集合一级；目录面板可整体收起，宽度可拖拽（分割条，键盘左右键微调，双击复位）。树与预览之间可以横向滚动查看长条目名。
 
 | 操作 | 说明 |
 | --- | --- |
-| 上传 | 内容配图写入 `public/images/{collection}/{slug}/`，`{slug}` 为条目 ID |
-| 重命名 | 改名的同时同步引用，避免正文指向不存在的文件 |
-| 元信息 | 读取尺寸、来源与所属集合，供选择器与列表展示 |
-| 站点资源上传 | favicon 等站点级资源走独立接口 |
+| 浏览与筛选 | 按集合、系列、版本/条目、目录、引用状态、类型、日期与关键词筛选，状态写入 URL |
+| 上传 | 图片落到当前条目 `images/`，附件落到 `files/` |
+| 批量操作 | 重命名、移动、删除前确认；选择状态跟随当前筛选 |
+| 详情抽屉 | 复制路径 / Markdown 引用、重命名、移动、删除、导出条目 ZIP；文本附件（`txt` / `md` / `json` 等）显示文本预览 |
+| 导入导出 | 资源页支持导入整条目 ZIP；导出走内容接口 |
+| 引用状态 | 统计正文与 frontmatter 的引用次数，区分已引用、未引用与孤儿 |
 
-列表与筛选状态体现在 URL 查询参数（`group`、`scope`、`sub`、`q`、`page`），可直接分享链接。云端来源需要配置对象存储凭据，逻辑在 `src/lib/admin-console/image-cloud-storage.ts`。
+预览区自身滚动，文件统计与分页固定在工作区底部。列表状态体现在 URL 查询参数（`collection`、`series`、`entry`、`dir`、`ref`、`type`、`q`、`page`）。云端来源需要配置对象存储凭据，逻辑在 `src/lib/admin-console/image-cloud-storage.ts`。
 
 ## 主题
 
@@ -99,6 +101,7 @@
 | 替换首页 Hero 图 | `/admin/theme/` → 首页设置，或在 `/admin/images/` 上传后选择 |
 | 批量删除草稿 | `/admin/content/` → 按草稿筛选 → 选中条目 → 批量操作 |
 | 迁移到另一台机器 | `/admin/data/` → 导出快照，在新环境导入 |
+| 管理图片或附件 | `/admin/resources/` → 选条目 → 上传或批量操作 |
 
 ## 写入流程
 
