@@ -35,6 +35,7 @@ export type AdminMediaItem = {
   collection: AdminContentCollectionKey;
   series: string;
   seriesLabel: string;
+  hasSeries: boolean;
   version: string;
   versionLabel: string;
   entryId: string;
@@ -116,6 +117,7 @@ type MediaEntryMeta = {
   dirRel: string;
   series: string;
   seriesLabel: string;
+  hasSeries: boolean;
   version: string;
   versionLabel: string;
   entryLabel: string;
@@ -207,7 +209,9 @@ const readEntryMeta = async (
 
   const title = normalizeText(frontmatter.title);
   const slug = normalizeText(frontmatter.slug);
-  const series = normalizeText(frontmatter.series) || slug || entryId;
+  const rawSeries = normalizeText(frontmatter.series);
+  const hasSeries = rawSeries.length > 0;
+  const series = rawSeries || slug || entryId;
   const versionLabel = normalizeText(frontmatter.versionLabel)
     || normalizeText(frontmatter.versionName)
     || entryId;
@@ -223,7 +227,8 @@ const readEntryMeta = async (
     entryLabel: title || versionLabel,
     title: title || entryId,
     date: readDateValue(frontmatter.date),
-    exists: true
+    exists: true,
+    hasSeries
   };
 };
 
@@ -484,6 +489,7 @@ const loadAssets = async (
         collection: entry?.collection ?? collection,
         series: entry?.series ?? UNASSIGNED_SERIES,
         seriesLabel: entry?.seriesLabel ?? UNASSIGNED_LABEL,
+        hasSeries: entry?.hasSeries ?? false,
         version: entry?.version ?? UNASSIGNED_VERSION,
         versionLabel: entry?.versionLabel ?? UNASSIGNED_LABEL,
         entryId: entry?.entryId ?? '',
@@ -514,6 +520,7 @@ const loadAssets = async (
       collection: resolved.collection,
       series: entry?.series ?? resolved.entryId ?? UNASSIGNED_SERIES,
       seriesLabel: entry?.seriesLabel ?? resolved.entryId ?? UNASSIGNED_LABEL,
+      hasSeries: entry?.hasSeries ?? false,
       version: entry?.version ?? resolved.entryId ?? UNASSIGNED_VERSION,
       versionLabel: entry?.versionLabel ?? resolved.entryId ?? UNASSIGNED_LABEL,
       entryId: resolved.entryId,
@@ -794,19 +801,21 @@ const buildMediaFilterOptions = (
 
   for (const item of items) {
     if (item.entryExists) {
-      const seriesKey = `${item.collection}:${item.series}`;
-      const seriesOption = series.get(seriesKey) ?? {
-        value: item.series,
-        label: item.seriesLabel || item.series,
-        count: 0,
-        collection: item.collection
-      };
-      seriesOption.count += 1;
-      series.set(seriesKey, seriesOption);
+      if (item.hasSeries) {
+        const seriesKey = `${item.collection}:${item.series}`;
+        const seriesOption = series.get(seriesKey) ?? {
+          value: item.series,
+          label: item.seriesLabel || item.series,
+          count: 0,
+          collection: item.collection
+        };
+        seriesOption.count += 1;
+        series.set(seriesKey, seriesOption);
+      }
 
       const versionOption = versions.get(item.entryId) ?? {
         value: item.entryId,
-        label: item.versionLabel || item.entryId,
+        label: item.hasSeries ? (item.versionLabel || item.entryId) : item.entryLabel,
         count: 0,
         collection: item.collection,
         series: item.series,
