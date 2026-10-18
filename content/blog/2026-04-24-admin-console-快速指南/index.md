@@ -33,7 +33,7 @@ npm run dev
 | `/admin/` | Site Overview | 查看站点概况、内容结构、近期文章等 |
 | `/admin/theme/` | Theme Console | 编辑站点信息、侧栏、首页、内页文案 |
 | `/admin/content/` | Content Console | 文章管理与可视化写作 |
-| `/admin/images/` | Images Console | 浏览图片资源，复制可用路径 |
+| `/admin/resources/` | 资源管理 | 浏览图片与附件，复制路径或 Markdown 引用 |
 | `/admin/data/` | Data Console | 导入与导出主题设置，便于迁移和备份 |
 
 ## 主要页面

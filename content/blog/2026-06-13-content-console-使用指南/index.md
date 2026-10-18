@@ -39,7 +39,7 @@ Content Console 直接读取 `src/content/**` 下的源文件，不依赖数据�
 
 Admin Console 的图片上传默认保存到本地，也可在开发环境配置 S3 兼容对象存储。
 
-启用后，博客 / 项目 / 更新的正文图片和动态配图会上传到配置的存储桶（bucket），并将 `https://` 公开地址写入内容。已有本地图片不会自动迁移。Images Console（`/admin/images/`）可以浏览并复制云端 URL。
+启用后，博客 / 项目 / 更新的正文图片和动态配图会上传到配置的存储桶（bucket），并将 `https://` 公开地址写入内容。已有本地图片不会自动迁移。资源管理（`/admin/resources/`）可以浏览并复制云端 URL。
 
 维护者可运行 `npm run smoke:cloud-images` 验证实际服务。该命令默认不会联网；只有显式设置 `ASTRO_WHONO_CLOUD_SMOKE=1` 并提供独立测试凭证时，才会上传测试对象、分页读取对象列表，并在结束时清理该对象。
 
@@ -85,7 +85,7 @@ Content Console 统一管理四类内容，但它们的能力并不相同：
 
 | 内容 | 目录 | 新建 | 编辑 | 删除 | 列表筛选 |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| 随笔 | `src/content/blog/` | 支持 | 支持 | 支持 | 支持 |
+| 随笔 | `content/blog/<entry>/` | 支持 | 支持 | 支持 | 支持 |
 | 动态 | `src/content/bits/` | 支持 | 支持 | 支持 | 支持 |
 | 关于 | `src/content/about/index.md` | — | 支持 | — | — |
 
@@ -177,7 +177,7 @@ archive: true
 date: 2026-01-01T12:00:00+08:00
 tags: [阅读]
 images:
-  - src: images/bits/bits-2026-01-01-1200/demo-01.webp
+  - src: ./images/demo-01.webp
     width: 800
     height: 600
     alt: 示例图片
@@ -186,7 +186,7 @@ images:
 #   avatar: author/alice.webp
 ```
 
-`title`、`tags`、`images` 和 `author` 都是可选字段。`images[].src` 可填写 `public/**` 下的相对图片路径（填写时去掉 `public/`，例如 `images/bits/bits-2026-01-01-1200/demo-01.webp`）或 `https://` 远程地址；本地相对路径不能使用 `http`、`..`、查询串或片段。`width` / `height` 为正整数时可减少布局跳动，`alt` 用于图片说明。头像同样只填写 `public/**` 下的相对路径，例如 `author/avatar.webp`。当前 `/bits/` 不生成详情页，通常不需要填写 `slug`。
+`title`、`tags`、`images` 和 `author` 都是可选字段。`images[].src` 填写条目目录内的相对路径（例如 `./images/demo-01.webp`）或 `https://` 远程地址；本地相对路径不能使用 `http`、`..`、查询串或片段。`width` / `height` 为正整数时可减少布局跳动，`alt` 用于图片说明。头像同样只填写 `public/**` 下的相对路径，例如 `author/avatar.webp`。当前 `/bits/` 不生成详情页，通常不需要填写 `slug`。
 
 ### 关于
 
