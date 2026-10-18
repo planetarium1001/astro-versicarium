@@ -17,7 +17,7 @@ import '../../styles/archive-page.css';
  * tag dialog 作用域跟随一级胶囊。无服务端分页，/archive/index.json 是客户端筛选与计数的唯一数据源。
  */
 const {
-  settings: { page }
+  settings: { page, shell }
 } = getThemeSettings();
 const [rows, blogs, devlogs] = await Promise.all([
   getArchiveRows({ versionMode: page.archive.versionMode }),
@@ -60,6 +60,7 @@ const allTags: TagSummary[] = collectTagScopedSummary(
 
 const scopePills = buildArchiveScopePills({
   page,
+  nav: shell.nav,
   totalCount,
   blogCount,
   projectCount,

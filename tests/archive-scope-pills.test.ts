@@ -9,6 +9,11 @@ describe('archive scope pills', () => {
         projects: { title: '作品集' },
         devlog: { title: '动态更新' }
       },
+      nav: [
+        { id: 'blog', label: '文章' },
+        { id: 'projects', label: '作品集' },
+        { id: 'devlog', label: '动态更新' }
+      ],
       totalCount: 10,
       blogCount: 5,
       projectCount: 3,
@@ -19,6 +24,24 @@ describe('archive scope pills', () => {
       { id: 'projects', label: '作品集', count: 3 },
       { id: 'devlog', label: '动态更新', count: 2 }
     ]);
+  });
+
+  it('prefers the sidebar nav label so archive pills match the sidebar', () => {
+    expect(buildArchiveScopePills({
+      page: {
+        blog: { title: '文章页' },
+        projects: { title: '作品页' },
+        devlog: { title: '开发页' }
+      },
+      nav: [
+        { id: 'blog', label: '文章' },
+        { id: 'devlog', label: '开发日志' }
+      ],
+      totalCount: 3,
+      blogCount: 1,
+      projectCount: 0,
+      devlogCount: 2
+    }).map((pill) => pill.label)).toEqual(['全部', '文章', '作品页', '开发日志']);
   });
 
   it('falls back when a page title is empty', () => {
