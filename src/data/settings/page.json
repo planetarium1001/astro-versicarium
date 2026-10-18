@@ -1,6 +1,6 @@
 {
   "listRss": {
-    "enabled": false,
+    "enabled": true,
     "blog": true,
     "bits": true,
     "archive": true

@@ -26,11 +26,12 @@
     "showDate": true,
     "dateLabel": "发布于：",
     "dateDisplay": "both",
+    "dateGranularity": "date",
     "showTags": true,
     "showWordCount": true,
     "showReadingTime": true
   },
-  "cardDateDisplay": "updated",
+  "cardDateDisplay": "both",
   "layout": {
     "sidebarDivider": "default"
   },
