@@ -140,6 +140,17 @@ const readUiSettingsRaw = () => {
   }
 };
 
+// 编辑器岛在浏览器里解析日期时需要站点时区；浏览器读不到 site.json，配置期注入快照。
+const readSiteTimezoneForClient = () => {
+  try {
+    const parsed = JSON.parse(readFileSync(new URL('./src/data/settings/site.json', import.meta.url), 'utf8'));
+    const timezone = typeof parsed?.timezone === 'string' ? parsed.timezone.trim() : '';
+    return timezone || 'Asia/Shanghai';
+  } catch {
+    return 'Asia/Shanghai';
+  }
+};
+
 const selectedApiFonts = getSelectedAstroApiFonts(resolveTypographyFromRawUiSettings(readUiSettingsRaw()));
 const fonts = selectedApiFonts.flatMap((entry) => {
   if (!entry.familyName) return [];
@@ -197,7 +208,8 @@ export default defineConfig({
     define: {
       'import.meta.env.ASTRO_WHONO_FONT_CSS_VARIABLES': JSON.stringify(
         fonts.map((font) => font.cssVariable).join(',')
-      )
+      ),
+      'import.meta.env.ASTRO_WHONO_SITE_TIMEZONE': JSON.stringify(readSiteTimezoneForClient())
     },
     resolve: {
       alias: {
