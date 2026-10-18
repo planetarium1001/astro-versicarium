@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import TagFilterHeader from '../../components/TagFilterHeader.astro';
 import { createWithBase, getVisibleblogs, getVisibleDevlogs } from '../../lib/content';
 import { getArchiveRows, groupArchiveRows } from '../../lib/archive';
+import { buildArchiveScopePills } from '../../lib/archive-scope-pills';
 import { collectTagScopedSummary, type TagSummary } from '../../lib/tags';
 import { getThemeSettings } from '../../lib/theme-settings';
 import { joinPageSubtitleText } from '../../utils/format';
@@ -57,12 +58,13 @@ const allTags: TagSummary[] = collectTagScopedSummary(
   (entry) => ('tags' in entry.data ? entry.data.tags : [entry.data.project].filter(Boolean))
 );
 
-const scopePills = [
-  { id: 'all', label: '全部', count: totalCount },
-  { id: 'blog', label: '博客', count: blogCount },
-  { id: 'projects', label: '项目', count: projectCount },
-  { id: 'devlog', label: '更新', count: devlogCount }
-];
+const scopePills = buildArchiveScopePills({
+  page,
+  totalCount,
+  blogCount,
+  projectCount,
+  devlogCount
+});
 
 const tagPayload = { blog: blogTags, projects: projectTags, devlog: devlogTags, all: allTags };
 ---
