@@ -34,6 +34,7 @@ import {
 import { getStringArray } from './content-editor-payload';
 import { isRecord, normalizeOptionalText } from './content-entry-utils';
 import { compareByNullableDateDesc } from './content-shared';
+import { resolveAdminContentSeriesVersionStates } from './content-series';
 
 // Admin Content 列表跟随 src/content.config.ts 当前 glob 边界：仅索引 .md。
 const ADMIN_CONTENT_SOURCE_INDEX_EXT_RE = /\.md$/i;
@@ -67,6 +68,13 @@ export type AdminContentSourceIndexItem = {
   dateLabel: string;
   year: number | null;
   tags: string[];
+  // series/version 元数据：仅 blog 从 frontmatter 读取，其余 collection 保持空值。
+  series: string | null;
+  versionLabel: string | null;
+  versionName: string | null;
+  versionOrder: number | null;
+  versionGroupSize: number;
+  isLatestVersion: boolean;
   searchHaystack: string;
   readonlyReason: string | null;
   sourceError: string | null;
@@ -111,6 +119,17 @@ const normalizeFieldValue = (value: unknown, fallback = UNTITLED_VALUE): string 
 
 const parseDateTimeInput = (value: unknown): ParsedContentDate | null =>
   parseContentDateInput(value);
+
+/** versionOrder 允许 number 或数字字符串；无效值不参与排序，按缺失处理。 */
+const parseVersionOrder = (value: unknown): number | null => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? Math.trunc(value) : null;
+  }
+  const text = normalizeOptionalText(value);
+  if (!text) return null;
+  const parsed = Number(text);
+  return Number.isInteger(parsed) ? parsed : null;
+};
 
 const getUnsetSourceDateMeta = (): SourceDateMeta => ({
   label: '未设置日期',
@@ -204,15 +223,37 @@ const getSourceRecordErrorMessage = (error: unknown): string => {
 const getBodyDerived = (record: SourceRecord): AdminContentSourceBodyDerived | null =>
   record.bodyDerived ?? null;
 
+type AdminContentSeriesFields = Pick<
+  AdminContentSourceIndexItem,
+  'series' | 'versionLabel' | 'versionName' | 'versionOrder'
+>;
+
 const createBaseItem = (
   record: SourceRecord,
-  values: Omit<AdminContentSourceIndexItem, 'collection' | 'id' | 'publicEntryId' | 'relativePath' | 'readonlyReason'>
+  values: Omit<
+    AdminContentSourceIndexItem,
+    | 'collection'
+    | 'id'
+    | 'publicEntryId'
+    | 'relativePath'
+    | 'readonlyReason'
+    | keyof AdminContentSeriesFields
+    | 'versionGroupSize'
+    | 'isLatestVersion'
+  >,
+  seriesFields: Partial<AdminContentSeriesFields> = {}
 ): AdminContentSourceIndexItem => ({
   collection: record.collection,
   id: record.entryId,
   publicEntryId: record.publicEntryId,
   relativePath: record.relativePath,
   readonlyReason: getAdminContentReadOnlyReason(record.collection),
+  series: seriesFields.series ?? null,
+  versionLabel: seriesFields.versionLabel ?? null,
+  versionName: seriesFields.versionName ?? null,
+  versionOrder: seriesFields.versionOrder ?? null,
+  versionGroupSize: 1,
+  isLatestVersion: true,
   ...values
 });
 
@@ -226,6 +267,10 @@ const createBlogSourceIndexItem: FrontmatterAdapter = (record) => {
   const tags = getStringArray(frontmatter.tags);
   const explicitSlug = normalizeOptionalText(frontmatter.slug);
   const slug = explicitSlug || flattenEntryIdToSlug(record.publicEntryId);
+  const series = normalizeOptionalText(frontmatter.series) || null;
+  const versionLabel = normalizeOptionalText(frontmatter.versionLabel);
+  const versionName = normalizeOptionalText(frontmatter.versionName);
+  const versionOrder = parseVersionOrder(frontmatter.versionOrder);
   const bodyDerived = getBodyDerived(record);
   const sourceError = mergeSourceError(
     record.sourceError,
@@ -248,12 +293,20 @@ const createBlogSourceIndexItem: FrontmatterAdapter = (record) => {
       record.entryId,
       record.publicEntryId,
       slug,
+      series,
+      versionLabel,
+      versionName,
       normalizeOptionalText(frontmatter.description),
       tags,
       bodyDerived?.text,
       sourceError
     ]),
     sourceError
+  }, {
+    series,
+    versionLabel: versionLabel || null,
+    versionName: versionName || null,
+    versionOrder
   });
 };
 
@@ -535,18 +588,28 @@ const loadSourceRecords = async (
     )
   );
 
+/** 最新版判定基于 collection 全量记录，不受列表筛选与分页影响。 */
+const applySeriesVersionStates = (
+  items: readonly AdminContentSourceIndexItem[]
+): AdminContentSourceIndexItem[] => {
+  const states = resolveAdminContentSeriesVersionStates(items);
+  return items.map((item) => {
+    const state = states.get(item.id);
+    return state ? { ...item, ...state } : item;
+  });
+};
+
 const createSourceIndexItems = (
   collection: AdminContentCollectionKey,
   records: readonly SourceRecord[]
 ): AdminContentSourceIndexItem[] => {
   const publicHrefByBitsId = collection === 'bits' ? buildBitsHrefMap(records) : new Map<string, string>();
-  return orderSourceIndexItemsByRecent(
-    records.map((record) =>
-      FRONTMATTER_ADAPTERS[collection](record, {
-        publicHrefByBitsId
-      })
-    )
+  const items = records.map((record) =>
+    FRONTMATTER_ADAPTERS[collection](record, {
+      publicHrefByBitsId
+    })
   );
+  return orderSourceIndexItemsByRecent(applySeriesVersionStates(items));
 };
 
 export const loadAdminContentSourceManifest = async (): Promise<AdminContentSourceManifest> => {

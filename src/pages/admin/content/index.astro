@@ -22,6 +22,9 @@ import type {
 } from '../../../lib/admin-console/content';
 import type { AdminContentCreatableCollectionKey } from '../../../lib/admin-console/content-collections';
 import {
+  buildAdminContentListRenderEntries
+} from '../../../lib/admin-console/content-series';
+import {
   ADMIN_CONTENT_CREATE_API_PATH,
   ADMIN_CONTENT_CREATE_VERSION_API_PATH,
   ADMIN_CONTENT_DELETE_API_PATH,
@@ -473,6 +476,7 @@ const getContentCreateAction = (
                   : null;
                 const shouldShowSectionCreateAction = Boolean(createAction);
                 const isSectionTitleLinked = pageData.mode === 'overview';
+                const sectionRenderEntries = buildAdminContentListRenderEntries(section.items);
                 return (
                   <section class="admin-content-module" aria-labelledby={sectionTitleId}>
                     <div class="admin-content-module__head">
@@ -524,7 +528,24 @@ const getContentCreateAction = (
                       section.items.length > 0 ? (
                         <ol class="admin-content-list" aria-label={`${section.collectionLabel}内容条目`}>
                             {
-                              section.items.map((item, itemIndex) => {
+                              sectionRenderEntries.map((entry, entryIndex) => {
+                                if (entry.kind === 'series') {
+                                  return (
+                                    <li
+                                      class="admin-content-series-head"
+                                      data-admin-content-series-group={entry.series}
+                                    >
+                                      <div class="admin-content-series-head__title">
+                                        <span class="admin-content-series-head__label">系列</span>
+                                        <strong class="admin-content-series-head__name">{entry.title}</strong>
+                                        <code class="admin-content-series-head__series">{entry.series}</code>
+                                      </div>
+                                      <span class="admin-content-series-head__count">{entry.versionCount} 个版本</span>
+                                    </li>
+                                  );
+                                }
+
+                                const item = entry.item;
                                 const capability = getAdminContentCollectionCapability(item.collection);
                                 const editPath = getAdminContentEntryEditHref(item.collection, item.id);
                                 const editHref = withBase(editPath);
@@ -540,7 +561,7 @@ const getContentCreateAction = (
                                 const exportHref = getContentEntryExportHref(item.collection, item.id);
                                 const deleteUnsupportedReason = capability.deleteUnsupportedReason ?? `当前 collection 暂不支持删除：${item.collection}`;
                                 const sourceErrorPanelId = item.sourceError
-                                  ? `admin-content-source-error-${section.collection}-${itemIndex}`
+                                  ? `admin-content-source-error-${section.collection}-${entryIndex}`
                                   : null;
                                 const hasBulkIdentity = Boolean(item.collection && item.id && item.relativePath);
                                 const bulkCheckboxLabel = hasBulkIdentity
@@ -571,6 +592,30 @@ const getContentCreateAction = (
 
                                   <div class="admin-content-item__title-row">
                                     <a class="admin-content-row-title" href={entryTitleHref} data-admin-content-row-title>{item.title}</a>
+                                    {
+                                      item.collection === 'blog' && item.series ? (
+                                        <>
+                                          <span
+                                            class="admin-content-row-version"
+                                            data-admin-content-row-version
+                                            title={item.versionName ?? undefined}
+                                          >
+                                            {item.versionLabel || item.dateLabel}
+                                          </span>
+                                          <span
+                                            class:list={[
+                                              'admin-content-row-mark',
+                                              item.isLatestVersion
+                                                ? 'admin-content-row-mark--latest'
+                                                : 'admin-content-row-mark--history'
+                                            ]}
+                                            data-admin-content-row-version-state={item.isLatestVersion ? 'latest' : 'history'}
+                                          >
+                                            {item.isLatestVersion ? '最新' : '历史'}
+                                          </span>
+                                        </>
+                                      ) : null
+                                    }
                                     {
                                       item.sourceError && sourceErrorPanelId ? (
                                         <details class="admin-content-source-error">

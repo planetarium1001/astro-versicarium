@@ -17,6 +17,55 @@
   gap: 0;
 }
 
+/* series 分组标题：不参与 data-admin-content-item 行选择器，避免影响批量操作。 */
+.admin-content-series-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+  min-width: 0;
+  padding: 10px var(--admin-row-table-padding-inline) 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  background: color-mix(in srgb, var(--admin-panel-bg) 82%, var(--bg) 18%);
+}
+
+.admin-content-series-head__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.admin-content-series-head__label {
+  color: var(--faint);
+  font-size: var(--admin-text-2xs);
+  font-weight: 600;
+  letter-spacing: var(--admin-tracking-wide);
+}
+
+.admin-content-series-head__name {
+  color: var(--text);
+  font-size: var(--admin-text-sm);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.admin-content-series-head__series {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: var(--admin-text-2xs);
+  overflow-wrap: anywhere;
+}
+
+.admin-content-series-head__count {
+  color: var(--faint);
+  font-size: var(--admin-text-2xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .admin-content-home-toolbar {
   display: grid;
   grid-template-columns: auto auto auto auto minmax(0, 1fr) minmax(0, 260px);
@@ -791,6 +840,26 @@
 
 .admin-content-row-mark--archive {
   color: var(--admin-status-info-text);
+}
+
+.admin-content-row-version {
+  flex: 0 0 auto;
+  padding: 0 5px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 3px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.admin-content-row-mark--latest {
+  color: var(--accent);
+}
+
+.admin-content-row-mark--history {
+  color: var(--faint);
 }
 
 .admin-content-source-error {

@@ -195,6 +195,60 @@ describe('admin-console/content-source-index', () => {
     });
   });
 
+  it('reads blog series/version metadata and marks the latest version per series', async () => {
+    await writeContent('blog', 'post-v1/index.md', markdown(`
+      title: Series v1
+      date: 2026-01-01
+      series: post
+      versionLabel: v1.0.0
+      versionName: First
+      versionOrder: 1
+    `));
+    await writeContent('blog', 'post-v2/index.md', markdown(`
+      title: Series v2
+      date: 2026-03-01
+      series: post
+      versionLabel: v2.0.0
+      versionName: Second
+      versionOrder: 2
+    `));
+    await writeContent('blog', 'standalone/index.md', markdown(`
+      title: Standalone
+      date: 2026-02-01
+    `));
+
+    const manifest = await loadAdminContentSourceManifest();
+    const items = await loadAdminContentSourceIndex(manifest, 'blog');
+    const byId = new Map(items.map((item) => [item.id, item]));
+
+    expect(byId.get('post-v2')).toMatchObject({
+      series: 'post',
+      versionLabel: 'v2.0.0',
+      versionName: 'Second',
+      versionOrder: 2,
+      versionGroupSize: 2,
+      isLatestVersion: true
+    });
+    expect(byId.get('post-v1')).toMatchObject({
+      series: 'post',
+      versionLabel: 'v1.0.0',
+      versionName: 'First',
+      versionOrder: 1,
+      versionGroupSize: 2,
+      isLatestVersion: false
+    });
+    expect(byId.get('standalone')).toMatchObject({
+      series: null,
+      versionLabel: null,
+      versionName: null,
+      versionOrder: null,
+      versionGroupSize: 1,
+      isLatestVersion: true
+    });
+    expect(byId.get('post-v2')?.searchHaystack).toContain('post');
+    expect(byId.get('post-v2')?.searchHaystack).toContain('v2.0.0');
+  });
+
   it('uses the published bits routing helper for draft exclusion and page boundaries', async () => {
     await writeContent('bits', 'draft-newest/index.md', markdown(`
       title: Draft
