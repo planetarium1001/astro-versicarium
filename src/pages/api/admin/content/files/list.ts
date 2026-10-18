@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { readdir, stat } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { ADMIN_JSON_HEADERS } from '../../../../../lib/admin-console/admin-api';
 import { getMimeTypeFromFileName } from '../../../../../lib/admin-console/image-cloud-storage';
@@ -16,7 +16,46 @@ type FileItem = {
   fileName: string;
   size: number;
   mimeType: string | null;
+  referenceCount: number;
+  referenced: boolean;
 };
+
+const readMarkdownSources = async (): Promise<string[]> => {
+  const sources: string[] = [];
+  const visit = async (directory: string) => {
+    let entries;
+    try {
+      entries = await readdir(directory, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const fullPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        await visit(fullPath);
+      } else if (entry.name.toLowerCase().endsWith('.md')) {
+        sources.push(await readFile(fullPath, 'utf8'));
+      }
+    }
+  };
+  await visit(path.join(getProjectRoot(), 'content'));
+  return sources;
+};
+
+const countFileReferences = (
+  sources: readonly string[],
+  relativePath: string,
+  value: string,
+  fileName: string
+): number =>
+  sources.reduce((count, source) => {
+    let total = count;
+    for (const pattern of [relativePath, value, `./${relativePath}`, fileName]) {
+      if (!pattern) continue;
+      total += source.split(pattern).length - 1;
+    }
+    return total;
+  }, 0);
 
 const listFiles = async (directory: string, files: FileItem[] = []): Promise<FileItem[]> => {
   let entries;
@@ -38,14 +77,18 @@ const listFiles = async (directory: string, files: FileItem[] = []): Promise<Fil
     const relativePath = path.relative(getProjectRoot(), fullPath).replace(/\\/g, '/');
     if (!relativePath.startsWith('content/')) continue;
     const owner = relativePath.split('/').slice(0, 3).join('/');
-    const [fileStat] = await Promise.all([stat(fullPath)]);
+    const fileStat = await stat(fullPath);
+    const value = `./${relativePath.split('/').slice(3).join('/')}`;
+    const referenceCount = countFileReferences(await readMarkdownSources(), relativePath, value, entry.name);
     files.push({
       path: relativePath,
-      value: `./${relativePath.split('/').slice(3).join('/')}`,
+      value,
       owner,
       fileName: entry.name,
       size: fileStat.size,
-      mimeType: getMimeTypeFromFileName(fullPath)
+      mimeType: getMimeTypeFromFileName(fullPath),
+      referenceCount,
+      referenced: referenceCount > 0
     });
   }
   return files;

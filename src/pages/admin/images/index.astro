@@ -4,6 +4,8 @@ import AdminLayout from '../../../components/admin/AdminLayout.astro';
 import AdminReadonlyNotice from '../../../components/admin/AdminReadonlyNotice.astro';
 import AdminShell from '../../../components/admin/AdminShell.astro';
 import {
+  ADMIN_CONTENT_FILES_LIST_API_PATH,
+  ADMIN_CONTENT_FILES_UPLOAD_API_PATH,
   ADMIN_IMAGE_LIST_API_PATH,
   ADMIN_IMAGE_META_API_PATH,
   ADMIN_IMAGE_RENAME_API_PATH
@@ -73,6 +75,8 @@ const loadImagesDevState = async (): Promise<{
 };
 
 const imagesDevState = isDev ? await loadImagesDevState() : null;
+const filesListEndpoint = withBase(ADMIN_CONTENT_FILES_LIST_API_PATH);
+const filesUploadEndpoint = withBase(ADMIN_CONTENT_FILES_UPLOAD_API_PATH);
 const bootstrapText = imagesDevState
   ? JSON.stringify({
       listEndpoint: withBase(ADMIN_IMAGE_LIST_API_PATH),
@@ -287,6 +291,40 @@ const bootstrapText = imagesDevState
         </AdminReadonlyNotice>
       )
     }
+
+    {isDev ? (
+      <section
+        class="admin-overview admin-files-console"
+        data-admin-files-root
+        data-list-endpoint={filesListEndpoint}
+        data-upload-endpoint={filesUploadEndpoint}
+      >
+        <div class="admin-files-console__head">
+          <h2 class="admin-overview-card__title">附件管理</h2>
+          <p class="admin-files-console__hint">附件按条目存放在 content/&lt;collection&gt;/&lt;entry&gt;/files/，构建时只复制被引用文件。</p>
+        </div>
+        <form class="admin-files-console__upload" data-admin-files-upload>
+          <label class="admin-field admin-content-editor__field">
+            <span class="admin-field__label">owner</span>
+            <input
+              class="admin-field__control"
+              name="owner"
+              type="text"
+              required
+              placeholder="content/blog/2026-01-01-post"
+              autocomplete="off"
+            />
+          </label>
+          <label class="admin-field admin-content-editor__field">
+            <span class="admin-field__label">附件</span>
+            <input class="admin-field__control" name="file" type="file" required />
+          </label>
+          <button class="admin-btn admin-btn--primary admin-btn--compact" type="submit">上传附件</button>
+          <p class="admin-status" data-admin-files-status data-state="idle" role="status" aria-live="polite"></p>
+        </form>
+        <div class="admin-files-console__list" data-admin-files-list>加载中…</div>
+      </section>
+    ) : null}
   </AdminShell>
 
   {
@@ -294,4 +332,9 @@ const bootstrapText = imagesDevState
       <script is:inline type="module" src={imagesDevState.adminImageScriptHref}></script>
     ) : null
   }
+  {isDev ? (
+    <script>
+      import '../../../scripts/admin-content/files-console.ts';
+    </script>
+  ) : null}
 </AdminLayout>
