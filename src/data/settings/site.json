@@ -1,17 +1,15 @@
 {
   "title": "Astro Whono Tweaked",
-  "description": "基于 cxro/astro-whono 的极简双栏 Astro 主题模板，面向长文阅读做了增量改造。",
+  "description": "一个极简双栏 Astro 主题的展示站，本仓库为 planetarium1001/astro-whono-tweaked。",
   "defaultLocale": "zh-CN",
-  "timezone": "Asia/Shanghai",
-  "titleMaxPercent": 35,
+  "titleMaxPercent": 50,
   "pageGapPx": 32,
   "footer": {
-    "startYear": 2026,
+    "startYear": 2025,
     "showCurrentYear": true,
-    "copyright": "Astro Whono Tweaked"
+    "copyright": "Astro Whono Tweaked · Theme Demo"
   },
   "filings": {
-    "scope": "all",
     "icp": {
       "number": null,
       "link": null
@@ -23,7 +21,7 @@
     }
   },
   "adminOverview": {
-    "publicVisible": false,
+    "publicVisible": true,
     "hiddenMessage": "作者暂未公开此页面。"
   },
   "favicon": {
@@ -34,12 +32,13 @@
   "socialLinks": {
     "github": "https://github.com/planetarium1001/astro-whono-tweaked",
     "x": null,
-    "email": "hello@example.com",
+    "email": "Astro@Whono.me",
     "presetOrder": {
       "github": 1,
-      "x": 3,
-      "email": 2
+      "x": 2,
+      "email": 3
     },
     "custom": []
-  }
+  },
+  "timezone": "Asia/Shanghai"
 }

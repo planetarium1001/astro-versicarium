@@ -1,18 +1,17 @@
 {
-  "brandTitle": "Astro Whono Tweaked",
-  "titleNarrow": null,
-  "quote": "一个极简双栏 Astro 主题。",
+  "brandTitle": "<div class=\"whono-left\">Astro Whono</div>\n<div class=\"whono-right\">主题与写作</div>",
+  "quote": "<div class=\"whono-left\">A minimal Astro theme</div>\n<div class=\"whono-left\">for blogs, projects, and devlogs.</div>\nDesigned for reading,\nopen-source.",
   "nav": [
     {
       "id": "blog",
-      "label": "博客",
+      "label": "文章",
       "ornament": "·",
       "order": 1,
       "visible": true
     },
     {
       "id": "projects",
-      "label": "项目",
+      "label": "作品",
       "ornament": "·",
       "order": 2,
       "visible": true
@@ -26,7 +25,7 @@
     },
     {
       "id": "devlog",
-      "label": "更新",
+      "label": "开发日志",
       "ornament": "·",
       "order": 4,
       "visible": true

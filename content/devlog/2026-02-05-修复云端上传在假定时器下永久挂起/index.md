@@ -1,0 +1,12 @@
+---
+title: 修复云端上传在假定时器下永久挂起
+date: 2026-02-05
+project: Whono Astro 主题
+projectSlug: 2026-03-01-whono-astro-主题
+kind: fix
+description: deadline 改为可注入，测试改用真实定时器，恢复绿色基线。
+---
+
+根因是 `setTimeout` 在 `vi.useFakeTimers()` 下没有被推进，请求永久挂起并污染了模块级上传队列。
+
+现在 upload/list 的 deadline 可以被环境变量覆盖，测试用真实定时器 + 极短 deadline。
