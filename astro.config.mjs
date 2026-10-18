@@ -95,9 +95,17 @@ const createSitemapBlogFilter = () => ({
           if (!loc) return block;
 
           const pathname = new URL(loc).pathname;
-          const stripped = basePrefix && pathname.startsWith(basePrefix)
-            ? pathname.slice(basePrefix.length)
-            : pathname;
+          // RSS 与 blog/index.json 的 href 是未编码的 CJK 路径；sitemap 的 <loc> 是百分号编码的。
+          // 先 decode，才能把中文 slug 与 canonicalPaths 对上，避免整类中文 URL 被误删。
+          let decodedPathname = pathname;
+          try {
+            decodedPathname = decodeURIComponent(pathname);
+          } catch {
+            // 非法百分号编码保持原样，交给下面的 /blog/ 判断。
+          }
+          const stripped = basePrefix && decodedPathname.startsWith(basePrefix)
+            ? decodedPathname.slice(basePrefix.length)
+            : decodedPathname;
           if (!stripped.startsWith('/blog/')) return block;
 
           const segments = stripped.split('/').filter(Boolean);
