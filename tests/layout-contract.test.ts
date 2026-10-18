@@ -1030,3 +1030,26 @@ describe('目录标题字号与时间/kind 配色', () => {
     expect(lists).toMatch(/:root\[data-theme="dark"\] \.badge\s*\{[^}]*background:\s*#1f1f1f[^}]*border-color:\s*#3f3f3f/);
   });
 });
+
+describe('主题台：文章元信息两行布局', () => {
+  it('行容器自动换行，组内不再出现横向滚动', async () => {
+    const [section, form] = await Promise.all([
+      read('src/components/admin/AdminPageSection.astro'),
+      read('src/styles/components/admin/theme/form.css')
+    ]);
+
+    const group = /\.admin-toggle-row-group--article-meta\s*\{([^}]*)\}/.exec(form)?.[1] ?? '';
+    expect(group).toContain('flex-direction: column');
+    expect(group).toMatch(/align-items:\s*stretch/);
+    expect(group).not.toMatch(/overflow-x\s*:/);
+    expect(group).not.toMatch(/nowrap/);
+
+    const line = /\.admin-toggle-row-group__line\s*\{([^}]*)\}/.exec(form)?.[1] ?? '';
+    expect(line).toContain('display: flex');
+    expect(line).toMatch(/flex-wrap:\s*wrap/);
+    expect(line).toMatch(/min-width:\s*0/);
+
+    // 两个行容器：第一行日期控件，第二行列表卡片日期与三个开关
+    expect(section.match(/class="admin-toggle-row-group__line"/g) ?? []).toHaveLength(2);
+  });
+});

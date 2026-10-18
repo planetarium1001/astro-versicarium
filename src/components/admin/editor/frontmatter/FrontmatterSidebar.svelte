@@ -240,7 +240,7 @@ const bitsAuthorAvatarFallback = $derived(
         <div class="admin-field admin-content-editor__field" class:is-invalid={Boolean(publishedAtIssue)}>
           <div class="admin-editor-frontmatter__label-row admin-editor-frontmatter__label-row--with-action">
             <span class="admin-editor-frontmatter__label-help">
-              <label class="admin-field__label" for="admin-blog-published-at">详细时间（可选）</label>
+              <label class="admin-field__label" for="admin-blog-published-at">详细时间 publishedAt（可选）</label>
               <button
                 class="admin-editor-frontmatter__hint-trigger"
                 type="button"
@@ -285,7 +285,7 @@ const bitsAuthorAvatarFallback = $derived(
 
       <div class="admin-editor-frontmatter__datetime-grid">
         <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('badge'))}>
-          <span class="admin-field__label">badge</span>
+          <span class="admin-field__label" title="列表中的分类标签">分类胶囊 badge</span>
           <input
             class="admin-field__control"
             name="badge"
@@ -301,7 +301,7 @@ const bitsAuthorAvatarFallback = $derived(
         <div class="admin-field admin-content-editor__field" class:is-invalid={Boolean(updatedAtIssue)}>
           <div class="admin-editor-frontmatter__label-row admin-editor-frontmatter__label-row--with-action">
             <span class="admin-editor-frontmatter__label-help">
-              <label class="admin-field__label" for="admin-blog-updated-at">更新日期（可选）</label>
+              <label class="admin-field__label" for="admin-blog-updated-at">更新日期 updatedAt（可选）</label>
               <button
                 class="admin-editor-frontmatter__hint-trigger"
                 type="button"
@@ -356,7 +356,7 @@ const bitsAuthorAvatarFallback = $derived(
       </label>
 
       <div class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('slug'))}>
-        <label class="admin-field__label" for="admin-blog-slug">公开 URL 别名（可选）</label>
+        <label class="admin-field__label" for="admin-blog-slug">公开 URL 别名 slug（可选）</label>
         <input
           id="admin-blog-slug"
           class="admin-field__control"
@@ -375,28 +375,28 @@ const bitsAuthorAvatarFallback = $derived(
 
       <div class="admin-field-row">
         <label class="admin-field admin-content-editor__field">
-          <span class="admin-field__label">series</span>
+          <span class="admin-field__label" title="同一系列的版本共用这个标识">系列 series</span>
           <input class="admin-field__control" name="series" type="text" bind:value={value.series} spellcheck="false" {disabled} />
         </label>
         <label class="admin-field admin-content-editor__field">
-          <span class="admin-field__label">versionOrder</span>
+          <span class="admin-field__label" title="数字越大越新，同日期时用于排序">版本顺序 versionOrder</span>
           <input class="admin-field__control" name="versionOrder" type="number" min="0" step="1" bind:value={value.versionOrder} {disabled} />
         </label>
       </div>
 
       <div class="admin-field-row">
         <label class="admin-field admin-content-editor__field">
-          <span class="admin-field__label">versionLabel</span>
+          <span class="admin-field__label" title="例如 v2.0">版本号 versionLabel</span>
           <input class="admin-field__control" name="versionLabel" type="text" bind:value={value.versionLabel} spellcheck="false" placeholder="v2.0.0" {disabled} />
         </label>
         <label class="admin-field admin-content-editor__field">
-          <span class="admin-field__label">versionName</span>
+          <span class="admin-field__label" title="例如 稳定版">版本名称 versionName</span>
           <input class="admin-field__control" name="versionName" type="text" bind:value={value.versionName} spellcheck="false" {disabled} />
         </label>
       </div>
 
       <label class="admin-field admin-content-editor__field">
-        <span class="admin-field__label">versionSummary</span>
+        <span class="admin-field__label" title="显示在版本历史抽屉">版本摘要 versionSummary</span>
         <textarea class="admin-field__control" name="versionSummary" rows="2" bind:value={value.versionSummary} {disabled}></textarea>
       </label>
 
@@ -682,7 +682,7 @@ const bitsAuthorAvatarFallback = $derived(
       </label>
 
       <label class="admin-field admin-content-editor__field">
-        <span class="admin-field__label">projectSlug（对应 projects 条目 id，可选）</span>
+        <span class="admin-field__label">项目标识 projectSlug（对应 projects 条目 id，可选）</span>
         <input
           class="admin-field__control"
           name="projectSlug"

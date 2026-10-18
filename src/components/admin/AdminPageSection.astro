@@ -97,7 +97,7 @@ const viewStatsInlineFields = [
       <span class="admin-subtitle__hint">（字数/时长仅详情页，移动端隐藏；粒度默认仅日期，frontmatter 可覆盖，无时分回退日期）</span>
     </p>
     <div class="admin-toggle-row-group admin-toggle-row-group--article-meta">
-      <div class="admin-toggle-row admin-toggle-row--with-inline-field">
+      <div class="admin-toggle-row-group__line">
         <label class="admin-toggle-row admin-toggle-row--compact" for="ui-article-meta-show-date">
           <input id="ui-article-meta-show-date" type="checkbox" />
           <span>显示发布日期</span>
@@ -138,26 +138,28 @@ const viewStatsInlineFields = [
           </select>
         </label>
       </div>
-      <label class="admin-inline-field" for="ui-card-date-display">
-        <span class="admin-inline-field__label">列表卡片日期：</span>
-        <select id="ui-card-date-display" class="admin-inline-field__input">
-          {ADMIN_ARTICLE_DATE_DISPLAY_OPTIONS.map((option) => (
-            <option value={option.id}>{option.label}</option>
-          ))}
-        </select>
-      </label>
-      <label class="admin-toggle-row">
-        <input id="ui-article-meta-show-tags" type="checkbox" />
-        <span>显示标签</span>
-      </label>
-      <label class="admin-toggle-row">
-        <input id="ui-article-meta-show-word-count" type="checkbox" />
-        <span>显示字数</span>
-      </label>
-      <label class="admin-toggle-row">
-        <input id="ui-article-meta-show-reading-time" type="checkbox" />
-        <span>显示阅读时长</span>
-      </label>
+      <div class="admin-toggle-row-group__line">
+        <label class="admin-inline-field" for="ui-card-date-display">
+          <span class="admin-inline-field__label">列表卡片日期：</span>
+          <select id="ui-card-date-display" class="admin-inline-field__input">
+            {ADMIN_ARTICLE_DATE_DISPLAY_OPTIONS.map((option) => (
+              <option value={option.id}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+        <label class="admin-toggle-row">
+          <input id="ui-article-meta-show-tags" type="checkbox" />
+          <span>显示标签</span>
+        </label>
+        <label class="admin-toggle-row">
+          <input id="ui-article-meta-show-word-count" type="checkbox" />
+          <span>显示字数</span>
+        </label>
+        <label class="admin-toggle-row">
+          <input id="ui-article-meta-show-reading-time" type="checkbox" />
+          <span>显示阅读时长</span>
+        </label>
+      </div>
     </div>
     <p class="admin-help admin-help--article-meta-preview">
       预览：<code id="article-meta-preview-value" class="admin-help__preview-value">{'更新于：2026-03-20 · #Astro\u00A0\u00A0#写作 · 共 2,416 字 · 约 6 分钟'}</code>
