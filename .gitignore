@@ -38,3 +38,6 @@ Thumbs.db
 
 # Font sources (local only)
 tools/fonts-src/
+
+# Temporary design workspace (local only, not committed)
+docs/.workspaces/
