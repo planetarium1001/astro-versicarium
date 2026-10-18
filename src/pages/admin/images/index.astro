@@ -6,10 +6,17 @@ import AdminShell from '../../../components/admin/AdminShell.astro';
 import {
   ADMIN_CONTENT_FILES_LIST_API_PATH,
   ADMIN_CONTENT_FILES_UPLOAD_API_PATH,
+  ADMIN_CONTENT_EXPORT_API_PATH,
+  ADMIN_CONTENT_IMPORT_API_PATH,
   ADMIN_IMAGE_LIST_API_PATH,
   ADMIN_IMAGE_META_API_PATH,
-  ADMIN_IMAGE_RENAME_API_PATH
+  ADMIN_IMAGE_RENAME_API_PATH,
+  ADMIN_IMAGE_UPLOAD_API_PATH,
+  ADMIN_MEDIA_BATCH_API_PATH,
+  ADMIN_MEDIA_LIST_API_PATH
 } from '../../../lib/admin-console/admin-api-paths';
+import { ADMIN_CONTENT_COLLECTIONS } from '../../../lib/admin-console/content-routes';
+import { getAdminContentCollectionCapability } from '../../../lib/admin-console/content-collections';
 import {
   invalidateAdminImageCaches,
   listAdminImageBrowseIndex,
@@ -77,6 +84,15 @@ const loadImagesDevState = async (): Promise<{
 const imagesDevState = isDev ? await loadImagesDevState() : null;
 const filesListEndpoint = withBase(ADMIN_CONTENT_FILES_LIST_API_PATH);
 const filesUploadEndpoint = withBase(ADMIN_CONTENT_FILES_UPLOAD_API_PATH);
+const mediaListEndpoint = withBase(ADMIN_MEDIA_LIST_API_PATH);
+const mediaBatchEndpoint = withBase(ADMIN_MEDIA_BATCH_API_PATH);
+const mediaImageUploadEndpoint = withBase(ADMIN_IMAGE_UPLOAD_API_PATH);
+const mediaExportEndpoint = withBase(ADMIN_CONTENT_EXPORT_API_PATH);
+const mediaImportEndpoint = withBase(ADMIN_CONTENT_IMPORT_API_PATH);
+const mediaCollectionOptions = ADMIN_CONTENT_COLLECTIONS.map((collection) => ({
+  value: collection,
+  label: getAdminContentCollectionCapability(collection).label
+}));
 const bootstrapText = imagesDevState
   ? JSON.stringify({
       listEndpoint: withBase(ADMIN_IMAGE_LIST_API_PATH),
@@ -294,6 +310,141 @@ const bootstrapText = imagesDevState
 
     {isDev ? (
       <section
+        class="admin-overview admin-media-console"
+        data-admin-media-root
+        data-list-endpoint={mediaListEndpoint}
+        data-batch-endpoint={mediaBatchEndpoint}
+        data-image-upload-endpoint={mediaImageUploadEndpoint}
+        data-file-upload-endpoint={filesUploadEndpoint}
+        data-export-endpoint={mediaExportEndpoint}
+        data-import-endpoint={mediaImportEndpoint}
+      >
+        <div class="admin-media-console__head">
+          <h2 class="admin-overview-card__title">媒体管理器</h2>
+          <p class="admin-media-console__hint">collection → series → version → 目录；图片与附件统一浏览，批量操作前会二次确认。</p>
+          <p class="admin-status" data-admin-media-status data-state="idle" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="admin-media-console__layout">
+          <aside class="admin-media-console__tree-panel" aria-label="媒体目录树">
+            <div class="admin-media-console__tree" data-admin-media-tree>加载中…</div>
+          </aside>
+
+          <div class="admin-media-console__main">
+            <nav class="admin-media-console__breadcrumb" data-admin-media-breadcrumb aria-label="媒体面包屑"></nav>
+
+            <form class="admin-media-console__filters" data-admin-media-filters>
+              <label class="admin-media-console__field">
+                <span>collection</span>
+                <select name="collection">
+                  <option value="">全部</option>
+                  {mediaCollectionOptions.map((option) => (
+                    <option value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label class="admin-media-console__field">
+                <span>series</span>
+                <input name="series" type="text" autocomplete="off" placeholder="全部" />
+              </label>
+              <label class="admin-media-console__field">
+                <span>version / entry</span>
+                <input name="entry" type="text" autocomplete="off" placeholder="全部" />
+              </label>
+              <label class="admin-media-console__field">
+                <span>目录</span>
+                <input name="dir" type="text" autocomplete="off" placeholder="全部" />
+              </label>
+              <label class="admin-media-console__field">
+                <span>引用状态</span>
+                <select name="ref">
+                  <option value="all">全部</option>
+                  <option value="referenced">已引用</option>
+                  <option value="unreferenced">未引用</option>
+                  <option value="orphan">孤儿</option>
+                </select>
+              </label>
+              <label class="admin-media-console__field">
+                <span>类型</span>
+                <select name="type">
+                  <option value="all">全部</option>
+                  <option value="image">图片</option>
+                  <option value="file">附件</option>
+                </select>
+              </label>
+              <label class="admin-media-console__field">
+                <span>从</span>
+                <input name="from" type="date" />
+              </label>
+              <label class="admin-media-console__field">
+                <span>到</span>
+                <input name="to" type="date" />
+              </label>
+              <label class="admin-media-console__field admin-media-console__field--search">
+                <span>搜索</span>
+                <input name="q" type="search" autocomplete="off" placeholder="路径 / 文件名 / 条目" />
+              </label>
+              <div class="admin-media-console__filter-actions">
+                <button class="admin-btn admin-btn--primary admin-btn--compact" type="submit">应用筛选</button>
+                <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-admin-media-reset>重置</button>
+              </div>
+            </form>
+
+            <div class="admin-media-console__toolbar">
+              <label class="admin-media-console__select-all">
+                <input type="checkbox" data-admin-media-select-all />
+                <span>全选当前页</span>
+              </label>
+              <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-admin-media-batch="rename">批量重命名</button>
+              <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-admin-media-batch="move">批量移动</button>
+              <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-admin-media-batch="delete">批量删除</button>
+              <span class="admin-media-console__toolbar-spacer"></span>
+              <a class="admin-btn admin-btn--tool admin-btn--compact" data-admin-media-export-archive href="#" aria-disabled="true">导出条目 zip</a>
+              <a class="admin-btn admin-btn--tool admin-btn--compact" data-admin-media-export-markdown href="#" aria-disabled="true">导出 Markdown</a>
+            </div>
+
+            <div class="admin-media-console__transfer">
+              <form class="admin-media-console__upload" data-admin-media-upload>
+                <span class="admin-media-console__upload-target" data-admin-media-upload-target>未选择条目</span>
+                <label class="admin-media-console__field">
+                  <span>图片</span>
+                  <input name="image" type="file" accept="image/*" />
+                </label>
+                <label class="admin-media-console__field">
+                  <span>附件</span>
+                  <input name="file" type="file" />
+                </label>
+                <div class="admin-media-console__filter-actions">
+                  <button class="admin-btn admin-btn--primary admin-btn--compact" type="submit" data-admin-media-upload-kind="image">上传图片</button>
+                  <button class="admin-btn admin-btn--tool admin-btn--compact" type="submit" data-admin-media-upload-kind="file">上传附件</button>
+                </div>
+              </form>
+
+              <form class="admin-media-console__import" data-admin-media-import>
+                <label class="admin-media-console__field">
+                  <span>导入条目 zip</span>
+                  <input name="file" type="file" accept=".zip,application/zip" required />
+                </label>
+                <button class="admin-btn admin-btn--tool admin-btn--compact" type="submit">导入</button>
+              </form>
+            </div>
+
+            <p class="admin-media-console__summary" data-admin-media-summary></p>
+            <ul class="admin-media-console__list" data-admin-media-list></ul>
+            <p class="admin-content-empty" data-admin-media-empty hidden>没有找到符合条件的媒体文件。</p>
+
+            <nav class="admin-media-console__pager" aria-label="媒体分页">
+              <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-admin-media-prev disabled>上一页</button>
+              <span data-admin-media-page-meta>1 / 1</span>
+              <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-admin-media-next disabled>下一页</button>
+            </nav>
+          </div>
+        </div>
+      </section>
+    ) : null}
+
+    {isDev ? (
+      <section
         class="admin-overview admin-files-console"
         data-admin-files-root
         data-list-endpoint={filesListEndpoint}
@@ -335,6 +486,7 @@ const bootstrapText = imagesDevState
   {isDev ? (
     <script>
       import '../../../scripts/admin-content/files-console.ts';
+      import '../../../scripts/admin-media/index.ts';
     </script>
   ) : null}
 </AdminLayout>
