@@ -60,7 +60,9 @@ describe('bits card view model', () => {
       slug: 'demo',
       bodyText: 'Hello',
       tags: ['loc:Shanghai', 'daily'],
-      date: new Date(2026, 4, 27, 8, 30),
+      // 固定 UTC 输入与站点时区，避免测试结果随运行环境的本地时区变化。
+      date: new Date('2026-05-27T00:30:00.000Z'),
+      timeZone: 'Asia/Shanghai',
       images: [
         { src: 'bits/a.webp', width: '800', height: 600, alt: 'A' },
         { src: 'https://example.com/b.webp', width: 'bad', height: '0' },
