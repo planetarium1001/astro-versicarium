@@ -632,8 +632,10 @@ describe('entry-search 客户端行为', () => {
 
   it('blog：翻页走列表整块过渡，动画结束后才落下一页', async () => {
     await loadPage(PAGES[1]);
-    // 归档默认不分页；本用例单独强制 20/页，验证分页器与列表过渡本身。
-    document.querySelector<HTMLElement>('[data-entry-filters]')!.dataset.pageSize = '4';
+    // 分页测试不依赖演示内容的条数：按当前页条目数拆成两页。
+    const totalItems = document.querySelectorAll('[data-entry-item]').length;
+    const pageSize = Math.max(1, Math.ceil(totalItems / 2));
+    document.querySelector<HTMLElement>('[data-entry-filters]')!.dataset.pageSize = String(pageSize);
     await importEntrySearch();
 
     const inner = document.querySelector<HTMLElement>('[data-entry-pagination-inner]');
