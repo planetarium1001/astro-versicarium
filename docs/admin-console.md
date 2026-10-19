@@ -1,5 +1,7 @@
 # 后台控制台
 
+Versicarium 的后台是本地内容与主题编辑入口，只在开发环境具备写权限，生产构建保持只读。
+
 ## 入口与页面
 
 后台入口为 `/admin/`，只在 `npm run dev` 下具备读写能力。生产构建输出只读静态壳，`/api/admin/*` 返回 404。路由定义在 `src/lib/admin-console/routes.ts`。

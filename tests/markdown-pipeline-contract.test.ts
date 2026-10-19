@@ -2,9 +2,13 @@ import { describe, expect, it } from 'vitest';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
+import rehypeStringify from 'rehype-stringify';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
+import remarkParse from 'remark-parse';
+import remarkRehype from 'remark-rehype';
 import remarkSmartypants from 'remark-smartypants';
+import { unified } from 'unified';
 import { rehypeAboutDirectives, remarkAboutDirectives } from '../src/plugins/about-directives.mjs';
 import {
   createMarkdownShikiConfig,
@@ -19,7 +23,9 @@ import {
   previewMarkdownRehypeSegments,
   previewMarkdownRemarkSegments,
   publicMarkdownRehypeSegments,
-  publicMarkdownRemarkSegments
+  publicMarkdownRemarkSegments,
+  rehypeDeploymentBaseLinks,
+  withDeploymentBase
 } from '../src/plugins/markdown-pipeline.mjs';
 import {
   markdownMathRawOptions,
@@ -139,13 +145,15 @@ describe('markdown pipeline contract', () => {
     expect(pluginOf(rehypePlugins[2])).toBe(rehypeRestoreMarkdownMathBoundary);
     expect(pluginOf(rehypePlugins[3])).toBe(rehypeAboutDirectives);
     expect(optionsOf(rehypePlugins[3])).toEqual({ base: '/blog/', enabled: true });
-    // 内容附件链接改写插件插在 about directives 与 sanitize 之间。
-    expect(rehypePlugins).toHaveLength(7);
+    // 内容附件链接改写与部署 base 链接改写依次插在 about directives 与 sanitize 之间。
+    expect(rehypePlugins).toHaveLength(8);
     expect(pluginOf(rehypePlugins[4])).not.toBe(rehypeSanitize);
     expect(optionsOf(rehypePlugins[4])).toEqual({ base: '/blog/' });
-    expect(pluginOf(rehypePlugins[5])).toBe(rehypeSanitize);
-    expect(optionsOf(rehypePlugins[5])).toBe(sanitizeSchema);
-    expect(pluginOf(rehypePlugins[6])).toBe(rehypeKatex);
+    expect(pluginOf(rehypePlugins[5])).toBe(rehypeDeploymentBaseLinks);
+    expect(optionsOf(rehypePlugins[5])).toEqual({ base: '/blog/' });
+    expect(pluginOf(rehypePlugins[6])).toBe(rehypeSanitize);
+    expect(optionsOf(rehypePlugins[6])).toBe(sanitizeSchema);
+    expect(pluginOf(rehypePlugins[7])).toBe(rehypeKatex);
   });
 
   it('keeps Shiki themes and toolbar transformer in one public factory', () => {
@@ -198,5 +206,110 @@ describe('弹窗正文的 markdown 图片', () => {
     expect(derived.plainText).toContain('这是正文。');
     expect(derived.plainText).not.toContain('![');
     expect(derived.plainText).not.toContain('cover.webp');
+  });
+});
+
+/**
+ * 子路径部署（GitHub Pages `/astro-versicarium/`）时，源码里的站内根相对链接必须补上 base；
+ * 外链、锚点、查询、相对链接与已带 base 的链接保持不变。
+ */
+describe('部署 base 链接', () => {
+  const BASE = '/astro-versicarium/';
+
+  const renderLinks = async (markdown: string, base: string | undefined) => {
+    const processor = unified().use(remarkParse);
+    if (base === undefined) {
+      processor.use(remarkRehype).use(rehypeDeploymentBaseLinks).use(rehypeStringify);
+    } else {
+      processor
+        .use(remarkRehype)
+        .use(rehypeDeploymentBaseLinks, { base })
+        .use(rehypeStringify);
+    }
+    return String(await processor.process(markdown));
+  };
+
+  it('给站内根相对链接补 base，其它链接原样保留', async () => {
+    const html = await renderLinks(
+      [
+        '[博客](/blog/2026-10-20-content-model/)',
+        '[项目](/projects/#versicarium)',
+        '[动态](/devlog/#versicarium-2026-10-20-versicarium-rename)',
+        '[站点根](/)',
+        '[外链](https://example.com/blog/)',
+        '[协议相对](//cdn.example.com/a)',
+        '[锚点](#intro)',
+        '[查询](?page=2)',
+        '[相对](./neighbor/)',
+        '[邮件](mailto:me@planetarium1001.com)',
+        '[电话](tel:+8613800000000)',
+        '[已带 base](/astro-versicarium/blog/2026-10-20-admin-console/)'
+      ].join(' '),
+      BASE
+    );
+
+    expect(html).toContain('href="/astro-versicarium/blog/2026-10-20-content-model/"');
+    expect(html).toContain('href="/astro-versicarium/projects/#versicarium"');
+    expect(html).toContain(
+      'href="/astro-versicarium/devlog/#versicarium-2026-10-20-versicarium-rename"'
+    );
+    expect(html).toContain('href="/astro-versicarium/"');
+    expect(html).toContain('href="https://example.com/blog/"');
+    expect(html).toContain('href="//cdn.example.com/a"');
+    expect(html).toContain('href="#intro"');
+    expect(html).toContain('href="?page=2"');
+    expect(html).toContain('href="./neighbor/"');
+    expect(html).toContain('href="mailto:me@planetarium1001.com"');
+    expect(html).toContain('href="tel:+8613800000000"');
+    expect(html).toContain('href="/astro-versicarium/blog/2026-10-20-admin-console/"');
+    expect(html).not.toContain('/astro-versicarium/astro-versicarium');
+  });
+
+  it('给正文图片、source 与 srcset 补 base，外部与 data 地址保留', async () => {
+    const html = String(
+      await unified()
+        .use(remarkParse)
+        .use(remarkRehype, { allowDangerousHtml: true })
+        .use(rehypeRaw)
+        .use(rehypeDeploymentBaseLinks, { base: BASE })
+        .use(rehypeStringify)
+        .process(
+          [
+            '![归档页](/images/demo/archive.png)',
+            '',
+            '<figure><source srcset="/images/pages/a.webp 1x, /images/pages/b.webp 2x" type="image/webp" />',
+            '<img src="/images/pages/c.webp" alt="c" />',
+            '<img src="https://example.com/d.png" alt="d" /></figure>'
+          ].join('\n')
+        )
+    );
+
+    expect(html).toContain('src="/astro-versicarium/images/demo/archive.png"');
+    expect(html).toContain('/astro-versicarium/images/pages/a.webp 1x');
+    expect(html).toContain('/astro-versicarium/images/pages/b.webp 2x');
+    expect(html).toContain('src="/astro-versicarium/images/pages/c.webp"');
+    expect(html).toContain('src="https://example.com/d.png"');
+    expect(html).not.toContain('/astro-versicarium/astro-versicarium');
+  });
+
+  it('base 为根路径时不改写任何链接', async () => {
+    const html = await renderLinks('[博客](/blog/a/) [外链](https://example.com/)', '/');
+    expect(html).toContain('href="/blog/a/"');
+    expect(html).toContain('href="https://example.com/"');
+  });
+
+  it('withDeploymentBase 归一化 base 并避免重复前缀', () => {
+    expect(withDeploymentBase('/blog/a/', '/astro-versicarium/')).toBe(
+      '/astro-versicarium/blog/a/'
+    );
+    expect(withDeploymentBase('/blog/a/', 'astro-versicarium')).toBe(
+      '/astro-versicarium/blog/a/'
+    );
+    expect(withDeploymentBase('/', BASE)).toBe(BASE);
+    expect(withDeploymentBase('/astro-versicarium', BASE)).toBe('/astro-versicarium');
+    expect(withDeploymentBase('/astro-versicarium/', BASE)).toBe('/astro-versicarium/');
+    expect(withDeploymentBase('/blog/a/', '/')).toBe('/blog/a/');
+    expect(withDeploymentBase('//cdn.example.com/a', BASE)).toBe('//cdn.example.com/a');
+    expect(withDeploymentBase('https://example.com/a', BASE)).toBe('https://example.com/a');
   });
 });

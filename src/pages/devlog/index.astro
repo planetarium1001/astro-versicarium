@@ -3,7 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import TagFilterHeader from '../../components/TagFilterHeader.astro';
 import { getVisibleDevlogs } from '../../lib/content';
 import { getThemeSettings } from '../../lib/theme-settings';
-import { joinPageSubtitleText } from '../../utils/format';
+import { createWithBase, joinPageSubtitleText } from '../../utils/format';
 import { flattenEntryIdToSlug } from '../../utils/slug-rules';
 import { deriveEntryDescription, renderEntryBody } from '../../lib/entry-body';
 import { containsMarkdownMath } from '../../lib/markdown-math';
@@ -23,6 +23,7 @@ import '../../styles/devlog-page.css';
  */
 const items = await getVisibleDevlogs();
 const base = import.meta.env.BASE_URL ?? '/';
+const withBase = createWithBase(base);
 const {
   settings: { page }
 } = getThemeSettings();
@@ -105,7 +106,7 @@ const katexStylesheetAttrs = { [MARKDOWN_MATH_STYLESHEET_DATA_ATTR]: 'true' };
     optionsAriaLabel={`按项目筛选${pageTitleText}`}
     pageTitleText={pageTitleText}
     subtitleText={subtitleText}
-    pickerHref="/devlog/?picker=project"
+    pickerHref={withBase('/devlog/?picker=project')}
     rssHref="/blog/rss.xml"
     searchAriaLabel={`搜索${pageTitleText}`}
     dialogTitleId="devlog-project-dialog-title"

@@ -1,16 +1,17 @@
 {
-  "name": "astro-whono-tweaked",
-  "version": "1.1.0",
+  "name": "astro-versicarium",
+  "version": "1.0.0",
   "private": true,
   "license": "MIT",
+  "description": "面向开发者的极简 Astro 写作主题：文章、项目版本、开发日志与动态共用同一套内容结构。",
   "repository": {
     "type": "git",
-    "url": "https://github.com/planetarium1001/astro-whono-tweaked.git"
+    "url": "https://github.com/planetarium1001/astro-versicarium.git"
   },
   "bugs": {
-    "url": "https://github.com/planetarium1001/astro-whono-tweaked/issues"
+    "url": "https://github.com/planetarium1001/astro-versicarium/issues"
   },
-  "homepage": "https://planetarium1001.github.io/astro-whono-tweaked/",
+  "homepage": "https://planetarium1001.github.io/astro-versicarium/",
   "type": "module",
   "engines": {
     "node": ">=22.12.0"

@@ -65,7 +65,7 @@ export const ADMIN_SOCIAL_CUSTOM_LIMIT = 8;
 
 const ADMIN_HERO_PRESETS = ['default', 'none'] as const satisfies readonly HeroPresetId[];
 export const ADMIN_HERO_PRESET_SET: ReadonlySet<HeroPresetId> = new Set(ADMIN_HERO_PRESETS);
-export const ADMIN_HERO_IMAGE_ALT_DEFAULT = 'Whono theme preview';
+export const ADMIN_HERO_IMAGE_ALT_DEFAULT = 'Versicarium 主题预览';
 export const ADMIN_HERO_IMAGE_ALT_MAX_LENGTH = 120;
 
 export const ADMIN_SITE_TIMEZONE_DEFAULT = 'Asia/Shanghai';

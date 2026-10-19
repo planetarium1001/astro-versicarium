@@ -4,6 +4,8 @@
  * 后台预览也据此输出同一套标记；blog 不使用。
  */
 
+import { withDeploymentBase } from '../plugins/markdown-pipeline.mjs';
+
 export type TrailingLink = {
   label: string;
   href: string;
@@ -96,10 +98,16 @@ const escapeHtml = (value: string): string =>
     .replace(/"/g, '&quot;');
 
 /** 链接行标记：右对齐、按书写顺序排列，链接之间只留等距间隔，不输出 `·` 等分隔符。 */
-export const renderTrailingLinksHtml = (links: readonly TrailingLink[]): string => {
+export const renderTrailingLinksHtml = (
+  links: readonly TrailingLink[],
+  base = '/'
+): string => {
   if (links.length === 0) return '';
   const items = links
-    .map((link) => `<a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a>`)
+    .map(
+      (link) =>
+        `<a href="${escapeHtml(withDeploymentBase(link.href, base))}">${escapeHtml(link.label)}</a>`
+    )
     .join('');
   return `<p class="${TRAILING_LINKS_CLASS}">${items}</p>`;
 };

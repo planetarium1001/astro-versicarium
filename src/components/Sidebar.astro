@@ -15,7 +15,7 @@ import { renderSettingHtml, toSettingPlainText } from '../lib/setting-html';
 import { getSidebarHref, getThemeSettings, type SidebarNavId } from '../lib/theme-settings';
 
 const {
-  siteTitle = 'Whono',
+  siteTitle = 'Versicarium',
   siteTitleNarrow = siteTitle,
   activeNavId,
   isAdminContext = false,
@@ -69,7 +69,7 @@ const showAdminNavPanels = isDev && !isPageScopedAdminSidebar;
 const siteTitleHtml = renderSettingHtml(siteTitle);
 const siteTitleNarrowHtml = renderSettingHtml(siteTitleNarrow || siteTitle);
 const quoteHtml = renderSettingHtml(quote);
-const siteTitlePlain = toSettingPlainText(siteTitle) || 'Whono';
+const siteTitlePlain = toSettingPlainText(siteTitle) || 'Versicarium';
 const siteTitleLabel = `${siteTitlePlain} 首页`;
 const adminOverviewRoute = getAdminRoute('overview');
 const adminRailTitleLabel = adminOverviewRoute.description;

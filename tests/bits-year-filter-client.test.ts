@@ -5,6 +5,7 @@ import {
   importEntrySearch,
   loadPage,
   pageItems,
+  seedEarlierBitsYear,
   stubEntrySearchEnvironment,
   visibleSlugs
 } from './entry-search-harness';
@@ -71,31 +72,35 @@ describe('bits 年份胶囊客户端行为', () => {
   });
 
   it('点击某一年：只剩该年条目', async () => {
-    const { indexItems: index } = await loadPage<BitsIndexItem>(BITS_PAGE);
+    await loadPage(BITS_PAGE);
+    const target = seedEarlierBitsYear();
     await importEntrySearch({ bitsYear: true });
 
-    const target = index.find((item) => item.year !== null)!.year!;
-    const expected = index
-      .filter((item) => item.year === target)
-      .map((item) => item.slug)
+    const expected = allItems()
+      .filter((el) => (el.dataset.entryYear ?? '').trim() === target)
+      .map((el) => (el.dataset.slug ?? '').trim())
       .sort();
 
-    clickPill(String(target));
+    clickPill(target);
 
+    // 派生年份确实只覆盖部分条目，筛选收敛可验证。
+    expect(expected.length).toBeGreaterThan(0);
+    expect(expected.length).toBeLessThan(allItems().length);
     expect(visibleSlugs().sort()).toEqual(expected);
-    expect(visibleYears().every((year) => year === String(target))).toBe(true);
-    expect(yearPill(String(target))!.getAttribute('aria-pressed')).toBe('true');
+    expect(visibleYears().every((year) => year === target)).toBe(true);
+    expect(yearPill(target)!.getAttribute('aria-pressed')).toBe('true');
     expect(yearPill('')!.getAttribute('aria-pressed')).toBe('false');
-    expect(currentYearParam()).toBe(String(target));
+    expect(currentYearParam()).toBe(target);
     // 滑块代码路径必须真的跑过（jsdom 里尺寸为 0，但 ready 标记会落下）
     expect(document.querySelector<HTMLElement>('[data-bits-year-bar]')!.dataset.ready).toBe('true');
   });
 
   it('再点「全部」：条目全部恢复，URL 上的年份参数被清掉', async () => {
     await loadPage(BITS_PAGE);
+    const target = seedEarlierBitsYear();
     await importEntrySearch({ bitsYear: true });
 
-    clickPill('2026');
+    clickPill(target);
     expect(visibleSlugs().length).toBeLessThan(allItems().length);
 
     clickPill('');

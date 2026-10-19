@@ -38,14 +38,16 @@ const markup = () => `
     data-project-latest-anchor="content-workflow"
     data-project-entry-id="2026-03-01-content-workflow-v2"
   >
-    <h2 class="project-dialog__title" tabindex="-1">内容流程 v2</h2>
-    <button type="button" data-project-close>关闭</button>
-    <div class="project-dialog__content">
-      <button
-        type="button"
-        data-project-open
-        data-project-dialog="project-dialog-2026-01-01-content-workflow"
-      >v1.0 初版</button>
+    <div class="project-dialog__inner">
+      <h2 class="project-dialog__title" tabindex="-1">内容流程 v2</h2>
+      <button type="button" data-project-close>关闭</button>
+      <div class="project-dialog__content">
+        <button
+          type="button"
+          data-project-open
+          data-project-dialog="project-dialog-2026-01-01-content-workflow"
+        >v1.0 初版</button>
+      </div>
     </div>
   </dialog>
 
@@ -55,13 +57,15 @@ const markup = () => `
     data-project-anchor="2026-01-01-content-workflow"
     data-project-latest-anchor="content-workflow"
   >
-    <h2 class="project-dialog__title" tabindex="-1">内容流程 v1</h2>
-    <button type="button" data-project-close>关闭</button>
-    <p class="project-version-notice">
-      <span>历史版本 · v1.0 · 2026-01-01 · 该版本已归档。</span>
-      <button type="button" data-project-open data-project-dialog="project-dialog-content-workflow">查看最新版 →</button>
-    </p>
-    <div class="project-dialog__content"></div>
+    <div class="project-dialog__inner">
+      <h2 class="project-dialog__title" tabindex="-1">内容流程 v1</h2>
+      <button type="button" data-project-close>关闭</button>
+      <p class="project-version-notice">
+        <span>历史版本 · v1.0 · 2026-01-01 · 该版本已归档。</span>
+        <button type="button" data-project-open data-project-dialog="project-dialog-content-workflow">查看最新版 →</button>
+      </p>
+      <div class="project-dialog__content"></div>
+    </div>
   </dialog>
 
   <dialog
@@ -70,9 +74,11 @@ const markup = () => `
     data-project-anchor="2026-02-10-夜间施工流水线"
     data-project-latest-anchor="2026-02-10-夜间施工流水线"
   >
-    <h2 class="project-dialog__title" tabindex="-1">夜间施工流水线</h2>
-    <button type="button" data-project-close>关闭</button>
-    <div class="project-dialog__content"></div>
+    <div class="project-dialog__inner">
+      <h2 class="project-dialog__title" tabindex="-1">夜间施工流水线</h2>
+      <button type="button" data-project-close>关闭</button>
+      <div class="project-dialog__content"></div>
+    </div>
   </dialog>
 `;
 
@@ -247,6 +253,48 @@ describe('项目弹窗只开一个 + hash 同步', () => {
     click(dialog);
     expect(dialog.open).toBe(false);
     expect(hash()).toBe('');
+  });
+});
+
+describe('项目弹窗关闭过渡', () => {
+  it('关闭时弹窗本体与内容一起淡出，内容同时向上位移', async () => {
+    const originalAnimate = Element.prototype.animate;
+    const animated: { target: Element; frames: Keyframe[] }[] = [];
+    Element.prototype.animate = vi.fn(function (this: Element, frames: Keyframe[]) {
+      animated.push({ target: this, frames });
+      return {
+        finished: Promise.resolve(),
+        cancel: vi.fn()
+      } as unknown as Animation;
+    }) as typeof Element.prototype.animate;
+
+    try {
+      boot('#content-workflow');
+      const dialog = query('#project-dialog-content-workflow')!;
+      const inner = dialog.querySelector('.project-dialog__inner')!;
+
+      click(dialog.querySelector('[data-project-close]')!);
+      // 退出动画期间弹窗仍然打开，只挂 data-closing，遮罩据此同步淡出。
+      expect(dialog.dataset.closing, '退出动画期间保留弹窗').toBe('true');
+
+      await vi.waitFor(() => {
+        expect(dialog.open).toBe(false);
+      });
+
+      const shellFade = animated.find(
+        ({ target, frames }) =>
+          target === dialog && frames[0]?.opacity === 1 && frames[1]?.opacity === 0
+      );
+      expect(shellFade, '弹窗本体（背景、边框）必须参与退出淡出').toBeDefined();
+
+      const innerMotion = animated.find(
+        ({ target, frames }) => target === inner && frames[0]?.transform === 'translateY(0)'
+      );
+      expect(innerMotion, '内容保留向上位移').toBeDefined();
+      expect(dialog.dataset.closing).toBeUndefined();
+    } finally {
+      Element.prototype.animate = originalAnimate;
+    }
   });
 });
 

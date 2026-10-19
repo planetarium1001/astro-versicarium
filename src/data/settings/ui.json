@@ -40,5 +40,6 @@
     "copy": "lxgw-wenkai-lite",
     "mono": "system-mono",
     "brand": "serif-georgia"
-  }
+  },
+  "entryVersionName": "hidden"
 }

@@ -251,7 +251,7 @@ const shouldShowMetaLine = articleMetaSettings.showDate
     <nav class="prev-next" aria-label="上一篇/下一篇">
       <div class="prev-next__item prev-next__item--prev">
         {prev ? (
-          <a class="prev-next__link" href={prev.href} rel="prev">
+          <a class="prev-next__link" href={withBase(prev.href)} rel="prev">
             <span class="prev-next__arrow" aria-hidden="true">‹</span>
             <span class="prev-next__label">上一篇</span>
             <span class="prev-next__title">{prev.title}</span>
@@ -260,7 +260,7 @@ const shouldShowMetaLine = articleMetaSettings.showDate
       </div>
       <div class="prev-next__item prev-next__item--next">
         {next ? (
-          <a class="prev-next__link" href={next.href} rel="next">
+          <a class="prev-next__link" href={withBase(next.href)} rel="next">
             <span class="prev-next__title">{next.title}</span>
             <span class="prev-next__label">下一篇</span>
             <span class="prev-next__arrow" aria-hidden="true">›</span>

@@ -301,6 +301,67 @@ const rehypeContentAssetLinks = ({ base = '/' } = {}) => (tree, file) => {
   });
 };
 
+/** 部署 base 归一化为「/ 或 /segment/」，与 astro.config.mjs 的 normalizeDeploymentBase 同语义。 */
+const normalizeDeploymentBase = (base) => {
+  const segment = (typeof base === 'string' ? base.trim() : '').replace(/^\/+|\/+$/g, '');
+  return segment ? `/${segment}/` : '/';
+};
+
+/**
+ * 站内根相对 href 加上部署 base。只处理以单个 `/` 开头的路径：`//` 开头的协议相对地址、
+ * `#` 锚点、`?` 查询、相对链接与带协议的地址原样返回；base 为 `/` 或已带 base 时不重复前缀。
+ * @param {string} href
+ * @param {string} [base]
+ * @returns {string}
+ */
+export const withDeploymentBase = (href, base = '/') => {
+  const normalizedBase = normalizeDeploymentBase(base);
+  if (normalizedBase === '/') return href;
+  if (!href.startsWith('/') || href.startsWith('//')) return href;
+  if (href === normalizedBase.slice(0, -1) || href.startsWith(normalizedBase)) return href;
+
+  return `${normalizedBase}${href.slice(1)}`;
+};
+
+/** srcset 里逐个候选地址补 base，保留 `1x`、`640w` 等描述符与空白。 */
+const withDeploymentBaseSrcset = (srcset, base) => {
+  if (typeof srcset !== 'string') return srcset;
+  return srcset
+    .split(',')
+    .map((candidate) => {
+      const matched = /^(\s*)(\S+)([\s\S]*)$/.exec(candidate);
+      if (!matched) return candidate;
+      const [, leading, url, trailing] = matched;
+      return `${leading}${withDeploymentBase(url, base)}${trailing}`;
+    })
+    .join(',');
+};
+
+/**
+ * 内容正文里的 `/blog/...`、`/projects/...` 等站内链接与 `/images/...` 图片在源码写的是
+ * 站点根路径；部署到子路径（如 GitHub Pages 的 `/astro-versicarium/`）时需要补上 base，
+ * 否则指向域名根。只处理单个 `/` 开头的地址。
+ */
+export const rehypeDeploymentBaseLinks = ({ base = '/' } = {}) => (tree) => {
+  visit(tree, 'element', (node) => {
+    if (node.tagName === 'a') {
+      const href = node.properties?.href;
+      if (typeof href === 'string') node.properties.href = withDeploymentBase(href, base);
+      return;
+    }
+
+    if (node.tagName !== 'img' && node.tagName !== 'source') return;
+    const src = node.properties?.src;
+    if (typeof src === 'string') node.properties.src = withDeploymentBase(src, base);
+    const srcSet = node.properties?.srcSet ?? node.properties?.srcset;
+    if (typeof srcSet === 'string') {
+      const nextSrcSet = withDeploymentBaseSrcset(srcSet, base);
+      if (node.properties?.srcSet !== undefined) node.properties.srcSet = nextSrcSet;
+      if (node.properties?.srcset !== undefined) node.properties.srcset = nextSrcSet;
+    }
+  });
+};
+
 /** @param {ProjectMarkdownRehypeOptions} [options] */
 export const createProjectMarkdownRehypePlugins = ({ aboutBase = '/', aboutEnabled } = {}) => [
   rehypeProtectMarkdownMath,
@@ -311,6 +372,7 @@ export const createProjectMarkdownRehypePlugins = ({ aboutBase = '/', aboutEnabl
     ...(aboutEnabled === undefined ? {} : { enabled: aboutEnabled })
   }],
   [rehypeContentAssetLinks, { base: aboutBase }],
+  [rehypeDeploymentBaseLinks, { base: aboutBase }],
   [rehypeSanitize, sanitizeSchema],
   rehypeKatex
 ];

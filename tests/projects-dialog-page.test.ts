@@ -44,11 +44,11 @@ beforeEach(async () => {
 describe('projects 页面：弹窗版本历史可点击', () => {
   it('点击卡片打开最新版弹窗，版本历史列出全部文档版本且当前版本不可点', () => {
     const card = document.querySelector<HTMLElement>(
-      '[data-project-card] [data-project-dialog="project-dialog-whono-theme"]'
+      '[data-project-card] [data-project-dialog="project-dialog-versicarium"]'
     )!;
     click(card);
 
-    const dialog = dialogOf('whono-theme')!;
+    const dialog = dialogOf('versicarium')!;
     expect(dialog.open).toBe(true);
 
     const versionButtons = Array.from(
@@ -57,28 +57,28 @@ describe('projects 页面：弹窗版本历史可点击', () => {
 
     expect(versionButtons).toEqual(
       expect.arrayContaining([
-        'project-dialog-2026-04-01-whono-theme',
-        'project-dialog-2025-10-01-whono-theme'
+        'project-dialog-2026-10-14-versicarium',
+        'project-dialog-2026-10-02-versicarium'
       ])
     );
-    expect(versionButtons).not.toContain('project-dialog-whono-theme');
+    expect(versionButtons).not.toContain('project-dialog-versicarium');
   });
 
   it('点击历史版本行打开对应版本文档弹窗，并关闭当前弹窗', () => {
     click(
       document.querySelector<HTMLElement>(
-        '[data-project-card] [data-project-dialog="project-dialog-whono-theme"]'
+        '[data-project-card] [data-project-dialog="project-dialog-versicarium"]'
       )!
     );
-    const latestDialog = dialogOf('whono-theme')!;
+    const latestDialog = dialogOf('versicarium')!;
 
     const historyTrigger = latestDialog.querySelector<HTMLElement>(
-      '[data-project-open][data-project-dialog="project-dialog-2026-04-01-whono-theme"]'
+      '[data-project-open][data-project-dialog="project-dialog-2026-10-14-versicarium"]'
     )!;
     click(historyTrigger);
 
     expect(latestDialog.open).toBe(false);
-    const historyDialog = dialogOf('2026-04-01-whono-theme')!;
+    const historyDialog = dialogOf('2026-10-14-versicarium')!;
     expect(historyDialog.open).toBe(true);
     expect(openDialogs()).toHaveLength(1);
     expect(historyDialog.textContent).toContain('历史版本');
@@ -88,22 +88,22 @@ describe('projects 页面：弹窗版本历史可点击', () => {
   it('历史版本弹窗里的「查看最新版」回到最新版', () => {
     click(
       document.querySelector<HTMLElement>(
-        '[data-project-card] [data-project-dialog="project-dialog-whono-theme"]'
+        '[data-project-card] [data-project-dialog="project-dialog-versicarium"]'
       )!
     );
     click(
-      dialogOf('whono-theme')!.querySelector<HTMLElement>(
-        '[data-project-open][data-project-dialog="project-dialog-2025-10-01-whono-theme"]'
+      dialogOf('versicarium')!.querySelector<HTMLElement>(
+        '[data-project-open][data-project-dialog="project-dialog-2026-10-02-versicarium"]'
       )!
     );
 
-    const historyDialog = dialogOf('2025-10-01-whono-theme')!;
+    const historyDialog = dialogOf('2026-10-02-versicarium')!;
     expect(historyDialog.open).toBe(true);
 
     const latestLink = historyDialog.querySelector<HTMLElement>('.project-version-notice [data-project-open]')!;
     click(latestLink);
 
-    expect(dialogOf('whono-theme')!.open).toBe(true);
+    expect(dialogOf('versicarium')!.open).toBe(true);
     expect(historyDialog.open).toBe(false);
   });
 });

@@ -11,7 +11,7 @@
   },
   "projects": {
     "title": "项目",
-    "subtitle": "主题版本与项目实践"
+    "subtitle": "主题版本与相关项目"
   },
   "archive": {
     "title": "归档",
@@ -22,13 +22,13 @@
     "title": "动态",
     "subtitle": "开发过程中的短记录",
     "defaultAuthor": {
-      "name": "Planetarium",
+      "name": "Versicarium",
       "avatar": "author/avatar.svg"
     }
   },
   "devlog": {
-    "title": "开发日志",
-    "subtitle": "逐条记录项目的每一次改动"
+    "title": "日志",
+    "subtitle": "按提交记录主题的每一次改动"
   },
   "about": {
     "title": "关于",

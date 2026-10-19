@@ -28,7 +28,7 @@ type CardDialogWiring = {
   exclusiveOpen?: boolean;
   /** 打开时把弹窗锚点写回 URL hash，关闭时清理 */
   syncHash?: boolean;
-  /** 版本切换与开合时给面板内容做淡入淡出；减少动效或缺少 WAAPI 时自动降级 */
+  /** 开合时给面板内容做淡入淡出，退出时弹窗本体一起淡出；减少动效或缺少 WAAPI 时自动降级 */
   animatePanels?: boolean;
   /** 参与淡入淡出的面板内容选择器；默认是弹窗自身 */
   panelMotionSelector?: string;
@@ -93,27 +93,37 @@ export const initCardDialogs = (wiring: CardDialogWiring) => {
   let motionRunId = 0;
   const pendingOutgoing = new Set<HTMLDialogElement>();
 
-  const animatePanel = async (dialog: HTMLDialogElement, direction: 'enter' | 'leave'): Promise<void> => {
-    const target = getMotionTarget(dialog);
-    const frames = direction === 'enter'
-      ? [
-          { opacity: 0, transform: 'translateY(6px)' },
-          { opacity: 1, transform: 'translateY(0)' }
-        ]
-      : [
-          { opacity: 1, transform: 'translateY(0)' },
-          { opacity: 0, transform: 'translateY(-4px)' }
-        ];
-    const animation = target.animate(frames, {
-      duration: direction === 'enter' ? PANEL_ENTER_MS : PANEL_LEAVE_MS,
+  const playMotion = (element: Element, frames: Keyframe[], duration: number): Animation =>
+    element.animate(frames, {
+      duration,
       easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
       fill: 'both'
     });
+
+  /**
+   * 进入只动内容，弹窗本体与遮罩交给 CSS 的 `::backdrop` 过渡 / `@starting-style`。
+   * 退出时弹窗本体（背景、边框）必须和内容一起淡出，否则内容淡出后半秒内会留下
+   * 一个不透明的空壳；内容同时向上位移，退出观感与进入对称。
+   */
+  const animatePanel = async (dialog: HTMLDialogElement, direction: 'enter' | 'leave'): Promise<void> => {
+    const target = getMotionTarget(dialog);
+    const animations = direction === 'enter'
+      ? [playMotion(target, [
+          { opacity: 0, transform: 'translateY(6px)' },
+          { opacity: 1, transform: 'translateY(0)' }
+        ], PANEL_ENTER_MS)]
+      : [
+          playMotion(dialog, [{ opacity: 1 }, { opacity: 0 }], PANEL_LEAVE_MS),
+          playMotion(target, [
+            { transform: 'translateY(0)' },
+            { transform: 'translateY(-4px)' }
+          ], PANEL_LEAVE_MS)
+        ];
     await Promise.race([
-      animation.finished.catch(() => undefined),
+      Promise.all(animations.map((animation) => animation.finished.catch(() => undefined))),
       new Promise<void>((resolve) => window.setTimeout(resolve, PANEL_MOTION_FALLBACK_MS))
     ]);
-    animation.cancel();
+    for (const animation of animations) animation.cancel();
   };
 
   const showDialog = (dialog: HTMLDialogElement) => {
@@ -297,6 +307,9 @@ export const initCardDialogs = (wiring: CardDialogWiring) => {
       closeDialog(dialog);
     });
     dialog.addEventListener('close', () => {
+      // 关闭事件可能来自脚本或原生 fallback；统一在这里清掉退出标记，
+      // 否则残留的 data-closing 会让下次打开的首帧直接处于淡出态。
+      delete dialog.dataset.closing;
       dialog.scrollTop = 0;
       const content = dialog.querySelector<HTMLElement>(wiring.scrollResetSelector);
       if (content) content.scrollTop = 0;

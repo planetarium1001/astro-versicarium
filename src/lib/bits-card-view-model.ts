@@ -147,7 +147,7 @@ export const buildBitsCardViewModel = ({
   draft = false
 }: BitsCardViewModelInput): BitsCardViewModel => {
   const withBase = createWithBase(base);
-  const defaultAuthorName = (defaultAuthor?.name ?? 'Whono').trim() || 'Whono';
+  const defaultAuthorName = (defaultAuthor?.name ?? 'Versicarium').trim() || 'Versicarium';
   const authorName = (author?.name ?? defaultAuthorName).trim() || defaultAuthorName;
   const authorAvatarRaw = (author?.avatar?.trim() || defaultAuthor?.avatar?.trim() || '');
   const imageItems = images
@@ -184,7 +184,7 @@ export const buildBitsCardViewModel = ({
     body: deriveBitsCardText(bodyText),
     authorName,
     authorAvatar: authorAvatarRaw ? withBase(authorAvatarRaw) : '',
-    avatarLetter: Array.from(authorName)[0] ?? 'W',
+    avatarLetter: Array.from(authorName)[0] ?? 'V',
     placeTag: placeTag && placeText ? toTagLink(placeText, withBase, placeTag) : null,
     normalTagItems,
     hasTags: Boolean(placeText || normalTagItems.length),

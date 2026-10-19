@@ -191,6 +191,7 @@ const createPreviewProcessor = (collection: AdminContentCollectionKey, sourceFil
     rehypeRestoreMathBoundary,
     rehypeAbout,
     rehypeContentAssetLinks,
+    rehypeDeploymentBaseLinks,
     rehypeSanitizeSchema,
     rehypeRenderKatex
   ] = createProjectMarkdownRehypePlugins({
@@ -215,6 +216,7 @@ const createPreviewProcessor = (collection: AdminContentCollectionKey, sourceFil
   processor.use(createPreviewImageSrcPlugin(sourceFilePath));
   useProcessorPlugin(processor, rehypeAbout);
   useProcessorPlugin(processor, rehypeContentAssetLinks);
+  useProcessorPlugin(processor, rehypeDeploymentBaseLinks);
   useProcessorPlugin(processor, rehypeSanitizeSchema);
   useProcessorPlugin(processor, rehypeRenderKatex);
 
@@ -246,7 +248,7 @@ export const renderAdminMarkdownPreview = async ({
         getThemeSettings().settings.site.socialLinks.resolvedSocialItems
       )
     : String(file);
-  const html = `${bodyHtml}${renderTrailingLinksHtml(links)}`;
+  const html = `${bodyHtml}${renderTrailingLinksHtml(links, previewBase)}`;
 
   return {
     collection,

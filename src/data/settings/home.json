@@ -1,5 +1,5 @@
 {
-  "introLead": "面向开发者的极简 Astro 主题：技术文章、项目文档与开发日志在同一套内容结构中维护。",
+  "introLead": "Versicarium · 垄录是面向开发者的极简 Astro 写作主题：文章、项目版本、开发日志与动态共用同一套内容结构。",
   "introMore": "按标签继续浏览",
   "introMoreLinks": [
     "tag",
@@ -9,5 +9,5 @@
   "showIntroMore": true,
   "heroPresetId": "default",
   "heroImageSrc": null,
-  "heroImageAlt": "深色背景上的 Astro Whono Tweaked 几何折线图形"
+  "heroImageAlt": "Versicarium 品牌图形：浅色与深色斜切背景中央的活页记录图标"
 }

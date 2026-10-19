@@ -93,4 +93,29 @@ describe('renderTrailingLinksHtml', () => {
       '<p class="trailing-links"><a href="https://example.com/?a=1&amp;b=2">a&lt;b&gt;&amp;&quot;c</a></p>'
     );
   });
+
+  it('按部署 base 改写站内根相对链接，其它链接保持原样', () => {
+    const links = [
+      { label: '项目', href: '/projects/#versicarium' },
+      { label: '开发日志', href: '/devlog/#versicarium-2026-10-20-versicarium-rename' },
+      { label: '仓库', href: 'https://github.com/planetarium1001/astro-versicarium' },
+      { label: '锚点', href: '#intro' },
+      { label: '相对', href: './neighbor/' },
+      { label: '已带 base', href: '/astro-versicarium/blog/' }
+    ];
+
+    expect(renderTrailingLinksHtml(links, '/astro-versicarium/')).toBe(
+      '<p class="trailing-links">'
+        + '<a href="/astro-versicarium/projects/#versicarium">项目</a>'
+        + '<a href="/astro-versicarium/devlog/#versicarium-2026-10-20-versicarium-rename">开发日志</a>'
+        + '<a href="https://github.com/planetarium1001/astro-versicarium">仓库</a>'
+        + '<a href="#intro">锚点</a>'
+        + '<a href="./neighbor/">相对</a>'
+        + '<a href="/astro-versicarium/blog/">已带 base</a>'
+        + '</p>'
+    );
+    // 根路径部署沿用旧行为，不额外加前缀。
+    expect(renderTrailingLinksHtml(links, '/')).toContain('href="/projects/#versicarium"');
+    expect(renderTrailingLinksHtml(links)).toContain('href="/projects/#versicarium"');
+  });
 });

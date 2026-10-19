@@ -41,7 +41,7 @@ export const renderEntryBody = async (
   const links = parseTrailingLinks(source);
   const renderer = await getMarkdownRenderer(base);
   const { code } = await renderer.render(links.length > 0 ? stripTrailingLinks(source) : source);
-  return { html: `${code}${renderTrailingLinksHtml(links)}`, links };
+  return { html: `${code}${renderTrailingLinksHtml(links, base)}`, links };
 };
 
 /**

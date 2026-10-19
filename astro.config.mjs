@@ -201,7 +201,8 @@ export default defineConfig({
   ...(fonts.length ? { fonts } : {}),
   trailingSlash: 'always',
   redirects: {
-    '/admin/images': '/admin/resources/'
+    // 重定向目标写部署 base：Astro 只为源路径推导 base，不会改写 redirect 目标。
+    '/admin/images': `${deploymentBase}admin/resources/`
   },
   // Astro 7 起 compressHTML 默认值改为 'jsx'(按 JSX 规则吞行内空格);
   // 显式固定为 v6 的 HTML-aware 压缩,避免中英混排的行内空格被移除。

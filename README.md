@@ -1,13 +1,19 @@
-# Astro Whono Tweaked
+# Versicarium · 垄录
 
-Astro Whono Tweaked 是面向开发者的双栏 Astro 主题，用于发布代码说明、项目文档与工程记录。它基于 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）改造，保留上游的壳层与内容扩展，并增加项目多版本文档、资源工作区与可重复执行的主题更新通道。主题以 `content/` 为内容边界，以 `src/` 为可更新代码，适合长期维护自有站点。
+Versicarium 的名字来自一条动作链：`vertere`（转）→ `versus`（犁沟、诗行）→ `versiculus`（短行、短句）→ `-arium`（存放特定事物的场所）。古人像犁地一样逐行书写，写完一行便转向下一行；一行字就是一道垄，`-arium` 把一次次转向留下的短行收存起来。
 
-- 仓库：<https://github.com/planetarium1001/astro-whono-tweaked>
-- 示例站：<https://planetarium1001.github.io/astro-whono-tweaked/>
+中文名“垄录”接住同一个动作：垄是犁沟、诗行与代码行，录是记录、收存与归档。品牌句“一行一垄，一版一录。”把行与版本放在同一条尺度上，每一行内容是一道垄，每一个版本是一次收存。
+
+Versicarium 是面向开发者的双栏 Astro 主题，用于发布技术文章、项目多版本文档与开发记录。它基于 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）改造，保留上游的双栏壳层、后台框架、Markdown 扩展与字体子集流程，并增加项目多版本文档、资源工作区与文件级主题同步。
+
+- 仓库：<https://github.com/planetarium1001/astro-versicarium>
+- 示例站：<https://planetarium1001.github.io/astro-versicarium/>
 - 上游：<https://github.com/cxro/astro-whono>
 - 联系：<mailto:me@planetarium1001.com>
 
-![Astro Whono Tweaked 桌面首页](docs/images/home-desktop.png)
+![示例站桌面首页](docs/images/home-desktop.png)
+
+文档截图取自示例站，尚未随本次品牌更新重新截取。
 
 ## 功能
 
@@ -42,18 +48,24 @@ npm run preview   # 预览构建产物
 
 ### 1. 下载 Release 资产
 
-从 [v1.1.0 Release](https://github.com/planetarium1001/astro-whono-tweaked/releases/tag/v1.1.0) 下载 `astro-whono-tweaked-1.1.0.zip` 与 `SHA256SUMS`，校验后解压：
+首个公开版本为 1.0.0，标签 `v1.0.0`。仓库当前尚未创建 Release；Release 创建后，`release` 工作流会附加 `astro-versicarium-1.0.0.zip` 与 `SHA256SUMS`。
 
 ```bash
+VERSION=1.0.0
+BASE="https://github.com/planetarium1001/astro-versicarium/releases/download/v${VERSION}"
+curl -LO "${BASE}/astro-versicarium-${VERSION}.zip"
+curl -LO "${BASE}/SHA256SUMS"
+
 sha256sum -c SHA256SUMS
 # macOS
 shasum -a 256 -c SHA256SUMS
-unzip astro-whono-tweaked-1.1.0.zip
-cd astro-whono-tweaked-1.1.0
+
+unzip "astro-versicarium-${VERSION}.zip"
+cd "astro-versicarium-${VERSION}"
 npm ci
 ```
 
-压缩包由 `git archive` 生成，只包含已跟踪文件；未跟踪的演示截图、`node_modules`、`dist` 与本地缓存不会进入，也不包含 Git 历史。解压后如需长期维护，按“浅克隆”一节的步骤初始化仓库。
+压缩包由 `git archive` 生成，只包含已跟踪文件；未跟踪的演示截图、`node_modules`、`dist` 与本地缓存不会进入，也不包含 Git 历史。解压后如需长期维护，按“浅克隆 main”一节的步骤初始化仓库。
 
 ### 2. 使用模板
 
@@ -63,7 +75,7 @@ npm ci
 
 ```bash
 git clone --depth 1 --branch main --single-branch \
-  https://github.com/planetarium1001/astro-whono-tweaked.git my-site
+  https://github.com/planetarium1001/astro-versicarium.git my-site
 cd my-site
 npm ci
 ```
@@ -80,6 +92,15 @@ git commit -m "chore: 初始化站点"
 git remote add origin <你的仓库地址>
 git push -u origin main
 ```
+
+## main 与 demo
+
+| 分支 | 角色 |
+| --- | --- |
+| `main` | 最小模板与主题更新来源，不包含示例站内容 |
+| `demo` | 完整示例站，部署到 GitHub Pages |
+
+主题改动先在 `main` 完成，再在 `demo` 检出上执行 `theme:update` 同步；不反向合并。`demo` 由 `.github/workflows/pages.yml` 构建并发布到示例站。
 
 ## 命令
 
@@ -160,16 +181,13 @@ npm run theme:update              # 合并并更新基准提交
 
 存在冲突时命令以非零状态退出且不更新 `theme.json`；解决冲突后重跑。主题删除的文件只列入报告，不自动移除。合并完成后执行 `npm run verify`。站点定制应放在站点自有路径或独立模块中，避免与主题文件产生长期冲突。
 
-## 分支、版本与发布
+## 版本与发布
 
-| 分支 | 角色 |
-| --- | --- |
-| `main` | 最小模板与主题更新来源，不包含示例站内容 |
-| `demo` | 完整示例站，部署到 GitHub Pages |
+当前为 1.0.0 预览版，也是首次公开版本，标签为 `v1.0.0`。仓库当前尚未创建 Release。
 
-主题改动先在 `main` 完成，再在 `demo` 检出上执行 `theme:update` 同步；不反向合并。当前版本为 1.1.0，遵循 SemVer，发布标签为 `v1.1.0`。标签触发 `release.yml`，校验标签提交位于 `main` 且与 `package.json` 版本一致后，生成源码 zip 与 `SHA256SUMS`。
+版本号与 `CHANGELOG.md` 由 Release Please 管理：提交遵循 Conventional Commits，Release Please 维护版本与变更记录，合并 release PR 时创建标签与 GitHub Release。Release 创建后，`.github/workflows/release.yml` 校验标签与版本号一致，并将模板 zip 与 `SHA256SUMS` 附加到该 Release。
 
-版本策略、发布清单与下载校验见 [docs/release.md](docs/release.md)。
+版本号遵循 SemVer，版本不嵌入日期；日期只写入 CHANGELOG 与 Release 标题。版本策略、发布清单、模板打包与下载校验见 [docs/release.md](docs/release.md)。
 
 ## 部署
 
@@ -178,7 +196,7 @@ npm run theme:update              # 合并并更新基准提交
 | 变量 | 作用 |
 | --- | --- |
 | `SITE_URL` | 站点 origin，用于 RSS、canonical、分享图与 sitemap；缺失时不生成 sitemap |
-| `ASTRO_WHONO_BASE_PATH` | 部署子路径，默认 `/`；项目页部署在仓库子路径时使用 |
+| `ASTRO_WHONO_BASE_PATH` | 部署子路径，默认 `/`；项目页部署在仓库子路径时使用，例如 `/astro-versicarium/` |
 
 GitHub Pages、自有域名与其他静态托管的配置见 [docs/deployment.md](docs/deployment.md)。
 
@@ -191,10 +209,10 @@ GitHub Pages、自有域名与其他静态托管的配置见 [docs/deployment.md
 | [docs/writing.md](docs/writing.md) | 五个集合的 frontmatter、版本规则、图片路径与 Markdown 语法 |
 | [docs/admin-console.md](docs/admin-console.md) | 后台页面、主题字段、内容编辑器、资源与快照写入 |
 | [docs/deployment.md](docs/deployment.md) | 分支模型、工作流、环境变量、GitHub Pages 与静态托管 |
-| [docs/release.md](docs/release.md) | SemVer、1.1.0、发布清单、标签、校验与 `theme.json` 基线 |
+| [docs/release.md](docs/release.md) | SemVer、Release Please、1.0.0 预览、标签、模板打包与 `theme.json` 基线 |
 | [docs/upstream.md](docs/upstream.md) | 与上游的关系、改造范围、同步方向与手工合并 |
 | [docs/favicon.md](docs/favicon.md) | 图标槽位、生成、回退、本地路径与反向代理放行 |
 
 ## 许可与致谢
 
-本仓库基于 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）改造，使用 [Astro](https://astro.build/) 构建。上游提供了双栏壳层、后台框架、Markdown 扩展与字体子集流程的基础，在此致谢。许可证见 [LICENSE](LICENSE)。
+Versicarium 基于 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）改造，使用 [Astro](https://astro.build/) 构建。上游提供了双栏壳层、后台框架、Markdown 扩展与字体子集流程的基础，在此致谢。许可证见 [LICENSE](LICENSE)。

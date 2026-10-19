@@ -325,7 +325,7 @@ describe('项目大版本页面契约', () => {
 
     expect(page).toContain('project.updates.length');
     expect(page).toContain('更新日志');
-    expect(page).toContain('renderTrailingLinksHtml(card.links)');
+    expect(page).toContain('renderTrailingLinksHtml(card.links, base)');
     expect(page).toContain('set:html={version.bodyHtml}');
   });
 
@@ -393,20 +393,21 @@ describe('项目弹窗样式契约', () => {
 
   it('demo 项目使用稳定 slug 与非日期最新版目录，历史版回退到日期目录', async () => {
     const files = [
-      'content/projects/whono-theme/index.md',
-      'content/projects/2026-04-01-whono-theme/index.md',
-      'content/projects/2025-10-01-whono-theme/index.md'
+      'content/projects/versicarium/index.md',
+      'content/projects/2026-10-14-versicarium/index.md',
+      'content/projects/2026-10-02-versicarium/index.md'
     ];
 
     for (const [index, file] of files.entries()) {
       const source = await readSource(file);
-      expect(source, file).toMatch(/^slug: whono-theme$/m);
-      expect(source, file).toMatch(/^versionLabel: "?(1\.1\.0|0\.5\.0|0\.1\.0)"?$/m);
+      expect(source, file).toMatch(/^slug: versicarium$/m);
+      expect(source, file).toMatch(/^versionLabel: "?(1\.0\.0|0\.5\.0|0\.1\.0)"?$/m);
       expect(source, file).toMatch(/^versionOrder: [123]$/m);
       if (index === 0) {
         expect(file, '最新版目录使用稳定 slug，不带日期前缀').not.toMatch(/\d{4}-\d{2}-\d{2}/);
+        expect(source, file).toMatch(/^versionLabel: "?1\.0\.0"?$/m);
       } else {
-        expect(file).toMatch(/\/\d{4}-\d{2}-\d{2}-whono-theme\//);
+        expect(file).toMatch(/\/\d{4}-\d{2}-\d{2}-versicarium\//);
       }
     }
   });
