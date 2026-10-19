@@ -183,7 +183,7 @@ npm run theme:update              # 合并并更新基准提交
 
 ## 版本与发布
 
-当前为 1.0.0 预览版，也是首次公开版本，标签为 `v1.0.0`。仓库当前尚未创建 Release。
+当前为 1.0.0 预览版，也是首次公开版本，`v1.0.0` 标签只保留在本地。仓库当前尚未创建 Release。
 
 版本号与 `CHANGELOG.md` 由 Release Please 管理：提交遵循 Conventional Commits，Release Please 维护版本与变更记录，合并 release PR 时创建标签与 GitHub Release。Release 创建后，`.github/workflows/release.yml` 校验标签与版本号一致，并将模板 zip 与 `SHA256SUMS` 附加到该 Release。
 
