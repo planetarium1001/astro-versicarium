@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Planetarium avatar">
+  <rect width="64" height="64" fill="#17191e" />
+  <path d="M9 16V48L21 28L32 48L43 28L55 48V16" stroke="#fffefc" stroke-width="5" stroke-linecap="square" stroke-linejoin="miter" fill="none" />
+  <rect x="44" y="11" width="8" height="8" fill="#b91c1c" />
+</svg>

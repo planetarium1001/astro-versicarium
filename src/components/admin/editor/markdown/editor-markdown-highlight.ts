@@ -16,8 +16,8 @@ export type MarkdownHighlightThemeOption = {
 
 export const DEFAULT_MARKDOWN_HIGHLIGHT_THEME: MarkdownHighlightTheme = 'github';
 
-// Preset registry only. CodeMirror tag-to-token mapping lives in
-// editor-markdown-highlight-extension.ts; palette variables live in pane-content.css.
+// 这里只维护预设注册表；CodeMirror 标签到 token 的映射在
+// editor-markdown-highlight-extension.ts，调色板变量在 pane-content.css。
 export const MARKDOWN_HIGHLIGHT_THEME_OPTIONS: readonly MarkdownHighlightThemeOption[] = [
   {
     id: 'github',

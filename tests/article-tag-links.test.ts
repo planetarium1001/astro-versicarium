@@ -55,6 +55,19 @@ describe('文章详情页 tag 的可点入口', () => {
  * 卡片不能是整块 `<a>`：在内层再放 `<a>` 属于非法嵌套，浏览器会切断外层链接。
  * 卡片用 `<div>` + 标题上的「拉伸链接」铺满整卡，tag 才是真正的 `<a>`。
  */
+describe('首页条目 tag 的可点入口', () => {
+  it('EntryListItem 用 div + 拉伸链接，tag 与文章详情页一样指向 /blog/?tags=', async () => {
+    const source = await readFile(path.join(process.cwd(), 'src/components/EntryListItem.astro'), 'utf8');
+
+    expect(source).toContain('<div class="list-item list-item--link">');
+    expect(source).toContain('titleAs="link"');
+    expect(source).toContain('titleHref={href}');
+    expect(source).toContain('a class="tag tag--link"');
+    expect(source).toContain('withBase(`/blog/?tags=${encodeURIComponent(key)}`)');
+    expect(source).not.toContain('<a class="list-item list-item--link" href={href}>');
+  });
+});
+
 describe('博客列表卡 tag 的可点入口', () => {
   beforeEach(async () => {
     const html = await readFile(BLOG_LIST_FIXTURE, 'utf8');

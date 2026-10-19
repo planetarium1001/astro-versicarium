@@ -1,17 +1,29 @@
 /* projects-page.css — /projects/ 卡片栅格与弹窗、底部抽屉（<=640px） */
 
+@import "./components/entry-body.css";
+
 .projects-page .project-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  /* 窄屏一列；正常宽度两列；极宽横屏最多三列，不再随宽度无限增加。 */
+  grid-template-columns: minmax(0, 1fr);
+  /* 单列时也让各卡片行等高：短卡片撑到该行最高卡片的高度，链接贴底。 */
+  grid-auto-rows: 1fr;
   gap: 16px;
   margin-top: 24px;
   align-items: stretch;
 }
 
-/* 多列时所有行等高（行高取最高卡片） */
-@media (min-width: 641px) {
+@media (min-width: 760px) {
   .projects-page .project-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* 同一行卡片等高：行高取该行最高卡片，短卡片的末尾链接贴底。 */
     grid-auto-rows: 1fr;
+  }
+}
+
+@media (min-width: 1500px) {
+  .projects-page .project-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -25,8 +37,9 @@
   border-radius: 12px;
   background: var(--bg);
   min-width: 0;
-  /* 卡片高度上限，超出部分省略 */
-  max-height: 320px;
+  /* 多列时撑满行高；单列时保留自然高度与一个统一的下限，避免短卡片显得过空。 */
+  height: 100%;
+  min-height: 220px;
   overflow: hidden;
 }
 
@@ -128,9 +141,11 @@
 }
 
 .project-card__title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  --entry-title-font-size: 16px;
+  --entry-title-line-height: 1.75;
+  --entry-title-gap: 10px;
+  --entry-pill-height: 22px;
+
   min-width: 0;
 }
 
@@ -202,12 +217,35 @@
 .project-dialog::backdrop {
   background: var(--overlay-20);
   backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 500ms ease;
+}
+
+.project-dialog[open]::backdrop {
+  opacity: 1;
+}
+
+.project-dialog[data-closing='true']::backdrop {
+  opacity: 0;
+}
+
+@starting-style {
+  .project-dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-dialog::backdrop {
+    transition: none;
+  }
 }
 
 .project-dialog__inner {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-width: 0;
   max-height: inherit;
   padding: 18px;
 }
@@ -230,10 +268,10 @@
 }
 
 .project-dialog__title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  --entry-title-font-size: 21px;
+  --entry-title-line-height: 1.4;
+  --entry-title-gap: 10px;
+  --entry-pill-height: 24px;
 }
 
 /**
@@ -283,42 +321,44 @@
   font-size: 15.5px;
 }
 
-/**
- * 关闭按钮无边框无底色，只保留颜色变化；44px 热区由 width/height 保留。
- */
+/* 视觉尺寸与焦点环由 global.css 的 [data-dialog-close] 统一提供。 */
 .project-dialog__close {
-  flex: 0 0 auto;
-  width: var(--tap-min-h);
-  height: var(--tap-min-h);
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--faint);
-  font: inherit;
-  font-family: "Segoe UI Symbol", "Segoe UI", sans-serif;
-  /* 关闭图标缩小一点，不喧宾夺主（44px 热区仍保留） */
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-  transition: color 0.16s ease;
+  margin: -3px -4px 0 0;
 }
 
-.project-dialog__close:hover,
-.project-dialog__close:focus-visible {
-  color: var(--text);
+/* 显式声明热区尺寸，供 check-touch-targets 解析；与全局 [data-dialog-close]::before 一致 */
+.project-dialog__close::before {
+  width: 44px;
+  height: 44px;
 }
 
-.project-dialog__close:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
+/*
+ * 滚动条贴弹窗边框：负 inline margin 抵消 `.project-dialog__inner` 的左右 padding，
+ * 再用同值 padding 保持文字对齐；`scrollbar-gutter: stable` 避免滚动条出现/消失时文字横跳。
+ */
 .project-dialog__content {
   overflow-y: auto;
   overscroll-behavior: contain;
   min-height: 0;
   flex: 1;
+  margin-inline: -18px;
+  padding-inline: 18px;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent;
+}
+
+.project-dialog__content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.project-dialog__content::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 45%, transparent);
+  border-radius: 999px;
+}
+
+.project-dialog__content::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /*
@@ -333,6 +373,69 @@
 .project-dialog__fallback {
   margin: 0;
   color: var(--muted);
+}
+
+/* 旧版本弹窗：一行紧凑提示 + 打开最新版 */
+.project-version-notice {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.project-version-notice__text {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.project-version-notice__meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45em;
+  white-space: nowrap;
+}
+
+.project-version-notice__latest {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.project-version-notice__latest:hover,
+.project-version-notice__latest:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.project-version-notice__latest:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 每个版本弹窗保留自己的末尾链接组，与版本历史 / 更新日志之间留出间距 */
+.project-dialog .trailing-links {
+  margin-top: 18px;
 }
 
 /* <=640px：底部抽屉 */
@@ -367,9 +470,142 @@
 
   /* 抽屉内部滚动，不带动整页 */
   .project-dialog__content {
+    margin-inline: -14px;
+    padding-inline: 14px;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
+}
+
+/* 卡片/弹窗标题行：弱化的版本信息跟在标题后，不抢标题层级 */
+/* 弹窗：项目大版本历史，视觉与文章版本历史同源 */
+.project-versions {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.project-versions__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 14px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.project-versions__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.project-versions__hint {
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.project-versions__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-version {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.project-version:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.project-version__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+}
+
+/* 当前版本是 span，文档历史版本是 button，legacy 记录是 span：统一成同一行排版。 */
+.project-version__main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.project-version__main--legacy {
+  cursor: default;
+}
+
+.project-version__main:hover,
+.project-version__main:focus-visible {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.project-version__main:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.project-version__label {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.project-version.is-current .project-version__label {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+
+.project-version__name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.project-version__meta {
+  display: flex;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.project-version__status {
+  color: var(--accent);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.project-version__status--legacy {
+  color: var(--faint);
+}
+
+.project-version__summary {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .project-updates {

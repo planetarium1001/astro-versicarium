@@ -12,7 +12,12 @@ import {
   MARKDOWN_MATH_STYLESHEET_HREF,
   MARKDOWN_MATH_STYLESHEET_ID
 } from '../lib/markdown-math-styles';
-import type { ArticleMetaSettings, SidebarNavId, ViewStatsSettings } from '../lib/theme-settings';
+import type {
+  ArticleDateGranularity,
+  ArticleMetaSettings,
+  SidebarNavId,
+  ViewStatsSettings
+} from '../lib/theme-settings';
 import { createWithBase } from '../utils/format';
 import { getSiteTimezone } from '../utils/site-timezone';
 import { resolveArticleDateItems } from '../lib/display-date';
@@ -30,6 +35,7 @@ const {
   prev,
   next,
   articleMetaSettings,
+  dateGranularity,
   viewStatsSettings,
   visibleTags = [],
   headings = []
@@ -39,6 +45,7 @@ const {
   prev: ArticleNeighborLink | null;
   next: ArticleNeighborLink | null;
   articleMetaSettings: ArticleMetaSettings;
+  dateGranularity?: ArticleDateGranularity;
   viewStatsSettings: ViewStatsSettings;
   visibleTags?: string[];
   headings?: { depth: number; slug: string; text?: string }[];
@@ -79,6 +86,7 @@ const updatedAt = entry.data.updatedAt ?? null;
 const dateItems = resolveArticleDateItems({
   mode: entry.data.articleDateDisplay ?? articleMetaSettings.dateDisplay ?? 'updated',
   timeZone: getSiteTimezone(),
+  granularity: dateGranularity ?? articleMetaSettings.dateGranularity ?? 'date',
   date: {
     date: entry.data.date,
     text: entry.data.dateText,
@@ -180,7 +188,7 @@ const shouldShowMetaLine = articleMetaSettings.showDate
           <span class="meta-line__item">
             {dateItems.map((item, index) => (
               <>
-                {index > 0 ? <span aria-hidden="true"> · </span> : null}
+                {index > 0 ? <span class="meta-line__sep" aria-hidden="true">·</span> : null}
                 <time
                   datetime={item.iso}
                   data-site-timezone={item.timeZone}
@@ -241,25 +249,23 @@ const shouldShowMetaLine = articleMetaSettings.showDate
   </div>
   {(prev || next) ? (
     <nav class="prev-next" aria-label="上一篇/下一篇">
-      <div class="prev-next__item">
+      <div class="prev-next__item prev-next__item--prev">
         {prev ? (
-          <a class="prev-next__link prev-next__link--prev" href={prev.href} rel="prev">
+          <a class="prev-next__link" href={prev.href} rel="prev">
+            <span class="prev-next__arrow" aria-hidden="true">‹</span>
             <span class="prev-next__label">上一篇</span>
             <span class="prev-next__title">{prev.title}</span>
           </a>
-        ) : (
-          <span class="prev-next__placeholder" aria-hidden="true"></span>
-        )}
+        ) : null}
       </div>
-      <div class="prev-next__item">
+      <div class="prev-next__item prev-next__item--next">
         {next ? (
-          <a class="prev-next__link prev-next__link--next" href={next.href} rel="next">
-            <span class="prev-next__label">下一篇</span>
+          <a class="prev-next__link" href={next.href} rel="next">
             <span class="prev-next__title">{next.title}</span>
+            <span class="prev-next__label">下一篇</span>
+            <span class="prev-next__arrow" aria-hidden="true">›</span>
           </a>
-        ) : (
-          <span class="prev-next__placeholder" aria-hidden="true"></span>
-        )}
+        ) : null}
       </div>
     </nav>
   ) : null}

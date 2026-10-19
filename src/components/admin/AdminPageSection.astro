@@ -4,7 +4,11 @@ import UiIcon from '../UiIcon.astro';
 import {
   ADMIN_ARCHIVE_VERSION_MODE_OPTIONS,
   ADMIN_ARTICLE_DATE_DISPLAY_OPTIONS,
+  ADMIN_ARTICLE_DATE_GRANULARITY_OPTIONS,
   ADMIN_ARTICLE_META_DATE_LABEL_MAX_LENGTH,
+  ADMIN_PAGINATION_PAGE_OPTIONS,
+  ADMIN_PAGINATION_PAGE_SIZE_MAX,
+  ADMIN_PAGINATION_PAGE_SIZE_MIN,
   ADMIN_VIEW_STATS_LABEL_MAX_LENGTH
 } from '../../lib/admin-console/theme-shared';
 
@@ -90,16 +94,18 @@ const viewStatsInlineFields = [
     </label>
   </div>
 
-  <div class="admin-subgroup">
+  <div class="admin-subgroup admin-subgroup--article-meta">
     <p class="admin-subtitle">
       <span class="admin-subtitle__main">文章元信息</span>
-      <span class="admin-subtitle__hint">（字数/时长仅详情页，移动端隐藏）</span>
+      <span class="admin-subtitle__hint">（字数/时长仅详情页，移动端隐藏；粒度默认仅日期，frontmatter 可覆盖，无时分回退日期）</span>
     </p>
-    <div class="admin-toggle-row-group admin-toggle-row-group--article-meta">
-      <div class="admin-toggle-row admin-toggle-row--with-inline-field">
+
+    <div class="admin-meta-group">
+      <p class="admin-meta-group__label">日期</p>
+      <div class="admin-toggle-row-group__line">
         <label class="admin-toggle-row admin-toggle-row--compact" for="ui-article-meta-show-date">
           <input id="ui-article-meta-show-date" type="checkbox" />
-          <span>显示发布日期</span>
+          <span>显示日期</span>
         </label>
         <span class="admin-toggle-row__sep" aria-hidden="true">|</span>
         <label class="admin-inline-field" for="ui-article-meta-date-label">
@@ -115,37 +121,106 @@ const viewStatsInlineFields = [
         </label>
         <span class="admin-toggle-row__sep" aria-hidden="true">|</span>
         <label class="admin-inline-field" for="ui-article-meta-date-display">
-          <span class="admin-inline-field__label">日期：</span>
+          <span class="admin-inline-field__label">显示：</span>
           <select id="ui-article-meta-date-display" class="admin-inline-field__input">
             {ADMIN_ARTICLE_DATE_DISPLAY_OPTIONS.map((option) => (
               <option value={option.id}>{option.label}</option>
             ))}
           </select>
         </label>
+        <span class="admin-toggle-row__sep" aria-hidden="true">|</span>
+        <label class="admin-inline-field" for="ui-article-meta-date-granularity">
+          <span class="admin-inline-field__label">粒度：</span>
+          <select
+            id="ui-article-meta-date-granularity"
+            class="admin-inline-field__input"
+            style="width: 116px; min-width: 116px;"
+            title="默认仅日期；frontmatter 可覆盖；无时分回退日期"
+          >
+            {ADMIN_ARTICLE_DATE_GRANULARITY_OPTIONS.map((option) => (
+              <option value={option.id}>{option.label}</option>
+            ))}
+          </select>
+        </label>
       </div>
-      <label class="admin-inline-field" for="ui-card-date-display">
-        <span class="admin-inline-field__label">列表卡片日期：</span>
-        <select id="ui-card-date-display" class="admin-inline-field__input">
-          {ADMIN_ARTICLE_DATE_DISPLAY_OPTIONS.map((option) => (
-            <option value={option.id}>{option.label}</option>
-          ))}
-        </select>
-      </label>
-      <label class="admin-toggle-row">
-        <input id="ui-article-meta-show-tags" type="checkbox" />
-        <span>显示标签</span>
-      </label>
-      <label class="admin-toggle-row">
-        <input id="ui-article-meta-show-word-count" type="checkbox" />
-        <span>显示字数</span>
-      </label>
-      <label class="admin-toggle-row">
-        <input id="ui-article-meta-show-reading-time" type="checkbox" />
-        <span>显示阅读时长</span>
-      </label>
     </div>
+
+    <div class="admin-meta-group">
+      <p class="admin-meta-group__label">附加信息</p>
+      <div class="admin-toggle-row-group__line">
+        <label class="admin-toggle-row" for="ui-article-meta-show-tags">
+          <input id="ui-article-meta-show-tags" type="checkbox" />
+          <span>显示标签</span>
+        </label>
+        <label class="admin-toggle-row" for="ui-article-meta-show-word-count">
+          <input id="ui-article-meta-show-word-count" type="checkbox" />
+          <span>显示字数</span>
+        </label>
+        <label class="admin-toggle-row" for="ui-article-meta-show-reading-time">
+          <input id="ui-article-meta-show-reading-time" type="checkbox" />
+          <span>显示阅读时长</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="admin-meta-group">
+      <p class="admin-meta-group__label">列表卡片</p>
+      <div class="admin-toggle-row-group__line">
+        <label class="admin-inline-field" for="ui-card-date-display">
+          <span class="admin-inline-field__label">日期显示：</span>
+          <select id="ui-card-date-display" class="admin-inline-field__input">
+            {ADMIN_ARTICLE_DATE_DISPLAY_OPTIONS.map((option) => (
+              <option value={option.id}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+    </div>
+
     <p class="admin-help admin-help--article-meta-preview">
-      预览：<code id="article-meta-preview-value" class="admin-help__preview-value">{'发布于：2026-03-18 · #Astro\u00A0\u00A0#写作 · 共 2,416 字 · 约 6 分钟'}</code>
+      预览：<code id="article-meta-preview-value" class="admin-help__preview-value">{'更新于：2026-03-20 · #Astro\u00A0#写作 · 共 2,416 字 · 约 6 分钟'}</code>
+    </p>
+  </div>
+
+  <div class="admin-subgroup admin-subgroup--pagination">
+    <p class="admin-subtitle">
+      <span class="admin-subtitle__main">列表分页</span>
+      <span class="admin-subtitle__hint">（关闭后整页排下去；开启时每页 {ADMIN_PAGINATION_PAGE_SIZE_MIN}-{ADMIN_PAGINATION_PAGE_SIZE_MAX} 条）</span>
+    </p>
+    <div class="admin-pagination-grid">
+      {ADMIN_PAGINATION_PAGE_OPTIONS.map((option) => (
+        <div class="admin-pagination-row" data-pagination-scope={option.id}>
+          <span class="admin-pagination-row__page">
+            {option.path ? <code>{option.path}</code> : null}
+            {option.label}
+          </span>
+          <label class="admin-toggle-row admin-toggle-row--compact" for={`page-pagination-${option.id}-enabled`}>
+            <input
+              id={`page-pagination-${option.id}-enabled`}
+              type="checkbox"
+              data-pagination-enabled
+            />
+            <span>启用</span>
+          </label>
+          <label class="admin-inline-field admin-pagination-row__size" for={`page-pagination-${option.id}-size`}>
+            <span class="admin-inline-field__label">每页</span>
+            <input
+              id={`page-pagination-${option.id}-size`}
+              class="admin-inline-field__input admin-pagination-row__number"
+              type="number"
+              min={ADMIN_PAGINATION_PAGE_SIZE_MIN}
+              max={ADMIN_PAGINATION_PAGE_SIZE_MAX}
+              step="1"
+              inputmode="numeric"
+              data-pagination-size
+            />
+            <span class="admin-inline-field__label">条</span>
+          </label>
+        </div>
+      ))}
+    </div>
+    <p class="admin-help">
+      公开页仍会完整输出所有条目，只在浏览器里按页收起；关闭分页或禁用脚本时整页可见。
     </p>
   </div>
 
@@ -157,7 +232,7 @@ const viewStatsInlineFields = [
     <div class="admin-label admin-label--split">
       <span class="admin-label__copy">
         <span class="admin-label__main">RSS 订阅</span>
-        <span class="admin-label__hint">（列表页描述行里的 RSS 链接；侧栏按钮见「侧栏设置」）</span>
+        <span class="admin-label__hint">（列表页描述行；侧栏按钮见「侧栏设置」）</span>
       </span>
       <label class="admin-label__toggle" for="page-list-rss-enabled">
         <input id="page-list-rss-enabled" type="checkbox" checked />
@@ -167,15 +242,15 @@ const viewStatsInlineFields = [
     <div id="page-list-rss-group" class="admin-toggle-row-group">
       <label class="admin-toggle-row" for="page-list-rss-blog">
         <input id="page-list-rss-blog" type="checkbox" />
-        <span>在 <code>/blog/</code> 描述行显示</span>
+        <span><code>/blog/</code></span>
       </label>
       <label class="admin-toggle-row" for="page-list-rss-bits">
         <input id="page-list-rss-bits" type="checkbox" />
-        <span>在 <code>/bits/</code> 描述行显示</span>
+        <span><code>/bits/</code></span>
       </label>
       <label class="admin-toggle-row" for="page-list-rss-archive">
         <input id="page-list-rss-archive" type="checkbox" />
-        <span>在 <code>/archive/</code> 描述行显示</span>
+        <span><code>/archive/</code></span>
       </label>
     </div>
     <p class="admin-help">

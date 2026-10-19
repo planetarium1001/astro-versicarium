@@ -66,6 +66,7 @@ const createItem = (overrides: Partial<AdminContentIndexItem> = {}): AdminConten
     dateLabel: '2026-04-01',
     year: 2026,
     tags: ['admin'],
+    project: null,
     series: null,
     versionLabel: null,
     versionName: null,

@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import EntryTitleLine from '../../components/EntryTitleLine.astro';
 import TagFilterHeader from '../../components/TagFilterHeader.astro';
 import { createWithBase, getVisibleblogs, getVisibleDevlogs } from '../../lib/content';
 import { getArchiveRows, groupArchiveRows } from '../../lib/archive';
@@ -7,13 +8,14 @@ import { buildArchiveScopePills } from '../../lib/archive-scope-pills';
 import { collectTagScopedSummary, type TagSummary } from '../../lib/tags';
 import { getThemeSettings } from '../../lib/theme-settings';
 import { joinPageSubtitleText } from '../../utils/format';
-import { PAGE_SIZE_ARCHIVE } from '../../../site.config.mjs';
 import '../../styles/archive-page.css';
 
 /**
  * `/archive/` 全站时间线。
- * 一级胶囊：全部 / 博客 / 项目 / 更新，默认「全部」。时间线只显示日期与标题，按年月分组，不含 bits。
- * 标题跳转：博客到稳定 slug 或版本 dated URL，项目到 /projects/#<entryId>，更新到 /devlog/#<entryId>。
+ * 一级胶囊：全部 / 博客 / 项目 / 更新，默认「全部」。时间线只显示日期与条目行，按年月分组，不含 bits。
+ * 标题跳转：博客到稳定 slug 或版本 dated URL，项目到对应版本的 /projects/#<anchor>，更新到 /devlog/#<entryId>。
+ * 项目按文档版本成行；行内排版固定为「标题 + 淡色版本号」；开发日志行为「项目名: 标题」，
+ * 版本名称是否显示由后台「条目版本」选项决定。
  * tag dialog 作用域跟随一级胶囊。无服务端分页，/archive/index.json 是客户端筛选与计数的唯一数据源。
  */
 const {
@@ -30,9 +32,11 @@ const base = import.meta.env.BASE_URL ?? '/';
 const withBase = createWithBase(base);
 
 const pageTitleText = page.archive.title || '归档';
+const pagination = page.pagination?.archive ?? { enabled: false, pageSize: 20 };
 const totalCount = rows.length;
 const blogCount = rows.filter((row) => row.kind === 'blog').length;
-const projectCount = rows.filter((row) => row.kind === 'projects').length;
+const projectRows = rows.filter((row) => row.kind === 'projects');
+const projectCount = projectRows.length;
 const devlogCount = rows.filter((row) => row.kind === 'devlog').length;
 const subtitleText = joinPageSubtitleText(page.archive.subtitle, `共 ${totalCount} 篇内容`);
 const pageDescription = joinPageSubtitleText(
@@ -43,20 +47,15 @@ const pageDescription = joinPageSubtitleText(
 
 /**
  * 归档的 tag 取值域逐档收敛：
- * 博客用自身 tags；项目不暴露任何标签（切到「项目」时页头的 #标签 入口整体隐藏，
- * 见 scripts/archive-scope.ts）；更新只取项目名称，与 /devlog/ 的 #项目 一致；
- * 「全部」= 博客 tags + 更新的项目名称，不含项目集合自身的 tags。
+ * 博客用自身 tags；项目每个版本行都带项目显示名，供「项目」作用域的 `#项目` 过滤；
+ * 更新只取项目名称，与 /devlog/ 的 `#项目` 一致；「全部」由时间线行推导，保证计数与可见行一致。
  */
 const blogTags: TagSummary[] = collectTagScopedSummary('blog', blogs, (entry) => entry.data.tags);
-const projectTags: TagSummary[] = [];
+const projectTags: TagSummary[] = collectTagScopedSummary('projects', projectRows, (row) => row.tags);
 const devlogTags: TagSummary[] = collectTagScopedSummary('devlog', devlogs, (entry) => [
   entry.data.project
 ].filter(Boolean));
-const allTags: TagSummary[] = collectTagScopedSummary(
-  'all',
-  [...blogs, ...devlogs],
-  (entry) => ('tags' in entry.data ? entry.data.tags : [entry.data.project].filter(Boolean))
-);
+const allTags: TagSummary[] = collectTagScopedSummary('all', rows, (row) => row.tags);
 
 const scopePills = buildArchiveScopePills({
   page,
@@ -77,7 +76,7 @@ const tagPayload = { blog: blogTags, projects: projectTags, devlog: devlogTags, 
     data-archive-timeline
     data-index-url="/archive/index.json"
     data-section-selector="[data-entry-section]"
-    data-page-size={String(PAGE_SIZE_ARCHIVE)}
+    data-page-size={pagination.enabled ? String(pagination.pageSize) : undefined}
   >
     <TagFilterHeader
       pageTitleText={pageTitleText}
@@ -133,20 +132,21 @@ const tagPayload = { blog: blogTags, projects: projectTags, devlog: devlogTags, 
               <time class="archive-timeline__date" datetime={row.dateText}>
                 {row.dateText.slice(5)}
               </time>
-              <span class="archive-timeline__entry">
-                {row.kind === 'blog' && row.series ? (
-                  <span class="badge badge--version">{row.versionLabel}</span>
-                ) : null}
-                {row.kind === 'blog' && row.series && row.isLatest === false ? (
-                  <span class="badge badge--history">历史</span>
-                ) : null}
-                <a class="archive-timeline__title" href={withBase(row.href)}>
-                  {row.kind === 'devlog' && row.project ? (
-                    <span class="archive-timeline__project">{`${row.project}: `}</span>
-                  ) : null}
-                  {row.title}
-                </a>
-              </span>
+              {/*
+                整行一个链接：字段组合（项目名 / 标题 / 版本号等）可能重排，
+                不能让标题单独成为 <a>，否则分隔符与胶囊会落在链接外。
+              */}
+              <a class="archive-timeline__entry" href={withBase(row.href)}>
+                <EntryTitleLine
+                  surface="archive"
+                  kind={row.kind}
+                  title={row.title}
+                  project={row.project ?? null}
+                  versionLabel={row.kind === 'blog' && !row.series ? null : row.versionLabel ?? null}
+                  versionName={row.versionName ?? null}
+                  titleTag="span"
+                />
+              </a>
             </div>
           ))}
         </div>

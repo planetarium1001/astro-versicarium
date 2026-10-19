@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   canonicalizeAdminThemeSettings,
   createAdminThemeSettingsCanonicalMismatchIssues,
+  createAdminWritableThemeSettingsGroups,
   fillAdminThemeSettingsCompatibilityDefaults,
   getAdminNavOrderIssues,
   getAdminSocialOrderIssues,
@@ -11,8 +12,13 @@ import {
   getAdminImageFieldPreviewSrc,
   getAdminRenderedImagePreviewSrc
 } from '../src/lib/admin-console/image-params';
-import { ADMIN_SHELL_TITLE_NARROW_MAX_LENGTH } from '../src/lib/admin-console/theme-shared';
+import {
+  ADMIN_PAGINATION_DEFAULTS,
+  ADMIN_PAGINATION_PAGE_SIZE_MAX,
+  ADMIN_SHELL_TITLE_NARROW_MAX_LENGTH
+} from '../src/lib/admin-console/theme-shared';
 import { getEditableThemeSettingsPayload, type EditableThemeSettings } from '../src/lib/theme-settings';
+import { DEFAULT_ENTRY_VERSION_NAME_MODE } from '../src/lib/entry-display';
 import {
   buildSearchHaystack,
   getBitsAvatarLocalFilePath,
@@ -524,5 +530,87 @@ describe('admin-console/shared：备案信息显示范围', () => {
       (issue) => issue.path
     );
     expect(mismatchPaths).not.toContain('site.filings.scope');
+  });
+});
+
+
+describe('列表分页设置', () => {
+  it('缺少分页组时补齐默认值', () => {
+    const raw = baseSettings() as Record<string, any>;
+    delete raw.page.pagination;
+    expect(canonicalizeAdminThemeSettings(raw).page.pagination).toEqual(ADMIN_PAGINATION_DEFAULTS);
+  });
+
+  it('每页条数越界时夹到 1-100', () => {
+    const raw = baseSettings() as Record<string, any>;
+    raw.page.pagination.home.pageSize = 0;
+    raw.page.pagination.archive.pageSize = ADMIN_PAGINATION_PAGE_SIZE_MAX + 1;
+    const canonical = canonicalizeAdminThemeSettings(raw);
+    expect(canonical.page.pagination.home.pageSize).toBe(1);
+    expect(canonical.page.pagination.archive.pageSize).toBe(ADMIN_PAGINATION_PAGE_SIZE_MAX);
+  });
+
+  it('校验把错误定位到具体页面与字段', () => {
+    const ok = canonicalizeAdminThemeSettings(baseSettings());
+    const broken = structuredClone(ok) as EditableThemeSettings;
+    broken.page.pagination.bits.enabled = 'yes' as unknown as boolean;
+    broken.page.pagination.devlog.pageSize = 101;
+    const paths = validateAdminThemeSettings(broken).map((issue) => issue.path);
+    expect(paths).toContain('page.pagination.bits.enabled');
+    expect(paths).toContain('page.pagination.devlog.pageSize');
+  });
+});
+
+describe('条目版本名称设置', () => {
+  it('缺省时补齐默认值', () => {
+    const raw = baseSettings() as Record<string, any>;
+    delete raw.ui.entryVersionName;
+    expect(canonicalizeAdminThemeSettings(raw).ui.entryVersionName).toBe(DEFAULT_ENTRY_VERSION_NAME_MODE);
+  });
+
+  it('三种模式原样保留', () => {
+    for (const mode of ['hidden', 'before-label', 'after-label'] as const) {
+      const raw = baseSettings() as Record<string, any>;
+      raw.ui.entryVersionName = mode;
+      expect(canonicalizeAdminThemeSettings(raw).ui.entryVersionName).toBe(mode);
+    }
+  });
+
+  it('canonical snapshot 与 writable ui 分组可往返', () => {
+    const canonical = canonicalizeAdminThemeSettings({
+      ...baseSettings(),
+      ui: { ...baseSettings().ui, entryVersionName: 'after-label' }
+    });
+    const groups = createAdminWritableThemeSettingsGroups(canonical);
+    expect(groups.ui.entryVersionName).toBe('after-label');
+
+    const roundTrip = canonicalizeAdminThemeSettings({
+      ...canonical,
+      ui: { ...canonical.ui, entryVersionName: groups.ui.entryVersionName }
+    });
+    expect(roundTrip.ui.entryVersionName).toBe('after-label');
+  });
+
+  it('未知取值归一化为默认并触发 canonical mismatch', () => {
+    const raw = baseSettings() as Record<string, any>;
+    raw.ui.entryVersionName = 'sideways';
+
+    const canonical = canonicalizeAdminThemeSettings(raw);
+    expect(canonical.ui.entryVersionName).toBe(DEFAULT_ENTRY_VERSION_NAME_MODE);
+
+    const mismatchPaths = createAdminThemeSettingsCanonicalMismatchIssues(raw, canonical).map(
+      (issue) => issue.path
+    );
+    expect(mismatchPaths).toContain('ui.entryVersionName');
+  });
+
+  it('共享校验把错误定位到 ui.entryVersionName', () => {
+    const invalid = {
+      ...baseSettings(),
+      ui: { ...baseSettings().ui, entryVersionName: 'sideways' }
+    } as unknown as EditableThemeSettings;
+
+    const paths = validateAdminThemeSettings(invalid).map((issue) => issue.path);
+    expect(paths).toContain('ui.entryVersionName');
   });
 });

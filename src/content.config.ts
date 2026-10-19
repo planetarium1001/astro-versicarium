@@ -31,6 +31,28 @@ const blogVersionFields = {
   versionOrder: versionOrderRule.optional()
 };
 
+/**
+ * 项目大版本：当前版本字段写在项目 frontmatter 顶层，`versions` 只放历史版本
+ * （不含当前版本；当前版本的日期沿用项目 date）。旧项目不写这些字段时完全不受影响。
+ */
+const projectVersionFields = {
+  versionLabel: z.string().trim().optional(),
+  versionName: z.string().trim().optional(),
+  versionSummary: z.string().trim().optional(),
+  versionOrder: versionOrderRule.optional(),
+  versions: z
+    .array(
+      z.object({
+        label: z.string().trim().min(1),
+        name: z.string().trim().optional(),
+        date: z.unknown(),
+        summary: z.string().trim().optional(),
+        order: versionOrderRule.optional()
+      })
+    )
+    .optional()
+};
+
 type NormalizedDate = {
   date: Date;
   dateText: string;
@@ -172,7 +194,7 @@ const bitsAuthorAvatar = z
     if (normalized === undefined) {
       ctx.addIssue({
         code: 'custom',
-        message: 'author.avatar 只允许相对图片路径（例如 author/avatar.webp），不要带 public/、不要以 / 开头，也不要使用 URL、..、?、#'
+        message: 'author.avatar 只允许相对图片路径（例如 author/avatar.svg），不要带 public/、不要以 / 开头，也不要使用 URL、..、?、#'
       });
     }
   })
@@ -183,16 +205,12 @@ const bitsAuthor = z.object({
   avatar: bitsAuthorAvatar.optional()
 });
 
-const commonDateShape = {
-  ...baseFields
-};
-
 const blog = defineCollection({
   loader: entryDirLoader({ collection: 'blog' }),
   schema: ({ image }) =>
     z
       .object({
-        ...commonDateShape,
+        ...baseFields,
         ...blogVersionFields,
         title: z.string().trim(),
         description: z.string().trim().optional(),
@@ -204,6 +222,7 @@ const blog = defineCollection({
         ogImageAlt: z.string().trim().optional(),
         articleDateDisplay: z.enum(['published', 'updated', 'both']).optional(),
         cardDateDisplay: z.enum(['published', 'updated', 'both']).optional(),
+        dateGranularity: z.enum(['date', 'datetime']).optional(),
         badge: z.string().trim().optional()
       })
       .transform((data, ctx) => {
@@ -256,13 +275,51 @@ const projects = defineCollection({
         type: z.string().trim().optional(),
         icon: createOptionalEntryImage(image),
         image: createOptionalEntryImage(image),
-        ...commonDateShape
+        // 同一项目的多个版本文档共享这个稳定键；留空或写成日期形式时按单版本处理，
+        // 最新版锚点直接回退到 entry.id 压平后的 `YYYY-MM-DD-title`。
+        slug: slugRule.optional(),
+        ...projectVersionFields,
+        ...baseFields
       })
       .transform((data, ctx) => {
         const date = parseDateOrReport(data.date, 'date', ctx);
         if (!date) return z.NEVER;
+
+        const rawVersions = data.versions ?? [];
+        if (rawVersions.length > 0 && !data.versionLabel) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['versionLabel'],
+            message: 'versions requires versionLabel（历史版本必须有一个当前版本号）'
+          });
+        }
+
+        const versions = rawVersions.flatMap((version, index) => {
+          const parsed = parseDateOrReport(version.date, `versions.${index}.date`, ctx);
+          if (!parsed) return [];
+          if (parsed.date.valueOf() > date.date.valueOf()) {
+            ctx.addIssue({
+              code: 'custom',
+              path: [`versions.${index}.date`],
+              message: 'versions date must not be later than project date'
+            });
+          }
+          return [
+            {
+              label: version.label,
+              ...(version.name ? { name: version.name } : {}),
+              ...(version.summary ? { summary: version.summary } : {}),
+              ...(version.order === undefined ? {} : { order: version.order }),
+              date: parsed.date,
+              dateText: parsed.dateText,
+              hasTime: parsed.hasTime
+            }
+          ];
+        });
+
         return {
           ...data,
+          ...(data.versions === undefined ? {} : { versions }),
           date: date.date,
           dateText: date.dateText,
           dateHasTime: date.hasTime
@@ -279,7 +336,7 @@ const devlog = defineCollection({
       projectSlug: seriesRule.optional(),
       kind: z.string().trim().optional(),
       description: z.string().trim().optional(),
-      ...commonDateShape
+      ...baseFields
     })
     .transform((data, ctx) => {
       const date = parseDateOrReport(data.date, 'date', ctx);

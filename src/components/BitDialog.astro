@@ -5,6 +5,7 @@ import { getThemeSettings } from '../lib/theme-settings';
 import { getSiteTimezone } from '../utils/site-timezone';
 import BitAvatar from './BitAvatar.astro';
 import BitTags from './BitTags.astro';
+import UiIcon from './UiIcon.astro';
 
 const { bit, Content = null } = Astro.props;
 
@@ -55,11 +56,13 @@ const title = (bitEntry.data.title ?? '').trim();
           </div>
         </div>
       </div>
-      <button class="bit-dialog__close" type="button" data-bit-dialog-close aria-label="关闭动态详情">✕</button>
+      <button class="bit-dialog__close" type="button" data-bit-dialog-close data-dialog-close aria-label="关闭动态详情">
+        <UiIcon name="x" size={14} strokeWidth={1.8} />
+      </button>
     </div>
 
     <div class="bit-dialog__content">
-      <div class="bit-body bit-dialog__body">
+      <div class="bit-body bit-dialog__body prose">
         {Content ? <Content /> : <p>{card.body.plainText}</p>}
       </div>
 

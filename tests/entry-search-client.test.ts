@@ -15,6 +15,17 @@ import {
 } from './entry-search-harness';
 
 /**
+ * 客户端分页会隐藏第一页之外的条目；清空筛选后应恢复的是「当前页」而不是全部 DOM。
+ * 页大小来自页面上的 data-page-size，避免把 12 / 20 写死。
+ */
+const visiblePageSize = (): number => {
+  const root = document.querySelector<HTMLElement>('[data-entry-filters]');
+  const pageSize = Number(root?.dataset.pageSize ?? '0');
+  const total = pageItems().length;
+  return pageSize > 0 ? Math.min(total, pageSize) : total;
+};
+
+/**
  * 端到端客户端行为测试（真实页面 HTML + 真实 entry-search.ts）。
  *
  * jsdom 载入构建产物里的真实 HTML，stub fetch 返回真实 index.json，再 import 真实脚本断言 DOM：
@@ -86,7 +97,7 @@ describe('entry-search 客户端行为', () => {
     expect(clear, '需要「清除筛选」按钮').not.toBeNull();
     clear!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     await vi.waitFor(() => {
-      expect(visibleItems().length).toBe(pageItems().length);
+      expect(visibleItems().length).toBe(visiblePageSize());
     });
   });
 
@@ -155,7 +166,24 @@ describe('entry-search 客户端行为', () => {
 
     allPill!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     await vi.waitFor(() => {
-      expect(visibleItems().length).toBe(pageItems().length);
+      expect(visibleItems().length).toBe(visiblePageSize());
+    });
+  });
+
+  it('archive：切换作用域后副标题计数跟随当前作用域', async () => {
+    await loadPage(PAGES[2]);
+    await importEntrySearch({ archiveScope: true });
+
+    const devlogCount = pageItems().filter(
+      (el) => (el.dataset.archiveKind ?? '').trim() === 'devlog'
+    ).length;
+    const devlogPill = document.querySelector<HTMLElement>('[data-archive-scope="devlog"]');
+    expect(devlogPill).toBeTruthy();
+    devlogPill!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() => {
+      const subtitle = document.querySelector<HTMLElement>('.page-subtitle__text')?.textContent ?? '';
+      expect(subtitle).toContain(`共 ${devlogCount} 条内容`);
     });
   });
 
@@ -195,16 +223,12 @@ describe('entry-search 客户端行为', () => {
       const bar = document.querySelector<HTMLElement>('[data-archive-scope-bar]')!;
       const cursor = document.querySelector<HTMLElement>('[data-archive-scope-cursor]')!;
       expect(bar.dataset.ready, '初始化后滑块应就绪（可淡入）').toBe('true');
-      // 滑块宽度 = 所有 item 的最大宽度（切换时只有位移、没有宽度跳变）
-      const maxWidth = Math.max(...Object.values(rects).map((r) => r.width));
-      expect(cursor.style.width).toBe(`${maxWidth}px`);
+      // 滑块宽度 = 当前激活胶囊的宽度，避免长标签的滑块盖住相邻胶囊
+      expect(cursor.style.width).toBe(`${rects.all.width}px`);
 
       const expectedLeft = (scope: keyof typeof rects) => {
         const rect: Rect = rects[scope];
-        const left = rect.left - rootRect.left - (maxWidth - rect.width) / 2;
-        const maxLeft = Math.max(rootRect.width - maxWidth, 0);
-        // 与实现同源的夹取：5px 内即视为一致（实现取整）
-        return Math.min(Math.max(left, 0), maxLeft);
+        return rect.left - rootRect.left;
       };
 
       const initial = Number(/translateX\((-?[\d.]+)px\)/.exec(cursor.style.transform)?.[1]);
@@ -216,7 +240,7 @@ describe('entry-search 客户端行为', () => {
       const after = Number(/translateX\((-?[\d.]+)px\)/.exec(cursor.style.transform)?.[1]);
       expect(Math.abs(after - expectedLeft('devlog'))).toBeLessThanOrEqual(1);
       expect(after, '滑块应真的移动了').not.toBe(initial);
-      expect(cursor.style.width, '切换不应改变滑块宽度').toBe(`${maxWidth}px`);
+      expect(cursor.style.width, '切换时滑块应收缩到当前胶囊宽度').toBe(`${rects.devlog.width}px`);
     } finally {
       Element.prototype.getBoundingClientRect = originalRect;
       if (originalOffset) Object.defineProperty(HTMLElement.prototype, 'offsetWidth', originalOffset);
@@ -229,8 +253,9 @@ describe('entry-search 客户端行为', () => {
 
     const groups = () => Array.from(document.querySelectorAll<HTMLElement>('[data-archive-group]'));
     expect(groups().length).toBeGreaterThan(1);
-    // 初始全部可见
-    expect(groups().every((group) => !group.hidden)).toBe(true);
+    // 客户端分页会先隐藏第一页之外的月份组；这里只要求初始有可见分组，
+    // 具体哪些组可见由分页决定，筛选后的断言再看可见组。
+    expect(groups().some((group) => !group.hidden)).toBe(true);
 
     // 选一个只命中最后一个月（1 月）的标签
     const matchesFor = (key: string) =>
@@ -603,5 +628,68 @@ describe('entry-search 客户端行为', () => {
     // URL 写入复合写法（`ops=`），不写 `mode=`
     expect(window.location.search).toContain('ops=');
     expect(window.location.search).not.toContain('mode=');
+  });
+
+  it('blog：翻页走列表整块过渡，动画结束后才落下一页', async () => {
+    await loadPage(PAGES[1]);
+    // 分页测试不依赖演示内容的条数：按当前页条目数拆成两页。
+    const totalItems = document.querySelectorAll('[data-entry-item]').length;
+    const pageSize = Math.max(1, Math.ceil(totalItems / 2));
+    document.querySelector<HTMLElement>('[data-entry-filters]')!.dataset.pageSize = String(pageSize);
+    await importEntrySearch();
+
+    const inner = document.querySelector<HTMLElement>('[data-entry-pagination-inner]');
+    expect(inner).not.toBeNull();
+    const next = inner!.querySelectorAll<HTMLButtonElement>('.pagination__link')[1];
+    expect(next).toBeDefined();
+
+    // 初始渲染时还没有 WAAPI，逐条淡入淡出走同步分支；替换 animate 只影响翻页。
+    const animations: {
+      duration: number;
+      finished: Promise<void>;
+      resolve: () => void;
+      cancel: () => void;
+      canceled: boolean;
+    }[] = [];
+    Object.defineProperty(Element.prototype, 'animate', {
+      configurable: true,
+      writable: true,
+      value: (keyframes: Keyframe[], options: KeyframeAnimationOptions) => {
+        let resolveFinished = () => {};
+        const finished = new Promise<void>((resolve) => {
+          resolveFinished = resolve;
+        });
+        const record = {
+          keyframes,
+          duration: Number(options.duration ?? 0),
+          finished,
+          canceled: false,
+          resolve: resolveFinished,
+          cancel: () => {
+            record.canceled = true;
+          }
+        };
+        animations.push(record);
+        return record as unknown as Animation;
+      }
+    });
+
+    try {
+      next!.click();
+
+      expect(animations).toHaveLength(1);
+      expect(animations[0]!.duration).toBe(110);
+      expect(inner!.textContent).toContain('1 / 2');
+
+      animations[0]!.resolve();
+      await vi.waitFor(() => {
+        expect(inner!.textContent).toContain('2 / 2');
+      });
+
+      expect(animations).toHaveLength(2);
+      expect(animations[1]!.duration).toBe(180);
+    } finally {
+      delete (Element.prototype as { animate?: unknown }).animate;
+    }
   });
 });

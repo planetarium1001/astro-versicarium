@@ -62,6 +62,7 @@ export type AdminThemeControls = RequiredElements<{
   inputPageListRssArchive: HTMLInputElement | null;
   inputPageArchiveVersionMode: HTMLSelectElement | null;
   inputUiArticleDateDisplay: HTMLSelectElement | null;
+  inputUiArticleDateGranularity: HTMLSelectElement | null;
   inputUiCardDateDisplay: HTMLSelectElement | null;
   pageListRssGroupEl: HTMLElement | null;
   inputSiteFooterStartYear: HTMLInputElement | null;
@@ -136,6 +137,7 @@ export type AdminThemeControls = RequiredElements<{
   inputTypographyCopy: HTMLElement | null;
   inputTypographyMono: HTMLElement | null;
   inputTypographyBrand: HTMLElement | null;
+  inputEntryVersionName: HTMLSelectElement | null;
 }> & {
   statusEl: HTMLElement | null;
   statusLiveEl: HTMLElement | null;
@@ -185,6 +187,7 @@ export const queryAdminThemeControls = (): AdminThemeControls | null => {
     inputPageListRssArchive: byId<HTMLInputElement>('page-list-rss-archive'),
     inputPageArchiveVersionMode: byId<HTMLSelectElement>('page-archive-version-mode'),
     inputUiArticleDateDisplay: byId<HTMLSelectElement>('ui-article-meta-date-display'),
+    inputUiArticleDateGranularity: byId<HTMLSelectElement>('ui-article-meta-date-granularity'),
     inputUiCardDateDisplay: byId<HTMLSelectElement>('ui-card-date-display'),
     pageListRssGroupEl: byId<HTMLElement>('page-list-rss-group'),
     inputSiteFooterStartYear: byId<HTMLInputElement>('site-footer-start-year'),
@@ -256,7 +259,8 @@ export const queryAdminThemeControls = (): AdminThemeControls | null => {
     inputTypographyReadable: byId<HTMLElement>('ui-typography-readable'),
     inputTypographyCopy: byId<HTMLElement>('ui-typography-copy'),
     inputTypographyMono: byId<HTMLElement>('ui-typography-mono'),
-    inputTypographyBrand: byId<HTMLElement>('ui-typography-brand')
+    inputTypographyBrand: byId<HTMLElement>('ui-typography-brand'),
+    inputEntryVersionName: byId<HTMLSelectElement>('ui-entry-version-name')
   });
 
   if (!controls) return null;

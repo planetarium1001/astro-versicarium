@@ -296,9 +296,9 @@ const createLightboxController = (options: LightboxOptions): LightboxController 
   };
 
   const focusDialogTarget = () => {
-    const target = closeBtn ?? dialog;
+    // 焦点落在 dialog 自身（tabindex=-1），不自动选中关闭按钮。
     window.requestAnimationFrame(() => {
-      target.focus({ preventScroll: true });
+      dialog.focus({ preventScroll: true });
     });
   };
 

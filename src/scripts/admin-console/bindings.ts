@@ -54,6 +54,8 @@ export const bindAdminThemeFieldEvents = ({
     inputSiteAdminOverviewPublicVisible,
     inputArticleMetaDateLabel,
     inputArticleMetaShowDate,
+    inputUiArticleDateDisplay,
+    inputUiArticleDateGranularity,
     inputArticleMetaShowTags,
     inputArticleMetaShowWordCount,
     inputArticleMetaShowReadingTime,
@@ -68,11 +70,13 @@ export const bindAdminThemeFieldEvents = ({
     inputHomeIntroMoreLinkPrimary,
     inputHomeIntroMoreLinkSecondaryEnabled,
     inputHomeIntroMoreLinkSecondary,
-    inputHomeShowHero
+    inputHomeShowHero,
+    inputEntryVersionName
   } = controls;
   const {
     refreshArticleMetaPreview,
     refreshViewStatsPreview,
+    refreshEntryVersionPreview,
     refreshHomeIntroPreview,
     syncAdminOverviewControls,
     syncSidebarActionControls,
@@ -116,6 +120,8 @@ export const bindAdminThemeFieldEvents = ({
   });
   inputArticleMetaDateLabel.addEventListener('input', refreshArticleMetaPreview);
   inputArticleMetaShowDate.addEventListener('change', refreshArticleMetaPreview);
+  inputUiArticleDateDisplay.addEventListener('change', refreshArticleMetaPreview);
+  inputUiArticleDateGranularity.addEventListener('change', refreshArticleMetaPreview);
   inputArticleMetaShowTags.addEventListener('change', refreshArticleMetaPreview);
   inputArticleMetaShowWordCount.addEventListener('change', refreshArticleMetaPreview);
   inputArticleMetaShowReadingTime.addEventListener('change', refreshArticleMetaPreview);
@@ -125,6 +131,7 @@ export const bindAdminThemeFieldEvents = ({
   inputViewStatsShowUv.addEventListener('change', refreshViewStatsPreview);
   inputViewStatsOnArticleMeta.addEventListener('change', refreshViewStatsPreview);
   inputViewStatsOnIndexPages.addEventListener('change', refreshViewStatsPreview);
+  inputEntryVersionName.addEventListener('change', refreshEntryVersionPreview);
   inputHomeIntroMore.addEventListener('input', refreshHomeIntroPreview);
   inputHomeShowIntroMore.addEventListener('change', refreshHomeIntroPreview);
   inputHomeIntroMoreLinkPrimary.addEventListener('change', () => {

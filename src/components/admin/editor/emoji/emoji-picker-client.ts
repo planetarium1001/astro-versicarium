@@ -63,8 +63,8 @@ const emojiPickerShadowStyle = `
   }
 
   /*
-   * emoji-picker-element does not expose variables for these chrome details.
-   * Keep internal selectors limited to this adapter so library upgrades have one review point.
+   * emoji-picker-element 没有为这些外壳细节暴露变量。
+   * 内部选择器只限制在本适配层内，升级库时只需检查这里。
    */
   .pad-top {
     height: 0;

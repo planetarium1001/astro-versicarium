@@ -29,7 +29,7 @@
   flex-direction: column;
 }
 
-/* 时间线只显示日期与标题 */
+/* 时间线行：左日期 + 右侧条目格式行 */
 .archive-timeline__row {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr);
@@ -43,34 +43,36 @@
   color: var(--muted);
 }
 
+/**
+ * 整行条目是一个链接，内部排版交给共享的 `.entry-title--archive`
+ * （15px 标题、8px 间隙、项目名前缀、淡色版本胶囊见 components/lists.css）。
+ * 这里只负责行级对齐与链接的文字样式。
+ */
 .archive-timeline__entry {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: block;
   min-width: 0;
+  color: var(--text);
+  text-decoration: none;
 }
 
-.archive-timeline__title {
-  color: var(--text);
-  font-size: 15px;
-  text-decoration: none;
-  /* 标题允许换行，不截断 */
+/* 标题允许换行，不截断 */
+.archive-timeline__entry .entry-title__title {
   overflow-wrap: anywhere;
 }
 
-/**
- * 更新（devlog）行的「项目名: 」前缀。前缀与标题同属一个链接，悬停须整体同一高亮色，
- * 因此不设 color，继承 .archive-timeline__title。
- */
-.archive-timeline__project {
-  color: inherit;
-}
-
-.archive-timeline__title:hover,
-.archive-timeline__title:focus-visible {
+/* 悬停 / 键盘聚焦只高亮标题文字，与旧版 `.archive-timeline__title` 的反馈一致。 */
+.archive-timeline__entry:hover .entry-title__title,
+.archive-timeline__entry:focus-visible .entry-title__title {
   color: var(--accent);
   text-decoration: underline;
+}
+
+/* 旧版「项目名: 」前缀属于同一个链接，悬停时与标题一起变色；版本胶囊保持弱化。 */
+.archive-timeline__entry:hover .entry-title__project,
+.archive-timeline__entry:focus-visible .entry-title__project,
+.archive-timeline__entry:hover .entry-title__colon,
+.archive-timeline__entry:focus-visible .entry-title__colon {
+  color: var(--accent);
 }
 
 /* <=640px：日期列收窄（胶囊收窄见 scope-pills.css） */

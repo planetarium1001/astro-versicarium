@@ -1001,16 +1001,106 @@
   gap: 8px 18px;
 }
 
-.admin-toggle-row-group--article-meta {
-  flex-wrap: nowrap;
-  gap: 8px clamp(12px, 1.6vw, 20px);
-  overflow-x: auto;
-  scrollbar-width: thin;
+.admin-toggle-row-group__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  min-width: 0;
 }
 
-.admin-toggle-row-group--article-meta :where(.admin-toggle-row, .admin-inline-field) {
+.admin-meta-group {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px 14px;
+  padding: 10px 0;
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.admin-meta-group:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.admin-meta-group__label {
+  margin: 0;
+  color: var(--faint);
+  font-family: var(--admin-font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: var(--admin-control-height-compact);
+}
+
+.admin-meta-group :where(.admin-toggle-row, .admin-inline-field) {
   flex: 0 0 auto;
   white-space: nowrap;
+}
+
+.admin-pagination-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-pagination-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) auto auto;
+  align-items: center;
+  gap: 8px 18px;
+  min-width: 0;
+  padding: 4px 0;
+}
+
+.admin-pagination-row__page {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.admin-pagination-row__page code {
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.admin-pagination-row__number {
+  width: 64px;
+  min-width: 64px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 关闭分页时保留数字（便于恢复），只弱化视觉，不阻断编辑。 */
+.admin-pagination-row:has([data-pagination-enabled]:not(:checked)) .admin-pagination-row__size {
+  opacity: 0.5;
+}
+
+/* 窄屏行内换行后，竖线分隔符会孤零零挂在行尾；改为只靠间距分组。 */
+@media (max-width: 760px) {
+  .admin-meta-group {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding: 9px 0;
+  }
+
+  .admin-meta-group__label {
+    line-height: 1.6;
+  }
+
+  .admin-meta-group .admin-toggle-row__sep {
+    display: none;
+  }
+
+  .admin-pagination-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 12px;
+  }
+
+  .admin-pagination-row__page {
+    grid-column: 1 / -1;
+  }
 }
 
 .admin-inline-field {
@@ -1349,4 +1439,32 @@
   height: 20px;
   background: var(--border);
   flex: none;
+}
+
+/* 条目版本：预览沿用文章元信息 / 浏览数据的「帮助文本 + 预览值」排版 */
+.admin-help--entry-version-preview {
+  margin-top: 8px;
+}
+
+.admin-entry-version-preview {
+  display: inline;
+}
+
+.admin-entry-version-preview__variant {
+  display: inline;
+}
+
+.admin-entry-version-preview__variant[hidden] {
+  display: none;
+}
+
+.admin-entry-version-preview .entry-title {
+  font-size: 13px;
+  vertical-align: baseline;
+}
+
+.admin-entry-version-preview .entry-title .badge,
+.admin-entry-version-preview .entry-title .muted-pill {
+  height: 18px;
+  font-size: 11px;
 }

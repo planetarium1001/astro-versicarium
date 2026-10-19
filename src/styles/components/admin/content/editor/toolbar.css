@@ -1,4 +1,4 @@
-/* Admin Content Editor Toolbar
+/* 后台内容编辑器工具栏
    承载 Markdown toolbar、heading menu、tooltip、布局/视图/compact 控件；不承载 pane 内容或 layout override。
 */
 @import "../../../callout-tokens.css";

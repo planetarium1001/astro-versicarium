@@ -42,6 +42,7 @@ const visibleTags = getVisibleArticleMetaTags(entry.data.tags, 'detail');
   prev={prev}
   next={next}
   articleMetaSettings={articleMetaSettings}
+  dateGranularity={entry.data.dateGranularity ?? articleMetaSettings.dateGranularity}
   viewStatsSettings={viewStatsSettings}
   visibleTags={visibleTags}
   headings={headings}

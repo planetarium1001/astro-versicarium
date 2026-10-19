@@ -82,6 +82,7 @@ if (!root) {
       inputPageListRssArchive: controls.inputPageListRssArchive,
       inputPageArchiveVersionMode: controls.inputPageArchiveVersionMode,
       inputUiArticleDateDisplay: controls.inputUiArticleDateDisplay,
+      inputUiArticleDateGranularity: controls.inputUiArticleDateGranularity,
       inputUiCardDateDisplay: controls.inputUiCardDateDisplay,
       pageListRssGroupEl: controls.pageListRssGroupEl,
       inputSiteFooterStartYear: controls.inputSiteFooterStartYear,
@@ -157,7 +158,8 @@ if (!root) {
       inputTypographyReadable: controls.inputTypographyReadable,
       inputTypographyCopy: controls.inputTypographyCopy,
       inputTypographyMono: controls.inputTypographyMono,
-      inputTypographyBrand: controls.inputTypographyBrand
+      inputTypographyBrand: controls.inputTypographyBrand,
+      inputEntryVersionName: controls.inputEntryVersionName
     });
 
     const getNavFieldTarget = (
@@ -191,6 +193,7 @@ if (!root) {
       inputPageListRssArchive: controls.inputPageListRssArchive,
       inputPageArchiveVersionMode: controls.inputPageArchiveVersionMode,
       inputUiArticleDateDisplay: controls.inputUiArticleDateDisplay,
+      inputUiArticleDateGranularity: controls.inputUiArticleDateGranularity,
       inputUiCardDateDisplay: controls.inputUiCardDateDisplay,
       inputSiteFooterStartYear: controls.inputSiteFooterStartYear,
       inputSiteFooterShowCurrentYear: controls.inputSiteFooterShowCurrentYear,

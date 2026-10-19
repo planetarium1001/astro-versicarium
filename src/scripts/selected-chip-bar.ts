@@ -222,7 +222,7 @@ export const syncSubtitleCount = (
   textEl: HTMLElement | null,
   template: string,
   count: number | null,
-  { defaultUnit, keep }: { defaultUnit: '篇' | '条'; keep?: string }
+  { defaultUnit, keep, unit: forcedUnit }: { defaultUnit: '篇' | '条'; keep?: string; unit?: '篇' | '条' }
 ): void => {
   if (!textEl || !template) return;
   if (count === null) {
@@ -234,7 +234,7 @@ export const syncSubtitleCount = (
     textEl.textContent = `共 ${count} ${defaultUnit}`;
     return;
   }
-  const unit = match[0].includes('条') ? '条' : '篇';
+  const unit = forcedUnit ?? (match[0].includes('条') ? '条' : '篇');
   const trailing = match[1] === keep ? match[1] : '';
   textEl.textContent = template.replace(SUBTITLE_COUNT_RE, `共 ${count} ${unit}${trailing}`);
 };

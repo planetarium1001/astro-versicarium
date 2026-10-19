@@ -1,37 +1,59 @@
 {
   "listRss": {
-    "enabled": false,
+    "enabled": true,
     "blog": true,
     "bits": true,
     "archive": true
   },
   "blog": {
-    "title": "博客",
-    "subtitle": "随笔与长文"
+    "title": "文章",
+    "subtitle": "技术文章与工程记录"
   },
   "projects": {
     "title": "项目",
-    "subtitle": "作品与长期维护的事项"
+    "subtitle": "主题版本与项目实践"
   },
   "archive": {
     "title": "归档",
-    "subtitle": "全站时间线",
+    "subtitle": "按时间串联文章、项目与开发日志",
     "versionMode": "all"
   },
   "bits": {
     "title": "动态",
-    "subtitle": "短内容与记录",
+    "subtitle": "开发过程中的短记录",
     "defaultAuthor": {
-      "name": "Astro Whono",
-      "avatar": "author/avatar.webp"
+      "name": "Planetarium",
+      "avatar": "author/avatar.svg"
     }
   },
   "devlog": {
-    "title": "更新",
-    "subtitle": "按项目记录的改动"
+    "title": "开发日志",
+    "subtitle": "逐条记录项目的每一次改动"
   },
   "about": {
     "title": "关于",
     "subtitle": null
+  },
+  "pagination": {
+    "home": {
+      "enabled": true,
+      "pageSize": 12
+    },
+    "blog": {
+      "enabled": true,
+      "pageSize": 12
+    },
+    "bits": {
+      "enabled": true,
+      "pageSize": 20
+    },
+    "devlog": {
+      "enabled": false,
+      "pageSize": 10
+    },
+    "archive": {
+      "enabled": false,
+      "pageSize": 20
+    }
   }
 }

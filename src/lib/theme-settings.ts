@@ -17,6 +17,12 @@ import {
 import { DEFAULT_SITE_FAVICON, GENERATED_SITE_FAVICON } from '../utils/favicon-defaults';
 import { isValidIanaTimeZone } from '../utils/timezone';
 import {
+  DEFAULT_ENTRY_VERSION_NAME_MODE,
+  normalizeEntryVersionNameMode,
+  type EntryVersionNameMode
+} from './entry-display';
+import {
+  ADMIN_ARTICLE_DATE_GRANULARITY_DEFAULT,
   ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT,
   ADMIN_ARTICLE_META_DATE_LABEL_MAX_LENGTH,
   ADMIN_HERO_IMAGE_ALT_DEFAULT,
@@ -32,6 +38,9 @@ import {
   ADMIN_NAV_ORNAMENT_MAX_LENGTH,
   ADMIN_OVERVIEW_HIDDEN_MESSAGE_DEFAULT,
   ADMIN_OVERVIEW_HIDDEN_MESSAGE_MAX_LENGTH,
+  ADMIN_PAGINATION_DEFAULTS,
+  ADMIN_PAGINATION_PAGE_SIZE_MAX,
+  ADMIN_PAGINATION_PAGE_SIZE_MIN,
   ADMIN_HERO_PRESET_SET,
   ADMIN_SOCIAL_ORDER_MAX,
   ADMIN_SOCIAL_ORDER_MIN,
@@ -63,6 +72,7 @@ import {
   isAdminSocialOrderValue,
   isAdminSidebarDividerVariant,
   isAdminFilingsScope,
+  isAdminArticleDateGranularity,
   normalizeAdminSocialIconKey,
 } from './admin-console/theme-shared';
 
@@ -72,6 +82,8 @@ export type SidebarNavId = 'blog' | 'projects' | 'bits' | 'devlog' | 'archive' |
 export type HeroPresetId = 'default' | 'none';
 export type SidebarDividerVariant = 'default' | 'subtle' | 'none';
 export type ArticleDateDisplayMode = 'published' | 'updated' | 'both';
+/** 文章元信息日期粒度：'date' 只到日期（默认），'datetime' 才显示时分。 */
+export type ArticleDateGranularity = 'date' | 'datetime';
 export type ArchiveVersionMode = 'all' | 'latest';
 /** 备案信息显示范围：'all' 所有公开页面（默认），'root' 仅站点根目录。 */
 export type SiteFilingsScope = 'all' | 'root';
@@ -119,6 +131,23 @@ export interface ListRssSettings {
   blog: boolean;
   bits: boolean;
   archive: boolean;
+}
+
+export interface PaginationScopeSettings {
+  enabled: boolean;
+  pageSize: number;
+}
+
+/**
+ * 公开列表页的分页设置。`enabled=false` 时整页渲染全部条目；
+ * 开启时 SSR 仍输出全部条目，由客户端按 pageSize 隐藏多余项（无 JS 时全部可见）。
+ */
+export interface PaginationSettings {
+  home: PaginationScopeSettings;
+  blog: PaginationScopeSettings;
+  bits: PaginationScopeSettings;
+  devlog: PaginationScopeSettings;
+  archive: PaginationScopeSettings;
 }
 
 interface SiteFooterSettings {
@@ -271,12 +300,14 @@ interface PageSettings {
    * 侧栏的 RSS 按钮由 `ui.sidebarActions.showRssLink` 单独控制。
    */
   listRss: ListRssSettings;
+  pagination: PaginationSettings;
 }
 
 export interface ArticleMetaSettings {
   showDate: boolean;
   dateLabel: string;
   dateDisplay: ArticleDateDisplayMode;
+  dateGranularity: ArticleDateGranularity;
   showTags: boolean;
   showWordCount: boolean;
   showReadingTime: boolean;
@@ -327,6 +358,7 @@ interface UiSettings {
     sidebarDivider: SidebarDividerVariant;
   };
   typography: TypographySettings;
+  entryVersionName: EntryVersionNameMode;
 }
 
 interface ThemeSettings {
@@ -389,6 +421,16 @@ interface ThemeSettingsSources {
     archiveTitle: SettingSource;
     archiveSubtitle: SettingSource;
     archiveVersionMode: SettingSource;
+    paginationHomeEnabled: SettingSource;
+    paginationHomePageSize: SettingSource;
+    paginationBlogEnabled: SettingSource;
+    paginationBlogPageSize: SettingSource;
+    paginationBitsEnabled: SettingSource;
+    paginationBitsPageSize: SettingSource;
+    paginationDevlogEnabled: SettingSource;
+    paginationDevlogPageSize: SettingSource;
+    paginationArchiveEnabled: SettingSource;
+    paginationArchivePageSize: SettingSource;
     bitsTitle: SettingSource;
     bitsSubtitle: SettingSource;
     bitsDefaultAuthorName: SettingSource;
@@ -415,6 +457,7 @@ interface ThemeSettingsSources {
     articleMetaShowDate: SettingSource;
     articleMetaDateLabel: SettingSource;
     articleMetaDateDisplay: SettingSource;
+    articleMetaDateGranularity: SettingSource;
     cardDateDisplay: SettingSource;
     articleMetaShowTags: SettingSource;
     articleMetaShowWordCount: SettingSource;
@@ -424,6 +467,7 @@ interface ThemeSettingsSources {
     typographyCopy: SettingSource;
     typographyMono: SettingSource;
     typographyBrand: SettingSource;
+    entryVersionName: SettingSource;
   };
 }
 
@@ -662,7 +706,7 @@ const DEFAULT_PAGE: PageSettings = {
     subtitle: LEGACY_BITS_SUBTITLE,
     defaultAuthor: {
       name: 'Whono',
-      avatar: 'author/avatar.webp'
+      avatar: 'author/avatar.svg'
     }
   },
   devlog: {
@@ -678,6 +722,13 @@ const DEFAULT_PAGE: PageSettings = {
     blog: true,
     bits: true,
     archive: true
+  },
+  pagination: {
+    home: { ...ADMIN_PAGINATION_DEFAULTS.home },
+    blog: { ...ADMIN_PAGINATION_DEFAULTS.blog },
+    bits: { ...ADMIN_PAGINATION_DEFAULTS.bits },
+    devlog: { ...ADMIN_PAGINATION_DEFAULTS.devlog },
+    archive: { ...ADMIN_PAGINATION_DEFAULTS.archive }
   }
 };
 
@@ -709,6 +760,7 @@ const DEFAULT_UI: UiSettings = {
     showDate: true,
     dateLabel: ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT,
     dateDisplay: 'updated',
+    dateGranularity: 'date',
     showTags: true,
     showWordCount: true,
     showReadingTime: true
@@ -719,7 +771,8 @@ const DEFAULT_UI: UiSettings = {
   },
   typography: {
     ...ADMIN_TYPOGRAPHY_DEFAULT
-  }
+  },
+  entryVersionName: DEFAULT_ENTRY_VERSION_NAME_MODE
 };
 
 const NAV_IDS: ReadonlySet<SidebarNavId> = new Set(['blog', 'projects', 'bits', 'devlog', 'archive', 'about']);
@@ -775,6 +828,9 @@ const asArticleDateDisplayMode = (value: unknown): ArticleDateDisplayMode | unde
   return next === 'published' || next === 'updated' || next === 'both' ? next : undefined;
 };
 
+const asArticleDateGranularity = (value: unknown): ArticleDateGranularity | undefined =>
+  isAdminArticleDateGranularity(value) ? value : undefined;
+
 const asArchiveVersionMode = (value: unknown): ArchiveVersionMode | undefined => {
   const next = asNonEmptyString(value);
   return next === 'all' || next === 'latest' ? next : undefined;
@@ -810,6 +866,12 @@ const asNullableSingleLineString = (value: unknown, maxLength?: number): string 
 const asInteger = (value: unknown): number | undefined => {
   if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
   return Number.isInteger(value) ? value : undefined;
+};
+
+const asPaginationPageSize = (value: unknown): number | undefined => {
+  const next = asInteger(value);
+  if (next === undefined) return undefined;
+  return next >= ADMIN_PAGINATION_PAGE_SIZE_MIN && next <= ADMIN_PAGINATION_PAGE_SIZE_MAX ? next : undefined;
 };
 
 const asFooterStartYear = (value: unknown): number | undefined => {
@@ -1376,6 +1438,23 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
   const listRssBlog = resolveListRss('blog');
   const listRssBits = resolveListRss('bits');
   const listRssArchive = resolveListRss('archive');
+  const pagePaginationJson = isRecord(pageJson?.pagination) ? pageJson.pagination : undefined;
+  const resolvePagination = (scope: keyof PaginationSettings) => {
+    const raw = isRecord(pagePaginationJson?.[scope]) ? pagePaginationJson[scope] : undefined;
+    return {
+      enabled: resolveValue(asBoolean(raw?.enabled), undefined, DEFAULT_PAGE.pagination[scope].enabled),
+      pageSize: resolveValue(
+        asPaginationPageSize(raw?.pageSize),
+        undefined,
+        DEFAULT_PAGE.pagination[scope].pageSize
+      )
+    };
+  };
+  const paginationHome = resolvePagination('home');
+  const paginationBlog = resolvePagination('blog');
+  const paginationBits = resolvePagination('bits');
+  const paginationDevlog = resolvePagination('devlog');
+  const paginationArchive = resolvePagination('archive');
   const pageBlogJson = isRecord(pageJson?.blog) ? pageJson.blog : undefined;
   const pageProjectsJson = isRecord(pageJson?.projects) ? pageJson.projects : undefined;
   const pageArchiveJson = isRecord(pageJson?.archive) ? pageJson.archive : undefined;
@@ -1584,12 +1663,12 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
     DEFAULT_HOME.heroImageAlt
   );
 
-  const BlogTitle = resolveValue(
+  const blogTitle = resolveValue(
     asNullableString(pageBlogJson?.title),
     undefined,
     DEFAULT_PAGE.blog.title
   );
-  const BlogSubtitle = resolveValue(
+  const blogSubtitle = resolveValue(
     asNullableString(pageBlogJson?.subtitle),
     LEGACY_BLOG_SUBTITLE,
     DEFAULT_PAGE.blog.subtitle
@@ -1668,6 +1747,11 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
   const uiArticleMeta = isRecord(uiJson?.articleMeta) ? uiJson.articleMeta : undefined;
   const uiLayout = isRecord(uiJson?.layout) ? uiJson.layout : undefined;
   const uiTypography = isRecord(uiJson?.typography) ? uiJson.typography : undefined;
+  const entryVersionName = resolveValue<EntryVersionNameMode>(
+    uiJson?.entryVersionName === undefined ? undefined : normalizeEntryVersionNameMode(uiJson.entryVersionName),
+    undefined,
+    DEFAULT_UI.entryVersionName
+  );
 
   const showLineNumbers = resolveValue(
     asBoolean(uiCodeBlock?.showLineNumbers),
@@ -1748,6 +1832,11 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
     asArticleDateDisplayMode(uiArticleMeta?.dateDisplay),
     undefined,
     DEFAULT_UI.articleMeta.dateDisplay
+  );
+  const articleDateGranularity = resolveValue(
+    asArticleDateGranularity(uiArticleMeta?.dateGranularity),
+    undefined,
+    ADMIN_ARTICLE_DATE_GRANULARITY_DEFAULT
   );
   const cardDateDisplay = resolveValue(
     asArticleDateDisplayMode(uiJson?.cardDateDisplay),
@@ -1878,8 +1967,8 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
       },
       page: {
         blog: {
-          title: BlogTitle.value,
-          subtitle: BlogSubtitle.value
+          title: blogTitle.value,
+          subtitle: blogSubtitle.value
         },
         projects: {
           title: projectsTitle.value,
@@ -1889,6 +1978,13 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
           title: archiveTitle.value,
           subtitle: archiveSubtitle.value,
           versionMode: archiveVersionMode.value
+        },
+        pagination: {
+          home: { enabled: paginationHome.enabled.value, pageSize: paginationHome.pageSize.value },
+          blog: { enabled: paginationBlog.enabled.value, pageSize: paginationBlog.pageSize.value },
+          bits: { enabled: paginationBits.enabled.value, pageSize: paginationBits.pageSize.value },
+          devlog: { enabled: paginationDevlog.enabled.value, pageSize: paginationDevlog.pageSize.value },
+          archive: { enabled: paginationArchive.enabled.value, pageSize: paginationArchive.pageSize.value }
         },
         bits: {
           title: bitsTitle.value,
@@ -1942,6 +2038,7 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
           showDate: showArticleDate.value,
           dateLabel: articleDateLabel.value,
           dateDisplay: articleDateDisplay.value,
+          dateGranularity: articleDateGranularity.value,
           showTags: showArticleTags.value,
           showWordCount: showArticleWordCount.value,
           showReadingTime: showArticleReadingTime.value
@@ -1954,7 +2051,8 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
           copy: typographyCopy.value,
           mono: typographyMono.value,
           brand: typographyBrand.value
-        }
+        },
+        entryVersionName: entryVersionName.value
       }
     },
     sources: {
@@ -2002,13 +2100,23 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         heroImageAlt: heroImageAlt.source
       },
       page: {
-        BlogTitle: BlogTitle.source,
-        BlogSubtitle: BlogSubtitle.source,
+        BlogTitle: blogTitle.source,
+        BlogSubtitle: blogSubtitle.source,
         projectsTitle: projectsTitle.source,
         projectsSubtitle: projectsSubtitle.source,
         archiveTitle: archiveTitle.source,
         archiveSubtitle: archiveSubtitle.source,
         archiveVersionMode: archiveVersionMode.source,
+        paginationHomeEnabled: paginationHome.enabled.source,
+        paginationHomePageSize: paginationHome.pageSize.source,
+        paginationBlogEnabled: paginationBlog.enabled.source,
+        paginationBlogPageSize: paginationBlog.pageSize.source,
+        paginationBitsEnabled: paginationBits.enabled.source,
+        paginationBitsPageSize: paginationBits.pageSize.source,
+        paginationDevlogEnabled: paginationDevlog.enabled.source,
+        paginationDevlogPageSize: paginationDevlog.pageSize.source,
+        paginationArchiveEnabled: paginationArchive.enabled.source,
+        paginationArchivePageSize: paginationArchive.pageSize.source,
         bitsTitle: bitsTitle.source,
         bitsSubtitle: bitsSubtitle.source,
         bitsDefaultAuthorName: bitsDefaultAuthorName.source,
@@ -2035,6 +2143,7 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         articleMetaShowDate: showArticleDate.source,
         articleMetaDateLabel: articleDateLabel.source,
         articleMetaDateDisplay: articleDateDisplay.source,
+        articleMetaDateGranularity: articleDateGranularity.source,
         cardDateDisplay: cardDateDisplay.source,
         articleMetaShowTags: showArticleTags.source,
         articleMetaShowWordCount: showArticleWordCount.source,
@@ -2043,7 +2152,8 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         typographyReadable: typographyReadable.source,
         typographyCopy: typographyCopy.source,
         typographyMono: typographyMono.source,
-        typographyBrand: typographyBrand.source
+        typographyBrand: typographyBrand.source,
+        entryVersionName: entryVersionName.source
       }
     }
   };
@@ -2122,6 +2232,13 @@ const buildEditableThemeSettingsSnapshot = (
       blog: { ...resolved.settings.page.blog },
       projects: { ...resolved.settings.page.projects },
       archive: { ...resolved.settings.page.archive },
+      pagination: {
+        home: { ...resolved.settings.page.pagination.home },
+        blog: { ...resolved.settings.page.pagination.blog },
+        bits: { ...resolved.settings.page.pagination.bits },
+        devlog: { ...resolved.settings.page.pagination.devlog },
+        archive: { ...resolved.settings.page.pagination.archive }
+      },
       bits: {
         title: resolved.settings.page.bits.title,
         subtitle: resolved.settings.page.bits.subtitle,
@@ -2141,7 +2258,8 @@ const buildEditableThemeSettingsSnapshot = (
       articleMeta: { ...resolved.settings.ui.articleMeta },
       cardDateDisplay: resolved.settings.ui.cardDateDisplay,
       layout: { ...resolved.settings.ui.layout },
-      typography: { ...resolved.settings.ui.typography }
+      typography: { ...resolved.settings.ui.typography },
+      entryVersionName: resolved.settings.ui.entryVersionName
     }
   });
 

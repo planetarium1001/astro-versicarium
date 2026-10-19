@@ -3,12 +3,14 @@ import { createWithBase } from '../utils/format';
 import { getSiteTimezone } from '../utils/site-timezone';
 import { resolveArticleDateItems } from '../lib/display-date';
 import { isRoutableTagKey, toTagKey } from '../lib/tags';
-import type { ArticleMetaSettings } from '../lib/theme-settings';
+import type { ArticleDateGranularity, ArticleMetaSettings } from '../lib/theme-settings';
+import EntryTitleLine from './EntryTitleLine.astro';
 
 const {
   href,
   title,
   excerpt,
+  dateGranularity,
   date,
   dateText,
   dateHasTime = false,
@@ -21,15 +23,16 @@ const {
   dateDisplay,
   visibleTags = [],
   badge = '随笔',
+  series = null,
+  versionLabel = null,
+  versionName = null,
   slug = '',
-  versionLabel = '',
-  versionCount = 1,
-  isLatest = true,
   articleMetaSettings
 } = Astro.props as {
   href: string;
   title: string;
   excerpt?: string | null;
+  dateGranularity?: ArticleDateGranularity;
   date: Date;
   dateText?: string;
   dateHasTime?: boolean;
@@ -42,18 +45,20 @@ const {
   dateDisplay?: 'published' | 'updated' | 'both';
   visibleTags?: string[];
   badge?: string;
+  series?: string | null;
+  versionLabel?: string | null;
+  versionName?: string | null;
+  versionSummary?: string | null;
+  versionOrder?: number | null;
   slug?: string;
-  versionLabel?: string;
-  versionCount?: number;
-  isLatest?: boolean;
   articleMetaSettings: ArticleMetaSettings;
 };
-const displayBadge = badge.trim() ? badge : '随笔';
 const shouldShowMetaLine = articleMetaSettings.showDate || (articleMetaSettings.showTags && visibleTags.length > 0);
 const timeZone = getSiteTimezone();
 const dateItems = resolveArticleDateItems({
   mode: dateDisplay ?? articleMetaSettings.dateDisplay ?? 'updated',
   timeZone,
+  granularity: dateGranularity ?? articleMetaSettings.dateGranularity ?? 'date',
   date: { date, text: dateText, hasTime: dateHasTime },
   publishedAt: publishedAt ? { date: publishedAt, text: publishedAtText, hasTime: publishedAtHasTime } : undefined,
   updatedAt: updatedAt ? { date: updatedAt, text: updatedAtText, hasTime: updatedAtHasTime } : undefined,
@@ -83,18 +88,15 @@ const tagLinks = visibleTags.map((tag) => {
   data-slug={slug || undefined}
 >
   <div class="list-item__row">
-    <div style="display:flex; align-items:center; gap:10px; min-width:0;">
-      <span class="badge">{displayBadge}</span>
-      {versionCount > 1 ? (
-        <>
-          <span class="badge badge--version">{versionLabel}</span>
-          {!isLatest ? <span class="badge badge--history">历史</span> : null}
-        </>
-      ) : null}
-      <h2 class="list-item__title" style="margin:0; min-width:0;">
-        <a class="list-item__stretch" href={href}>{title}</a>
-      </h2>
-    </div>
+    <EntryTitleLine
+      surface="list"
+      title={title}
+      badge={badge}
+      versionLabel={series ? versionLabel : null}
+      versionName={series ? versionName : null}
+      titleAs="link"
+      titleHref={href}
+    />
   </div>
   {excerpt ? <p class="list-item__excerpt">{excerpt}</p> : null}
   {shouldShowMetaLine ? (
@@ -103,7 +105,7 @@ const tagLinks = visibleTags.map((tag) => {
         <span class="meta-line__item">
           {dateItems.map((item, index) => (
             <>
-              {index > 0 ? <span aria-hidden="true"> · </span> : null}
+              {index > 0 ? <span class="meta-line__sep" aria-hidden="true">·</span> : null}
               <time
                 datetime={item.iso}
                 data-site-timezone={item.timeZone}

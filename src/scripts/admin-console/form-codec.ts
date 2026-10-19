@@ -1,4 +1,5 @@
 import type {
+  ArticleDateGranularity,
   HomeIntroLinkKey,
   SidebarDividerVariant,
   SidebarNavId,
@@ -10,6 +11,7 @@ import type {
   TypographyRole,
   TypographySettings
 } from '@/lib/theme-settings';
+import { normalizeEntryVersionNameMode } from '@/lib/entry-display';
 import {
   createWithBase,
   normalizeHeroImageSrc as normalizeHeroImageSrcValue,
@@ -18,6 +20,7 @@ import {
   type SiteFaviconSlot
 } from '@/utils/format';
 import {
+  ADMIN_ARTICLE_DATE_GRANULARITY_DEFAULT,
   ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT,
   ADMIN_FILINGS_SCOPE_DEFAULT,
   ADMIN_HERO_IMAGE_ALT_DEFAULT,
@@ -27,6 +30,8 @@ import {
   ADMIN_NAV_IDS,
   ADMIN_NAV_ORNAMENT_DEFAULT,
   ADMIN_OVERVIEW_HIDDEN_MESSAGE_DEFAULT,
+  ADMIN_PAGINATION_DEFAULTS,
+  ADMIN_PAGINATION_SCOPES,
   ADMIN_SIDEBAR_DIVIDER_DEFAULT,
   ADMIN_SITE_PAGE_GAP_DEFAULT,
   ADMIN_SITE_TITLE_PERCENT_DEFAULT,
@@ -37,6 +42,7 @@ import {
   ADMIN_VIEW_STATS_UV_LABEL_DEFAULT,
   canonicalizeAdminThemeSettings,
   isAdminFilingsScope,
+  isAdminArticleDateGranularity,
   isAdminHomeIntroLinkKey,
   isAdminNavId,
   isAdminTypographyFontId,
@@ -81,6 +87,7 @@ type FormCodecContext = {
   inputPageListRssArchive: HTMLInputElement;
   inputPageArchiveVersionMode: HTMLSelectElement;
   inputUiArticleDateDisplay: HTMLSelectElement;
+  inputUiArticleDateGranularity: HTMLSelectElement;
   inputUiCardDateDisplay: HTMLSelectElement;
   pageListRssGroupEl: HTMLElement;
   inputSiteFooterStartYear: HTMLInputElement;
@@ -159,6 +166,7 @@ type FormCodecContext = {
   inputTypographyCopy: HTMLElement;
   inputTypographyMono: HTMLElement;
   inputTypographyBrand: HTMLElement;
+  inputEntryVersionName: HTMLSelectElement;
 };
 
 const normalizeMultiline = (value: string): string => value.replace(/\r\n/g, '\n');
@@ -187,6 +195,32 @@ export const parseInteger = (value: string | number | null | undefined): number 
 };
 
 export const normalizeTrimmed = (value: unknown): string => String(value ?? '').trim();
+
+const paginationInput = (
+  scope: (typeof ADMIN_PAGINATION_SCOPES)[number],
+  field: 'enabled' | 'size'
+): HTMLInputElement | null =>
+  document.getElementById(`page-pagination-${scope}-${field}`) as HTMLInputElement | null;
+
+const readPaginationScope = (
+  scope: (typeof ADMIN_PAGINATION_SCOPES)[number]
+): { enabled: boolean; pageSize: number } => {
+  const enabledInput = paginationInput(scope, 'enabled');
+  const sizeInput = paginationInput(scope, 'size');
+  const fallback = ADMIN_PAGINATION_DEFAULTS[scope];
+  return {
+    enabled: enabledInput ? Boolean(enabledInput.checked) : fallback.enabled,
+    pageSize: parseInteger(sizeInput?.value ?? null) ?? fallback.pageSize
+  };
+};
+
+const readPaginationSettings = (): EditableSettings['page']['pagination'] => ({
+  home: readPaginationScope('home'),
+  blog: readPaginationScope('blog'),
+  bits: readPaginationScope('bits'),
+  devlog: readPaginationScope('devlog'),
+  archive: readPaginationScope('archive')
+});
 
 const normalizeHeroImageInput = (value: unknown): string | null => {
   const rawValue = normalizeTrimmed(value);
@@ -233,6 +267,7 @@ export const createFormCodec = ({
   inputPageListRssArchive,
   inputPageArchiveVersionMode,
   inputUiArticleDateDisplay,
+  inputUiArticleDateGranularity,
   inputUiCardDateDisplay,
   pageListRssGroupEl,
   inputSiteFooterStartYear,
@@ -310,7 +345,8 @@ export const createFormCodec = ({
   inputTypographyReadable,
   inputTypographyCopy,
   inputTypographyMono,
-  inputTypographyBrand
+  inputTypographyBrand,
+  inputEntryVersionName
 }: FormCodecContext) => {
   const defaultHomeIntroLinks = [...ADMIN_HOME_INTRO_LINK_DEFAULT] as HomeIntroLinkKey[];
   const defaultPrimaryHomeIntroLink: HomeIntroLinkKey = ADMIN_HOME_INTRO_LINK_DEFAULT[0];
@@ -394,22 +430,42 @@ export const createFormCodec = ({
     homeIntroMorePreviewEl.textContent = getHomeIntroPreviewText();
   };
 
-  const ARTICLE_META_PREVIEW_DATE = '2026-03-18';
+  const ARTICLE_META_PREVIEW_PUBLISHED = '2026-03-18';
+  const ARTICLE_META_PREVIEW_UPDATED = '2026-03-20';
+  const ARTICLE_META_PREVIEW_TIME = '14:30';
   const ARTICLE_META_PREVIEW_TAGS = ['#Astro', '#写作'] as const;
   const ARTICLE_META_PREVIEW_WORD_COUNT = '共 2,416 字';
   const ARTICLE_META_PREVIEW_READING_TIME = '约 6 分钟';
   const ARTICLE_META_PREVIEW_EMPTY = '当前不显示文章元信息';
 
+  /** 预览跟随粒度：date 只到日期，datetime 补站点时间语义的时分（不带时区后缀）。 */
+  const getArticleMetaPreviewDateText = (dateText: string): string =>
+    inputUiArticleDateGranularity.value === 'datetime'
+      ? `${dateText} ${ARTICLE_META_PREVIEW_TIME}`
+      : dateText;
+
   const getArticleMetaPreviewText = (): string => {
     const segments: string[] = [];
 
     if (inputArticleMetaShowDate.checked) {
-      const dateLabel = normalizeSingleLine(inputArticleMetaDateLabel.value);
-      segments.push(`${dateLabel}${ARTICLE_META_PREVIEW_DATE}`);
+      const dateLabel = normalizeSingleLine(inputArticleMetaDateLabel.value) || '发布于：';
+      const dateDisplay = inputUiArticleDateDisplay.value;
+      // 与 resolveArticleDateItems 保持一致：updated 缺失时回退 published，
+      // 但预览固定展示「同时显示」时的两行日期。
+      if (dateDisplay === 'published') {
+        segments.push(`${dateLabel}${getArticleMetaPreviewDateText(ARTICLE_META_PREVIEW_PUBLISHED)}`);
+      } else if (dateDisplay === 'updated') {
+        segments.push(`更新于：${getArticleMetaPreviewDateText(ARTICLE_META_PREVIEW_UPDATED)}`);
+      } else {
+        segments.push(
+          `${dateLabel}${getArticleMetaPreviewDateText(ARTICLE_META_PREVIEW_PUBLISHED)}`,
+          `更新于：${getArticleMetaPreviewDateText(ARTICLE_META_PREVIEW_UPDATED)}`
+        );
+      }
     }
 
     if (inputArticleMetaShowTags.checked) {
-      segments.push(ARTICLE_META_PREVIEW_TAGS.join('\u00A0\u00A0'));
+      segments.push(ARTICLE_META_PREVIEW_TAGS.join('\u00A0'));
     }
 
     if (inputArticleMetaShowWordCount.checked) {
@@ -455,6 +511,17 @@ export const createFormCodec = ({
     const { meta, footer } = getViewStatsPreviewTexts();
     viewStatsPreviewMetaEl.textContent = meta;
     viewStatsPreviewFooterEl.textContent = footer;
+  };
+
+  /** 条目版本下拉框与下方预览保持同步：只切换当前模式的示例块。 */
+  const refreshEntryVersionPreview = (): void => {
+    const mode = normalizeEntryVersionNameMode(inputEntryVersionName.value);
+    document.querySelectorAll<HTMLElement>('[data-entry-version-preview]').forEach((preview) => {
+      preview.dataset.mode = mode;
+      preview.querySelectorAll<HTMLElement>('[data-entry-version-preview-variant]').forEach((variant) => {
+        variant.hidden = (variant.dataset.entryVersionPreviewVariant ?? '') !== mode;
+      });
+    });
   };
 
   /** 总开关关掉时三个页面各自的勾选框置灰并加 `aria-disabled`。 */
@@ -507,6 +574,17 @@ export const createFormCodec = ({
   const getSelectedFilingsScope = (): SiteFilingsScope => {
     const value = inputSiteFilingsScope.value;
     return isAdminFilingsScope(value) ? value : ADMIN_FILINGS_SCOPE_DEFAULT;
+  };
+
+  const getSelectedArticleDateGranularity = (): ArticleDateGranularity => {
+    const value = inputUiArticleDateGranularity.value;
+    return isAdminArticleDateGranularity(value) ? value : ADMIN_ARTICLE_DATE_GRANULARITY_DEFAULT;
+  };
+
+  const applyArticleDateGranularity = (value: unknown): void => {
+    inputUiArticleDateGranularity.value = isAdminArticleDateGranularity(value)
+      ? value
+      : ADMIN_ARTICLE_DATE_GRANULARITY_DEFAULT;
   };
 
   const typographyGroups: Record<TypographyRole, HTMLElement> = {
@@ -751,7 +829,8 @@ export const createFormCodec = ({
         about: {
           title: normalizeOptionalSingleLine(inputPageAboutTitle.value),
           subtitle: normalizeOptionalSingleLine(inputPageAboutSubtitle.value)
-        }
+        },
+        pagination: readPaginationSettings()
       },
       ui: {
         codeBlock: {
@@ -781,6 +860,7 @@ export const createFormCodec = ({
           showDate: Boolean(inputArticleMetaShowDate.checked),
           dateLabel: normalizeSingleLine(inputArticleMetaDateLabel.value),
           dateDisplay: inputUiArticleDateDisplay.value as 'published' | 'updated' | 'both',
+          dateGranularity: getSelectedArticleDateGranularity(),
           showTags: Boolean(inputArticleMetaShowTags.checked),
           showWordCount: Boolean(inputArticleMetaShowWordCount.checked),
           showReadingTime: Boolean(inputArticleMetaShowReadingTime.checked)
@@ -794,7 +874,8 @@ export const createFormCodec = ({
           copy: getSelectedTypographyFontId('copy'),
           mono: getSelectedTypographyFontId('mono'),
           brand: getSelectedTypographyFontId('brand')
-        }
+        },
+        entryVersionName: normalizeEntryVersionNameMode(inputEntryVersionName.value)
       }
     };
   };
@@ -872,6 +953,13 @@ export const createFormCodec = ({
     inputPageDevlogSubtitle.value = settings.page.devlog?.subtitle || '';
     inputPageAboutTitle.value = settings.page.about?.title || '';
     inputPageAboutSubtitle.value = settings.page.about?.subtitle || '';
+    for (const scope of ADMIN_PAGINATION_SCOPES) {
+      const values = settings.page.pagination?.[scope] ?? ADMIN_PAGINATION_DEFAULTS[scope];
+      const enabledInput = paginationInput(scope, 'enabled');
+      const sizeInput = paginationInput(scope, 'size');
+      if (enabledInput) enabledInput.checked = values.enabled;
+      if (sizeInput) sizeInput.value = String(values.pageSize);
+    }
     inputPageBitsAuthorName.value = settings.page.bits?.defaultAuthor?.name || '';
     inputPageBitsAuthorAvatar.value = settings.page.bits?.defaultAuthor?.avatar || '';
     inputHomeShowHero.checked = (settings.home.heroPresetId || 'default') !== 'none';
@@ -896,12 +984,15 @@ export const createFormCodec = ({
     inputArticleMetaShowDate.checked = settings.ui?.articleMeta?.showDate !== false;
     inputArticleMetaDateLabel.value = settings.ui?.articleMeta?.dateLabel ?? ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT;
     inputUiArticleDateDisplay.value = settings.ui?.articleMeta?.dateDisplay ?? 'updated';
+    applyArticleDateGranularity(settings.ui?.articleMeta?.dateGranularity);
     inputUiCardDateDisplay.value = settings.ui?.cardDateDisplay ?? 'updated';
     inputArticleMetaShowTags.checked = settings.ui?.articleMeta?.showTags !== false;
     inputArticleMetaShowWordCount.checked = settings.ui?.articleMeta?.showWordCount !== false;
     inputArticleMetaShowReadingTime.checked = settings.ui?.articleMeta?.showReadingTime !== false;
     applySidebarDividerVariant(settings.ui?.layout?.sidebarDivider || ADMIN_SIDEBAR_DIVIDER_DEFAULT);
     applyTypographySettings(settings.ui?.typography);
+    inputEntryVersionName.value = normalizeEntryVersionNameMode(settings.ui?.entryVersionName);
+    refreshEntryVersionPreview();
     refreshFooterPreview();
     refreshFilingsPreview();
     refreshArticleMetaPreview();
@@ -943,6 +1034,7 @@ export const createFormCodec = ({
     collectHomeIntroLinks,
     refreshArticleMetaPreview,
     refreshViewStatsPreview,
+    refreshEntryVersionPreview,
     refreshHomeIntroPreview,
     syncAdminOverviewControls,
     syncSidebarActionControls,

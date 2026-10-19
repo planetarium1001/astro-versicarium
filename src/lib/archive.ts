@@ -4,12 +4,79 @@ import {
   getBlogDerivedText,
   getVisibleBlogRouting,
   getVisibleDevlogs,
-  getVisibleProjects
+  getVisibleProjectGroups
 } from './content';
 import { getBlogEntryHrefMap } from './blog-routing';
 import { stripTrailingLinks } from './trailing-links';
+import { deriveEntryDescription } from './entry-body';
+import { flattenEntryIdToSlug } from '../utils/slug-rules';
 
 export type ArchiveRowKind = 'blog' | 'projects' | 'devlog';
+
+export type ProjectVersionRecord = {
+  label: string;
+  name: string | null;
+  dateText: string;
+  summary: string | null;
+  order: number;
+  isCurrent: boolean;
+};
+
+type ProjectVersionSource = {
+  versionLabel?: string | null | undefined;
+  versionName?: string | null | undefined;
+  versionSummary?: string | null | undefined;
+  versionOrder?: number | null | undefined;
+  versions?:
+    | ReadonlyArray<{
+        label: string;
+        name?: string | null | undefined;
+        dateText?: string | null | undefined;
+        summary?: string | null | undefined;
+        order?: number | null | undefined;
+      }>
+    | undefined;
+};
+
+/**
+ * 项目大版本文档：当前版本来自项目顶层的 version* 字段，历史版本来自 versions。
+ * 只返回给界面消费的展示字段；当前版本永远排第一，历史版本按日期倒序。
+ */
+export const getProjectVersionHistory = (
+  data: ProjectVersionSource,
+  currentDateText: string
+): ProjectVersionRecord[] => {
+  const currentLabel = data.versionLabel?.trim();
+  if (!currentLabel) return [];
+
+  const current: ProjectVersionRecord = {
+    label: currentLabel,
+    name: data.versionName?.trim() || null,
+    dateText: currentDateText,
+    summary: data.versionSummary?.trim() || null,
+    order: data.versionOrder ?? 0,
+    isCurrent: true
+  };
+
+  const history = (data.versions ?? [])
+    .map((version): ProjectVersionRecord => ({
+      label: version.label.trim(),
+      name: version.name?.trim() || null,
+      dateText: version.dateText?.trim() || '',
+      summary: version.summary?.trim() || null,
+      order: version.order ?? 0,
+      isCurrent: false
+    }))
+    .filter((version) => version.label.length > 0)
+    .sort(
+      (left, right) =>
+        right.dateText.localeCompare(left.dateText, 'en') ||
+        right.order - left.order ||
+        left.label.localeCompare(right.label, 'en')
+    );
+
+  return [current, ...history];
+};
 
 export type ArchiveRow = {
   kind: ArchiveRowKind;
@@ -23,12 +90,16 @@ export type ArchiveRow = {
   month: number;
   versionOrder: number;
   versionLabel?: string;
+  versionName?: string;
+  versionSummary?: string;
   isLatest?: boolean;
   series?: string | null;
   project?: string;
   description: string;
   tags: string[];
   text: string;
+  /** legacy `versions[]` 元数据历史（可选）；只有项目最新版行携带。 */
+  projectVersions?: ProjectVersionRecord[];
 };
 
 export type ArchiveGroup = {
@@ -58,9 +129,9 @@ const orderRows = (left: ArchiveRow, right: ArchiveRow): number => {
 export const getArchiveRows = async (
   options: { versionMode?: 'all' | 'latest' } = {}
 ): Promise<ArchiveRow[]> => {
-  const [routing, projects, devlogs] = await Promise.all([
+  const [routing, projectGroups, devlogs] = await Promise.all([
     getVisibleBlogRouting(),
-    getVisibleProjects(),
+    getVisibleProjectGroups(),
     getVisibleDevlogs()
   ]);
   const hrefByEntryId = getBlogEntryHrefMap(routing);
@@ -80,7 +151,8 @@ export const getArchiveRows = async (
         date: entry.data.date,
         ...meta,
         versionOrder: entry.data.versionOrder ?? 0,
-        versionLabel: entry.data.versionLabel?.trim() || meta.dateText,
+        versionLabel: entry.data.versionLabel?.trim() || '',
+        ...(entry.data.versionName?.trim() ? { versionName: entry.data.versionName.trim() } : {}),
         isLatest,
         series: group.series,
         description: entry.data.description ?? '',
@@ -90,41 +162,70 @@ export const getArchiveRows = async (
     });
   });
 
-  const projectRows: ArchiveRow[] = projects.map((entry) => {
-    const meta = toDateMeta(entry.data.date, entry.data.dateText);
-    return {
-      kind: 'projects',
-      key: `projects:${entry.id}`,
-      id: entry.id,
-      title: entry.data.title,
-      href: `/projects/#${entry.id}`,
-      date: entry.data.date,
-      ...meta,
-      versionOrder: 0,
-      description: entry.data.description ?? '',
-      tags: [],
-      text: [entry.data.subtitle, entry.data.description].filter(Boolean).join(' ')
-    };
+  /**
+   * 项目按文档版本成行：同一项目的各版本文档共享 `tags: [group.title]`，
+   * 以便 `#项目` 过滤能一次选中该项目的所有版本。
+   * legacy `versions[]` 只有元数据，不再单独成行，仅附在最新版行的 `projectVersions`。
+   */
+  const projectRows: ArchiveRow[] = projectGroups.flatMap((group) => {
+    const versions =
+      versionMode === 'latest'
+        ? [group.latest]
+        : group.versions.filter((version) => version.hasDocument);
+
+    return versions.map((version) => {
+      const entry = version.entry;
+      const meta = toDateMeta(entry.data.date, entry.data.dateText);
+      const versionLabel = entry.data.versionLabel?.trim();
+      const versionName = entry.data.versionName?.trim();
+      const versionSummary = entry.data.versionSummary?.trim();
+      const projectVersions = version.isLatest
+        ? getProjectVersionHistory(entry.data, meta.dateText)
+        : [];
+
+      return {
+        kind: 'projects',
+        key: `projects:${version.anchor}`,
+        id: version.entryId,
+        title: entry.data.title,
+        href: version.href,
+        date: entry.data.date,
+        ...meta,
+        versionOrder: entry.data.versionOrder ?? 0,
+        ...(versionLabel ? { versionLabel } : {}),
+        ...(versionName ? { versionName } : {}),
+        ...(versionSummary ? { versionSummary } : {}),
+        isLatest: version.isLatest,
+        ...(projectVersions.length > 0 ? { projectVersions } : {}),
+        description: entry.data.description ?? '',
+        tags: [group.title],
+        text: [entry.data.subtitle, entry.data.description, versionName, versionSummary]
+          .filter(Boolean)
+          .join(' ')
+      } satisfies ArchiveRow;
+    });
   });
 
   const devlogRows: ArchiveRow[] = devlogs.map((entry) => {
     const meta = toDateMeta(entry.data.date, entry.data.dateText);
+    // 与 /devlog/ 页共用同一套摘要派生：frontmatter 缺 description 时从正文截取。
+    const description = deriveEntryDescription(entry.data.description, entry.body) ?? '';
     return {
       kind: 'devlog',
       key: `devlog:${entry.id}`,
       id: entry.id,
       title: entry.data.title,
-      href: `/devlog/#${entry.id}`,
+      href: `/devlog/#${flattenEntryIdToSlug(entry.id)}`,
       date: entry.data.date,
       ...meta,
       versionOrder: 0,
       project: entry.data.project,
-      description: entry.data.description ?? '',
+      description,
       tags: [entry.data.project],
       text: [
         entry.data.project,
         entry.data.kind,
-        entry.data.description,
+        description,
         stripTrailingLinks(entry.body ?? '').replace(/\s+/g, ' ').trim()
       ].filter(Boolean).join(' ')
     };

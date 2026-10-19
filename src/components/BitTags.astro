@@ -1,5 +1,6 @@
 ---
 import type { BitsCardViewModel } from '../lib/bits-card-view-model';
+import UiIcon from './UiIcon.astro';
 
 /** 动态卡片与详情弹窗共用的标签行：地点标签与普通标签都是 `/bits/?tags=<key>` 的筛选入口。 */
 const { card, class: extraClass = '' } = Astro.props as {
@@ -18,19 +19,19 @@ const { card, class: extraClass = '' } = Astro.props as {
           aria-label={`筛选标签 ${card.placeTag.label}`}
           data-bit-tag-link={card.placeTag.key}
         >
-          <span class="bit-tag-icon" aria-hidden="true">📍</span>
+          <UiIcon name="map-pin" class="bit-tag-icon" size={12} />
           <span class="bit-tag-text">{card.placeTag.label}</span>
         </a>
       ) : (
         <span class="bit-tag bit-tag--place">
-          <span class="bit-tag-icon" aria-hidden="true">📍</span>
+          <UiIcon name="map-pin" class="bit-tag-icon" size={12} />
           <span class="bit-tag-text">{card.placeTag.label}</span>
         </span>
       )
     ) : null}
     {card.normalTagItems.length ? (
       <span class="bit-tag bit-tag--normal">
-        <span class="bit-tag-icon" aria-hidden="true">❤</span>
+        <UiIcon name="heart" class="bit-tag-icon" size={12} />
         <span class="bit-tag-list">
           {card.normalTagItems.map((tag) =>
             tag.href ? (

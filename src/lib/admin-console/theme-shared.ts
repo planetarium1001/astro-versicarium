@@ -6,6 +6,7 @@ import type {
   SidebarNavId,
   SiteFilingsScope,
   ArticleDateDisplayMode,
+  ArticleDateGranularity,
   ArchiveVersionMode,
   SiteSocialIconKey,
   SiteSocialPresetId,
@@ -20,6 +21,10 @@ import {
   isThemeFontIdForRole
 } from '../fonts/registry';
 import { isValidIanaTimeZone } from '../../utils/timezone';
+import {
+  isEntryVersionNameMode,
+  normalizeEntryVersionNameMode
+} from '../entry-display';
 import {
   getBitsAvatarLocalFilePath as getAdminBitsAvatarLocalFilePath,
   getHeroImageLocalFilePath as getAdminHeroImageLocalFilePath,
@@ -77,6 +82,18 @@ const ADMIN_ARTICLE_DATE_DISPLAY_SET = new Set<ArticleDateDisplayMode>(
 export const isAdminArticleDateDisplayMode = (value: unknown): value is ArticleDateDisplayMode =>
   typeof value === 'string' && ADMIN_ARTICLE_DATE_DISPLAY_SET.has(value as ArticleDateDisplayMode);
 
+/** 日期粒度与「显示模式（published/updated/both）」是两个维度：粒度只管是否带时分。 */
+export const ADMIN_ARTICLE_DATE_GRANULARITY_OPTIONS = [
+  { id: 'date', label: '仅日期' },
+  { id: 'datetime', label: '日期 + 时间' }
+] as const satisfies readonly { id: ArticleDateGranularity; label: string }[];
+export const ADMIN_ARTICLE_DATE_GRANULARITY_DEFAULT: ArticleDateGranularity = 'date';
+const ADMIN_ARTICLE_DATE_GRANULARITY_SET = new Set<ArticleDateGranularity>(
+  ADMIN_ARTICLE_DATE_GRANULARITY_OPTIONS.map((option) => option.id)
+);
+export const isAdminArticleDateGranularity = (value: unknown): value is ArticleDateGranularity =>
+  typeof value === 'string' && ADMIN_ARTICLE_DATE_GRANULARITY_SET.has(value as ArticleDateGranularity);
+
 export const ADMIN_ARCHIVE_VERSION_MODE_OPTIONS = [
   { id: 'all', label: '显示全部版本' },
   { id: 'latest', label: '仅显示最新版' }
@@ -90,6 +107,33 @@ export const isAdminArchiveVersionMode = (value: unknown): value is ArchiveVersi
 
 export const ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT = '发布于：';
 export const ADMIN_ARTICLE_META_DATE_LABEL_MAX_LENGTH = 20;
+
+export const ADMIN_PAGINATION_SCOPES = ['home', 'blog', 'bits', 'devlog', 'archive'] as const;
+export type AdminPaginationScope = (typeof ADMIN_PAGINATION_SCOPES)[number];
+const ADMIN_PAGINATION_SCOPE_SET: ReadonlySet<string> = new Set(ADMIN_PAGINATION_SCOPES);
+export const isAdminPaginationScope = (value: unknown): value is AdminPaginationScope =>
+  typeof value === 'string' && ADMIN_PAGINATION_SCOPE_SET.has(value);
+export const ADMIN_PAGINATION_PAGE_SIZE_MIN = 1;
+export const ADMIN_PAGINATION_PAGE_SIZE_MAX = 100;
+export const ADMIN_PAGINATION_DEFAULTS = {
+  home: { enabled: true, pageSize: 12 },
+  blog: { enabled: true, pageSize: 12 },
+  bits: { enabled: true, pageSize: 20 },
+  devlog: { enabled: false, pageSize: 10 },
+  // 归档是完整时间线：默认一次展示全部条目，避免分页把较早的 devlog 藏到第二页。
+  archive: { enabled: false, pageSize: 20 }
+} as const satisfies Record<AdminPaginationScope, { enabled: boolean; pageSize: number }>;
+export const ADMIN_PAGINATION_PAGE_OPTIONS: ReadonlyArray<{
+  id: AdminPaginationScope;
+  label: string;
+  path: string | null;
+}> = [
+  { id: 'home', label: '首页', path: null },
+  { id: 'blog', label: '博客', path: '/blog/' },
+  { id: 'bits', label: '动态', path: '/bits/' },
+  { id: 'devlog', label: '开发日志', path: '/devlog/' },
+  { id: 'archive', label: '归档', path: '/archive/' }
+];
 
 export const ADMIN_FILINGS_NUMBER_MAX_LENGTH = 40;
 export const ADMIN_ICP_FILING_HOSTS = ['beian.miit.gov.cn'] as const;
@@ -509,6 +553,20 @@ export const canonicalizeAdminThemeSettings = (
   const rawFilingsPolice = isRecord(rawFilings.police) ? rawFilings.police : {};
   const rawFilingsScope = normalizeTrimmed(rawFilings.scope);
   const rawUiArticleMeta: LooseRecord = isRecord(ui.articleMeta) ? ui.articleMeta : {};
+  const canonicalPaginationScope = (scope: AdminPaginationScope): { enabled: boolean; pageSize: number } => {
+    const rawScope = isRecord(page.pagination) && isRecord(page.pagination[scope])
+      ? page.pagination[scope]
+      : undefined;
+    const fallback = ADMIN_PAGINATION_DEFAULTS[scope];
+    const pageSize = parseInteger(rawScope?.pageSize as string | number | null | undefined) ?? fallback.pageSize;
+    return {
+      enabled: typeof rawScope?.enabled === 'boolean' ? rawScope.enabled : fallback.enabled,
+      pageSize: Math.min(
+        Math.max(pageSize, ADMIN_PAGINATION_PAGE_SIZE_MIN),
+        ADMIN_PAGINATION_PAGE_SIZE_MAX
+      )
+    };
+  };
   const rawUiFloatStack: LooseRecord = isRecord(ui.floatStack) ? ui.floatStack : {};
   const rawUiViewStats: LooseRecord = isRecord(ui.viewStats) ? ui.viewStats : {};
   const rawUiSidebarActions: LooseRecord = isRecord(ui.sidebarActions) ? ui.sidebarActions : {};
@@ -722,6 +780,13 @@ export const canonicalizeAdminThemeSettings = (
         blog: typeof rawListRss.blog === 'boolean' ? rawListRss.blog : true,
         bits: typeof rawListRss.bits === 'boolean' ? rawListRss.bits : true,
         archive: typeof rawListRss.archive === 'boolean' ? rawListRss.archive : true
+      },
+      pagination: {
+        home: canonicalPaginationScope('home'),
+        blog: canonicalPaginationScope('blog'),
+        bits: canonicalPaginationScope('bits'),
+        devlog: canonicalPaginationScope('devlog'),
+        archive: canonicalPaginationScope('archive')
       }
     },
     ui: {
@@ -762,6 +827,9 @@ export const canonicalizeAdminThemeSettings = (
         dateDisplay: isAdminArticleDateDisplayMode(rawUiArticleMeta.dateDisplay)
           ? rawUiArticleMeta.dateDisplay
           : ADMIN_ARTICLE_DATE_DISPLAY_DEFAULT,
+        dateGranularity: isAdminArticleDateGranularity(rawUiArticleMeta.dateGranularity)
+          ? rawUiArticleMeta.dateGranularity
+          : ADMIN_ARTICLE_DATE_GRANULARITY_DEFAULT,
         showTags: typeof rawUiArticleMeta.showTags === 'boolean' ? rawUiArticleMeta.showTags : true,
         showWordCount: typeof rawUiArticleMeta.showWordCount === 'boolean' ? rawUiArticleMeta.showWordCount : true,
         showReadingTime: typeof rawUiArticleMeta.showReadingTime === 'boolean'
@@ -782,7 +850,8 @@ export const canonicalizeAdminThemeSettings = (
         copy: asThemeFontIdForRole('copy', rawTypographyCopy) ?? ADMIN_TYPOGRAPHY_DEFAULT.copy,
         mono: asThemeFontIdForRole('mono', rawTypographyMono) ?? ADMIN_TYPOGRAPHY_DEFAULT.mono,
         brand: asThemeFontIdForRole('brand', rawTypographyBrand) ?? ADMIN_TYPOGRAPHY_DEFAULT.brand
-      }
+      },
+      entryVersionName: normalizeEntryVersionNameMode(ui.entryVersionName)
     }
   };
 };
@@ -844,7 +913,14 @@ export const createAdminWritableThemeSettingsGroups = (
       }
     },
     devlog: { ...settings.page.devlog },
-    about: { ...settings.page.about }
+    about: { ...settings.page.about },
+    pagination: {
+      home: { ...settings.page.pagination.home },
+      blog: { ...settings.page.pagination.blog },
+      bits: { ...settings.page.pagination.bits },
+      devlog: { ...settings.page.pagination.devlog },
+      archive: { ...settings.page.pagination.archive }
+    }
   },
   ui: {
     codeBlock: { ...settings.ui.codeBlock },
@@ -855,7 +931,8 @@ export const createAdminWritableThemeSettingsGroups = (
     articleMeta: { ...settings.ui.articleMeta },
     cardDateDisplay: settings.ui.cardDateDisplay,
     layout: { ...settings.ui.layout },
-    typography: { ...settings.ui.typography }
+    typography: { ...settings.ui.typography },
+    entryVersionName: settings.ui.entryVersionName
   }
 });
 
@@ -891,6 +968,24 @@ export const validateAdminThemeSettings = (
     pushIssue('page.archive.versionMode', '归档版本模式无效');
   }
 
+  for (const option of ADMIN_PAGINATION_PAGE_OPTIONS) {
+    const scope = option.id;
+    const current = settings.page?.pagination?.[scope];
+    if (typeof current?.enabled !== 'boolean') {
+      pushIssue(`page.pagination.${scope}.enabled`, `${option.label}分页开关必须是布尔值`);
+    }
+    if (
+      !Number.isInteger(current?.pageSize)
+      || (current?.pageSize ?? 0) < ADMIN_PAGINATION_PAGE_SIZE_MIN
+      || (current?.pageSize ?? 0) > ADMIN_PAGINATION_PAGE_SIZE_MAX
+    ) {
+      pushIssue(
+        `page.pagination.${scope}.pageSize`,
+        `${option.label}每页条数必须是 ${ADMIN_PAGINATION_PAGE_SIZE_MIN}–${ADMIN_PAGINATION_PAGE_SIZE_MAX} 的整数`
+      );
+    }
+  }
+
   if (!settings.site.defaultLocale) {
     pushIssue('site.defaultLocale', '默认语言不能为空');
   } else if (!ADMIN_LOCALE_RE.test(settings.site.defaultLocale)) {
@@ -918,6 +1013,9 @@ export const validateAdminThemeSettings = (
 
   if (!isAdminArticleDateDisplayMode(settings.ui.articleMeta.dateDisplay)) {
     pushIssue('ui.articleMeta.dateDisplay', '文章日期显示模式无效');
+  }
+  if (!isAdminArticleDateGranularity(settings.ui.articleMeta.dateGranularity)) {
+    pushIssue('ui.articleMeta.dateGranularity', '文章日期粒度无效');
   }
   if (!isAdminArticleDateDisplayMode(settings.ui.cardDateDisplay)) {
     pushIssue('ui.cardDateDisplay', '卡片日期显示模式无效');
@@ -1374,6 +1472,10 @@ export const validateAdminThemeSettings = (
     pushIssue('ui.typography.brand', '品牌字体必须从注册表可选项中选择');
   }
 
+  if (!isEntryVersionNameMode(settings.ui?.entryVersionName ?? '')) {
+    pushIssue('ui.entryVersionName', '版本名称只允许 不显示 / 标题后 / 版本号后');
+  }
+
   const nav = Array.isArray(settings.shell.nav) ? settings.shell.nav : [];
   if (nav.length !== ADMIN_NAV_IDS.length) {
     pushIssue('shell.nav', 'Sidebar 导航项数量必须与既有导航一致');
@@ -1617,7 +1719,7 @@ const UI_COMPATIBILITY_GROUP_FIELDS: ReadonlyArray<readonly [string, readonly st
     ['showPv', 'pvLabel', 'showUv', 'uvLabel', 'onArticleMeta', 'onIndexPages']
   ],
   ['typography', ['readable', 'copy', 'mono', 'brand']],
-  ['articleMeta', ['showDate', 'dateLabel', 'dateDisplay', 'showTags', 'showWordCount', 'showReadingTime']]
+  ['articleMeta', ['showDate', 'dateLabel', 'dateDisplay', 'dateGranularity', 'showTags', 'showWordCount', 'showReadingTime']]
 ];
 
 const fillAdminThemeSettingsShellCompatibilityDefaults = (
@@ -1648,6 +1750,26 @@ const fillAdminThemeSettingsPageCompatibilityDefaults = (
       next = { ...next, archive: { ...canonicalArchive, ...rawArchive } };
     }
   }
+
+  const canonicalPagination = canonicalPage.pagination;
+  if (isRecord(canonicalPagination)) {
+    const rawPagination = next.pagination;
+    if (rawPagination === undefined) {
+      next = { ...next, pagination: canonicalPagination };
+    } else if (isRecord(rawPagination)) {
+      /* 旧配置没有分页组：按页面补齐默认值，已有值原样保留交给校验。 */
+      const merged = { ...rawPagination };
+      for (const scope of ADMIN_PAGINATION_SCOPES) {
+        const canonicalScope = canonicalPagination[scope];
+        if (!isRecord(canonicalScope)) continue;
+        const rawScope = rawPagination[scope];
+        merged[scope] = isRecord(rawScope)
+          ? { ...canonicalScope, ...rawScope }
+          : canonicalScope;
+      }
+      next = { ...next, pagination: merged };
+    }
+  }
   return next;
 };
 
@@ -1668,6 +1790,18 @@ const fillAdminThemeSettingsUiCompatibilityDefaults = (
       const defaults = Object.fromEntries(fields.map((field) => [field, canonicalGroup[field]]));
       next = { ...next, [key]: { ...defaults, ...rawGroup } };
     }
+  }
+
+  // 条目版本名称是后加的顶层标量：旧 ui.json 缺该键时补默认，避免读取期被判定锁住后台。
+  if (canonicalUi.entryVersionName !== undefined && next.entryVersionName === undefined) {
+    next = { ...next, entryVersionName: canonicalUi.entryVersionName };
+  }
+
+  // 旧的条目格式组合器已移除：保留该键会被误判为 schema-mismatch，读取时直接忽略，
+  // 下次保存会自然把它从 ui.json 里去掉。
+  if ('entryFormat' in next) {
+    const { entryFormat: _removedEntryFormat, ...rest } = next;
+    next = rest;
   }
 
   return next;

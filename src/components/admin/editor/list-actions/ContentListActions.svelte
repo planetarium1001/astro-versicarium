@@ -127,6 +127,7 @@ const createEmptyProjectsFrontmatter = (): AdminProjectsEditorValues => ({
   type: '',
   icon: '',
   image: '',
+  slug: '',
   date: '',
   draft: false
 });
@@ -135,6 +136,7 @@ const createEmptyDevlogFrontmatter = (): AdminDevlogEditorValues => ({
   title: '',
   date: '',
   project: '',
+  projectSlug: '',
   kind: '',
   description: '',
   draft: false
@@ -241,13 +243,24 @@ const setStatus = (
 };
 
 /**
- * 新条目的源文件名固定为 `YYYY-MM-DD-title`；日期缺失或非法时用当天。
+ * devlog 按项目目录归档：创建时若已填 projectSlug，就把条目放进 `<projectSlug>/`。
+ * 其他集合仍落在集合根目录。
+ */
+const getCreateProjectPrefix = (): string => {
+  if (selectedCollection !== 'devlog' || !frontmatter || !('projectSlug' in frontmatter)) return '';
+  return frontmatter.projectSlug.trim();
+};
+
+/**
+ * 新条目的源目录固定为 `YYYY-MM-DD-title`；日期缺失或非法时用当天。
  */
 const deriveCreateEntryId = (date: string, title: string): string => {
   const trimmed = title.trim();
   if (!trimmed) return '';
   const parsed = new Date(`${date.trim()}T00:00:00Z`);
-  return buildContentEntryId(Number.isNaN(parsed.valueOf()) ? new Date() : parsed, trimmed);
+  const base = buildContentEntryId(Number.isNaN(parsed.valueOf()) ? new Date() : parsed, trimmed);
+  const prefix = getCreateProjectPrefix();
+  return prefix ? `${prefix}/${base}` : base;
 };
 
 const syncCreateEntryIdFromTitle = () => {

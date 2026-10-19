@@ -30,6 +30,7 @@ type ValidationContext = {
   inputPageListRssArchive: HTMLInputElement;
   inputPageArchiveVersionMode: HTMLSelectElement;
   inputUiArticleDateDisplay: HTMLSelectElement;
+  inputUiArticleDateGranularity: HTMLSelectElement;
   inputUiCardDateDisplay: HTMLSelectElement;
   inputSiteFooterStartYear: HTMLInputElement;
   inputSiteFooterShowCurrentYear: HTMLInputElement;
@@ -125,6 +126,7 @@ export const createValidation = ({
   inputPageListRssArchive,
   inputPageArchiveVersionMode,
   inputUiArticleDateDisplay,
+  inputUiArticleDateGranularity,
   inputUiCardDateDisplay,
   inputSiteFooterStartYear,
   inputSiteFooterShowCurrentYear,
@@ -261,6 +263,8 @@ export const createValidation = ({
         return () => inputPageArchiveVersionMode;
       case 'ui.articleMeta.dateDisplay':
         return () => inputUiArticleDateDisplay;
+      case 'ui.articleMeta.dateGranularity':
+        return () => inputUiArticleDateGranularity;
       case 'ui.cardDateDisplay':
         return () => inputUiCardDateDisplay;
       case 'site.titleMaxPercent':
@@ -376,6 +380,10 @@ export const createValidation = ({
         break;
     }
 
+    if (path === 'ui.entryVersionName') {
+      return () => form.querySelector<HTMLElement>('#ui-entry-version-name');
+    }
+
     if (path.startsWith('site.socialLinks.presetOrder.')) {
       const presetId = path.slice('site.socialLinks.presetOrder.'.length) as SiteSocialPresetId;
       return getPresetFieldTarget(presetId, 'order');
@@ -395,6 +403,13 @@ export const createValidation = ({
 
     if (path.startsWith('home.introMoreLinks[')) {
       return () => inputHomeIntroMoreLinkPrimary;
+    }
+
+    if (path.startsWith('page.pagination.')) {
+      const segments = path.split('.');
+      const scope = segments[2] ?? '';
+      const field = segments[3] === 'pageSize' ? 'size' : 'enabled';
+      return () => document.getElementById(`page-pagination-${scope}-${field}`);
     }
 
     if (path.startsWith('page.')) {

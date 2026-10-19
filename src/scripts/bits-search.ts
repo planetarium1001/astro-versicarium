@@ -26,6 +26,10 @@ const MAX_VISIBLE_RESULTS = 50;
 const QUERY_PARAM_QUERY = 'q';
 const QUERY_PARAM_YEAR = 'year';
 
+/** 地点标签的行内图标；与 BitTags 的 map-pin 使用同一图形。 */
+const PLACE_TAG_ICON =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>';
+
 type IndexItem = {
   key?: string;
   slug: string;
@@ -245,7 +249,7 @@ const renderResults = (matchedItems: IndexItem[]) => {
       const pageHint = item.page && item.page !== currentBitsPage ? `来自第 ${item.page} 页` : '';
       const { placeText, normalTags } = getDisplayTags(item.tags ?? []);
       const place = placeText
-        ? `<span class="bit-search-result__tag bit-search-result__tag--place">📍 ${highlightText(placeText, queryTerms)}</span>`
+        ? `<span class="bit-search-result__tag bit-search-result__tag--place">${PLACE_TAG_ICON}${highlightText(placeText, queryTerms)}</span>`
         : '';
       const tags = normalTags
         .slice(0, 3)

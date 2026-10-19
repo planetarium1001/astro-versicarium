@@ -1,24 +1,17 @@
 ---
 ---
 
-这里是关于页的示例内容，介绍站点与作者，可按实际站点替换。
+# 关于 Astro Whono Tweaked
 
-## 致谢
+Astro Whono Tweaked 是一个面向开发者的双栏 Astro 主题，用于技术文章、项目文档与工程记录。它基于 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）改造，保留上游壳层与 Markdown 扩展，并增加项目多版本文档、资源控制台与主题更新通道。
 
-:::friend{name="astro-whono-tweaked" url="https://github.com/planetarium1001/astro-whono-tweaked"}
-本主题仓库
-:::
+主题以 `content/` 为内容边界，以 `src/` 为可更新代码。适合长期维护自有站点，也适合作为从零开始的模板。
 
-:::friend{name="astro-whono" url="https://github.com/cxro/astro-whono"}
-上游主题，MIT 许可
-:::
-
-:::friend{name="Astro" url="https://astro.build/"}
-站点构建框架
-:::
+::site-info{name="Astro Whono Tweaked" url="https://github.com/planetarium1001/astro-whono-tweaked" description="面向开发者的双栏 Astro 主题。"}
 
 ## 联系
 
-如果你有问题或建议，欢迎联系。
+- 邮箱：[me@planetarium1001.com](mailto:me@planetarium1001.com)
+- 仓库：[github.com/planetarium1001/astro-whono-tweaked](https://github.com/planetarium1001/astro-whono-tweaked)
 
-::contact-links
+[仓库](https://github.com/planetarium1001/astro-whono-tweaked)

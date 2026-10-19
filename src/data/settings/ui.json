@@ -25,11 +25,13 @@
   "articleMeta": {
     "showDate": true,
     "dateLabel": "发布于：",
+    "dateDisplay": "both",
+    "dateGranularity": "date",
     "showTags": true,
     "showWordCount": true,
-    "showReadingTime": true,
-    "dateDisplay": "updated"
+    "showReadingTime": true
   },
+  "cardDateDisplay": "both",
   "layout": {
     "sidebarDivider": "default"
   },
@@ -38,6 +40,5 @@
     "copy": "lxgw-wenkai-lite",
     "mono": "system-mono",
     "brand": "serif-georgia"
-  },
-  "cardDateDisplay": "updated"
+  }
 }

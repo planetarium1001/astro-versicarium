@@ -95,9 +95,17 @@ const createSitemapBlogFilter = () => ({
           if (!loc) return block;
 
           const pathname = new URL(loc).pathname;
-          const stripped = basePrefix && pathname.startsWith(basePrefix)
-            ? pathname.slice(basePrefix.length)
-            : pathname;
+          // RSS 与 blog/index.json 的 href 是未编码的 CJK 路径；sitemap 的 <loc> 是百分号编码的。
+          // 先 decode，才能把中文 slug 与 canonicalPaths 对上，避免整类中文 URL 被误删。
+          let decodedPathname = pathname;
+          try {
+            decodedPathname = decodeURIComponent(pathname);
+          } catch {
+            // 非法百分号编码保持原样，交给下面的 /blog/ 判断。
+          }
+          const stripped = basePrefix && decodedPathname.startsWith(basePrefix)
+            ? decodedPathname.slice(basePrefix.length)
+            : decodedPathname;
           if (!stripped.startsWith('/blog/')) return block;
 
           const segments = stripped.split('/').filter(Boolean);
@@ -137,6 +145,17 @@ const readUiSettingsRaw = () => {
     return JSON.parse(readFileSync(new URL('./src/data/settings/ui.json', import.meta.url), 'utf8'));
   } catch {
     return undefined;
+  }
+};
+
+// 编辑器岛在浏览器里解析日期时需要站点时区；浏览器读不到 site.json，配置期注入快照。
+const readSiteTimezoneForClient = () => {
+  try {
+    const parsed = JSON.parse(readFileSync(new URL('./src/data/settings/site.json', import.meta.url), 'utf8'));
+    const timezone = typeof parsed?.timezone === 'string' ? parsed.timezone.trim() : '';
+    return timezone || 'Asia/Shanghai';
+  } catch {
+    return 'Asia/Shanghai';
   }
 };
 
@@ -197,7 +216,8 @@ export default defineConfig({
     define: {
       'import.meta.env.ASTRO_WHONO_FONT_CSS_VARIABLES': JSON.stringify(
         fonts.map((font) => font.cssVariable).join(',')
-      )
+      ),
+      'import.meta.env.ASTRO_WHONO_SITE_TIMEZONE': JSON.stringify(readSiteTimezoneForClient())
     },
     resolve: {
       alias: {

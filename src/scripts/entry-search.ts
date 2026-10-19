@@ -29,6 +29,7 @@ import { applyExpressionToParams,
   type TagSegment
 } from './tag-expression';
 import { canAnimate, mergeFullyHiddenGroups, runVisibilityFade } from './visibility-fade';
+import { animateListSwap, cancelListSwap } from './list-swap';
 import {
   buildSearchHaystack,
   createDebouncedAsyncRunner,
@@ -36,6 +37,7 @@ import {
   createWithBase,
   tokenizeSearchQuery
 } from '../utils/format';
+import { formatPageStatus } from '../lib/pagination';
 
 type IndexItem = {
   slug: string;
@@ -103,6 +105,9 @@ if (!root) {
   const pageSize = Number.isFinite(pageSizeRaw) && pageSizeRaw > 0 ? pageSizeRaw : items.length || 1;
   const paginationNav = document.querySelector<HTMLElement>('[data-entry-pagination]');
   const paginationInner = document.querySelector<HTMLElement>('[data-entry-pagination-inner]');
+  /** 翻页只切可见性，动画作用在列表容器上；年份胶囊用 `[data-bits-browse]`，同样包住列表。 */
+  const listSwapTarget = document.querySelector<HTMLElement>('[data-entry-list]')
+    ?? document.querySelector<HTMLElement>('[data-bits-browse]');
   let currentPage = 1;
   let filteredItems: PageItem[] = items.slice();
 
@@ -227,7 +232,7 @@ if (!root) {
     );
   };
 
-  const renderPage = () => {
+  const applyPage = () => {
     const totalPages = getTotalPages(filteredItems.length);
     if (currentPage > totalPages) currentPage = totalPages;
     const start = (currentPage - 1) * pageSize;
@@ -240,7 +245,7 @@ if (!root) {
     instantRenderPending = false;
 
     if (instant) {
-      // 容器级滑动过渡（`/bits/` 年份胶囊）：条目可见性同步落状态，动画由调用方在容器上做。
+      // 容器级过渡（`/bits/` 年份胶囊、分页）：条目可见性同步落状态，动画由调用方在容器上做。
       // 仍要作废正在跑的那一轮淡入淡出，否则它会在滑动过程中继续改 DOM。
       transitionRunId += 1;
       for (const item of items) {
@@ -269,14 +274,30 @@ if (!root) {
     dispatchFiltered(visibleInPage, runId);
   };
 
+  /**
+   * 翻页走列表容器的整块过渡（`instantRenderPending` 让条目可见性同步落状态，避免与
+   * 逐条淡入淡出叠两层动画）；筛选 / 作用域仍走原有的 `createContentSlider` 与级联淡入。
+   */
+  const renderPage = (options: { animateListSwap?: boolean } = {}) => {
+    if (options.animateListSwap && listSwapTarget) {
+      animateListSwap(listSwapTarget, () => {
+        instantRenderPending = true;
+        applyPage();
+      });
+      return;
+    }
+    if (listSwapTarget) cancelListSwap(listSwapTarget);
+    applyPage();
+  };
+
   const gotoPage = (page: number) => {
     const totalPages = getTotalPages(filteredItems.length);
     const next = Math.min(Math.max(page, 1), totalPages);
     if (next === currentPage) return;
     currentPage = next;
-    renderPage();
+    renderPage({ animateListSwap: true });
     const anchor = paginationNav ?? root;
-    anchor.scrollIntoView({ block: 'nearest' });
+    anchor.scrollIntoView?.({ block: 'nearest' });
   };
 
   const renderPagination = (totalPages: number) => {
@@ -288,50 +309,27 @@ if (!root) {
     }
     paginationNav.hidden = false;
 
-    const createButton = (label: string, page: number, options: { disabled?: boolean; current?: boolean; rel?: string } = {}) => {
+    const createButton = (label: string, ariaLabel: string, page: number, options: { disabled?: boolean } = {}) => {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'pagination__link';
-      if (options.current) button.classList.add('is-current');
-      if (options.rel) button.dataset.rel = options.rel;
       button.textContent = label;
       button.disabled = options.disabled === true;
-      if (options.current) button.setAttribute('aria-current', 'page');
-      button.setAttribute('aria-label', options.current ? `第 ${page} 页，当前页` : `第 ${page} 页`);
+      button.setAttribute('aria-label', ariaLabel);
       button.addEventListener('click', () => gotoPage(page));
       return button;
     };
 
-    paginationInner.append(
-      createButton('上一页', currentPage - 1, { disabled: currentPage <= 1, rel: 'prev' })
-    );
-
-    // 页码过多时只保留「首页 / 当前页邻域 / 末页」，窄屏可横向 wrap。
-    const windowSize = 2;
-    const pages: (number | 'ellipsis')[] = [];
-    for (let page = 1; page <= totalPages; page += 1) {
-      const nearCurrent = Math.abs(page - currentPage) <= windowSize;
-      if (page === 1 || page === totalPages || nearCurrent) {
-        pages.push(page);
-      } else if (pages.at(-1) !== 'ellipsis') {
-        pages.push('ellipsis');
-      }
-    }
-
-    for (const page of pages) {
-      if (page === 'ellipsis') {
-        const ellipsis = document.createElement('span');
-        ellipsis.className = 'pagination__ellipsis';
-        ellipsis.setAttribute('aria-hidden', 'true');
-        ellipsis.textContent = '…';
-        paginationInner.append(ellipsis);
-        continue;
-      }
-      paginationInner.append(createButton(String(page), page, { current: page === currentPage }));
-    }
+    const status = document.createElement('span');
+    status.className = 'pagination__status';
+    status.dataset.pageStatus = '';
+    status.setAttribute('aria-live', 'polite');
+    status.textContent = formatPageStatus(currentPage, totalPages);
 
     paginationInner.append(
-      createButton('下一页', currentPage + 1, { disabled: currentPage >= totalPages, rel: 'next' })
+      createButton('< 上一页', '上一页', currentPage - 1, { disabled: currentPage <= 1 }),
+      status,
+      createButton('下一页 >', '下一页', currentPage + 1, { disabled: currentPage >= totalPages })
     );
   };
 
@@ -661,7 +659,8 @@ if (!root) {
   const applySubtitleCount = (count: number | null) =>
     syncSubtitleCount(pageSubtitleTextEl, subtitleTemplate, count, {
       defaultUnit: '篇',
-      keep: '内容'
+      keep: '内容',
+      ...(activeScope === 'devlog' ? { unit: '条' as const } : {})
     });
 
   const setDegradedMode = () => {
@@ -798,9 +797,10 @@ if (!root) {
 
   const openTagDialog = (options: { focusTitle?: boolean } = {}) => {
     if (!tagDialog || tagDialog.open) return;
+    const focusTitle = options.focusTitle !== false;
     if (typeof tagDialog.showModal === 'function') {
       tagDialog.showModal();
-      if (options.focusTitle && tagDialogTitle) {
+      if (focusTitle && tagDialogTitle) {
         window.requestAnimationFrame(() => {
           tagDialogTitle.focus({ preventScroll: true });
         });
@@ -809,7 +809,7 @@ if (!root) {
       return;
     }
     tagDialog.setAttribute('open', '');
-    if (options.focusTitle && tagDialogTitle) {
+    if (focusTitle && tagDialogTitle) {
       window.requestAnimationFrame(() => {
         tagDialogTitle.focus({ preventScroll: true });
       });
@@ -870,10 +870,12 @@ if (!root) {
     }
     // 作用域内没有标签/关键词时直接用 scopedItems，避免多走一次 index 请求
     if (scopeFallback) {
-      if (instant) applyInstantItems(scopedItems());
-      else setFilteredItems(scopedItems());
+      const scoped = scopedItems();
+      if (instant) applyInstantItems(scoped);
+      else setFilteredItems(scoped);
       syncSections(true);
-      applySubtitleCount(null);
+      // 副标题跟随当前作用域 / 年份的条目数，而不是保留服务端「全部」的 27。
+      applySubtitleCount(scoped.length);
       return;
     }
     void applyFilter();
@@ -895,7 +897,7 @@ if (!root) {
       else if (activeYear === null) showAllItems();
       else setFilteredItems(next);
       syncSections(activeYear !== null);
-      applySubtitleCount(null);
+      applySubtitleCount(activeYear === null ? null : next.length);
       return;
     }
     void applyFilter();

@@ -29,11 +29,10 @@ const {
   }
 } = getThemeSettings();
 
-import { PAGE_SIZE_BITS } from '../../site.config.mjs';
-
 const base = import.meta.env.BASE_URL ?? '/';
 const withBase = createWithBase(base);
 const pageTitleText = page.bits.title || '动态';
+const pagination = page.pagination?.bits ?? { enabled: true, pageSize: 20 };
 // /bits/ 的标签入口走统一 dialog，作用域就是 bits 自身。
 const tagOptions: TagSummary[] = collectTagScopedSummary(
   'all',
@@ -80,7 +79,7 @@ const katexStylesheetAttrs = { [MARKDOWN_MATH_STYLESHEET_DATA_ATTR]: 'true' };
     class="entry-filters bits-filters"
     data-entry-filters
     data-index-url="/bits/index.json"
-    data-page-size={String(PAGE_SIZE_BITS)}
+    data-page-size={pagination.enabled ? String(pagination.pageSize) : undefined}
   >
     <TagFilterHeader
       pageTitleText={pageTitleText}

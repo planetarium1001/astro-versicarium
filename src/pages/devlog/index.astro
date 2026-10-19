@@ -4,7 +4,14 @@ import TagFilterHeader from '../../components/TagFilterHeader.astro';
 import { getVisibleDevlogs } from '../../lib/content';
 import { getThemeSettings } from '../../lib/theme-settings';
 import { joinPageSubtitleText } from '../../utils/format';
+import { flattenEntryIdToSlug } from '../../utils/slug-rules';
 import { deriveEntryDescription, renderEntryBody } from '../../lib/entry-body';
+import { containsMarkdownMath } from '../../lib/markdown-math';
+import {
+  MARKDOWN_MATH_STYLESHEET_DATA_ATTR,
+  MARKDOWN_MATH_STYLESHEET_HREF,
+  MARKDOWN_MATH_STYLESHEET_ID
+} from '../../lib/markdown-math-styles';
 import '../../styles/devlog-page.css';
 
 /**
@@ -21,6 +28,7 @@ const {
 } = getThemeSettings();
 
 const pageTitleText = page.devlog.title || '更新';
+const pagination = page.pagination?.devlog ?? { enabled: false, pageSize: 10 };
 const subtitleText = joinPageSubtitleText(page.devlog.subtitle, `共 ${items.length} 条更新`);
 const pageDescription = joinPageSubtitleText(
   `${pageTitleText}列表`,
@@ -36,6 +44,7 @@ type DevlogRow = {
   kind: string | null;
   description: string | null;
   hasBody: boolean;
+  hasMath: boolean;
   /** 正文 html（含末尾链接行标记）；无正文时为空串 */
   bodyHtml: string;
 };
@@ -46,13 +55,15 @@ const rows: DevlogRow[] = await Promise.all(
     const hasBody = body.trim().length > 0;
     const { html } = hasBody ? await renderEntryBody(body, base) : { html: '' };
     return {
-      id: entry.id,
+      // devlog 按 project 分目录后 entry.id 可能带 `/`；锚点统一压成单段。
+      id: flattenEntryIdToSlug(entry.id),
       title: entry.data.title,
       dateLabel: entry.data.dateText ?? entry.data.date.toISOString().slice(0, 10),
       project: entry.data.project,
       kind: entry.data.kind?.trim() || null,
       description: deriveEntryDescription(entry.data.description, body),
       hasBody,
+      hasMath: containsMarkdownMath(body),
       bodyHtml: html
     };
   })
@@ -67,9 +78,22 @@ const projectOptions = projectValues.map((value) => ({
   label: value,
   count: items.filter((item) => item.data.project === value).length
 }));
+const hasMath = rows.some((row) => row.hasMath);
+const katexStylesheetAttrs = { [MARKDOWN_MATH_STYLESHEET_DATA_ATTR]: 'true' };
 ---
 
 <BaseLayout title={pageTitleText} description={pageDescription} bodyClass="devlog-page">
+  <Fragment slot="head">
+    {hasMath ? (
+      <link
+        id={MARKDOWN_MATH_STYLESHEET_ID}
+        rel="stylesheet"
+        href={MARKDOWN_MATH_STYLESHEET_HREF}
+        {...katexStylesheetAttrs}
+      />
+    ) : null}
+  </Fragment>
+
   <TagFilterHeader
     showSearch={true}
     searchPlaceholder="搜索：标题 / 摘要 / 项目"
@@ -89,7 +113,8 @@ const projectOptions = projectValues.map((value) => ({
     tagOptions={projectOptions}
   />
 
-  <div class="devlog-list" data-devlog-list>
+  <div data-page-pagination-root data-page-size={pagination.enabled ? String(pagination.pageSize) : undefined}>
+  <div class="devlog-list" data-devlog-list data-page-list>
     {rows.map((row) => (
       <article
         class="devlog-row"
@@ -141,11 +166,17 @@ const projectOptions = projectValues.map((value) => ({
     ))}
   </div>
 
+  <nav class="pagination" data-page-pagination hidden aria-label={`${pageTitleText}分页`}>
+    <div class="pagination__inner" data-page-pagination-inner></div>
+  </nav>
+  </div>
+
   <script>
     // 加载顺序：摘要策略先定（它决定展开面板是否要多显示一行完整摘要），
     // 再由抽屉接管展开与锚点，最后是筛选。
     import '../../scripts/devlog-excerpts.ts';
     import '../../scripts/devlog-drawer.ts';
     import '../../scripts/devlog-filter.ts';
+    import '../../scripts/page-pagination.ts';
   </script>
 </BaseLayout>

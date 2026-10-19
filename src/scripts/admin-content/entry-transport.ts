@@ -158,6 +158,7 @@ const isAdminProjectsEditorValues = (value: unknown): value is AdminProjectsEdit
   && typeof value.type === 'string'
   && typeof value.icon === 'string'
   && typeof value.image === 'string'
+  && typeof value.slug === 'string'
   && typeof value.date === 'string'
   && typeof value.draft === 'boolean';
 
@@ -166,6 +167,7 @@ const isAdminDevlogEditorValues = (value: unknown): value is AdminDevlogEditorVa
   && typeof value.title === 'string'
   && typeof value.date === 'string'
   && typeof value.project === 'string'
+  && typeof value.projectSlug === 'string'
   && typeof value.kind === 'string'
   && typeof value.description === 'string'
   && typeof value.draft === 'boolean';

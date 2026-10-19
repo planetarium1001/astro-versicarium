@@ -1,4 +1,4 @@
-/* Site Overview
+/* 站点概览
    /admin/ 根页的站点报告布局。保持无卡片结构，以分隔线、比例条和点阵表达信息层级。
 */
 
@@ -16,7 +16,7 @@
   letter-spacing: 0;
 }
 
-/* Stats */
+/* 统计 */
 
 .admin-site-overview__stats {
   display: grid;
@@ -100,7 +100,7 @@
   overflow-wrap: anywhere;
 }
 
-/* System */
+/* 系统 */
 
 .admin-site-overview__system {
   --admin-site-overview-system-column-gap: clamp(30px, 3.4vw, 46px);
@@ -295,7 +295,7 @@
   transform-origin: bottom;
 }
 
-/* Layout */
+/* 布局 */
 
 .admin-site-overview__middle {
   display: grid;
@@ -360,7 +360,7 @@
   line-height: 1.4;
 }
 
-/* Structure */
+/* 结构 */
 
 .admin-site-overview__structure-list {
   display: grid;
@@ -418,7 +418,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Tags */
+/* 标签 */
 
 .admin-site-overview__tag-list {
   display: flex;
@@ -469,7 +469,7 @@
   border-color: var(--faint);
 }
 
-/* Activity */
+/* 活跃度 */
 
 .admin-site-overview__activity-grid {
   display: grid;
@@ -506,7 +506,7 @@
   background: var(--accent);
 }
 
-/* Recent */
+/* 最近 */
 
 .admin-site-overview__recent-draft-note {
   font-family: var(--admin-font-copy);
@@ -599,7 +599,7 @@ a.admin-site-overview__recent-row:hover {
   line-height: 1.7;
 }
 
-/* Responsive */
+/* 响应式 */
 
 @media (max-width: 1000px) {
   .admin-site-overview__middle {

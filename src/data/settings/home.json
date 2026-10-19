@@ -1,12 +1,13 @@
 {
-  "introLead": "一个极简双栏 Astro 主题，包含博客、项目、动态、更新与关于五个内容集合。",
-  "introMore": "更多内容",
+  "introLead": "面向开发者的极简 Astro 主题：技术文章、项目文档与开发日志在同一套内容结构中维护。",
+  "introMore": "按标签继续浏览",
   "introMoreLinks": [
-    "blog"
+    "tag",
+    "blogTag"
   ],
   "showIntroLead": true,
   "showIntroMore": true,
   "heroPresetId": "default",
   "heroImageSrc": null,
-  "heroImageAlt": "Astro Whono"
+  "heroImageAlt": "深色背景上的 Astro Whono Tweaked 几何折线图形"
 }

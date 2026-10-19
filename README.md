@@ -1,181 +1,200 @@
-# astro-whono-tweaked
+# Astro Whono Tweaked
 
-基于 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）的 Astro 博客主题模板，沿用上游的双栏壳层、后台控制台与 Markdown 扩展，并针对长文阅读做增量改造。
-
-主题更新通过 `theme:update` 三方合并，站点无需共享 git 历史。
+Astro Whono Tweaked 是面向开发者的双栏 Astro 主题，用于发布代码说明、项目文档与工程记录。它基于 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）改造，保留上游的壳层与内容扩展，并增加项目多版本文档、资源工作区与可重复执行的主题更新通道。主题以 `content/` 为内容边界，以 `src/` 为可更新代码，适合长期维护自有站点。
 
 - 仓库：<https://github.com/planetarium1001/astro-whono-tweaked>
-- 示例站点：<https://planetarium1001.github.io/astro-whono-tweaked/>
-- 上游项目：<https://github.com/cxro/astro-whono>
+- 示例站：<https://planetarium1001.github.io/astro-whono-tweaked/>
+- 上游：<https://github.com/cxro/astro-whono>
+- 联系：<mailto:me@planetarium1001.com>
 
-## 特性
+![Astro Whono Tweaked 桌面首页](docs/images/home-desktop.png)
 
-| 特性 | 说明 |
+## 功能
+
+| 功能 | 说明 |
 | --- | --- |
-| 双栏壳层 | 侧栏 224px，滚动条槽位固定，页面外缘间隙可配 |
-| 内容模型 | `blog`、`projects`、`bits`、`devlog`、`about` 五个集合，另有全站归档 |
-| 长文阅读 | 目录、阅读模式、浮动操作列、阅读位置记忆、主题切换 |
-| 后台控制台 | 开发环境可读写：概览、主题、写作、图片、快照 |
-| 主题同步 | 按文件三方合并，站点自有路径不覆盖 |
-| 自托管字体 | WOFF2 子集，按字符集加载 |
+| 双栏壳层 | 224px 侧栏、固定滚动条槽位、可配置页面外缘间隙；窄屏切换为单列 |
+| 五个内容集合 | `blog`、`projects`、`bits`、`devlog`、`about`，另有跨集合归档 |
+| 项目多版本文档 | 同一项目共享稳定 `slug`，最新版与历史版各自拥有公开锚点与弹窗 |
+| 博客系列版本 | `series` 分组，可选稳定 slug，历史版本保留日期路径 |
+| 阅读体验 | 目录、阅读模式、浮动操作列、阅读位置记忆、深浅色切换 |
+| 后台控制台 | 开发环境可写：概览、主题、写作、资源、快照 |
+| Markdown 扩展 | 提示块、图注、画廊、公式、代码工具栏、末尾链接组、关于页指令 |
+| 主题更新 | 按 `theme.json` 基准提交做文件级三方合并，站点自有路径不覆盖 |
+| 自托管字体 | WOFF2 子集按字符集切分；也可选用 Astro Fonts API 字体 |
 
-## 环境与命令
+## 环境要求与快速开始
 
-Node.js ≥ 22.12.0，版本基线见 `.nvmrc` 与 `package.json` 的 `engines`。
+需要 Node.js 22.12.0 或更高版本与 npm。版本基线写在 `.nvmrc` 与 `package.json` 的 `engines` 字段。
 
 ```bash
-npm install
+npm ci
 npm run dev       # 开发服务器，后台入口 /admin/
-npm run build     # 输出到 dist/
-npm run preview   # 预览构建结果
+npm run build     # 静态产物输出到 dist/
+npm run preview   # 预览构建产物
 ```
 
-`npm run dev` 下 `/admin/` 与 `/api/admin/*` 可读写；生产构建中的后台是只读静态壳。
+构建 RSS、canonical、分享图与 sitemap 时需要提供 `SITE_URL`。本地只查看页面可以省略；执行 `npm run verify` 或部署前必须提供。
 
 ## 获取模板
 
-按用途选择一种方式。
+以下三种方式得到同一套主题代码，区别在历史、远端与后续更新方式。
 
-1. 从模板创建：在仓库页面点「Use this template」，得到独立历史，后续用 `npm run theme:update` 获取主题更新。
-2. 克隆 `main` 写作：只取一个分支，适合从零开始管理站点。
+### 1. 下载 Release 资产
 
-   ```bash
-   git clone --branch main --single-branch https://github.com/planetarium1001/astro-whono-tweaked.git my-site
-   cd my-site
-   npm install
-   ```
+从 [v1.1.0 Release](https://github.com/planetarium1001/astro-whono-tweaked/releases/tag/v1.1.0) 下载 `astro-whono-tweaked-1.1.0.zip` 与 `SHA256SUMS`，校验后解压：
 
-   克隆得到的 `origin` 指向主题仓库，不能向它推送。要变成自己的站点，删除 `.git` 后重新初始化；`theme.json` 与主题更新不依赖 git 历史。
+```bash
+sha256sum -c SHA256SUMS
+# macOS
+shasum -a 256 -c SHA256SUMS
+unzip astro-whono-tweaked-1.1.0.zip
+cd astro-whono-tweaked-1.1.0
+npm ci
+```
 
-   ```bash
-   rm -rf .git
-   git init -b main
-   git add -A
-   git commit -m "chore: 初始化站点"
-   git remote add origin <你的仓库地址>
-   git push -u origin main
-   ```
+压缩包由 `git archive` 生成，只包含已跟踪文件；未跟踪的演示截图、`node_modules`、`dist` 与本地缓存不会进入，也不包含 Git 历史。解压后如需长期维护，按“浅克隆”一节的步骤初始化仓库。
 
-3. Fork：保留与主题同源的历史，可直接合并主题更新。
+### 2. 使用模板
 
-   ```bash
-   git remote add theme https://github.com/planetarium1001/astro-whono-tweaked.git
-   git fetch theme main
-   git merge theme/main
-   ```
+在仓库页面选择 **Use this template**，得到独立历史的仓库。该方式保留完整主题代码，不携带示例站内容；后续可用 `npm run theme:update` 接收主题更新。
+
+### 3. 浅克隆 main
+
+```bash
+git clone --depth 1 --branch main --single-branch \
+  https://github.com/planetarium1001/astro-whono-tweaked.git my-site
+cd my-site
+npm ci
+```
+
+`--depth 1` 只取 `main` 的最新提交，`--single-branch` 不抓取 `demo`。这样不会带入示例站内容，也不会下载完整历史；主题更新依赖 `theme.json`，不依赖站点本地的提交深度。
+
+克隆得到的 `origin` 指向主题仓库，不能向它推送。准备作为自有站点时，删除 `.git` 后重新初始化：
+
+```bash
+rm -rf .git
+git init -b main
+git add -A
+git commit -m "chore: 初始化站点"
+git remote add origin <你的仓库地址>
+git push -u origin main
+```
+
+## 命令
+
+| 命令 | 作用 |
+| --- | --- |
+| `npm run dev` | 启动开发服务器，后台与 `/api/admin/*` 可用 |
+| `npm run build` | 构建静态产物到 `dist/` |
+| `npm run check` | 类型检查、Svelte 编译与源码类守卫 |
+| `npm test` | Vitest 用例 |
+| `npm run verify` | check、build、刷新 fixture、test 与产物校验依次执行 |
+| `npm run ci` | 等价于 `verify`，CI 使用 |
+| `npm run new:bit` | 生成一条动态草稿 |
+| `npm run theme:update` | 同步主题更新；加 `-- --check` 只报告 |
+| `npm run font:build` | 重算字符集并重建字体子集 |
 
 ## 目录结构
 
 ```text
-src/content/        内容源文件，按集合分目录
+content/            作者内容：五个集合，条目含 index.md 与 images/、files/
 src/pages/          路由；admin/ 与 api/admin/ 仅开发环境可用
 src/layouts/        BaseLayout、ArticleLayout
 src/components/     展示组件；admin/ 为后台界面
-src/lib/            设置解析、内容读取与后台逻辑
-src/scripts/        前台脚本；admin-*/ 为后台专用
-src/styles/         样式入口与各组件样式
-src/plugins/        Markdown 管线：remark / rehype 插件与 HTML 白名单
-src/utils/          格式化、日期、slug 规则等通用工具
-src/data/settings/  主题设置 JSON
-public/             静态资源：fonts/、author/ 等
-scripts/            维护脚本：字体子集、校验、new:bit、theme:update
-tools/              字体字符集基线与指纹
+src/lib/            设置解析、内容读取、路由模型与后台逻辑
+src/scripts/        客户端脚本；admin-*/ 仅开发环境加载
+src/styles/         样式入口与组件样式
+src/plugins/        Markdown 管线与 HTML 白名单
+src/utils/          日期、slug、格式化与路径规则
+src/data/settings/  五个主题设置 JSON
+public/             静态资源：字体、头像、默认图标、上传图片
+scripts/            校验、字体子集、new:bit、theme:update
+tools/              字符集基线、指纹与图标生成标记
 tests/              Vitest 用例与页面快照
 docs/               仓库文档
 ```
 
-分层与数据流见 [docs/architecture.md](docs/architecture.md)。
+## 内容模型与写作入口
 
-## 主题设置
-
-设置以 JSON 保存在 `src/data/settings/`，按领域分成五个文件。
-
-| 文件 | 内容 |
-| --- | --- |
-| `site.json` | 站点标题与描述、语言、页脚、备案、favicon、社交链接、后台概览、标题宽度与页面间隙 |
-| `shell.json` | 侧栏站点名、窄屏标题、引用文案、导航项 |
-| `home.json` | 首页引导语、更多入口、Hero 图 |
-| `page.json` | 各列表页标题与副标题、动态页默认作者、列表页 RSS 开关 |
-| `ui.json` | 代码块行号、阅读模式、浮动操作列、浏览数据、侧栏动作、文章元信息、字体角色 |
-
-推荐通过 `/admin/theme/` 修改；直接编辑 JSON 同样有效，字段缺失或非法时回退默认值。字段分组见 [docs/admin-console.md](docs/admin-console.md)，站点图标见 [docs/favicon.md](docs/favicon.md)。
-
-## 内容模型
-
-| 集合 | 源文件 | 路由 |
+| 集合 | 源文件 | 公开路由 |
 | --- | --- | --- |
-| `blog` | `src/content/blog/*.md` | `/blog/`、`/blog/<slug>/` |
-| `projects` | `src/content/projects/*.md` | `/projects/`（页内锚点） |
-| `bits` | `src/content/bits/*.md` | `/bits/`（页内锚点） |
-| `devlog` | `src/content/devlog/*.md` | `/devlog/`（页内锚点） |
-| `about` | `src/content/about/index.md` | `/about/` |
+| `blog` | `content/blog/<entry>/index.md` | `/blog/`、`/blog/<slug>/` |
+| `projects` | `content/projects/<entry>/index.md` | `/projects/`、`/projects/#<anchor>` |
+| `bits` | `content/bits/<entry>/index.md` | `/bits/` 页内锚点 |
+| `devlog` | `content/devlog/<projectSlug>/<entry>/index.md` | `/devlog/` 页内锚点 |
+| `about` | `content/about/index.md` | `/about/` |
 
-`/archive/` 是跨博客、项目与更新的全站时间线，按年月分组，不含动态。写作入口有三种：后台写作页、直接新增 Markdown 文件、`npm run new:bit` 生成动态草稿。frontmatter、图片路径与 Markdown 扩展见 [docs/writing.md](docs/writing.md)。
+`/archive/` 汇总博客、项目与开发日志，按年月分组，不含动态。项目按版本文档成行，并可在全部版本与最新版之间切换。
 
-## 主题同步
+写作入口有三种：后台写作页、直接新增条目目录与 `index.md`、`npm run new:bit` 生成动态草稿。`draft: true` 只在开发环境可见，生产构建、公开列表与 RSS 会过滤。
 
-`theme:update` 读取 `theme.json` 记录的主题仓库、分支与基准提交，拉取主题新版本，按文件做三方合并：
+frontmatter、项目与博客版本规则、图片路径与 Markdown 语法见 [docs/writing.md](docs/writing.md)。
+
+## 主题设置与后台
+
+设置以 JSON 存放在 `src/data/settings/`，分为 `site.json`、`shell.json`、`home.json`、`page.json`、`ui.json`。字段缺失或非法时回落到内置默认值，来源与可编辑快照由 `src/lib/theme-settings.ts` 统一解析。
+
+`npm run dev` 下访问 `/admin/` 可读写概览、主题、写作、资源与快照；生产构建输出只读静态壳，`/api/admin/*` 返回 404。分组、字段与写入流程见 [docs/admin-console.md](docs/admin-console.md)，站点图标见 [docs/favicon.md](docs/favicon.md)。
+
+## 主题更新
+
+`theme.json` 记录主题仓库、跟踪分支与上一次合并到的提交，字段为 `repository`、`branch`、`commit`。
 
 ```bash
-npm run theme:update -- --check   # 只报告将要发生的变更
-npm run theme:update              # 执行合并，并更新 theme.json 的基准提交
+npm run theme:update -- --check   # 只报告变更
+npm run theme:update              # 合并并更新基准提交
 ```
+
+更新前工作树必须干净。脚本按文件读取基准版本、主题新版本与站点当前版本，文本文件使用 `git merge-file --diff3`，二进制文件整文件取舍。
 
 | 情况 | 处理 |
 | --- | --- |
-| 站点未改动该文件 | 直接取主题新版本 |
+| 站点未改动该文件 | 采用主题新版本 |
 | 主题未改动该文件 | 保留站点版本 |
-| 双方都改动 | `git merge-file` 合并，冲突保留标记并列出 |
-| 文件为二进制 | 整文件取舍；双方都改过则保留站点版本并报冲突 |
-| 站点自有路径 | 不覆盖，仅在报告中列出 |
+| 双方都改动 | 三方合并，冲突保留标记并列入报告 |
+| 二进制文件双方都改过 | 保留站点版本并记为冲突 |
+| 站点自有路径 | 不覆盖，只在报告中列出 |
 
-站点自有路径包括 `src/content/`、`src/data/settings/`、`public/images/`、`public/author/`、`public/fonts/`、`tools/`、`tests/fixtures/`、`README.md`、`.github/workflows/pages.yml` 与 `theme.json`。
+站点自有路径：`content/`、`src/data/settings/`、`public/images/`、`public/author/`、`public/fonts/`、`tools/`、`tests/fixtures/`、`README.md`、`theme.json`、`.github/workflows/pages.yml`。
 
-存在冲突时命令以非零状态退出，且不更新 `theme.json`；解决后重跑。主题删除的文件不会自动移除，报告会列出待确认项。合并完成后执行 `npm run verify`。
+存在冲突时命令以非零状态退出且不更新 `theme.json`；解决冲突后重跑。主题删除的文件只列入报告，不自动移除。合并完成后执行 `npm run verify`。站点定制应放在站点自有路径或独立模块中，避免与主题文件产生长期冲突。
 
-## 开发与验证
+## 分支、版本与发布
 
-```bash
-npm run check     # 类型检查与源码类守卫
-npm test          # Vitest
-npm run verify    # check → build → test:fixtures → test → 产物 / 布局 / 触控校验
-npm run ci        # 等价于 verify，CI 使用
-```
+| 分支 | 角色 |
+| --- | --- |
+| `main` | 最小模板与主题更新来源，不包含示例站内容 |
+| `demo` | 完整示例站，部署到 GitHub Pages |
 
-产物类校验读取 `dist/`，必须在构建后执行。`SITE_URL` 为空时 sitemap 不生成，`check:prod-artifacts` 会失败；CI 与发布构建必须提供该变量。
+主题改动先在 `main` 完成，再在 `demo` 检出上执行 `theme:update` 同步；不反向合并。当前版本为 1.1.0，遵循 SemVer，发布标签为 `v1.1.0`。标签触发 `release.yml`，校验标签提交位于 `main` 且与 `package.json` 版本一致后，生成源码 zip 与 `SHA256SUMS`。
 
-校验脚本清单、测试组织与命名规范见 [docs/development.md](docs/development.md)。
+版本策略、发布清单与下载校验见 [docs/release.md](docs/release.md)。
 
 ## 部署
 
-`main` 是模板分支，只保留种子内容与中性默认设置；`demo` 是完整示例站，承载 GitHub Pages 部署。主题改动在 `main` 完成后单向同步到 `demo`，不反向合并。
-
-| 工作流 | 触发 | 作用 |
-| --- | --- | --- |
-| `ci.yml` | push / PR 到 `main`、`demo` | `npm ci` 后执行 `npm run ci` |
-| `pages.yml` | push 到 `demo`、手动触发 | 构建并发布到 GitHub Pages |
+`demo` 由 `.github/workflows/pages.yml` 构建并发布到 GitHub Pages。部署自己的站点时，修改工作流中的部署分支与检出引用，或直接上传 `dist/` 到任意静态托管。
 
 | 变量 | 作用 |
 | --- | --- |
-| `SITE_URL` | 站点 origin，用于 RSS、canonical、og 与 sitemap |
-| `ASTRO_WHONO_BASE_PATH` | 部署子路径，默认 `/`；项目页部署时由 Pages 工作流推导 |
+| `SITE_URL` | 站点 origin，用于 RSS、canonical、分享图与 sitemap；缺失时不生成 sitemap |
+| `ASTRO_WHONO_BASE_PATH` | 部署子路径，默认 `/`；项目页部署在仓库子路径时使用 |
 
-GitHub Pages 配置、自有站点部署与其他静态托管见 [docs/deployment.md](docs/deployment.md)。
+GitHub Pages、自有域名与其他静态托管的配置见 [docs/deployment.md](docs/deployment.md)。
 
 ## 文档
 
 | 文档 | 内容 |
 | --- | --- |
-| [docs/architecture.md](docs/architecture.md) | 目录分层、集合与路由、壳层与布局几何、字体子集流程 |
-| [docs/development.md](docs/development.md) | 环境、命令、验证流水线、fixture 与守卫脚本、命名规范 |
-| [docs/deployment.md](docs/deployment.md) | 分支模型、GitHub Pages、自有站点与其他静态托管 |
-| [docs/writing.md](docs/writing.md) | 各集合 frontmatter、图片路径、末尾链接组与 Markdown 扩展 |
-| [docs/admin-console.md](docs/admin-console.md) | 后台模块、主题页分组、校验与排序规则 |
-| [docs/favicon.md](docs/favicon.md) | 站点图标槽位、单图复用、反向代理下的图标请求 |
-| [docs/analytics.md](docs/analytics.md) | 浏览数据槽位契约、统计接入、备案字段 |
-| [docs/upstream.md](docs/upstream.md) | 与上游的关系、增量范围、同步方向 |
-| [docs/llm-view-stats-prompt.md](docs/llm-view-stats-prompt.md) | 浏览数据取数脚本的提示词模板 |
+| [docs/architecture.md](docs/architecture.md) | 目录分层、集合与路由、服务端边界、设置解析、布局与构建流水线 |
+| [docs/development.md](docs/development.md) | 环境、命令、验证流水线、fixture、字体、测试与命名规范 |
+| [docs/writing.md](docs/writing.md) | 五个集合的 frontmatter、版本规则、图片路径与 Markdown 语法 |
+| [docs/admin-console.md](docs/admin-console.md) | 后台页面、主题字段、内容编辑器、资源与快照写入 |
+| [docs/deployment.md](docs/deployment.md) | 分支模型、工作流、环境变量、GitHub Pages 与静态托管 |
+| [docs/release.md](docs/release.md) | SemVer、1.1.0、发布清单、标签、校验与 `theme.json` 基线 |
+| [docs/upstream.md](docs/upstream.md) | 与上游的关系、改造范围、同步方向与手工合并 |
+| [docs/favicon.md](docs/favicon.md) | 图标槽位、生成、回退、本地路径与反向代理放行 |
 
 ## 许可与致谢
 
-本仓库基于 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）改造，使用 [Astro](https://astro.build/) 构建。许可证见 [LICENSE](LICENSE)。
+本仓库基于 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）改造，使用 [Astro](https://astro.build/) 构建。上游提供了双栏壳层、后台框架、Markdown 扩展与字体子集流程的基础，在此致谢。许可证见 [LICENSE](LICENSE)。

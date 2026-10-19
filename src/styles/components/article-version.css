@@ -11,38 +11,65 @@
   background: color-mix(in srgb, var(--accent) 3%, var(--bg));
 }
 
-.article-version-notice__eyebrow,
-.article-version-notice__message {
+/**
+ * eyebrow 与 message 合并为一行：版本信息、提示与「查看最新版」共用一条基线。
+ * 入口按钮固定在引用框最右端，窄屏换行时仍贴右。
+ */
+.article-version-notice__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.article-version-notice__text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  min-width: 0;
   margin: 0;
+  column-gap: 0.8em;
+  row-gap: 2px;
+  color: var(--text);
   font-size: 14px;
   line-height: 1.7;
 }
 
-.article-version-notice__eyebrow {
-  color: var(--text);
-  font-weight: 600;
+/* 状态/版本号/日期保持正文色，只有说明性文案降为 muted，避免整行一起发灰。 */
+.article-version-notice__meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45em;
+  white-space: nowrap;
 }
 
-.article-version-notice__mark {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  margin-right: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  vertical-align: 2px;
-}
-
-.article-version-notice__message {
-  margin-top: 2px;
+.article-version-notice__note {
   color: var(--muted);
 }
 
+.article-version-notice__mark {
+  flex: none;
+  align-self: center;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
 .article-version-notice__latest {
-  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   color: var(--accent);
   white-space: nowrap;
   border-bottom: 0;
+}
+
+.article-version-notice__latest:focus-visible,
+.article-version-trigger:focus-visible,
+.version-drawer__close:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .article-version-notice__latest:hover,
@@ -50,40 +77,73 @@
   text-decoration: underline;
 }
 
+/**
+ * 入口收进引用框最右端：文字说明 + 图标（宽屏 `<`、窄屏 `^`），
+ * 文字与图标同属一个按钮，点任一位置都展开抽屉。
+ */
 .article-version-trigger {
-  display: flex;
+  position: relative;
+  flex: none;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  margin-top: 10px;
-  padding: 8px 0 1px;
+  gap: 4px;
+  min-height: 30px;
+  margin: -3px -6px 0 0;
+  padding: 0 8px;
   border: 0;
-  border-top: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+  border-radius: 8px;
   background: transparent;
-  color: var(--muted);
-  font: inherit;
+  color: var(--faint);
   font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.article-version-trigger::before {
+  content: "";
+  position: absolute;
+  inset: -7px -6px;
+  border-radius: 12px;
+}
+
+.article-version-trigger__label {
+  color: inherit;
 }
 
 .article-version-trigger:hover,
-.article-version-trigger:focus-visible {
+.article-version-trigger:focus-visible,
+.article-version-trigger[data-version-open='true'] {
   color: var(--text);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
 }
 
-.article-version-trigger:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: var(--focus-ring-offset);
-}
-
-.article-version-trigger__caret {
+.article-version-trigger__icon {
   display: inline-flex;
-  color: var(--muted);
-  transition: transform 180ms ease;
 }
 
-.article-version-trigger[data-version-open='true'] .article-version-trigger__caret {
-  transform: rotate(180deg);
+.article-version-trigger__icon--narrow {
+  display: none;
+}
+
+/* 宽/窄图标只由 CSS 决定，避免脚本再维护一份断点。 */
+@media (max-width: 700px) {
+  .article-version-trigger__icon--wide {
+    display: none;
+  }
+
+  .article-version-trigger__icon--narrow {
+    display: inline-flex;
+  }
+}
+
+/* 鼠标点击后由脚本调用 focus()：不画焦点环，键盘操作仍走 :focus-visible。 */
+.article-version-trigger:focus:not(:focus-visible),
+.version-drawer__close:focus:not(:focus-visible),
+.article-version-trigger[data-pointer-focus]:focus,
+.version-drawer__close[data-pointer-focus]:focus {
+  outline: none;
 }
 
 .version-drawer {
@@ -99,6 +159,28 @@
 
 .version-drawer::backdrop {
   background: rgb(0 0 0 / 0.32);
+  opacity: 0;
+  transition: opacity 450ms ease;
+}
+
+.version-drawer[open]::backdrop {
+  opacity: 1;
+}
+
+.version-drawer[data-closing='true']::backdrop {
+  opacity: 0;
+}
+
+@starting-style {
+  .version-drawer[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .version-drawer::backdrop {
+    transition: none;
+  }
 }
 
 .version-drawer__panel {
@@ -112,7 +194,12 @@
   background: var(--bg);
   border-left: 1px solid var(--border);
   box-shadow: -18px 0 40px rgb(0 0 0 / 0.12);
-  animation: version-drawer-in 180ms ease-out;
+  animation: version-drawer-in 450ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 关闭时先播退出动画；脚本收到 animationend 或 240ms 兜底后才 dialog.close()。 */
+.version-drawer[data-closing='true'] .version-drawer__panel {
+  animation: version-drawer-out 450ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .version-drawer__head {
@@ -129,23 +216,13 @@
   font-weight: 600;
 }
 
-.version-drawer__close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
-  cursor: pointer;
+.version-drawer__title:focus {
+  outline: none;
 }
 
-.version-drawer__close:hover,
-.version-drawer__close:focus-visible {
-  color: var(--text);
+/* 视觉尺寸与焦点环由 global.css 的 [data-dialog-close] 统一提供。 */
+.version-drawer__close {
+  margin: -3px -4px 0 0;
 }
 
 .version-list {
@@ -192,7 +269,17 @@
 
 .version-item.is-current .version-item__label {
   color: var(--accent);
-  border-bottom: 2px solid var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+
+.version-item__main:hover,
+.version-item__main:focus-visible {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
 }
 
 .version-item__meta {
@@ -216,12 +303,23 @@
 
 @keyframes version-drawer-in {
   from {
-    transform: translateX(24px);
-    opacity: 0.6;
+    transform: translateX(48px);
+    opacity: 0;
   }
   to {
     transform: translateX(0);
     opacity: 1;
+  }
+}
+
+@keyframes version-drawer-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(48px);
+    opacity: 0;
   }
 }
 
@@ -240,14 +338,36 @@
     animation-name: version-drawer-in-bottom;
   }
 
+  .version-drawer[data-closing='true'] .version-drawer__panel {
+    animation-name: version-drawer-out-bottom;
+  }
+
   @keyframes version-drawer-in-bottom {
     from {
-      transform: translateY(24px);
-      opacity: 0.6;
+      transform: translateY(48px);
+      opacity: 0;
     }
     to {
       transform: translateY(0);
       opacity: 1;
     }
+  }
+
+  @keyframes version-drawer-out-bottom {
+    from {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(48px);
+      opacity: 0;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .version-drawer__panel,
+  .version-drawer[data-closing='true'] .version-drawer__panel {
+    animation: none;
   }
 }

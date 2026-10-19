@@ -1,4 +1,4 @@
-/* Admin Images
+/* 后台图片浏览器
    负责 Images Console 私有浏览器。
 */
 
@@ -93,7 +93,7 @@
   color: var(--admin-warning, #9a6700);
 }
 
-/* Media Manager
+/* 媒体管理
    树 + 面包屑 + 批量操作的媒体管理器，与 Images Console 共用页面与主题变量。
 */
 

@@ -59,4 +59,17 @@ describe('admin-console/settings-data', () => {
     }
   });
 
+  it('round-trips version-name display settings through export and import', () => {
+    const payload = getEditableThemeSettingsPayload();
+    payload.settings.ui.entryVersionName = 'after-label';
+    const bundle = createAdminSettingsExportBundle(payload, {
+      createdAt: '2026-04-01T08:00:00.000Z'
+    });
+    const parsed = parseAdminSettingsExportBundle(bundle);
+
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.bundle.settings.ui.entryVersionName).toBe('after-label');
+    }
+  });
 });

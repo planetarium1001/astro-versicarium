@@ -1,7 +1,7 @@
 /* about.css
    承载 about 页面私有规则，并保留普通 Markdown 代码块能力。
 */
-@import "./components/code-block.css";
+@import "./components/entry-body.css";
 
 .page-header.page-header--about {
   align-items: flex-end;

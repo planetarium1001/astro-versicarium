@@ -17,5 +17,6 @@ export const ADMIN_IMAGE_META_API_PATH = '/api/admin/images/meta/' as const;
 export const ADMIN_IMAGE_UPLOAD_API_PATH = '/api/admin/images/upload/' as const;
 export const ADMIN_IMAGE_RENAME_API_PATH = '/api/admin/images/rename/' as const;
 export const ADMIN_MEDIA_LIST_API_PATH = '/api/admin/media/list/' as const;
+export const ADMIN_MEDIA_TEXT_API_PATH = '/api/admin/media/text/' as const;
 export const ADMIN_MEDIA_BATCH_API_PATH = '/api/admin/media/batch/' as const;
 export const ADMIN_SITE_ASSET_UPLOAD_API_PATH = '/api/admin/site-assets/upload/' as const;

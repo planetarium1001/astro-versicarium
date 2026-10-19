@@ -1,12 +1,20 @@
 ---
 import { getSiteTimezone } from '../utils/site-timezone';
 import { resolveArticleDateItems } from '../lib/display-date';
-import type { ArticleMetaSettings } from '../lib/theme-settings';
+import type { ArticleDateGranularity, ArticleMetaSettings } from '../lib/theme-settings';
+import EntryTitleLine from './EntryTitleLine.astro';
+import { isRoutableTagKey, toTagKey } from '../lib/tags';
+import { createWithBase } from '../utils/format';
 
 const {
   href,
   title,
   excerpt,
+  badge = '随笔',
+  series = null,
+  versionLabel = null,
+  versionName = null,
+  dateGranularity,
   date,
   dateText,
   dateHasTime = false,
@@ -18,14 +26,18 @@ const {
   updatedAtHasTime = false,
   dateDisplay,
   visibleTags = [],
-  versionLabel = '',
-  versionCount = 1,
-  isLatest = true,
   articleMetaSettings
 } = Astro.props as {
   href: string;
   title: string;
   excerpt?: string | null;
+  badge?: string;
+  series?: string | null;
+  versionLabel?: string | null;
+  versionName?: string | null;
+  versionSummary?: string | null;
+  versionOrder?: number | null;
+  dateGranularity?: ArticleDateGranularity;
   date: Date;
   dateText?: string;
   dateHasTime?: boolean;
@@ -37,17 +49,26 @@ const {
   updatedAtHasTime?: boolean;
   dateDisplay?: 'published' | 'updated' | 'both';
   visibleTags?: string[];
-  versionLabel?: string;
-  versionCount?: number;
-  isLatest?: boolean;
   articleMetaSettings: ArticleMetaSettings;
 };
 
 const shouldShowMetaLine = articleMetaSettings.showDate || (articleMetaSettings.showTags && visibleTags.length > 0);
+// 与文章详情页、BlogCard 一致：列表条目里的 #tag 指向博客标签检索。
+const base = import.meta.env.BASE_URL ?? '/';
+const withBase = createWithBase(base);
+const tagLinks = visibleTags.map((tag) => {
+  const key = toTagKey(tag);
+  return {
+    label: tag,
+    key,
+    href: isRoutableTagKey(key) ? withBase(`/blog/?tags=${encodeURIComponent(key)}`) : null
+  };
+});
 const timeZone = getSiteTimezone();
 const dateItems = resolveArticleDateItems({
   mode: dateDisplay ?? articleMetaSettings.dateDisplay ?? 'updated',
   timeZone,
+  granularity: dateGranularity ?? articleMetaSettings.dateGranularity ?? 'date',
   date: { date, text: dateText, hasTime: dateHasTime },
   publishedAt: publishedAt ? { date: publishedAt, text: publishedAtText, hasTime: publishedAtHasTime } : undefined,
   updatedAt: updatedAt ? { date: updatedAt, text: updatedAtText, hasTime: updatedAtHasTime } : undefined,
@@ -55,15 +76,17 @@ const dateItems = resolveArticleDateItems({
 });
 ---
 
-<a class="list-item list-item--link" href={href}>
+<div class="list-item list-item--link">
   <div class="list-item__row">
-    {versionCount > 1 ? (
-      <>
-        <span class="badge badge--version">{versionLabel}</span>
-        {!isLatest ? <span class="badge badge--history">历史</span> : null}
-      </>
-    ) : null}
-    <h3 class="list-item__title">{title}</h3>
+    <EntryTitleLine
+      surface="list"
+      title={title}
+      badge={badge}
+      versionLabel={series ? versionLabel : null}
+      versionName={series ? versionName : null}
+      titleAs="link"
+      titleHref={href}
+    />
   </div>
   {excerpt ? <p class="list-item__excerpt">{excerpt}</p> : null}
   {shouldShowMetaLine ? (
@@ -72,7 +95,7 @@ const dateItems = resolveArticleDateItems({
         <span class="meta-line__item">
           {dateItems.map((item, index) => (
             <>
-              {index > 0 ? <span aria-hidden="true"> · </span> : null}
+              {index > 0 ? <span class="meta-line__sep" aria-hidden="true">·</span> : null}
               <time
                 datetime={item.iso}
                 data-site-timezone={item.timeZone}
@@ -85,11 +108,19 @@ const dateItems = resolveArticleDateItems({
           ))}
         </span>
       ) : null}
-      {articleMetaSettings.showTags && visibleTags.length ? (
+      {articleMetaSettings.showTags && tagLinks.length ? (
         <span class="meta-line__item meta-line__item--tags">
-          {visibleTags.map((tag) => <span class="tag">#{tag}</span>)}
+          {tagLinks.map((tag) =>
+            tag.href ? (
+              <a class="tag tag--link" href={tag.href} aria-label={`筛选标签 ${tag.label}`} data-article-tag-link={tag.key}>
+                #{tag.label}
+              </a>
+            ) : (
+              <span class="tag">#{tag.label}</span>
+            )
+          )}
         </span>
       ) : null}
     </div>
   ) : null}
-</a>
+</div>

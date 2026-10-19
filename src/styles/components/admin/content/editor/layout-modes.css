@@ -1,4 +1,4 @@
-/* Admin Content Editor Layout Modes
+/* 后台内容编辑器布局模式
    承载 data-layout/data-effective-view 覆盖与底部 actions；必须在 workspace、toolbar 和 pane-content 后导入。
 */
 

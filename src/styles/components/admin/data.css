@@ -1,4 +1,4 @@
-/* Admin Data
+/* 后台数据
    Data Console 私有视觉层：导出面板、拖拽导入区与 terminal 预览。
 */
 
@@ -18,18 +18,18 @@
     background-color 180ms ease,
     color 180ms ease,
     box-shadow 180ms ease;
-  /* Terminal / diff preview keeps a fixed dark semantic palette by design. */
-  --admin-data-terminal-bg: #0d1117;
-  --admin-data-terminal-surface: #161b22;
-  --admin-data-terminal-border: #30363d;
-  --admin-data-terminal-text: #e6edf3;
-  --admin-data-terminal-muted: #8b949e;
-  --admin-data-terminal-empty: #484f58;
-  --admin-data-terminal-blue: #2f81f7;
-  --admin-data-terminal-green: #3fb950;
-  --admin-data-terminal-amber: #d29922;
-  --admin-data-terminal-red: #f85149;
-  --admin-data-terminal-on-accent: #ffffff;
+  /* Diff / log 预览沿用管理台表面与状态色，不再固定成 GitHub 暗色。 */
+  --admin-data-terminal-bg: var(--admin-panel-bg);
+  --admin-data-terminal-surface: var(--admin-panel-bg-muted);
+  --admin-data-terminal-border: var(--admin-panel-border);
+  --admin-data-terminal-text: var(--text);
+  --admin-data-terminal-muted: var(--muted);
+  --admin-data-terminal-empty: var(--faint);
+  --admin-data-terminal-blue: var(--admin-status-info-text);
+  --admin-data-terminal-green: var(--admin-status-success-text);
+  --admin-data-terminal-amber: var(--admin-status-warning-text);
+  --admin-data-terminal-red: var(--admin-status-danger-text);
+  --admin-data-terminal-on-accent: var(--bg);
   --admin-data-terminal-blue-bg: color-mix(in srgb, var(--admin-data-terminal-blue) 12%, transparent);
   --admin-data-terminal-blue-border: color-mix(in srgb, var(--admin-data-terminal-blue) 28%, transparent);
   --admin-data-terminal-green-bg: color-mix(in srgb, var(--admin-data-terminal-green) 12%, transparent);

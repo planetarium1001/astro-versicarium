@@ -4,6 +4,14 @@ import {
   ADMIN_TYPOGRAPHY_DEFAULT,
   getAdminTypographyFontOptions
 } from '../../lib/admin-console/theme-shared';
+import { ENTRY_VERSION_NAME_MODE_OPTIONS } from '../../lib/entry-display';
+import { getThemeSettings } from '../../lib/theme-settings';
+import EntryTitleLine from '../EntryTitleLine.astro';
+
+const {
+  settings: { ui }
+} = getThemeSettings();
+const entryVersionMode = ui.entryVersionName;
 
 const typographyFields = [
   { role: 'readable', label: '正文字体', hint: '（文章正文与标题）' },
@@ -12,6 +20,80 @@ const typographyFields = [
   { role: 'brand', label: '品牌字体', hint: '（侧栏站点名与引言）' }
 ] as const;
 ---
+
+<fieldset class="admin-group">
+  <legend class="admin-group__legend">
+    <AdminIcon name="layout-list" class="admin-group__legend-icon" size={14} />
+    <span class="admin-group__legend-copy">
+      <span class="admin-group__legend-zh">条目版本</span>
+      <span class="admin-group__legend-en">Entry version</span>
+    </span>
+  </legend>
+
+  <p class="admin-help">
+    条目固定为「分类胶囊 · 标题 · 版本号淡色胶囊」；这里只决定版本名称是否显示以及出现的位置。没有版本字段的条目不会显示版本信息。
+  </p>
+
+  <div class="admin-stack">
+    <label class="admin-field" for="ui-entry-version-name">
+      <span class="admin-label">
+        <span class="admin-label__main">版本名称</span>
+        <span class="admin-label__hint">（列表、归档与项目卡片共用）</span>
+      </span>
+      <select class="admin-field__control" id="ui-entry-version-name">
+        {ENTRY_VERSION_NAME_MODE_OPTIONS.map((option) => (
+          <option value={option.id} selected={option.id === entryVersionMode}>{option.label}</option>
+        ))}
+      </select>
+    </label>
+
+    <p class="admin-help admin-help--entry-version-preview">
+      预览（列表）：<span class="admin-help__preview-value admin-entry-version-preview" data-entry-version-preview data-mode={entryVersionMode}>
+        {ENTRY_VERSION_NAME_MODE_OPTIONS.map((option) => (
+          <span
+            class="admin-entry-version-preview__variant"
+            data-entry-version-preview-variant={option.id}
+            hidden={option.id !== entryVersionMode}
+          >
+            <EntryTitleLine
+              surface="project"
+              kind={null}
+              title="Whono Astro 主题"
+              badge="主题"
+              versionLabel="v2.3.0"
+              versionName="可读性"
+              titleAs="span"
+              titleTag="span"
+              versionNameMode={option.id}
+            />
+          </span>
+        ))}
+      </span>
+      <br />
+      预览（归档）：<span class="admin-help__preview-value admin-entry-version-preview" data-entry-version-preview data-mode={entryVersionMode}>
+        {ENTRY_VERSION_NAME_MODE_OPTIONS.map((option) => (
+          <span
+            class="admin-entry-version-preview__variant"
+            data-entry-version-preview-variant={option.id}
+            hidden={option.id !== entryVersionMode}
+          >
+            <EntryTitleLine
+              surface="project"
+              kind="projects"
+              title="Whono Astro 主题"
+              badge="主题"
+              versionLabel="v2.3.0"
+              versionName="可读性"
+              titleAs="span"
+              titleTag="span"
+              versionNameMode={option.id}
+            />
+          </span>
+        ))}
+      </span>
+    </p>
+  </div>
+</fieldset>
 
 <fieldset class="admin-group">
   <legend class="admin-group__legend">

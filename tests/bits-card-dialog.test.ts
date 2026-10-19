@@ -130,7 +130,7 @@ describe('bits 卡片：详情弹窗', () => {
 
     expect(bits).toContain("import { initCardDialogs } from './dialog-controller'");
     expect(projects).toContain("import { initCardDialogs } from './dialog-controller'");
-    expect(bits).toMatch(/focusSelector: '\.bit-dialog__title, \.bit-dialog__identity'/);
+    expect(bits).toMatch(/focusSelector: '\.bit-dialog__identity'/);
     expect(bits).toMatch(/panelSelector: '\[data-bit-dialog-panel\]'/);
 
     // 打开用 showModal；Esc 交给原生 cancel；点遮罩时 target 就是 dialog 自身

@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   getContentEditorAdapter
@@ -52,6 +54,34 @@ describe('content editor adapters', () => {
     expect(projects.isFrontmatterIssuePath('icon')).toBe(true);
     expect(projects.isFrontmatterIssuePath('image')).toBe(true);
     expect(projects.getWriteFieldLabel('image')).toBe('展示图');
+  });
+
+  it('tracks the projects stable slug in clone, issue paths and labels', () => {
+    const projects = getContentEditorAdapter('projects');
+    const values = {
+      title: 'P',
+      subtitle: '',
+      description: '',
+      type: '',
+      icon: '',
+      image: '',
+      slug: 'content-workflow',
+      date: '2026-02-01',
+      draft: false
+    };
+
+    const cloned = projects.cloneValues(values);
+    expect(cloned).toEqual(values);
+    expect(cloned).not.toBe(values);
+    expect(projects.isFrontmatterIssuePath('slug')).toBe(true);
+    expect(projects.getWriteFieldLabel('slug')).toBe('稳定 slug');
+  });
+
+  it('tracks the devlog project slug as a frontmatter issue path', () => {
+    const devlog = getContentEditorAdapter('devlog');
+
+    expect(devlog.isFrontmatterIssuePath('projectSlug')).toBe(true);
+    expect(devlog.getWriteFieldLabel('projectSlug')).toBe('项目 slug');
   });
 
   it('derives delete affordance from collection capabilities', () => {
@@ -117,5 +147,46 @@ describe('content editor adapters', () => {
 
     expect(getPayloadEditorValues(payload, 'about')).toEqual(aboutValues);
     expect(getPayloadEditorBody(payload, 'about')).toBe('About body');
+  });
+});
+
+describe('frontmatter sidebar labels', () => {
+  const FRONTMATTER_SIDEBAR = 'src/components/admin/editor/frontmatter/FrontmatterSidebar.svelte';
+
+  it('keeps chinese labels alongside the original variable names', async () => {
+    const source = await readFile(path.join(process.cwd(), FRONTMATTER_SIDEBAR), 'utf8');
+    const labels = [
+      '分类胶囊 badge',
+      '系列 series',
+      '版本顺序 versionOrder',
+      '版本号 versionLabel',
+      '版本名称 versionName',
+      '版本摘要 versionSummary',
+      '详细时间 publishedAt（可选）',
+      '更新日期 updatedAt（可选）',
+      '公开 URL 别名 slug（可选）',
+      '稳定 slug（可选，发布后不要修改）',
+      '项目稳定 slug（或旧条目 id）；项目改 slug 后需同步更新这里'
+    ];
+
+    for (const label of labels) {
+      expect(source, label).toContain(label);
+    }
+  });
+
+  it('adds short tooltips for the version fields', async () => {
+    const source = await readFile(path.join(process.cwd(), FRONTMATTER_SIDEBAR), 'utf8');
+    const tooltips = [
+      '列表中的分类标签',
+      '同一系列的版本共用这个标识',
+      '数字越大越新，同日期时用于排序',
+      '例如 v2.0',
+      '例如 稳定版',
+      '显示在版本历史抽屉'
+    ];
+
+    for (const tooltip of tooltips) {
+      expect(source, tooltip).toContain(`title="${tooltip}"`);
+    }
   });
 });

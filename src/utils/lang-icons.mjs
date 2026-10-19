@@ -184,7 +184,7 @@ const buildSvg = (set, icon, className, isColored) => {
   const viewBox = getViewBox(set, icon);
   const body = isColored ? icon.body : normalizeSvgBody(icon.body);
   const classes = isColored ? `${className} is-colored` : className;
-  return `<svg class="${classes}" viewBox="${viewBox}" aria-hidden="true" focusable="false">${body}</svg>`;
+  return `<svg class="${classes}" width="16" height="16" viewBox="${viewBox}" aria-hidden="true" focusable="false">${body}</svg>`;
 };
 
 export const getLangIcon = (rawLang) => {

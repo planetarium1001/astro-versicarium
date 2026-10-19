@@ -254,6 +254,7 @@ export const persistAdminFileTransaction = async <TId extends string>(
 
     return operations.map((operation) => operation.id);
   } catch (error) {
+    // 回滚尽力而为：单个文件恢复失败也继续处理其余文件，最后抛出原始错误。
     for (const operation of [...operations].reverse()) {
       try {
         if (operation.committed) {

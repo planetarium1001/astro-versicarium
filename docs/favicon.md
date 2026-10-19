@@ -1,82 +1,93 @@
 # 站点图标
 
+## 槽位
+
 站点图标由 `src/data/settings/site.json` 的 `favicon` 块控制：
 
 ```json
 "favicon": {
   "svg": null,
-  "png": "/images/site/favicon-256x256-a1b2c3d4.png",
+  "png": null,
   "appleTouchIcon": null
 }
 ```
 
-| 槽位 | 用途 | 格式 |
-| --- | --- | --- |
-| `svg` | 标签页图标（可选） | `.svg` |
-| `png` | 标签页图标（主入口） | `.png` |
-| `appleTouchIcon` | iOS 主屏图标（可选） | `.png` |
+| 槽位 | 用途 | 格式 | 来源 |
+| --- | --- | --- | --- |
+| `svg` | 标签页图标，可选 | `.svg` | 手动放入 `public/` 后写路径 |
+| `png` | 标签页图标，主入口 | `.png` | 后台上传，或手动放入 `public/` |
+| `appleTouchIcon` | iOS 主屏图标，可选 | `.png` | 后台上传，或手动放入 `public/` |
 
-## 单图复用
+路径必须是 `public/` 下的文件，可以写 `/images/site/favicon-32x32.png`，也可以写 `public/images/site/favicon-32x32.png`。不接受远程 URL、`..`、`?`、`#`，扩展名必须与槽位匹配。渲染时链接会补上部署 `base`。
 
-- `svg` 与 `png` 是独立的标签页槽位，不要求同时设置。只设置 `png` 时只输出 PNG 链接，不会补默认 SVG。
-- 后台只提供 PNG 上传。SVG 需手动放到 `public/`，再在 `site.json` 的 `favicon.svg` 写路径。
-- `appleTouchIcon` 留空时复用标签页 PNG，复用链接不写 `sizes`；通常只上传一张 256×256 PNG 即可。
-- 只有 SVG、没有 PNG 时，没有可复用的触摸图，渲染层不会回退主题默认触摸图标；需要主屏图标时单独设置 `appleTouchIcon`。
-- `svg`、`png` 都为空时，才回退 `public/` 下的默认 `favicon.svg`、`favicon-32x32.png`、`apple-touch-icon.png`。默认链接只输出文件实际存在的项。
-- `apple-touch-icon` 在 iOS 上只支持 PNG；当前标签页槽位也只接受 PNG。
+后台只提供 PNG 上传。SVG 不提供上传，需要手动放到 `public/`，再在 `site.json` 中填写。完整主题字段见 [admin-console.md](admin-console.md)。
 
-后台预览在触摸槽位为空且标签页 PNG 存在时显示复用状态；清除触摸图标不会删除标签页 PNG。
+## 生成
 
-## 反向代理下的图标请求
+`predev` 与 `prebuild` 都会执行 `node ./scripts/favicon.mjs`，也可以手动运行。生成器按以下顺序选择源图：
 
-站点前面有 Anubis 或其他挑战层时，favicon 图片请求可能返回挑战页 HTML，而不是图片。浏览器解码失败后标签页显示空图标；子页面可能因请求时机或缓存不同而正常。
+1. `site.json` 的 `favicon.png`；
+2. `favicon.svg`；
+3. 默认的 `public/favicon-32x32.png`；
+4. 默认的 `public/favicon.svg`。
 
-Anubis 默认策略只放行 `^/favicon\.(ico|png|gif|jpg|jpeg|svg)$`，不会放行 `/favicon-32x32.png`、`/images/site/favicon-*.png` 等路径。需要把这些路径加入 `ALLOW`，并放在默认的 `generic-browser` 之前；Anubis 规则是第一条匹配即生效。
+输出写入 `public/images/site/generated/`：
 
-自定义 policy 文件：
+| 文件 | 用途 |
+| --- | --- |
+| `favicon-16x16.png`、`favicon-32x32.png` | 标签页 |
+| `apple-touch-icon.png` | 主屏图标兜底，180×180 |
+| `icon-192.png`、`icon-512.png` | Web App Manifest 图标 |
+| `favicon.ico` | 旧浏览器与隐式 `/favicon.ico` 请求 |
+| `site.webmanifest` | 名称、起始路径、主题色与图标清单 |
 
-```yaml
-bots:
-  - name: site-favicon-ico
-    path_regex: ^/favicon\.ico$
-    action: ALLOW
-  - name: site-favicon-assets
-    path_regex: ^/(?:favicon(?:-\d+x\d+(?:-[0-9a-f]{8})?)?\.(?:png|svg)|apple-touch-icon(?:-\d+x\d+(?:-[0-9a-f]{8})?)?\.png|images/site/(?:favicon|apple-touch-icon)[^/]*\.(?:png|svg))$
-    action: ALLOW
-  - import: (data)/meta/default-config.yaml
-```
+根目录的 `public/favicon.ico` 只在文件缺失、内容与本次生成一致，或确认仍是上次生成结果时写入；用户替换过的 ICO 不会被覆盖。生成标记写入 `tools/favicon-generated.json` 与 `public/images/site/generated/.favicon-generated.json`。
 
-NixOS：
+生成目录属于主题运行时资产，不要手改。需要更换图标时修改槽位或替换源图，再重新运行生成器。
 
-```nix
-environment.etc."anubis/blog-policy.yaml".text = ''
-  bots:
-    - name: site-favicon-ico
-      path_regex: ^/favicon\.ico$
-      action: ALLOW
-    - name: site-favicon-assets
-      path_regex: ^/(?:favicon(?:-\d+x\d+(?:-[0-9a-f]{8})?)?\.(?:png|svg)|apple-touch-icon(?:-\d+x\d+(?:-[0-9a-f]{8})?)?\.png|images/site/(?:favicon|apple-touch-icon)[^/]*\.(?:png|svg))$
-      action: ALLOW
-    - import: (data)/meta/default-config.yaml
-'';
+## 回退顺序
 
-services.anubis.instances.blog.settings.POLICY_FNAME = "/etc/anubis/blog-policy.yaml";
-```
+标签页图标：
 
-`policy.extraBots` 会追加在默认规则之后，浏览器请求会先命中 `generic-browser`，通常来不及。没有使用 `settings.POLICY_FNAME` 时，可设 `policy.useDefaultBotRules = false`，把 ALLOW 规则和 `{ import = "(data)/meta/default-config.yaml"; }` 按顺序放进 `extraBots`。自定义文件替换原 policy 时，保留原有的 `thresholds`、`store`、`status_codes` 等块。
+1. 配置了 `svg` 或 `png` 时，只输出配置的自定义标签页链接；
+2. 两者都为空时，若生成目录存在 16×16、32×32 PNG，输出对应链接；
+3. 生成文件也不存在时，回退 `public/favicon.svg` 与 `public/favicon-32x32.png`，只输出实际存在的文件；
+4. 生成目录存在 ICO、192、512 或 manifest 时，追加对应链接。
 
-`/favicon.ico` 是页面没有 icon 链接时浏览器隐式请求的路径，Anubis 默认通常已放行。可以额外放一个 `public/favicon.ico` 作为旧浏览器或挑战页兜底，但它不能替代 ALLOW：真实页面有显式 PNG 链接时，浏览器优先请求该链接。
+主屏图标：
 
-改完配置后重新部署，并用无痕窗口验证；已有的 favicon 缓存可能需要清理一次。
+1. 配置了 `appleTouchIcon` 时使用该文件；
+2. 留空时复用标签页 `png`，复用链接不写 `sizes`；
+3. 再回退生成的 `apple-touch-icon.png`；
+4. 没有自定义标签页图标时，最后回退默认 `public/apple-touch-icon.png`。
 
-## 排查
+配置路径指向的文件不存在时，渲染层忽略该槽位并继续回退，不会输出裂图。只配置 SVG、没有 PNG 时，主屏图标不会直接复用 SVG；生成器会从 SVG 生成 `apple-touch-icon.png` 作为兜底，需要专用主屏图时再单独设置。
 
-1. DevTools → Network，过滤 `favicon` 与 `apple-touch`。
-2. 检查响应类型：图片，还是 `text/html` 挑战页。
-3. 挑战页说明代理层未放行该路径；404 说明 `site.json` 路径或 `public/` 文件有误。
-4. 图片正常但标签页仍旧时，清理浏览器 favicon 缓存或使用无痕窗口；Chrome 对根 URL 的 favicon 缓存较顽固。
-5. 用 `curl` 确认线上文件：
+## 本地验证
 
 ```bash
-curl -sS -o /dev/null -D - https://example.com/images/site/favicon-256x256-a1b2c3d4.png
+npm run dev
+curl -sSI http://localhost:4321/favicon.ico
+curl -sSI http://localhost:4321/images/site/generated/favicon-32x32.png
 ```
+
+子路径部署时把 `ASTRO_WHONO_BASE_PATH` 也加到 URL 前缀。修改 `site.json` 后重启开发服务器，确认 `<link rel="icon">`、`apple-touch-icon` 与 manifest 指向预期文件。
+
+## 反向代理
+
+站点前的反向代理、访问控制或挑战层如果拦截静态图片，浏览器会收到 HTML 而不是图片，标签页显示空图标。放行规则应覆盖实际请求路径，并放在通用拦截规则之前：
+
+```text
+^/favicon\.ico$
+^/images/site/generated/
+^/images/site/
+^/apple-touch-icon[^/]*\.png$
+```
+
+规则按第一条匹配生效。若自定义图标放在 `public/` 的其他目录，也要把对应前缀加入放行列表。放行后确认响应类型为 `image/png`、`image/svg+xml` 或 `image/x-icon`，而不是 `text/html`。
+
+```bash
+curl -sS -o /dev/null -D - https://example.com/images/site/generated/favicon-32x32.png
+```
+
+缓存可能让修复后的图标仍不更新；用无痕窗口或清理 favicon 缓存后再验证。`/favicon.ico` 是页面没有 icon 链接时浏览器隐式请求的路径，不能替代显式链接的放行。

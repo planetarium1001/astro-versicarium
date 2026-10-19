@@ -14,6 +14,17 @@ import {
   type BlogRouteInfo,
   type BlogRoutingResult
 } from './blog-routing';
+import { getContentImageSrc } from './content-image';
+import { deriveEntryDescription, renderEntryBody } from './entry-body';
+import {
+  buildProjectGroups,
+  buildProjectResolver,
+  collectProjectDevlogUpdates,
+  type ProjectDevlogUpdate,
+  type ProjectGroup,
+  type ProjectVersionItem
+} from './project-routing';
+import type { TrailingLink } from './trailing-links';
 export { createWithBase } from '../utils/format';
 export { getBlogEntryHrefMap } from './blog-routing';
 
@@ -85,7 +96,7 @@ const orderBlogVersions = (a: BlogEntry, b: BlogEntry): number => {
   return a.id.localeCompare(b.id, 'en');
 };
 
-/** projects：列表型集合，无详情路由，公开定位为 `/projects/#<entryId>`。 */
+/** projects：列表型集合，无详情路由，公开定位为 `/projects/#<anchor>`（旧调用保留）。 */
 export const getVisibleProjects = async (
   options: AnchorListQueryOptions = {}
 ): Promise<ProjectsEntry[]> => {
@@ -94,6 +105,92 @@ export const getVisibleProjects = async (
     orderBy: orderByEntryDateDesc
   });
   return entries;
+};
+
+export type ProjectDialogVersion = {
+  version: ProjectVersionItem<ProjectsEntry>;
+  bodyHtml: string;
+  hasBody: boolean;
+  links: TrailingLink[];
+  description: string | null;
+  type: string | null;
+  icon: string | null;
+  image: string | null;
+};
+
+export type ProjectDialogItem = {
+  group: ProjectGroup<ProjectsEntry>;
+  /** 文档版本按最新优先排序，legacy `versions[]` 元数据追加在末尾（不可打开）。 */
+  versions: ProjectDialogVersion[];
+  updates: ProjectDevlogUpdate[];
+};
+
+export type ProjectDialogQueryOptions = AnchorListQueryOptions & { base?: string };
+
+/**
+ * 按共享稳定 slug 分组的项目列表：每个项目只保留最新版卡片。
+ * 排序 date DESC → versionOrder DESC → entryId ASC，最新版在首位。
+ */
+export const getVisibleProjectGroups = async (
+  options: AnchorListQueryOptions = {}
+): Promise<ProjectGroup<ProjectsEntry>[]> => buildProjectGroups(await getVisibleProjects(options));
+
+/**
+ * 项目弹窗视图模型：每个文档版本一份正文与元信息；legacy `versions[]` 只有元数据，
+ * 不生成额外弹窗。devlog 通过稳定 slug / 旧 entry.id / 唯一显示名解析到项目。
+ */
+export const getVisibleProjectDialogItems = async (
+  options: ProjectDialogQueryOptions = {}
+): Promise<ProjectDialogItem[]> => {
+  const query = options.includeDraft === undefined ? {} : { includeDraft: options.includeDraft };
+  const [groups, devlogs] = await Promise.all([
+    getVisibleProjectGroups(query),
+    getVisibleDevlogs(query)
+  ]);
+  const base = options.base ?? (import.meta.env.BASE_URL || '/');
+  const resolver = buildProjectResolver(groups);
+  const updatesByGroupKey = collectProjectDevlogUpdates(resolver, devlogs);
+
+  return Promise.all(
+    groups.map(async (group): Promise<ProjectDialogItem> => {
+      const versions = await Promise.all(
+        group.versions.map(async (version): Promise<ProjectDialogVersion> => {
+          if (!version.hasDocument) {
+            return {
+              version,
+              bodyHtml: '',
+              hasBody: false,
+              links: [],
+              description: null,
+              type: null,
+              icon: null,
+              image: null
+            };
+          }
+
+          const entry = version.entry;
+          const body = entry.body ?? '';
+          const hasBody = body.trim().length > 0;
+          const { html, links } = hasBody
+            ? await renderEntryBody(body, base)
+            : { html: '', links: [] as TrailingLink[] };
+
+          return {
+            version,
+            bodyHtml: html,
+            hasBody,
+            links,
+            description: deriveEntryDescription(entry.data.description, body),
+            type: entry.data.type?.trim() || null,
+            icon: getContentImageSrc(entry.data.icon),
+            image: getContentImageSrc(entry.data.image)
+          };
+        })
+      );
+
+      return { group, versions, updates: updatesByGroupKey.get(group.key) ?? [] };
+    })
+  );
 };
 
 /** devlog：列表型集合，无详情路由，公开定位为 `/devlog/#<entryId>`。 */
@@ -254,15 +351,14 @@ export async function getVisibleBlogRouteEntries(
   const entries = await getVisibleblogs(options);
   const routing = buildBlogRouting(entries);
   const hrefByEntryId = getBlogEntryHrefMap(routing);
-  const orderedEntries = entries.slice().sort(orderBlogVersions);
   const neighborsByEntryId = new Map<string, {
     prev: { href: string; title: string } | null;
     next: { href: string; title: string } | null;
   }>();
 
-  orderedEntries.forEach((entry, index) => {
-    const prev = orderedEntries[index - 1] ?? null;
-    const next = orderedEntries[index + 1] ?? null;
+  entries.forEach((entry, index) => {
+    const prev = entries[index - 1] ?? null;
+    const next = entries[index + 1] ?? null;
     neighborsByEntryId.set(entry.id, {
       prev: prev
         ? { href: hrefByEntryId.get(prev.id) ?? `/blog/${getBlogSlug(prev)}/`, title: prev.data.title }

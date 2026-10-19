@@ -430,15 +430,25 @@ describe('项目卡片与末尾链接行', () => {
     expect(links).toMatch(/\.prose \.trailing-links a\s*\{[^}]*border-bottom:\s*0/);
   });
 
-  it('多列时所有行等高：行高由栅格统一，单卡仍有高度上限', async () => {
+  it('列数三档特调，多列时所有行等高且卡片撑满行高', async () => {
     const css = await read('src/styles/projects-page.css');
 
-    // grid-auto-rows: 1fr 让每一行都取最高卡片的高度，避免某一行更高；多列时才需要
+    // 窄屏一列、常规两列、极宽三列；不再用 auto-fit 无限增加列数
+    expect(css).toMatch(/\.projects-page \.project-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
     expect(css).toMatch(
-      /@media \(min-width: 641px\)\s*\{[^@]*?\.projects-page \.project-grid\s*\{[^}]*grid-auto-rows:\s*1fr/
+      /@media \(min-width: 760px\)\s*\{[^@]*?\.project-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/
+    );
+    expect(css).toMatch(
+      /@media \(min-width: 1500px\)\s*\{[^@]*?\.project-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/
+    );
+    expect(css).not.toContain('auto-fit');
+    // grid-auto-rows: 1fr 让每一行都取最高卡片的高度；卡片 height: 100% 撑满行高
+    expect(css).toMatch(
+      /@media \(min-width: 760px\)\s*\{[^@]*?\.project-grid\s*\{[^}]*grid-auto-rows:\s*1fr/
     );
     expect(css).toMatch(/\.projects-page \.project-grid\s*\{[^}]*align-items:\s*stretch/);
-    expect(css).toMatch(/\.project-card\s*\{[^}]*max-height:\s*320px/);
+    expect(css).toMatch(/\.project-card\s*\{[^}]*height:\s*100%/);
+    expect(css).not.toMatch(/\.project-card\s*\{[^}]*max-height:\s*320px/);
   });
 
   it('展示图：可选字段渲染成与文字左对齐的缩略图', async () => {
@@ -569,10 +579,16 @@ describe('文章目录列：右边界跟随页面外缘间隙', () => {
     expect(css).toMatch(
       /:root\[data-toc-collapsed='true'\] \.article-toc__rail-head,[\s\S]*?:root\[data-toc-intro='true'\] \.article-toc__rail-head\s*\{[^}]*margin-right:\s*0[^}]*padding-right:\s*0/
     );
-    // 收起态列宽与 1024–1280 的占位规则保持不变
+    // 收起态列宽仍压到把手宽；1024–1279 普通模式也常驻目录列，不再占位 0px
     expect(css).toMatch(/--article-toc-column:\s*var\(--article-toc-handle-column\)/);
     expect(css).toMatch(
-      /@media \(min-width: 1024px\) and \(max-width: 1279\.98px\)[\s\S]*?minmax\(0, 1fr\)\s*\n?\s*0px;/
+      /@media \(min-width: 1024px\) and \(max-width: 1279\.98px\)[\s\S]*?clamp\(184px, 17vw, 220px\)/
+    );
+    expect(css).toMatch(
+      /@media \(min-width: 1024px\) and \(max-width: 1279\.98px\)[\s\S]*?body\.immersive-page \.article-toc--rail\s*\{\s*display:\s*block/
+    );
+    expect(css).toMatch(
+      /@media \(min-width: 1024px\) and \(max-width: 1279\.98px\)[\s\S]*?body\.immersive-page \.article-toc--inline\s*\{\s*display:\s*none/
     );
   });
 });
@@ -763,15 +779,19 @@ describe('#标签 与「切换标签」互斥', () => {
 });
 
 describe('项目弹窗的主次层级', () => {
-  it('关闭按钮更小、标题与副标题放大、正文不得大于标题', async () => {
-    const css = await read('src/styles/projects-page.css');
+  it('关闭按钮统一走 shared 样式、标题与副标题放大、正文不得大于标题', async () => {
+    const [css, global] = await Promise.all([
+      read('src/styles/projects-page.css'),
+      read('src/styles/global.css')
+    ]);
 
-    // 关闭按钮缩小（44px 热区保留）
+    // 视觉 32px、44px 热区由全局 [data-dialog-close] 提供；项目页只保留边距
     const close = /\.project-dialog__close\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
-    expect(close).toMatch(/font-size:\s*15px/);
-    expect(close).toMatch(/width:\s*var\(--tap-min-h\)/);
-    expect(close).toMatch(/border:\s*0/);
-    expect(close).toMatch(/background:\s*transparent/);
+    expect(close).not.toMatch(/width:/);
+    expect(close).not.toMatch(/font-size:/);
+    expect(global).toMatch(/\[data-dialog-close\]\s*\{[^}]*width:\s*32px[^}]*height:\s*32px/);
+    expect(global).toMatch(/\[data-dialog-close\]::before\s*\{[^}]*width:\s*44px[^}]*height:\s*44px/);
+    expect(global).toMatch(/\[data-dialog-close\]\[data-pointer-focus\]:focus\s*\{[^}]*outline:\s*none/);
 
     // 标题 / 副标题 / 类型胶囊放大
     const title = /\.project-dialog__title\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
@@ -848,18 +868,18 @@ describe('归档 tag 的作用域与语义', () => {
       read('src/lib/archive.ts')
     ]);
 
-    // 取值域
-    expect(page).toMatch(/const projectTags: TagSummary\[\] = \[\];/);
+    // 取值域：项目版本行按项目显示名打标签，all 作用域由行数据推导
+    expect(page).toMatch(/collectTagScopedSummary\('projects', projectRows, \(row\) => row\.tags\)/);
     expect(page).toMatch(/collectTagScopedSummary\('devlog', devlogs, \(entry\) => \[\s*entry\.data\.project\s*\]/);
-    expect(page).toMatch(/collectTagScopedSummary\(\s*'all',\s*\[\s*\.\.\.blogs,\s*\.\.\.devlogs\s*\]/);
+    expect(page).toMatch(/collectTagScopedSummary\('all', rows, \(row\) => row\.tags\)/);
     // archive row 的 devlog tags 只取项目名称，不含 kind；index.json 直接复用 row.tags
     expect(archiveLib).toMatch(/tags: \[entry\.data\.project\]/);
     expect(archiveLib).not.toMatch(/tags: \[entry\.data\.project, entry\.data\.kind\]/);
     expect(indexJson).toMatch(/tags: row\.tags/);
 
-    // 项目档隐藏 tag 入口；更新档把入口与标题按作用域改成「项目」
-    expect(scopeScript).toMatch(/TAG_TRIGGER\.hidden = isProjects/);
-    expect(scopeScript).toMatch(/const noun = scope === 'devlog' \? '项目' : '标签'/);
+    // 项目档与更新档都显示 tag 入口并称「项目」；不再隐藏
+    expect(scopeScript).toContain('TAG_TRIGGER.hidden = false');
+    expect(scopeScript).toMatch(/const noun = scope === 'projects' \|\| scope === 'devlog' \? '项目' : '标签'/);
     expect(scopeScript).toContain("ENTRY_ROOT.dataset.entryTagNoun = noun");
     // entry-search 读这个称谓来生成「切换项目 / 清除筛选」
     expect(entryScript).toMatch(/root\.dataset\.entryTagNoun/);
@@ -867,21 +887,25 @@ describe('归档 tag 的作用域与语义', () => {
   });
 });
 
-describe('归档的更新行补「项目名：」', () => {
-  it('devlog 行在标题前渲染项目名，样式用 muted 不抢标题', async () => {
-    const [page, css, archiveLib] = await Promise.all([
+describe('归档条目固定排版「项目名: 标题 v2.0」', () => {
+  it('归档行统一走 EntryTitleLine，冒号为半角冒号+空格，版本胶囊为淡色', async () => {
+    const [page, css, display] = await Promise.all([
       read('src/pages/archive/index.astro'),
-      read('src/styles/archive-page.css'),
-      read('src/lib/archive.ts')
+      read('src/styles/components/lists.css'),
+      read('src/lib/entry-display.ts')
     ]);
 
-    expect(page).toMatch(/row\.kind === 'devlog' && row\.project/);
-    expect(page).toContain('archive-timeline__project');
-    expect(archiveLib).toMatch(/project: entry\.data\.project/);
-    // 半角冒号，冒号后一个空格
-    expect(page).toMatch(/\$\{row\.project\}: `/);
-    // 项目名与标题继承同一个链接色，悬停整体高亮
-    expect(css).toMatch(/\.archive-timeline__project\s*\{[^}]*color:\s*inherit/);
+    expect(page).toContain('<EntryTitleLine');
+    expect(page).toContain('surface="archive"');
+    expect(page).toContain('titleTag="span"');
+    expect(page).toContain('kind={row.kind}');
+    // 固定排版：devlog 项目名前缀 + ': ' + 标题；版本段只由显式 versionLabel 触发。
+    expect(display).toContain("ENTRY_TITLE_COLON = ': '");
+    expect(display).toMatch(/kind === 'devlog'/);
+    expect(display).toMatch(/kind: 'version-label'/);
+    // 项目名分隔符继承标题色，不额外抢层级
+    expect(css).toMatch(/\.entry-title--archive \.entry-title__colon\s*\{[^}]*color:\s*inherit/);
+    expect(css).toMatch(/\.entry-title .entry-title__version-label[\s\S]*?height:\s*var\(--entry-pill-height\)/);
   });
 });
 
@@ -970,9 +994,9 @@ describe('目录展开/收起的正文右内边距', () => {
       /@media \(max-width: 1279\.98px\)\s*\{[\s\S]{0,300}?:root:not\(\[data-toc-collapsed='true'\]\) body\.immersive-page \.shell\[data-toc='true'\] \.content\s*\{[^}]*padding-right:\s*max\(/
     );
 
-    // 1024–1280 阅读模式（目录进了第 4 列）：间隙 = --pad-x（与左侧一致）
+    // 1024–1280 目录常驻第 4 列（普通模式也生效）：间隙 = --pad-x（与左侧一致）
     expect(layout).toMatch(
-      /@media \(min-width: 1024px\) and \(max-width: 1279\.98px\)\s*\{[\s\S]{0,300}?body\.immersive-page\[data-reading='immersive'\] \.shell\[data-toc='true'\] \.content\s*\{[^}]*padding-right:\s*var\(--pad-x\)/
+      /@media \(min-width: 1024px\) and \(max-width: 1279\.98px\)\s*\{[\s\S]{0,300}?body\.immersive-page \.shell\[data-toc='true'\] \.content\s*\{[^}]*padding-right:\s*var\(--pad-x\)/
     );
 
     // ≥1280 展开态走基础规则的 --pad-x
@@ -1028,5 +1052,33 @@ describe('目录标题字号与时间/kind 配色', () => {
     );
     // 与 .badge 的暗色覆盖一致
     expect(lists).toMatch(/:root\[data-theme="dark"\] \.badge\s*\{[^}]*background:\s*#1f1f1f[^}]*border-color:\s*#3f3f3f/);
+  });
+});
+
+describe('主题台：文章元信息按语义分组', () => {
+  it('日期 / 附加信息 / 列表卡片分成三组，组内换行且无横向滚动', async () => {
+    const [section, form] = await Promise.all([
+      read('src/components/admin/AdminPageSection.astro'),
+      read('src/styles/components/admin/theme/form.css')
+    ]);
+
+    const group = /\.admin-meta-group\s*\{([^}]*)\}/.exec(form)?.[1] ?? '';
+    expect(group).toContain('display: grid');
+    expect(group).toMatch(/grid-template-columns:\s*84px minmax\(0,\s*1fr\)/);
+    expect(group).not.toMatch(/overflow-x\s*:/);
+    expect(group).not.toMatch(/nowrap/);
+
+    const line = /\.admin-toggle-row-group__line\s*\{([^}]*)\}/.exec(form)?.[1] ?? '';
+    expect(line).toContain('display: flex');
+    expect(line).toMatch(/flex-wrap:\s*wrap/);
+    expect(line).toMatch(/min-width:\s*0/);
+
+    // 语义分组：日期（显示/前缀/模式/粒度）、附加信息（标签/字数/时长）、列表卡片（日期显示）
+    expect(section.match(/class="admin-meta-group"/g) ?? []).toHaveLength(3);
+    expect(section.match(/class="admin-toggle-row-group__line"/g) ?? []).toHaveLength(3);
+    const labels = [...section.matchAll(/class="admin-meta-group__label">([^<]+)</g)].map((match) => match[1]);
+    expect(labels).toEqual(['日期', '附加信息', '列表卡片']);
+    // 日期组不再把「列表卡片日期」和详情附加信息混在一起
+    expect(section).not.toContain('列表卡片日期');
   });
 });

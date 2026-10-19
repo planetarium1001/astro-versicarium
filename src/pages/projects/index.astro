@@ -1,14 +1,31 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { createWithBase, getVisibleDevlogs, getVisibleProjects } from '../../lib/content';
+import {
+  createWithBase,
+  getVisibleProjectDialogItems,
+  type ProjectDialogItem,
+  type ProjectDialogVersion
+} from '../../lib/content';
+import { getProjectAnchorAliases } from '../../lib/project-routing';
+import EntryTitleLine from '../../components/EntryTitleLine.astro';
+import UiIcon from '../../components/UiIcon.astro';
 import { getThemeSettings } from '../../lib/theme-settings';
 import { joinPageSubtitleText } from '../../utils/format';
-import { deriveEntryDescription, renderEntryBody } from '../../lib/entry-body';
 import { getContentImageSrc } from '../../lib/content-image';
 import { renderTrailingLinksHtml, type TrailingLink } from '../../lib/trailing-links';
+import { containsMarkdownMath } from '../../lib/markdown-math';
+import {
+  MARKDOWN_MATH_STYLESHEET_DATA_ATTR,
+  MARKDOWN_MATH_STYLESHEET_HREF,
+  MARKDOWN_MATH_STYLESHEET_ID
+} from '../../lib/markdown-math-styles';
 import '../../styles/projects-page.css';
 
-const [items, devlogs] = await Promise.all([getVisibleProjects(), getVisibleDevlogs()]);
+/**
+ * `/projects/` 每张卡片只展示一个项目的最新版；每个文档版本各有一个弹窗。
+ * 旧的内联 `versions[]` 只作为元数据历史展示，不生成弹窗。
+ */
+const items = await getVisibleProjectDialogItems();
 const base = import.meta.env.BASE_URL ?? '/';
 const withBase = createWithBase(base);
 const {
@@ -23,54 +40,115 @@ const pageDescription = joinPageSubtitleText(
   `共 ${items.length} 个项目`
 ) ?? `${pageTitleText}列表`;
 
-type ProjectCard = {
-  id: string;
+type ProjectVersionView = {
+  anchor: string;
+  /** 旧 `/projects/#<entry.id>` 别名；只有与锚点不同时才写入弹窗。 */
+  entryIdAlias: string | null;
+  isLatest: boolean;
+  hasDocument: boolean;
+  /** 标题行是否展示版本信息：只有显式写了 versionLabel 的项目才展示。 */
+  showsVersionInTitle: boolean;
+  label: string;
+  name: string;
   title: string;
   subtitle: string | null;
-  description: string | null;
+  date: string;
+  summary: string | null;
   type: string | null;
   icon: string | null;
-  /** 展示图路径（可为空）；卡片里以缩略图呈现 */
   image: string | null;
+  description: string | null;
   hasBody: boolean;
-  /** 正文 html（含末尾链接行标记）；无正文时为空串 */
+  hasMath: boolean;
   bodyHtml: string;
-  /** 末尾链接组，按书写顺序；卡片在摘要下一行单独渲染 */
   links: TrailingLink[];
-  updates: Array<{ id: string; title: string; dateText: string }>;
 };
 
-const cards: ProjectCard[] = await Promise.all(
-  items.map(async (entry): Promise<ProjectCard> => {
-    const body = entry.body ?? '';
-    const hasBody = body.trim().length > 0;
-    const { html, links } = hasBody
-      ? await renderEntryBody(body, base)
-      : { html: '', links: [] as TrailingLink[] };
-    return {
-      id: entry.id,
-      title: entry.data.title,
-      subtitle: entry.data.subtitle?.trim() || null,
-      description: deriveEntryDescription(entry.data.description, body),
-      type: entry.data.type?.trim() || null,
-      icon: getContentImageSrc(entry.data.icon),
-      image: getContentImageSrc(entry.data.image),
-      hasBody,
-      bodyHtml: html,
-      links,
-      updates: devlogs
-        .filter((devlog) => devlog.data.projectSlug === entry.id)
-        .map((devlog) => ({
-          id: devlog.id,
-          title: devlog.data.title,
-          dateText: devlog.data.dateText
-        }))
-    };
-  })
+type ProjectView = {
+  cardId: string;
+  group: ProjectDialogItem['group'];
+  latest: ProjectVersionView;
+  versions: ProjectVersionView[];
+  updates: ProjectDialogItem['updates'];
+  showVersionHistory: boolean;
+};
+
+const buildVersionView = (
+  dialog: ProjectDialogVersion,
+  entryIdAlias: string | null
+): ProjectVersionView => {
+  const entry = dialog.version.entry;
+  const explicitLabel = dialog.version.hasDocument ? entry.data.versionLabel?.trim() ?? '' : '';
+  const versionName = dialog.version.versionName.trim();
+  return {
+    anchor: dialog.version.anchor,
+    entryIdAlias,
+    isLatest: dialog.version.isLatest,
+    hasDocument: dialog.version.hasDocument,
+    showsVersionInTitle: dialog.version.hasDocument ? Boolean(explicitLabel) : true,
+    label: dialog.version.versionLabel,
+    name: versionName && versionName !== dialog.version.title ? versionName : '',
+    title: dialog.version.title,
+    subtitle: entry.data.subtitle?.trim() || null,
+    date: dialog.version.date,
+    summary: dialog.version.hasDocument
+      ? entry.data.versionSummary?.trim() || null
+      : dialog.version.versionSummary,
+    type: dialog.type,
+    icon: dialog.icon,
+    image: getContentImageSrc(entry.data.image),
+    description: dialog.description,
+    hasBody: dialog.hasBody,
+    hasMath: containsMarkdownMath(entry.body ?? ''),
+    bodyHtml: dialog.bodyHtml,
+    links: dialog.links
+  };
+};
+
+const projects: ProjectView[] = items.map((item) => {
+  const aliases = new Map<string, string>(
+    getProjectAnchorAliases(item.group).map(
+      (alias): [string, string] => [alias.anchor, alias.entryId]
+    )
+  );
+  const versions = item.versions.map((dialog) =>
+    buildVersionView(dialog, aliases.get(dialog.version.anchor) ?? null)
+  );
+  const documents = versions.filter((version) => version.hasDocument);
+  const latest = documents.find((version) => version.isLatest) ?? documents[0]!;
+  return {
+    cardId: `project-card-${item.group.key}`,
+    group: item.group,
+    latest,
+    versions,
+    updates: item.updates,
+    // 没有版本字段的单版本文档继续沿用旧行为：不显示版本历史区。
+    showVersionHistory:
+      versions.length > 1 || versions.some((version) => version.showsVersionInTitle)
+  };
+});
+
+const dialogs = projects.flatMap((project) =>
+  project.versions
+    .filter((version) => version.hasDocument)
+    .map((version) => ({ project, version }))
 );
+const hasMath = dialogs.some(({ version }) => version.hasMath);
+const katexStylesheetAttrs = { [MARKDOWN_MATH_STYLESHEET_DATA_ATTR]: 'true' };
 ---
 
 <BaseLayout title={pageTitleText} description={pageDescription} bodyClass="projects-page">
+  <Fragment slot="head">
+    {hasMath ? (
+      <link
+        id={MARKDOWN_MATH_STYLESHEET_ID}
+        rel="stylesheet"
+        href={MARKDOWN_MATH_STYLESHEET_HREF}
+        {...katexStylesheetAttrs}
+      />
+    ) : null}
+  </Fragment>
+
   <div class="page-header">
     <div class="page-heading">
       <h1 class="page-title">{pageTitleText}</h1>
@@ -79,94 +157,211 @@ const cards: ProjectCard[] = await Promise.all(
   </div>
 
   <div class="project-grid">
-    {cards.map((card) => (
-      <article
-        class="project-card"
-        id={card.id}
-        data-project-card
-        data-project-id={card.id}
-      >
-        <button
-          class="project-card__main"
-          type="button"
-          data-project-open
-          data-project-dialog={`project-dialog-${card.id}`}
-          aria-haspopup="dialog"
-          aria-label={`查看项目：${card.title}`}
+    {projects.map((project) => {
+      const card = project.latest;
+      return (
+        <article
+          class="project-card"
+          id={project.cardId}
+          data-project-card
+          data-project-anchor={project.group.latestAnchor}
         >
-          {/*
-            头部两列：图标在左，胶囊标题与副标题在右侧两行，两列顶部对齐；
-            正文里展示图左浮动贴最左，文段从它右侧开始并绕开它。
-          */}
-          <span class="project-card__body">
-            <span class="project-card__head">
-              {card.icon ? (
-                <span class="project-card__icon">
-                  <img src={withBase(card.icon)} alt="" loading="lazy" decoding="async" />
+          <button
+            class="project-card__main"
+            type="button"
+            data-project-open
+            data-project-dialog={`project-dialog-${card.anchor}`}
+            aria-haspopup="dialog"
+            aria-label={`查看项目：${card.title}`}
+          >
+            {/*
+              头部两列：图标在左，胶囊标题与副标题在右侧两行，两列顶部对齐；
+              版本信息与标题同一行，跟在标题之后。
+              正文里展示图左浮动贴最左，文段从它右侧开始并绕开它。
+            */}
+            <span class="project-card__body">
+              <span class="project-card__head">
+                {card.icon ? (
+                  <span class="project-card__icon">
+                    <img src={withBase(card.icon)} alt="" loading="lazy" decoding="async" />
+                  </span>
+                ) : null}
+                <span class="project-card__headings">
+                  <EntryTitleLine
+                    surface="project"
+                    class="project-card__title-row"
+                    titleClass="project-card__title"
+                    title={card.title}
+                    badge={card.type}
+                    versionLabel={card.showsVersionInTitle ? card.label : null}
+                    versionName={card.showsVersionInTitle ? card.name : null}
+                    titleAs="span"
+                    titleTag="span"
+                  />
+                  {project.group.subtitle ? (
+                    <span class="project-card__subtitle">{project.group.subtitle}</span>
+                  ) : null}
+                </span>
+              </span>
+              {card.image ? (
+                <span class="project-card__image">
+                  <img src={withBase(card.image)} alt={card.title} loading="lazy" decoding="async" />
                 </span>
               ) : null}
-              <span class="project-card__headings">
-                <span class="project-card__title-row">
-                  {card.type ? <span class="badge">{card.type}</span> : null}
-                  <span class="project-card__title">{card.title}</span>
-                </span>
-                {card.subtitle ? <span class="project-card__subtitle">{card.subtitle}</span> : null}
-              </span>
+              {card.description ? (
+                <span class="project-card__description">{card.description}</span>
+              ) : null}
             </span>
-            {card.image ? (
-              <span class="project-card__image">
-                <img src={withBase(card.image)} alt={card.title} loading="lazy" decoding="async" />
-              </span>
-            ) : null}
-            {card.description ? <span class="project-card__description">{card.description}</span> : null}
-          </span>
-        </button>
+          </button>
 
-        {/* 末尾链接组渲染在摘要下一行，与展开正文里的链接行共用同一套标记 */}
-        {card.links.length > 0 ? <Fragment set:html={renderTrailingLinksHtml(card.links)} /> : null}
-      </article>
-    ))}
+          {/* 末尾链接组渲染在摘要下一行，与展开正文里的链接行共用同一套标记 */}
+          {card.links.length > 0 ? (
+            <Fragment set:html={renderTrailingLinksHtml(card.links)} />
+          ) : null}
+        </article>
+      );
+    })}
   </div>
 
-  {cards.map((card) => (
+  {dialogs.map(({ project, version }) => (
     <dialog
       class="project-dialog"
-      id={`project-dialog-${card.id}`}
+      id={`project-dialog-${version.anchor}`}
       data-project-dialog-panel
-      aria-labelledby={`project-dialog-title-${card.id}`}
+      data-project-anchor={version.anchor}
+      data-project-latest-anchor={project.group.latestAnchor}
+      data-project-entry-id={version.entryIdAlias || undefined}
+      aria-labelledby={`project-dialog-title-${version.anchor}`}
     >
       <div class="project-dialog__inner">
         <div class="project-dialog__handle" aria-hidden="true"></div>
         <div class="project-dialog__head">
           {/* 与卡片同一套头部：图标在左，胶囊标题与副标题在右侧两行，顶部对齐 */}
-          {card.icon ? (
+          {version.icon ? (
             <span class="project-dialog__icon">
-              <img src={withBase(card.icon)} alt="" loading="lazy" decoding="async" />
+              <img src={withBase(version.icon)} alt="" loading="lazy" decoding="async" />
             </span>
           ) : null}
           <div class="project-dialog__title-wrap">
-            <div class="project-dialog__title-row">
-              {card.type ? <span class="badge">{card.type}</span> : null}
-              <h2 class="project-dialog__title" id={`project-dialog-title-${card.id}`} tabindex="-1">{card.title}</h2>
-            </div>
-            {card.subtitle ? <p class="project-dialog__subtitle">{card.subtitle}</p> : null}
+            <EntryTitleLine
+              surface="project"
+              class="project-dialog__title-row"
+              titleClass="project-dialog__title"
+              titleId={`project-dialog-title-${version.anchor}`}
+              title={version.title}
+              badge={version.type}
+              versionLabel={version.showsVersionInTitle ? version.label : null}
+              versionName={version.showsVersionInTitle ? version.name : null}
+              titleAs="span"
+              titleTag="h2"
+            />
+            {version.subtitle ? <p class="project-dialog__subtitle">{version.subtitle}</p> : null}
           </div>
-          <button class="project-dialog__close" type="button" data-project-close aria-label={`关闭 ${card.title}`}>✕</button>
+          <button
+            class="project-dialog__close"
+            type="button"
+            data-project-close
+            data-dialog-close
+            aria-label={`关闭 ${version.title}`}
+          >
+            <UiIcon name="x" size={14} strokeWidth={1.8} />
+          </button>
         </div>
+
+        {!version.isLatest ? (
+          <p class="project-version-notice">
+            <span class="project-version-notice__text">
+              <span class="project-version-notice__meta">
+                <span>历史版本</span>
+                <span aria-hidden="true">·</span>
+                <span>{version.label}</span>
+                <span aria-hidden="true">·</span>
+                <time datetime={version.date}>{version.date}</time>
+              </span>
+              <span>该版本已归档。</span>
+            </span>
+            <button
+              class="project-version-notice__latest"
+              type="button"
+              data-project-open
+              data-project-dialog={`project-dialog-${project.group.latestAnchor}`}
+            >
+              查看最新版
+              <UiIcon name="chevron-up" size={14} strokeWidth={1.8} />
+            </button>
+          </p>
+        ) : null}
+
         <div class="project-dialog__content">
-          {card.hasBody && card.bodyHtml ? (
-            <div class="prose project-dialog__prose" set:html={card.bodyHtml} />
+          {version.hasBody && version.bodyHtml ? (
+            <div class="prose project-dialog__prose" set:html={version.bodyHtml} />
           ) : (
-            <p class="project-dialog__fallback">{card.description ?? '暂无描述。'}</p>
+            <p class="project-dialog__fallback">{version.description ?? '暂无描述。'}</p>
           )}
-          {card.updates.length ? (
-            <section class="project-updates" aria-label={`${card.title}更新日志`}>
+          {project.showVersionHistory ? (
+            <section class="project-versions" aria-labelledby={`project-versions-title-${version.anchor}`}>
+              <div class="project-versions__head">
+                <h3 class="project-versions__title" id={`project-versions-title-${version.anchor}`}>
+                  版本历史
+                </h3>
+                <span class="project-versions__hint">大版本记录；逐条改动见下方更新日志。</span>
+              </div>
+              <ol class="project-versions__list">
+                {project.versions.map((item) => {
+                  const isCurrent = item.hasDocument && item.anchor === version.anchor;
+                  const status = isCurrent
+                    ? item.isLatest ? '当前版本' : '正在查看'
+                    : item.isLatest
+                      ? '最新'
+                      : '';
+                  return (
+                    <li class:list={['project-version', isCurrent && 'is-current']}>
+                      <div class="project-version__head">
+                        {isCurrent ? (
+                          <span class="project-version__main" aria-current="true">
+                            {item.label ? <span class="project-version__label">{item.label}</span> : null}
+                            {item.name ? <span class="project-version__name">{item.name}</span> : null}
+                          </span>
+                        ) : item.hasDocument ? (
+                          <button
+                            class="project-version__main"
+                            type="button"
+                            data-project-open
+                            data-project-dialog={`project-dialog-${item.anchor}`}
+                            aria-label={`查看 ${item.label || item.title} 版本`}
+                          >
+                            {item.label ? <span class="project-version__label">{item.label}</span> : null}
+                            {item.name ? <span class="project-version__name">{item.name}</span> : null}
+                          </button>
+                        ) : (
+                          <span class="project-version__main project-version__main--legacy">
+                            {item.label ? <span class="project-version__label">{item.label}</span> : null}
+                            {item.name ? <span class="project-version__name">{item.name}</span> : null}
+                          </span>
+                        )}
+                        <span class="project-version__meta">
+                          {item.date ? <time datetime={item.date}>{item.date}</time> : null}
+                          {status ? <span class="project-version__status">{status}</span> : null}
+                          {!item.hasDocument ? (
+                            <span class="project-version__status project-version__status--legacy">仅记录</span>
+                          ) : null}
+                        </span>
+                      </div>
+                      {item.summary ? <p class="project-version__summary">{item.summary}</p> : null}
+                    </li>
+                  );
+                })}
+              </ol>
+            </section>
+          ) : null}
+          {project.updates.length ? (
+            <section class="project-updates" aria-label={`${version.title}更新日志`}>
               <h3 class="project-updates__title">更新日志</h3>
               <ul class="project-updates__list">
-                {card.updates.map((update) => (
+                {project.updates.map((update) => (
                   <li>
                     <time datetime={update.dateText}>{update.dateText}</time>
-                    <a href={withBase(`/devlog/#${update.id}`)}>{update.title}</a>
+                    <a href={withBase(update.href)}>{update.title}</a>
                   </li>
                 ))}
               </ul>

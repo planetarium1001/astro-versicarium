@@ -1,4 +1,9 @@
-const rawSiteUrl = (process.env.SITE_URL ?? '').trim();
+// 该模块会被浏览器端 Svelte 岛（编辑器、列表操作）间接引入，不能直接读 process。
+// 构建期服务端仍通过 process.env 注入 SITE_URL；浏览器环境退化为无环境变量。
+const env =
+  typeof process === 'object' && process !== null && process.env ? process.env : {};
+
+const rawSiteUrl = (env.SITE_URL ?? '').trim();
 const siteUrl = rawSiteUrl ? rawSiteUrl.replace(/\/+$/, '') : '';
 const hasSiteUrl = siteUrl.length > 0;
 const fallbackSiteUrl = 'https://example.invalid';
@@ -6,10 +11,10 @@ const siteUrlWarningFlag = 'ASTRO_WHONO_SITE_URL_WARNING_SHOWN';
 
 if (
   !hasSiteUrl &&
-  process.env.NODE_ENV === 'production' &&
-  process.env[siteUrlWarningFlag] !== '1'
+  env.NODE_ENV === 'production' &&
+  env[siteUrlWarningFlag] !== '1'
 ) {
-  process.env[siteUrlWarningFlag] = '1';
+  env[siteUrlWarningFlag] = '1';
   console.warn(
     '[astro-whono] SITE_URL is not set. RSS will use example.invalid; canonical/og will be omitted; sitemap will not be generated and robots will not include Sitemap.'
   );
@@ -26,8 +31,8 @@ export const site = {
   title: 'Astro Whono Tweaked',
   brandTitle: 'Astro Whono Tweaked',
   author: 'Planetarium',
-  authorAvatar: 'author/avatar.webp',
-  description: '基于 cxro/astro-whono 的极简双栏 Astro 主题模板，面向长文阅读做了增量改造。'
+  authorAvatar: 'author/avatar.svg',
+  description: '面向开发者的极简 Astro 主题，适合撰写技术文章、项目记录与开发日志。'
 };
 
 // 前端每页条目数：列表页写入 `[data-entry-filters][data-page-size]`，客户端分页读取。

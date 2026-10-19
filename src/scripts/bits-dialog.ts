@@ -7,6 +7,6 @@ initCardDialogs({
   closeSelector: '[data-bit-dialog-close]',
   panelSelector: '[data-bit-dialog-panel]',
   dialogIdAttribute: 'data-bit-dialog',
-  focusSelector: '.bit-dialog__title, .bit-dialog__identity',
+  focusSelector: '.bit-dialog__identity',
   scrollResetSelector: '.bit-dialog__content'
 });

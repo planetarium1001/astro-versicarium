@@ -1,0 +1,243 @@
+---
+import type { AdminContentIndexItem } from '../../../lib/admin-console/content';
+import {
+  getAdminContentCollectionCapability,
+  getAdminContentEntryEditHref,
+  getAdminContentEntryListHref,
+  getAdminContentPublicFallbackLabel
+} from '../../../lib/admin-console/content';
+import { ADMIN_CONTENT_EXPORT_API_PATH } from '../../../lib/admin-console/admin-api-paths';
+import { isAdminContentDeletableCollectionKey } from '../../../lib/admin-console/content-delete-contract';
+import { createWithBase, formatISODate } from '../../../utils/format';
+import AdminIcon from '../AdminIcon.astro';
+
+type Props = {
+  item: AdminContentIndexItem;
+};
+
+const { item } = Astro.props as Props;
+const base = import.meta.env.BASE_URL ?? '/';
+const withBase = createWithBase(base);
+
+const capability = getAdminContentCollectionCapability(item.collection);
+const editPath = getAdminContentEntryEditHref(item.collection, item.id);
+const editHref = withBase(editPath);
+const supportsListInfoAction = capability.writable
+  && (item.collection === 'blog' || item.collection === 'bits');
+const articleInfoHref = capability.writable
+  ? item.collection === 'blog'
+    ? withBase(`${editPath}?panel=info`)
+    : editHref
+  : null;
+const entryTitleHref = capability.writable
+  ? editHref
+  : withBase(getAdminContentEntryListHref(item.collection));
+const publicHref = item.publicHref ? withBase(item.publicHref) : null;
+const publicFallbackLabel = getAdminContentPublicFallbackLabel(item);
+const exportParams = new URLSearchParams({
+  collection: item.collection,
+  entryId: item.id
+});
+const exportHref = `${withBase(ADMIN_CONTENT_EXPORT_API_PATH)}?${exportParams.toString()}`;
+const deleteUnsupportedReason = capability.deleteUnsupportedReason
+  ?? `当前 collection 暂不支持删除：${item.collection}`;
+const sourceErrorPanelId = item.sourceError
+  ? `admin-content-source-error-${item.collection}-${item.id.replaceAll('/', '-')}`
+  : null;
+const hasBulkIdentity = Boolean(item.collection && item.id && item.relativePath);
+const bulkCheckboxLabel = hasBulkIdentity
+  ? `选择${item.title}`
+  : '缺少源文件身份，无法批量操作';
+const rowDateLabel = item.collection === 'bits' && item.date
+  ? formatISODate(item.date)
+  : item.dateLabel;
+
+const getContentPublicLinkLabel = (): string => {
+  if (capability.fixedPage) return `转到${capability.label}`;
+  if (item.collection === 'bits') return '前台查看';
+  return '转到文章';
+};
+
+const getContentInfoActionLabel = (): string => {
+  if (!capability.writable) return '查看源信息';
+  if (item.collection === 'blog' || item.collection === 'bits') return '修改信息';
+  if (capability.fixedPage) return `${capability.label}信息`;
+  return '编辑信息';
+};
+---
+
+<li
+  class="admin-row admin-row--plain admin-row--interactive admin-row--table admin-content-item"
+  data-collection={item.collection}
+  data-admin-content-item
+>
+  <label class="admin-content-bulk-select" title={bulkCheckboxLabel}>
+    <input
+      class="admin-content-bulk-checkbox"
+      type="checkbox"
+      data-admin-content-bulk-entry={hasBulkIdentity ? true : undefined}
+      data-collection={hasBulkIdentity ? item.collection : undefined}
+      data-entry-id={hasBulkIdentity ? item.id : undefined}
+      data-relative-path={hasBulkIdentity ? item.relativePath : undefined}
+      data-title={hasBulkIdentity ? item.title : undefined}
+      disabled={!hasBulkIdentity}
+      aria-label={bulkCheckboxLabel}
+    />
+  </label>
+  <p class="admin-content-row-meta">
+    <span data-admin-content-row-date>{rowDateLabel}</span>
+  </p>
+
+  <div class="admin-content-item__title-row">
+    <a class="admin-content-row-title" href={entryTitleHref} data-admin-content-row-title>{item.collection === 'devlog' && item.project ? <span class="admin-content-row-project">{`${item.project}: `}</span> : null}{item.title}</a>
+    {
+      item.collection === 'blog' && item.series ? (
+        <>
+          {item.versionLabel ? (
+            <span
+              class="admin-content-row-version"
+              data-admin-content-row-version
+              title={item.versionName ?? undefined}
+            >
+              {item.versionLabel}
+            </span>
+          ) : null}
+          <span
+            class:list={[
+              'admin-content-row-mark',
+              item.isLatestVersion
+                ? 'admin-content-row-mark--latest'
+                : 'admin-content-row-mark--history'
+            ]}
+            data-admin-content-row-version-state={item.isLatestVersion ? 'latest' : 'history'}
+          >
+            {item.isLatestVersion ? '最新' : '历史'}
+          </span>
+        </>
+      ) : null
+    }
+    {
+      item.sourceError && sourceErrorPanelId ? (
+        <details class="admin-content-source-error">
+          <summary
+            class="admin-content-source-error__trigger"
+            title={item.sourceError}
+            aria-label={`查看源文件异常：${item.title}`}
+            aria-controls={sourceErrorPanelId}
+          >
+            <AdminIcon name="triangle-alert" size={14} />
+          </summary>
+          <div
+            id={sourceErrorPanelId}
+            class="admin-content-source-error__panel"
+            role="note"
+          >
+            <p class="admin-content-source-error__label">源文件异常</p>
+            <p class="admin-content-source-error__message">{item.sourceError}</p>
+          </div>
+        </details>
+      ) : null
+    }
+    <span
+      class="admin-content-row-mark admin-content-row-mark--draft"
+      hidden={!item.isDraft}
+    >
+      [draft]
+    </span>
+    <span
+      class="admin-content-row-mark admin-content-row-mark--archive"
+      data-admin-content-row-archive
+      hidden={item.archive !== false}
+    >
+      [archive off]
+    </span>
+  </div>
+
+  <div class="admin-content-item__actions">
+    {capability.writable ? (
+      <a class="admin-btn admin-btn--secondary admin-btn--compact" href={editHref}>
+        编辑
+      </a>
+    ) : (
+      <span
+        class="admin-btn admin-btn--secondary admin-btn--compact is-disabled"
+        aria-disabled="true"
+        title={capability.readonlyReason ?? '当前内容暂不支持编辑'}
+      >
+        待接入
+      </span>
+    )}
+    <details class="admin-content-item__more">
+      <summary class="admin-btn admin-btn--ghost admin-btn--compact">更多</summary>
+      <div class="admin-content-more-panel" aria-label="内容操作">
+        <a
+          class:list={[
+            'admin-content-menu-item',
+            !articleInfoHref && 'is-disabled'
+          ]}
+          href={articleInfoHref ?? undefined}
+          data-admin-content-info-action={supportsListInfoAction ? true : undefined}
+          data-collection={supportsListInfoAction ? item.collection : undefined}
+          data-entry-id={supportsListInfoAction ? item.id : undefined}
+          aria-disabled={articleInfoHref ? undefined : 'true'}
+          title={articleInfoHref ? undefined : capability.readonlyReason ?? '当前内容暂不支持编辑'}
+          tabindex={articleInfoHref ? undefined : '-1'}
+        >
+          <AdminIcon name="admin-page" size={14} />
+          <span>{getContentInfoActionLabel()}</span>
+        </a>
+        <a
+          class:list={[
+            'admin-content-menu-item',
+            !publicHref && 'is-disabled'
+          ]}
+          href={publicHref ?? undefined}
+          data-admin-content-row-public-link
+          aria-disabled={publicHref ? undefined : 'true'}
+          title={publicHref ? undefined : publicFallbackLabel}
+          tabindex={publicHref ? undefined : '-1'}
+        >
+          <AdminIcon name="link" size={14} />
+          <span>{getContentPublicLinkLabel()}</span>
+        </a>
+        {item.collection === 'blog' ? (
+          <button
+            type="button"
+            class="admin-content-menu-item"
+            data-admin-content-create-version-action
+            data-entry-id={item.id}
+          >
+            <AdminIcon name="admin-page" size={14} />
+            <span>新建版本</span>
+          </button>
+        ) : null}
+        <a
+          class="admin-content-menu-item"
+          href={exportHref}
+          data-admin-content-export-action
+        >
+          <AdminIcon name="download" size={14} />
+          <span>导出</span>
+        </a>
+        {isAdminContentDeletableCollectionKey(item.collection) ? (
+          <button
+            type="button"
+            class="admin-content-menu-item admin-content-menu-item--danger"
+            data-admin-content-delete-action
+            data-collection={item.collection}
+            data-entry-id={item.id}
+            data-relative-path={item.relativePath}
+          >
+            <AdminIcon name="trash" size={14} />
+            <span>删除</span>
+          </button>
+        ) : (
+          <span class="admin-content-menu-item admin-content-menu-item--danger is-disabled" aria-disabled="true" title={deleteUnsupportedReason}>
+            <AdminIcon name="trash" size={14} />
+            <span>删除</span>
+          </span>
+        )}
+      </div>
+    </details>
+  </div>
+</li>

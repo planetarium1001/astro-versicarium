@@ -1,0 +1,14 @@
+/**
+ * 弹窗 / 行内展开正文的 Markdown 排版。
+ *
+ * `/projects/` 与 `/devlog/` 的正文由 `renderEntryBody()` 走与文章页相同的
+ * remark/rehype 管线生成，但这两个页面不加载 `article.css`。这里聚合正文所需的
+ * 共享规则（prose / figure / callout / code-block），避免出现
+ * 「代码块工具栏图标没有尺寸、图片铺满整屏」这类只在弹窗里出现的问题。
+ *
+ * 文章页仍由 `article.css` 直接引入同一组文件；两边保持同一份来源。
+ */
+@import "./prose.css";
+@import "./figure.css";
+@import "./callout.css";
+@import "./code-block.css";

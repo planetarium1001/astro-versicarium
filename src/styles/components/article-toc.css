@@ -313,24 +313,27 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
   visibility: hidden;
 }
 
-/* 中屏：仅阅读模式启用（左侧栏已收拢，腾出的宽度够放目录列） */
-@media (min-width: 1024px) {
-  body.immersive-page[data-reading='immersive'] .shell[data-toc='true'] {
-    grid-template-columns: 0px 0px minmax(0, 1fr) var(--article-toc-column);
-  }
-
-  body.immersive-page[data-reading='immersive'] .article-toc--rail {
-    display: block;
-  }
-
-  body.immersive-page[data-reading='immersive'] .article-toc--inline {
-    display: none;
-  }
-}
-
-/* 1024–1280：普通模式先把第 4 列占位成 0px，保证进出阅读模式时列数不变（3 到 4 无法插值） */
+/**
+ * 中屏（1024–1279）：普通模式也常驻右侧目录，不再退回正文顶部的内联折叠卡。
+ * 第 4 列用 clamp 收窄（184–220px），给正文留出可读宽度；列数始终为 4，
+ * 进出阅读模式时栅格结构不变。内联目录只留给 <1024 的窄屏。
+ */
 @media (min-width: 1024px) and (max-width: 1279.98px) {
   body.immersive-page .shell[data-toc='true'] {
+    grid-template-columns:
+      var(--sidebar)
+      var(--layout-divider-inline-size)
+      minmax(0, 1fr)
+      clamp(184px, 17vw, 220px);
+  }
+
+  body.immersive-page .shell[data-toc='true'][data-sidebar-divider='none'] {
+    grid-template-columns: var(--sidebar) 0 minmax(0, 1fr) clamp(184px, 17vw, 220px);
+  }
+
+  /* 收起态：第 4 列归零，把手改为 fixed 悬在原竖线上；列数不变，正文贴近右缘。 */
+  :root[data-toc-collapsed='true'] body.immersive-page .shell[data-toc='true'],
+  :root[data-toc-collapsed='true'] body.immersive-page .shell[data-toc='true'][data-sidebar-divider='none'] {
     grid-template-columns:
       var(--sidebar)
       var(--layout-divider-inline-size)
@@ -338,8 +341,12 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
       0px;
   }
 
-  body.immersive-page .shell[data-toc='true'][data-sidebar-divider='none'] {
-    grid-template-columns: var(--sidebar) 0 minmax(0, 1fr) 0px;
+  body.immersive-page .article-toc--rail {
+    display: block;
+  }
+
+  body.immersive-page .article-toc--inline {
+    display: none;
   }
 }
 
@@ -348,7 +355,7 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
  * --pad-x + 34px，与左侧不对称。收起态把第 4 列压到 0（四列不变，宽度可平滑插值），
  * 把手改为绝对定位悬在原竖线上。
  */
-@media (min-width: 1280px) {
+@media (min-width: 1024px) {
   :root[data-toc-collapsed='true'] body.immersive-page .shell[data-toc='true'],
   :root[data-toc-collapsed='true'] body.immersive-page .shell[data-toc='true'][data-sidebar-divider='none'] {
     grid-template-columns:

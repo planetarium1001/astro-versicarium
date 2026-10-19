@@ -1,4 +1,4 @@
-/* Admin Images Detail
+/* 后台图片详情
    负责详情区、badge、代码块与复制反馈。
 */
 
@@ -97,7 +97,7 @@
   color: var(--admin-images-origin-content-text);
 }
 
-/* Semantic DL meta data list */
+/* 语义化 dl 元数据列表 */
 .admin-images-browser__detail-meta-list {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -228,7 +228,7 @@
   height: 16px;
 }
 
-/* Action button hierarchy */
+/* 操作按钮层级 */
 .admin-images-browser__detail-actions {
   display: flex;
   flex-wrap: wrap;
