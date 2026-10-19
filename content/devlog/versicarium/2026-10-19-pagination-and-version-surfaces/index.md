@@ -14,4 +14,4 @@ draft: false
 
 项目与归档开始显示大版本历史。项目弹窗与归档条目可以展开同一项目的多个版本文档，历史版使用日期锚点，最新版使用稳定 slug 锚点。
 
-[项目 1.0.0](/projects/#versicarium) · [仓库](https://github.com/planetarium1001/astro-versicarium)
+[项目 1.0.0-rc.1](/projects/#versicarium) · [仓库](https://github.com/planetarium1001/astro-versicarium)

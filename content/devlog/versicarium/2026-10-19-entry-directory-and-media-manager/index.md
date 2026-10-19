@@ -14,4 +14,4 @@ draft: false
 
 `f6280ed`（2026-10-19 00:50）补上完整的媒体管理器。后台把图片与附件放进同一工作区，支持搜索与筛选、批量重命名和移动、引用状态统计，以及整条目归档的导入与导出。内容台、媒体台与前台正文从此对准同一套条目目录。
 
-[项目 1.0.0](/projects/#versicarium) · [仓库](https://github.com/planetarium1001/astro-versicarium)
+[项目 1.0.0-rc.1](/projects/#versicarium) · [仓库](https://github.com/planetarium1001/astro-versicarium)

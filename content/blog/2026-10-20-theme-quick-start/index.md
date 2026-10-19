@@ -5,14 +5,14 @@ date: 2026-10-20
 publishedAt: 2026-10-20
 tags: [快速开始, 环境]
 series: theme-quick-start
-versionLabel: "1.0.0"
-versionName: 1.0 预览版
+versionLabel: "1.0.0-rc.1"
+versionName: 1.0-rc.1 预览候选
 versionSummary: 覆盖安装、开发、构建、目录结构与第一次检查的当前说明。
 versionOrder: 2
 draft: false
 ---
 
-Versicarium · 垄录 是一个以内容目录为边界、主题代码可独立更新的 Astro 博客主题。仓库地址为 `https://github.com/planetarium1001/astro-versicarium`，完整示例站部署在 `https://planetarium1001.github.io/astro-versicarium/`。当前版本为 1.0.0 预览版。
+Versicarium · 垄录 是一个以内容目录为边界、主题代码可独立更新的 Astro 博客主题。仓库地址为 `https://github.com/planetarium1001/astro-versicarium`，完整示例站部署在 `https://planetarium1001.github.io/astro-versicarium/`。当前版本为 `1.0.0-rc.1` 预览版。
 
 ## 环境要求
 

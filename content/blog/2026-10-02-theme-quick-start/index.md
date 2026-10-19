@@ -1,6 +1,6 @@
 ---
 title: 主题快速开始
-description: 0.1.0 时期的安装与运行说明，已被 1.0.0 预览版取代。
+description: 0.1.0 时期的安装与运行说明，已被 1.0.0-rc.1 预览版取代。
 date: 2026-10-02
 publishedAt: 2026-10-02
 tags: [历史版本, 快速开始]
@@ -30,6 +30,6 @@ npm run dev
 
 ## 与当前版本的差异
 
-1.0.0 预览版补齐了环境要求、构建校验、目录结构与第一次检查，并加入主题更新与发布流程。当前说明见[主题快速开始](/blog/2026-10-20-theme-quick-start/)，其中包含 `npm run verify`、`SITE_URL` 与后台入口的完整步骤。
+1.0.0-rc.1 预览版补齐了环境要求、构建校验、目录结构与第一次检查，并加入主题更新与发布流程。当前说明见[主题快速开始](/blog/2026-10-20-theme-quick-start/)，其中包含 `npm run verify`、`SITE_URL` 与后台入口的完整步骤。
 
 [仓库](https://github.com/planetarium1001/astro-versicarium) · [示例站](https://planetarium1001.github.io/astro-versicarium/)

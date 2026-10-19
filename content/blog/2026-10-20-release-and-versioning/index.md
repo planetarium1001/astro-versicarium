@@ -1,6 +1,6 @@
 ---
 title: 发布与版本管理
-description: 1.0.0 预览版的 SemVer 含义、Release Please 工作流、模板获取方式与 main / demo 的分支职责。
+description: 1.0.0-rc.1 预览版的 SemVer 含义、Release Please 工作流、模板获取方式与 main / demo 的分支职责。
 date: 2026-10-20
 publishedAt: 2026-10-20
 tags: [发布, 版本]
@@ -9,7 +9,7 @@ draft: false
 
 Versicarium · 垄录 用语义化版本标记主题发布，用 Git 分支区分模板与示例站。版本号回答“这次升级是否兼容”，Release 页面回答“如何取得这个版本的源码”，`theme.json` 回答“站点同步到了哪个主题提交”。三者职责不同，不能互相替代。
 
-## SemVer 与 1.0.0 预览版
+## SemVer 与 1.0.0-rc.1 预览版
 
 主题版本写在 `package.json` 的 `version` 字段，Release 标签使用同一版本号。版本号按语义化版本解释：
 
@@ -19,18 +19,19 @@ Versicarium · 垄录 用语义化版本标记主题发布，用 Git 分支区�
 | 向后兼容的功能 | 次版本 | 新增设置项、增加版本字段、扩展后台模块 |
 | 向后兼容的修复 | 修订版本 | 修复渲染、布局、合并逻辑或文档错误 |
 
-1.0.0 是首次公开版本，当前处于预览阶段：版本号、CHANGELOG 与发布配置已按 1.0.0 准备，Release 尚未创建。预览版表示发布范围与内容结构已经收敛，正式发布前仍可能根据验证结果调整细节；正式发布时推送本地 `v1.0.0` 标签并创建 Release。
+`1.0.0-rc.1` 是首个预览候选：版本号、CHANGELOG 与发布配置已按 `1.0.0-rc.1` 准备，Release 尚未创建。预览版表示发布范围与内容结构已经收敛，验证与文档补全后发布稳定版 `1.0.0`。
 
-`theme.json` 的 `commit` 不是版本号。它记录站点已经吸收到的主题提交；同一个 1.0.0 可以被不同站点在不同时间同步，各自的基准提交可以不同。
+`theme.json` 的 `commit` 不是版本号。它记录站点已经吸收到的主题提交；同一个 1.0.0-rc.1 可以被不同站点在不同时间同步，各自的基准提交可以不同。
 
 ## Release Please
 
 版本号与 CHANGELOG 由 Release Please 管理，不再手工维护。仓库使用约定式提交，合并到 `main` 的 `feat`、`fix` 等提交会被收集，Release Please 据此更新 `package.json` 与 `CHANGELOG.md`，并开出一个发布 PR。
 
 - 发布 PR 合并后，Release Please 创建对应标签与 GitHub Release。
-- `release-please-config.json` 与 `.release-please-manifest.json` 保存发布类型与当前版本；首次 1.0.0 由维护者写入清单，此后由 Release Please 接管。
+- `release-please-config.json` 与 `.release-please-manifest.json` 保存发布类型与当前版本；首个 `1.0.0-rc.1` 由维护者写入清单，此后由 Release Please 接管。
 - 版本号不嵌入日期；日期只写入 CHANGELOG 条目与 Release 标题。
-- 预览阶段不创建 GitHub Release；`v1.0.0` 标签只保留在本地，不推送。
+- 预览阶段不创建 GitHub Release；`v1.0.0-rc.1` 标签只保留在本地，不推送。
+- `release-please-config.json` 使用 `versioning: prerelease`、`prerelease: true` 与 `prerelease-type: rc`，后续预览版本递增为 `1.0.0-rc.2`。发布稳定版时改回默认版本策略并关闭预发布标记。
 
 ## 模板与源码归档
 
@@ -87,4 +88,4 @@ GitHub Pages 工作流固定在 `demo` 运行，`main` 不参与部署。工作�
 4. 执行 `npm run verify`，确认类型、构建、测试与产物校验通过。
 5. 提交站点自己的更新，把 `theme.json` 的新基准一并纳入版本控制。
 
-预览阶段的 1.0.0 覆盖内容目录、项目多版本文档、资源工作区与版本界面；这些能力的字段说明分别见[内容模型与目录式条目](/blog/2026-10-20-content-model/)与[后台控制台概览](/blog/2026-10-20-admin-console/)。
+预览阶段的 `1.0.0-rc.1` 覆盖内容目录、项目多版本文档、资源工作区与版本界面；这些能力的字段说明分别见[内容模型与目录式条目](/blog/2026-10-20-content-model/)与[后台控制台概览](/blog/2026-10-20-admin-console/)。
