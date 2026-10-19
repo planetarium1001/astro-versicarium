@@ -33,5 +33,27 @@
   "about": {
     "title": "关于",
     "subtitle": null
+  },
+  "pagination": {
+    "home": {
+      "enabled": true,
+      "pageSize": 12
+    },
+    "blog": {
+      "enabled": true,
+      "pageSize": 12
+    },
+    "bits": {
+      "enabled": true,
+      "pageSize": 20
+    },
+    "devlog": {
+      "enabled": false,
+      "pageSize": 10
+    },
+    "archive": {
+      "enabled": true,
+      "pageSize": 20
+    }
   }
 }

@@ -17,6 +17,7 @@ import List from '@lucide/astro/icons/list';
 import MapPin from '@lucide/astro/icons/map-pin';
 import Moon from '@lucide/astro/icons/moon';
 import MonitorDot from '@lucide/astro/icons/monitor-dot';
+import PanelRightOpen from '@lucide/astro/icons/panel-right-open';
 import PenLine from '@lucide/astro/icons/pen-line';
 import Pilcrow from '@lucide/astro/icons/pilcrow';
 import Quote from '@lucide/astro/icons/quote';
@@ -26,6 +27,7 @@ import SquareArrowRightExit from '@lucide/astro/icons/square-arrow-right-exit';
 import Sun from '@lucide/astro/icons/sun';
 import SunMoon from '@lucide/astro/icons/sun-moon';
 import Tag from '@lucide/astro/icons/tag';
+import X from '@lucide/astro/icons/x';
 
 type UiIconName =
   | 'bold'
@@ -43,6 +45,7 @@ type UiIconName =
   | 'map-pin'
   | 'moon'
   | 'monitor-dot'
+  | 'panel-right-open'
   | 'paragraph'
   | 'pen'
   | 'quote'
@@ -52,7 +55,8 @@ type UiIconName =
   | 'sun'
   | 'sun-moon'
   | 'tag'
-  | 'user-circle';
+  | 'user-circle'
+  | 'x';
 
 interface Props {
   name: UiIconName;
@@ -86,6 +90,7 @@ const uiIconComponents = {
   'map-pin': MapPin,
   moon: Moon,
   'monitor-dot': MonitorDot,
+  'panel-right-open': PanelRightOpen,
   paragraph: Pilcrow,
   pen: PenLine,
   quote: Quote,
@@ -95,7 +100,8 @@ const uiIconComponents = {
   sun: Sun,
   'sun-moon': SunMoon,
   tag: Tag,
-  'user-circle': CircleUserRound
+  'user-circle': CircleUserRound,
+  x: X
 } as const satisfies Record<UiIconName, AstroComponent>;
 
 const IconComponent = uiIconComponents[name];

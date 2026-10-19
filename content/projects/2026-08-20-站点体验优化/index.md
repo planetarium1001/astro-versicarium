@@ -4,6 +4,21 @@ subtitle: 从列表密度到移动端触控的体验整理
 description: 记录列表、卡片与移动端交互的体验检查与调整。
 type: 演示
 date: 2026-08-20
+versionLabel: v2.0
+versionName: 体验整理
+versionSummary: 统一列表、卡片与移动端交互，并补齐检查清单。
+versionOrder: 2
+versions:
+  - label: v1.1
+    name: 列表与触控
+    date: 2026-08-18
+    summary: 调整列表密度与移动端触控热区。
+    order: 1
+  - label: v1.0
+    name: 初版
+    date: 2026-08-12
+    summary: 建立站点体验检查的初始范围。
+    order: 0
 draft: false
 ---
 

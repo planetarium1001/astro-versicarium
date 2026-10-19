@@ -67,6 +67,18 @@
   color: inherit;
 }
 
+/* 项目大版本标签：弱化，附在标题后，不抢时间线标题的层级。 */
+.archive-timeline__version {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 999px;
+  color: var(--faint);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+}
+
 .archive-timeline__title:hover,
 .archive-timeline__title:focus-visible {
   color: var(--accent);

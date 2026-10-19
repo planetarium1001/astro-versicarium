@@ -401,6 +401,13 @@ export const createValidation = ({
       return () => inputHomeIntroMoreLinkPrimary;
     }
 
+    if (path.startsWith('page.pagination.')) {
+      const segments = path.split('.');
+      const scope = segments[2] ?? '';
+      const field = segments[3] === 'pageSize' ? 'size' : 'enabled';
+      return () => document.getElementById(`page-pagination-${scope}-${field}`);
+    }
+
     if (path.startsWith('page.')) {
       const segments = path.split('.');
       const pageId = segments[1] as (typeof PAGE_TITLE_INPUT_KEYS)[number] | undefined;

@@ -4,6 +4,16 @@ subtitle: 从草稿、版本到归档的发布流程
 description: 用版本号与检查清单串起草稿、发布和归档。
 type: 演示
 date: 2026-09-08
+versionLabel: v2.0
+versionName: 稳定版
+versionSummary: 补齐检查清单，把草稿、版本与归档串成可执行流程。
+versionOrder: 2
+versions:
+  - label: v1.0
+    name: 初版
+    date: 2026-09-01
+    summary: 建立草稿、版本号与发布检查的初始约定。
+    order: 1
 draft: false
 ---
 

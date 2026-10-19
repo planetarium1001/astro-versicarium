@@ -36,6 +36,7 @@ import {
   createWithBase,
   tokenizeSearchQuery
 } from '../utils/format';
+import { formatPageStatus } from '../lib/pagination';
 
 type IndexItem = {
   slug: string;
@@ -288,50 +289,27 @@ if (!root) {
     }
     paginationNav.hidden = false;
 
-    const createButton = (label: string, page: number, options: { disabled?: boolean; current?: boolean; rel?: string } = {}) => {
+    const createButton = (label: string, ariaLabel: string, page: number, options: { disabled?: boolean } = {}) => {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'pagination__link';
-      if (options.current) button.classList.add('is-current');
-      if (options.rel) button.dataset.rel = options.rel;
       button.textContent = label;
       button.disabled = options.disabled === true;
-      if (options.current) button.setAttribute('aria-current', 'page');
-      button.setAttribute('aria-label', options.current ? `第 ${page} 页，当前页` : `第 ${page} 页`);
+      button.setAttribute('aria-label', ariaLabel);
       button.addEventListener('click', () => gotoPage(page));
       return button;
     };
 
-    paginationInner.append(
-      createButton('上一页', currentPage - 1, { disabled: currentPage <= 1, rel: 'prev' })
-    );
-
-    // 页码过多时只保留「首页 / 当前页邻域 / 末页」，窄屏可横向 wrap。
-    const windowSize = 2;
-    const pages: (number | 'ellipsis')[] = [];
-    for (let page = 1; page <= totalPages; page += 1) {
-      const nearCurrent = Math.abs(page - currentPage) <= windowSize;
-      if (page === 1 || page === totalPages || nearCurrent) {
-        pages.push(page);
-      } else if (pages.at(-1) !== 'ellipsis') {
-        pages.push('ellipsis');
-      }
-    }
-
-    for (const page of pages) {
-      if (page === 'ellipsis') {
-        const ellipsis = document.createElement('span');
-        ellipsis.className = 'pagination__ellipsis';
-        ellipsis.setAttribute('aria-hidden', 'true');
-        ellipsis.textContent = '…';
-        paginationInner.append(ellipsis);
-        continue;
-      }
-      paginationInner.append(createButton(String(page), page, { current: page === currentPage }));
-    }
+    const status = document.createElement('span');
+    status.className = 'pagination__status';
+    status.dataset.pageStatus = '';
+    status.setAttribute('aria-live', 'polite');
+    status.textContent = formatPageStatus(currentPage, totalPages);
 
     paginationInner.append(
-      createButton('下一页', currentPage + 1, { disabled: currentPage >= totalPages, rel: 'next' })
+      createButton('< 上一页', '上一页', currentPage - 1, { disabled: currentPage <= 1 }),
+      status,
+      createButton('下一页 >', '下一页', currentPage + 1, { disabled: currentPage >= totalPages })
     );
   };
 
@@ -661,7 +639,8 @@ if (!root) {
   const applySubtitleCount = (count: number | null) =>
     syncSubtitleCount(pageSubtitleTextEl, subtitleTemplate, count, {
       defaultUnit: '篇',
-      keep: '内容'
+      keep: '内容',
+      ...(activeScope === 'devlog' ? { unit: '条' as const } : {})
     });
 
   const setDegradedMode = () => {
@@ -870,10 +849,12 @@ if (!root) {
     }
     // 作用域内没有标签/关键词时直接用 scopedItems，避免多走一次 index 请求
     if (scopeFallback) {
-      if (instant) applyInstantItems(scopedItems());
-      else setFilteredItems(scopedItems());
+      const scoped = scopedItems();
+      if (instant) applyInstantItems(scoped);
+      else setFilteredItems(scoped);
       syncSections(true);
-      applySubtitleCount(null);
+      // 副标题跟随当前作用域 / 年份的条目数，而不是保留服务端「全部」的 27。
+      applySubtitleCount(scoped.length);
       return;
     }
     void applyFilter();
@@ -895,7 +876,7 @@ if (!root) {
       else if (activeYear === null) showAllItems();
       else setFilteredItems(next);
       syncSections(activeYear !== null);
-      applySubtitleCount(null);
+      applySubtitleCount(activeYear === null ? null : next.length);
       return;
     }
     void applyFilter();

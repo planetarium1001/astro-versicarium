@@ -22,6 +22,7 @@ const {
 } = getThemeSettings();
 
 const pageTitleText = page.devlog.title || '更新';
+const pagination = page.pagination?.devlog ?? { enabled: false, pageSize: 10 };
 const subtitleText = joinPageSubtitleText(page.devlog.subtitle, `共 ${items.length} 条更新`);
 const pageDescription = joinPageSubtitleText(
   `${pageTitleText}列表`,
@@ -91,7 +92,8 @@ const projectOptions = projectValues.map((value) => ({
     tagOptions={projectOptions}
   />
 
-  <div class="devlog-list" data-devlog-list>
+  <div data-page-pagination-root data-page-size={pagination.enabled ? String(pagination.pageSize) : undefined}>
+  <div class="devlog-list" data-devlog-list data-page-list>
     {rows.map((row) => (
       <article
         class="devlog-row"
@@ -143,11 +145,17 @@ const projectOptions = projectValues.map((value) => ({
     ))}
   </div>
 
+  <nav class="pagination" data-page-pagination hidden aria-label={`${pageTitleText}分页`}>
+    <div class="pagination__inner" data-page-pagination-inner></div>
+  </nav>
+  </div>
+
   <script>
     // 加载顺序：摘要策略先定（它决定展开面板是否要多显示一行完整摘要），
     // 再由抽屉接管展开与锚点，最后是筛选。
     import '../../scripts/devlog-excerpts.ts';
     import '../../scripts/devlog-drawer.ts';
     import '../../scripts/devlog-filter.ts';
+    import '../../scripts/page-pagination.ts';
   </script>
 </BaseLayout>

@@ -17,6 +17,7 @@ const withBase = createWithBase(base);
 const {
   settings: {
     home: { introLead, introMore, introMoreLinks, showIntroLead, showIntroMore, heroPresetId, heroImageSrc, heroImageAlt },
+    page: { pagination: paginationSettings },
     ui: { articleMeta, typography, cardDateDisplay }
   }
 } = getThemeSettings();
@@ -34,7 +35,8 @@ const resolvedIntroMoreLinks = (introMoreLinks.length ? introMoreLinks : [...ADM
   (linkKey) => getAdminHomeIntroLinkOption(linkKey)
 );
 
-const latest = (await getVisibleBlogListItems()).slice(0, 12);
+const allItems = await getVisibleBlogListItems();
+const pagination = paginationSettings?.home ?? { enabled: true, pageSize: 12 };
 
 type HomeHeadCriticalFontFace = {
   family: 'LXGW WenKai Lite' | 'Noto Serif SC';
@@ -826,8 +828,9 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
 
   <h2 class="section-title section-title--index">索引</h2>
 
-  <div class="list">
-    {latest.map((item) => {
+  <div data-page-pagination-root data-page-size={pagination.enabled ? String(pagination.pageSize) : undefined}>
+    <div class="list" data-page-list>
+    {allItems.map((item) => {
       const href = withBase(item.href);
       const visibleTags = getVisibleArticleMetaTags(item.entry.data.tags, 'home');
       return (
@@ -852,5 +855,12 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
         />
       );
     })}
+    </div>
+    <nav class="pagination" data-page-pagination hidden aria-label="首页文章分页">
+      <div class="pagination__inner" data-page-pagination-inner></div>
+    </nav>
   </div>
+  <script>
+    import '../scripts/page-pagination.ts';
+  </script>
 </BaseLayout>

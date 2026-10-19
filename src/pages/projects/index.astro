@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { createWithBase, getVisibleDevlogs, getVisibleProjects } from '../../lib/content';
+import { getProjectVersionHistory, type ProjectVersionRecord } from '../../lib/archive';
 import { getThemeSettings } from '../../lib/theme-settings';
 import { joinPageSubtitleText } from '../../utils/format';
 import { flattenEntryIdToSlug } from '../../utils/slug-rules';
@@ -38,6 +39,8 @@ type ProjectCard = {
   bodyHtml: string;
   /** 末尾链接组，按书写顺序；卡片在摘要下一行单独渲染 */
   links: TrailingLink[];
+  /** 大版本历史（当前版本在首位）；未配置版本字段时为空。 */
+  versions: ProjectVersionRecord[];
   updates: Array<{ id: string; title: string; dateText: string }>;
 };
 
@@ -59,6 +62,7 @@ const cards: ProjectCard[] = await Promise.all(
       hasBody,
       bodyHtml: html,
       links,
+      versions: getProjectVersionHistory(entry.data, entry.data.dateText),
       updates: devlogs
         .filter((devlog) => devlog.data.projectSlug === entry.id)
         .map((devlog) => ({
@@ -112,6 +116,12 @@ const cards: ProjectCard[] = await Promise.all(
                   <span class="project-card__title">{card.title}</span>
                 </span>
                 {card.subtitle ? <span class="project-card__subtitle">{card.subtitle}</span> : null}
+                {card.versions[0] ? (
+                  <span class="project-card__version">
+                    <span class="project-card__version-label">{card.versions[0].label}</span>
+                    {card.versions[0].name ? <span>{card.versions[0].name}</span> : null}
+                  </span>
+                ) : null}
               </span>
             </span>
             {card.image ? (
@@ -160,6 +170,27 @@ const cards: ProjectCard[] = await Promise.all(
           ) : (
             <p class="project-dialog__fallback">{card.description ?? '暂无描述。'}</p>
           )}
+          {card.versions.length ? (
+            <section class="project-versions" aria-labelledby={`project-versions-title-${card.id}`}>
+              <div class="project-versions__head">
+                <h3 class="project-versions__title" id={`project-versions-title-${card.id}`}>版本历史</h3>
+                <span class="project-versions__hint">大版本记录；逐条改动见下方更新日志。</span>
+              </div>
+              <ol class="project-versions__list">
+                {card.versions.map((version) => (
+                  <li class:list={['project-version', version.isCurrent && 'is-current']}>
+                    <div class="project-version__head">
+                      <span class="project-version__label">{version.label}</span>
+                      {version.name ? <span class="project-version__name">{version.name}</span> : null}
+                      <time class="project-version__date" datetime={version.dateText}>{version.dateText}</time>
+                      {version.isCurrent ? <span class="project-version__status">当前版本</span> : null}
+                    </div>
+                    {version.summary ? <p class="project-version__summary">{version.summary}</p> : null}
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ) : null}
           {card.updates.length ? (
             <section class="project-updates" aria-label={`${card.title}更新日志`}>
               <h3 class="project-updates__title">更新日志</h3>

@@ -29,6 +29,8 @@ import {
   ADMIN_NAV_IDS,
   ADMIN_NAV_ORNAMENT_DEFAULT,
   ADMIN_OVERVIEW_HIDDEN_MESSAGE_DEFAULT,
+  ADMIN_PAGINATION_DEFAULTS,
+  ADMIN_PAGINATION_SCOPES,
   ADMIN_SIDEBAR_DIVIDER_DEFAULT,
   ADMIN_SITE_PAGE_GAP_DEFAULT,
   ADMIN_SITE_TITLE_PERCENT_DEFAULT,
@@ -191,6 +193,32 @@ export const parseInteger = (value: string | number | null | undefined): number 
 };
 
 export const normalizeTrimmed = (value: unknown): string => String(value ?? '').trim();
+
+const paginationInput = (
+  scope: (typeof ADMIN_PAGINATION_SCOPES)[number],
+  field: 'enabled' | 'size'
+): HTMLInputElement | null =>
+  document.getElementById(`page-pagination-${scope}-${field}`) as HTMLInputElement | null;
+
+const readPaginationScope = (
+  scope: (typeof ADMIN_PAGINATION_SCOPES)[number]
+): { enabled: boolean; pageSize: number } => {
+  const enabledInput = paginationInput(scope, 'enabled');
+  const sizeInput = paginationInput(scope, 'size');
+  const fallback = ADMIN_PAGINATION_DEFAULTS[scope];
+  return {
+    enabled: enabledInput ? Boolean(enabledInput.checked) : fallback.enabled,
+    pageSize: parseInteger(sizeInput?.value ?? null) ?? fallback.pageSize
+  };
+};
+
+const readPaginationSettings = (): EditableSettings['page']['pagination'] => ({
+  home: readPaginationScope('home'),
+  blog: readPaginationScope('blog'),
+  bits: readPaginationScope('bits'),
+  devlog: readPaginationScope('devlog'),
+  archive: readPaginationScope('archive')
+});
 
 const normalizeHeroImageInput = (value: unknown): string | null => {
   const rawValue = normalizeTrimmed(value);
@@ -787,7 +815,8 @@ export const createFormCodec = ({
         about: {
           title: normalizeOptionalSingleLine(inputPageAboutTitle.value),
           subtitle: normalizeOptionalSingleLine(inputPageAboutSubtitle.value)
-        }
+        },
+        pagination: readPaginationSettings()
       },
       ui: {
         codeBlock: {
@@ -909,6 +938,13 @@ export const createFormCodec = ({
     inputPageDevlogSubtitle.value = settings.page.devlog?.subtitle || '';
     inputPageAboutTitle.value = settings.page.about?.title || '';
     inputPageAboutSubtitle.value = settings.page.about?.subtitle || '';
+    for (const scope of ADMIN_PAGINATION_SCOPES) {
+      const values = settings.page.pagination?.[scope] ?? ADMIN_PAGINATION_DEFAULTS[scope];
+      const enabledInput = paginationInput(scope, 'enabled');
+      const sizeInput = paginationInput(scope, 'size');
+      if (enabledInput) enabledInput.checked = values.enabled;
+      if (sizeInput) sizeInput.value = String(values.pageSize);
+    }
     inputPageBitsAuthorName.value = settings.page.bits?.defaultAuthor?.name || '';
     inputPageBitsAuthorAvatar.value = settings.page.bits?.defaultAuthor?.avatar || '';
     inputHomeShowHero.checked = (settings.home.heroPresetId || 'default') !== 'none';

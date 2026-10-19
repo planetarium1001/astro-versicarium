@@ -170,6 +170,23 @@ describe('entry-search 客户端行为', () => {
     });
   });
 
+  it('archive：切换作用域后副标题计数跟随当前作用域', async () => {
+    await loadPage(PAGES[2]);
+    await importEntrySearch({ archiveScope: true });
+
+    const devlogCount = pageItems().filter(
+      (el) => (el.dataset.archiveKind ?? '').trim() === 'devlog'
+    ).length;
+    const devlogPill = document.querySelector<HTMLElement>('[data-archive-scope="devlog"]');
+    expect(devlogPill).toBeTruthy();
+    devlogPill!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() => {
+      const subtitle = document.querySelector<HTMLElement>('.page-subtitle__text')?.textContent ?? '';
+      expect(subtitle).toContain(`共 ${devlogCount} 条内容`);
+    });
+  });
+
   it('archive：切换胶囊时滑块做弹性位移（沿用年份胶囊的实现）', async () => {
     await loadPage(PAGES[2]);
 

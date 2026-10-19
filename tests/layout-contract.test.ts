@@ -569,10 +569,16 @@ describe('文章目录列：右边界跟随页面外缘间隙', () => {
     expect(css).toMatch(
       /:root\[data-toc-collapsed='true'\] \.article-toc__rail-head,[\s\S]*?:root\[data-toc-intro='true'\] \.article-toc__rail-head\s*\{[^}]*margin-right:\s*0[^}]*padding-right:\s*0/
     );
-    // 收起态列宽与 1024–1280 的占位规则保持不变
+    // 收起态列宽仍压到把手宽；1024–1279 普通模式也常驻目录列，不再占位 0px
     expect(css).toMatch(/--article-toc-column:\s*var\(--article-toc-handle-column\)/);
     expect(css).toMatch(
-      /@media \(min-width: 1024px\) and \(max-width: 1279\.98px\)[\s\S]*?minmax\(0, 1fr\)\s*\n?\s*0px;/
+      /@media \(min-width: 1024px\) and \(max-width: 1279\.98px\)[\s\S]*?clamp\(184px, 17vw, 220px\)/
+    );
+    expect(css).toMatch(
+      /@media \(min-width: 1024px\) and \(max-width: 1279\.98px\)[\s\S]*?body\.immersive-page \.article-toc--rail\s*\{\s*display:\s*block/
+    );
+    expect(css).toMatch(
+      /@media \(min-width: 1024px\) and \(max-width: 1279\.98px\)[\s\S]*?body\.immersive-page \.article-toc--inline\s*\{\s*display:\s*none/
     );
   });
 });
@@ -970,9 +976,9 @@ describe('目录展开/收起的正文右内边距', () => {
       /@media \(max-width: 1279\.98px\)\s*\{[\s\S]{0,300}?:root:not\(\[data-toc-collapsed='true'\]\) body\.immersive-page \.shell\[data-toc='true'\] \.content\s*\{[^}]*padding-right:\s*max\(/
     );
 
-    // 1024–1280 阅读模式（目录进了第 4 列）：间隙 = --pad-x（与左侧一致）
+    // 1024–1280 目录常驻第 4 列（普通模式也生效）：间隙 = --pad-x（与左侧一致）
     expect(layout).toMatch(
-      /@media \(min-width: 1024px\) and \(max-width: 1279\.98px\)\s*\{[\s\S]{0,300}?body\.immersive-page\[data-reading='immersive'\] \.shell\[data-toc='true'\] \.content\s*\{[^}]*padding-right:\s*var\(--pad-x\)/
+      /@media \(min-width: 1024px\) and \(max-width: 1279\.98px\)\s*\{[\s\S]{0,300}?body\.immersive-page \.shell\[data-toc='true'\] \.content\s*\{[^}]*padding-right:\s*var\(--pad-x\)/
     );
 
     // ≥1280 展开态走基础规则的 --pad-x
@@ -1031,16 +1037,16 @@ describe('目录标题字号与时间/kind 配色', () => {
   });
 });
 
-describe('主题台：文章元信息两行布局', () => {
-  it('行容器自动换行，组内不再出现横向滚动', async () => {
+describe('主题台：文章元信息按语义分组', () => {
+  it('日期 / 附加信息 / 列表卡片分成三组，组内换行且无横向滚动', async () => {
     const [section, form] = await Promise.all([
       read('src/components/admin/AdminPageSection.astro'),
       read('src/styles/components/admin/theme/form.css')
     ]);
 
-    const group = /\.admin-toggle-row-group--article-meta\s*\{([^}]*)\}/.exec(form)?.[1] ?? '';
-    expect(group).toContain('flex-direction: column');
-    expect(group).toMatch(/align-items:\s*stretch/);
+    const group = /\.admin-meta-group\s*\{([^}]*)\}/.exec(form)?.[1] ?? '';
+    expect(group).toContain('display: grid');
+    expect(group).toMatch(/grid-template-columns:\s*84px minmax\(0,\s*1fr\)/);
     expect(group).not.toMatch(/overflow-x\s*:/);
     expect(group).not.toMatch(/nowrap/);
 
@@ -1049,7 +1055,12 @@ describe('主题台：文章元信息两行布局', () => {
     expect(line).toMatch(/flex-wrap:\s*wrap/);
     expect(line).toMatch(/min-width:\s*0/);
 
-    // 两个行容器：第一行日期控件，第二行列表卡片日期与三个开关
-    expect(section.match(/class="admin-toggle-row-group__line"/g) ?? []).toHaveLength(2);
+    // 语义分组：日期（显示/前缀/模式/粒度）、附加信息（标签/字数/时长）、列表卡片（日期显示）
+    expect(section.match(/class="admin-meta-group"/g) ?? []).toHaveLength(3);
+    expect(section.match(/class="admin-toggle-row-group__line"/g) ?? []).toHaveLength(3);
+    const labels = [...section.matchAll(/class="admin-meta-group__label">([^<]+)</g)].map((match) => match[1]);
+    expect(labels).toEqual(['日期', '附加信息', '列表卡片']);
+    // 日期组不再把「列表卡片日期」和详情附加信息混在一起
+    expect(section).not.toContain('列表卡片日期');
   });
 });

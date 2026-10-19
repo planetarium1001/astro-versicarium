@@ -207,9 +207,9 @@
   }
 }
 
-/* 1024–1280 阅读模式：目录已进入第 4 列，正文右内边距同样只取 --pad-x */
+/* 1024–1280：目录已常驻第 4 列，正文右内边距同样只取 --pad-x */
 @media (min-width: 1024px) and (max-width: 1279.98px) {
-  :root:not([data-toc-collapsed='true']) body.immersive-page[data-reading='immersive'] .shell[data-toc='true'] .content {
+  :root:not([data-toc-collapsed='true']) body.immersive-page .shell[data-toc='true'] .content {
     padding-right: var(--pad-x);
   }
 }
@@ -1205,47 +1205,50 @@ body.admin-page .sidebar-actions .icon-button[data-tooltip]::after {
   }
 }
 
-/* 窄屏分页控件必须触控可用：按钮 >= 44px，页码过多时横向 wrap */
+/* 简洁文字分页：视觉只有文字，热区仍保留 44px 高 */
 .pagination__inner {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 2px 12px;
 }
 
 .pagination__link {
   min-height: var(--tap-min-h);
-  min-width: var(--tap-min-h);
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--panel);
-  color: var(--text);
+  padding: 0 2px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--muted);
   font: inherit;
-  font-size: 13px;
+  font-size: 16px;
+  line-height: 1.5;
   cursor: pointer;
 }
 
 .pagination__link:hover:not(:disabled),
 .pagination__link:focus-visible {
-  border-color: var(--faint);
-  color: var(--accent);
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.pagination__link:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .pagination__link:disabled {
   color: var(--faint);
   cursor: default;
+  text-decoration: none;
 }
 
-.pagination__link.is-current {
-  background: var(--code-content-bg);
-  border-color: var(--faint);
-  font-weight: 600;
-}
-
-.pagination__ellipsis {
+.pagination__status {
   color: var(--faint);
-  padding: 0 2px;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* 侧栏底部按钮组 */

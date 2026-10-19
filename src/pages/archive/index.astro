@@ -7,7 +7,6 @@ import { buildArchiveScopePills } from '../../lib/archive-scope-pills';
 import { collectTagScopedSummary, type TagSummary } from '../../lib/tags';
 import { getThemeSettings } from '../../lib/theme-settings';
 import { joinPageSubtitleText } from '../../utils/format';
-import { PAGE_SIZE_ARCHIVE } from '../../../site.config.mjs';
 import '../../styles/archive-page.css';
 
 /**
@@ -30,6 +29,7 @@ const base = import.meta.env.BASE_URL ?? '/';
 const withBase = createWithBase(base);
 
 const pageTitleText = page.archive.title || '归档';
+const pagination = page.pagination?.archive ?? { enabled: true, pageSize: 20 };
 const totalCount = rows.length;
 const blogCount = rows.filter((row) => row.kind === 'blog').length;
 const projectCount = rows.filter((row) => row.kind === 'projects').length;
@@ -77,7 +77,7 @@ const tagPayload = { blog: blogTags, projects: projectTags, devlog: devlogTags, 
     data-archive-timeline
     data-index-url="/archive/index.json"
     data-section-selector="[data-entry-section]"
-    data-page-size={String(PAGE_SIZE_ARCHIVE)}
+    data-page-size={pagination.enabled ? String(pagination.pageSize) : undefined}
   >
     <TagFilterHeader
       pageTitleText={pageTitleText}
@@ -140,6 +140,9 @@ const tagPayload = { blog: blogTags, projects: projectTags, devlog: devlogTags, 
                   ) : null}
                   {row.title}
                 </a>
+                {row.kind === 'projects' && row.versionLabel ? (
+                  <span class="archive-timeline__version">{row.versionLabel}</span>
+                ) : null}
               </span>
             </div>
           ))}

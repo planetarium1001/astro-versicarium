@@ -104,6 +104,32 @@ export const isAdminArchiveVersionMode = (value: unknown): value is ArchiveVersi
 export const ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT = '发布于：';
 export const ADMIN_ARTICLE_META_DATE_LABEL_MAX_LENGTH = 20;
 
+export const ADMIN_PAGINATION_SCOPES = ['home', 'blog', 'bits', 'devlog', 'archive'] as const;
+export type AdminPaginationScope = (typeof ADMIN_PAGINATION_SCOPES)[number];
+const ADMIN_PAGINATION_SCOPE_SET: ReadonlySet<string> = new Set(ADMIN_PAGINATION_SCOPES);
+export const isAdminPaginationScope = (value: unknown): value is AdminPaginationScope =>
+  typeof value === 'string' && ADMIN_PAGINATION_SCOPE_SET.has(value);
+export const ADMIN_PAGINATION_PAGE_SIZE_MIN = 1;
+export const ADMIN_PAGINATION_PAGE_SIZE_MAX = 100;
+export const ADMIN_PAGINATION_DEFAULTS = {
+  home: { enabled: true, pageSize: 12 },
+  blog: { enabled: true, pageSize: 12 },
+  bits: { enabled: true, pageSize: 20 },
+  devlog: { enabled: false, pageSize: 10 },
+  archive: { enabled: true, pageSize: 20 }
+} as const satisfies Record<AdminPaginationScope, { enabled: boolean; pageSize: number }>;
+export const ADMIN_PAGINATION_PAGE_OPTIONS: ReadonlyArray<{
+  id: AdminPaginationScope;
+  label: string;
+  path: string | null;
+}> = [
+  { id: 'home', label: '首页', path: null },
+  { id: 'blog', label: '博客', path: '/blog/' },
+  { id: 'bits', label: '动态', path: '/bits/' },
+  { id: 'devlog', label: '开发日志', path: '/devlog/' },
+  { id: 'archive', label: '归档', path: '/archive/' }
+];
+
 export const ADMIN_FILINGS_NUMBER_MAX_LENGTH = 40;
 export const ADMIN_ICP_FILING_HOSTS = ['beian.miit.gov.cn'] as const;
 export const ADMIN_POLICE_FILING_HOSTS = ['beian.mps.gov.cn', 'beian.gov.cn'] as const;
@@ -522,6 +548,20 @@ export const canonicalizeAdminThemeSettings = (
   const rawFilingsPolice = isRecord(rawFilings.police) ? rawFilings.police : {};
   const rawFilingsScope = normalizeTrimmed(rawFilings.scope);
   const rawUiArticleMeta: LooseRecord = isRecord(ui.articleMeta) ? ui.articleMeta : {};
+  const canonicalPaginationScope = (scope: AdminPaginationScope): { enabled: boolean; pageSize: number } => {
+    const rawScope = isRecord(page.pagination) && isRecord(page.pagination[scope])
+      ? page.pagination[scope]
+      : undefined;
+    const fallback = ADMIN_PAGINATION_DEFAULTS[scope];
+    const pageSize = parseInteger(rawScope?.pageSize as string | number | null | undefined) ?? fallback.pageSize;
+    return {
+      enabled: typeof rawScope?.enabled === 'boolean' ? rawScope.enabled : fallback.enabled,
+      pageSize: Math.min(
+        Math.max(pageSize, ADMIN_PAGINATION_PAGE_SIZE_MIN),
+        ADMIN_PAGINATION_PAGE_SIZE_MAX
+      )
+    };
+  };
   const rawUiFloatStack: LooseRecord = isRecord(ui.floatStack) ? ui.floatStack : {};
   const rawUiViewStats: LooseRecord = isRecord(ui.viewStats) ? ui.viewStats : {};
   const rawUiSidebarActions: LooseRecord = isRecord(ui.sidebarActions) ? ui.sidebarActions : {};
@@ -735,6 +775,13 @@ export const canonicalizeAdminThemeSettings = (
         blog: typeof rawListRss.blog === 'boolean' ? rawListRss.blog : true,
         bits: typeof rawListRss.bits === 'boolean' ? rawListRss.bits : true,
         archive: typeof rawListRss.archive === 'boolean' ? rawListRss.archive : true
+      },
+      pagination: {
+        home: canonicalPaginationScope('home'),
+        blog: canonicalPaginationScope('blog'),
+        bits: canonicalPaginationScope('bits'),
+        devlog: canonicalPaginationScope('devlog'),
+        archive: canonicalPaginationScope('archive')
       }
     },
     ui: {
@@ -860,7 +907,14 @@ export const createAdminWritableThemeSettingsGroups = (
       }
     },
     devlog: { ...settings.page.devlog },
-    about: { ...settings.page.about }
+    about: { ...settings.page.about },
+    pagination: {
+      home: { ...settings.page.pagination.home },
+      blog: { ...settings.page.pagination.blog },
+      bits: { ...settings.page.pagination.bits },
+      devlog: { ...settings.page.pagination.devlog },
+      archive: { ...settings.page.pagination.archive }
+    }
   },
   ui: {
     codeBlock: { ...settings.ui.codeBlock },
@@ -905,6 +959,24 @@ export const validateAdminThemeSettings = (
   if (!settings.site.description) pushIssue('site.description', '站点描述不能为空');
   if (!isAdminArchiveVersionMode(settings.page.archive.versionMode)) {
     pushIssue('page.archive.versionMode', '归档版本模式无效');
+  }
+
+  for (const option of ADMIN_PAGINATION_PAGE_OPTIONS) {
+    const scope = option.id;
+    const current = settings.page?.pagination?.[scope];
+    if (typeof current?.enabled !== 'boolean') {
+      pushIssue(`page.pagination.${scope}.enabled`, `${option.label}分页开关必须是布尔值`);
+    }
+    if (
+      !Number.isInteger(current?.pageSize)
+      || (current?.pageSize ?? 0) < ADMIN_PAGINATION_PAGE_SIZE_MIN
+      || (current?.pageSize ?? 0) > ADMIN_PAGINATION_PAGE_SIZE_MAX
+    ) {
+      pushIssue(
+        `page.pagination.${scope}.pageSize`,
+        `${option.label}每页条数必须是 ${ADMIN_PAGINATION_PAGE_SIZE_MIN}–${ADMIN_PAGINATION_PAGE_SIZE_MAX} 的整数`
+      );
+    }
   }
 
   if (!settings.site.defaultLocale) {
@@ -1665,6 +1737,26 @@ const fillAdminThemeSettingsPageCompatibilityDefaults = (
       next = { ...next, archive: canonicalArchive };
     } else if (isRecord(rawArchive) && rawArchive.versionMode === undefined) {
       next = { ...next, archive: { ...canonicalArchive, ...rawArchive } };
+    }
+  }
+
+  const canonicalPagination = canonicalPage.pagination;
+  if (isRecord(canonicalPagination)) {
+    const rawPagination = next.pagination;
+    if (rawPagination === undefined) {
+      next = { ...next, pagination: canonicalPagination };
+    } else if (isRecord(rawPagination)) {
+      /* 旧配置没有分页组：按页面补齐默认值，已有值原样保留交给校验。 */
+      const merged = { ...rawPagination };
+      for (const scope of ADMIN_PAGINATION_SCOPES) {
+        const canonicalScope = canonicalPagination[scope];
+        if (!isRecord(canonicalScope)) continue;
+        const rawScope = rawPagination[scope];
+        merged[scope] = isRecord(rawScope)
+          ? { ...canonicalScope, ...rawScope }
+          : canonicalScope;
+      }
+      next = { ...next, pagination: merged };
     }
   }
   return next;

@@ -45,15 +45,26 @@
   border-bottom: 0;
 }
 
+.article-version-notice__latest:focus-visible,
+.article-version-trigger:focus-visible,
+.version-drawer__close:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
 .article-version-notice__latest:hover,
 .article-version-notice__latest:focus-visible {
   text-decoration: underline;
 }
 
+/**
+ * 展开触发器是「打开右侧版本栏」的入口，不是向下 accordion：
+ * 用面板图标而不是 down caret；整行仍可点，但视觉只保留轻量文字与一条细分隔线。
+ */
 .article-version-trigger {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 7px;
   width: 100%;
   margin-top: 10px;
   padding: 8px 0 1px;
@@ -63,27 +74,35 @@
   color: var(--muted);
   font: inherit;
   font-size: 13px;
+  text-align: left;
   cursor: pointer;
 }
 
 .article-version-trigger:hover,
-.article-version-trigger:focus-visible {
+.article-version-trigger:focus-visible,
+.article-version-trigger[data-version-open='true'] {
   color: var(--text);
 }
 
-.article-version-trigger:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: var(--focus-ring-offset);
+.article-version-trigger:hover .article-version-trigger__icon,
+.article-version-trigger:focus-visible .article-version-trigger__icon,
+.article-version-trigger[data-version-open='true'] .article-version-trigger__icon {
+  color: var(--accent);
+  transform: translateX(2px);
 }
 
-.article-version-trigger__caret {
+/* 鼠标点击后由脚本调用 focus()：不画焦点环，键盘操作仍走 :focus-visible。 */
+.article-version-trigger:focus:not(:focus-visible),
+.version-drawer__close:focus:not(:focus-visible),
+.article-version-trigger[data-pointer-focus]:focus,
+.version-drawer__close[data-pointer-focus]:focus {
+  outline: none;
+}
+
+.article-version-trigger__icon {
   display: inline-flex;
-  color: var(--muted);
-  transition: transform 180ms ease;
-}
-
-.article-version-trigger[data-version-open='true'] .article-version-trigger__caret {
-  transform: rotate(180deg);
+  color: var(--faint);
+  transition: color 160ms ease, transform 160ms ease;
 }
 
 .version-drawer {
@@ -129,23 +148,39 @@
   font-weight: 600;
 }
 
+/**
+ * 关闭按钮对齐项目 dialog 的 X：裸图标、无描边，热区缩到 30px；
+ * hover 只加一层很轻的圆角底，避免再出现「圆圈按钮」的误解。
+ */
 .version-drawer__close {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  margin: -3px -4px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
   background: transparent;
-  color: var(--muted);
-  font: inherit;
+  color: var(--faint);
   cursor: pointer;
+  transition: color 160ms ease, background-color 160ms ease;
 }
 
-.version-drawer__close:hover,
-.version-drawer__close:focus-visible {
+/* 视觉仍是 30px，热区向外补到 44px，触屏不因「按钮变小」而难点。 */
+.version-drawer__close::before {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 12px;
+}
+
+.version-drawer__close:hover {
   color: var(--text);
+  background: color-mix(in srgb, var(--text) 7%, transparent);
 }
 
 .version-list {

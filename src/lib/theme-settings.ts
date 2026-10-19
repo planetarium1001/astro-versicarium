@@ -33,6 +33,9 @@ import {
   ADMIN_NAV_ORNAMENT_MAX_LENGTH,
   ADMIN_OVERVIEW_HIDDEN_MESSAGE_DEFAULT,
   ADMIN_OVERVIEW_HIDDEN_MESSAGE_MAX_LENGTH,
+  ADMIN_PAGINATION_DEFAULTS,
+  ADMIN_PAGINATION_PAGE_SIZE_MAX,
+  ADMIN_PAGINATION_PAGE_SIZE_MIN,
   ADMIN_HERO_PRESET_SET,
   ADMIN_SOCIAL_ORDER_MAX,
   ADMIN_SOCIAL_ORDER_MIN,
@@ -123,6 +126,23 @@ export interface ListRssSettings {
   blog: boolean;
   bits: boolean;
   archive: boolean;
+}
+
+export interface PaginationScopeSettings {
+  enabled: boolean;
+  pageSize: number;
+}
+
+/**
+ * 公开列表页的分页设置。`enabled=false` 时整页渲染全部条目；
+ * 开启时 SSR 仍输出全部条目，由客户端按 pageSize 隐藏多余项（无 JS 时全部可见）。
+ */
+export interface PaginationSettings {
+  home: PaginationScopeSettings;
+  blog: PaginationScopeSettings;
+  bits: PaginationScopeSettings;
+  devlog: PaginationScopeSettings;
+  archive: PaginationScopeSettings;
 }
 
 interface SiteFooterSettings {
@@ -275,6 +295,7 @@ interface PageSettings {
    * 侧栏的 RSS 按钮由 `ui.sidebarActions.showRssLink` 单独控制。
    */
   listRss: ListRssSettings;
+  pagination: PaginationSettings;
 }
 
 export interface ArticleMetaSettings {
@@ -394,6 +415,16 @@ interface ThemeSettingsSources {
     archiveTitle: SettingSource;
     archiveSubtitle: SettingSource;
     archiveVersionMode: SettingSource;
+    paginationHomeEnabled: SettingSource;
+    paginationHomePageSize: SettingSource;
+    paginationBlogEnabled: SettingSource;
+    paginationBlogPageSize: SettingSource;
+    paginationBitsEnabled: SettingSource;
+    paginationBitsPageSize: SettingSource;
+    paginationDevlogEnabled: SettingSource;
+    paginationDevlogPageSize: SettingSource;
+    paginationArchiveEnabled: SettingSource;
+    paginationArchivePageSize: SettingSource;
     bitsTitle: SettingSource;
     bitsSubtitle: SettingSource;
     bitsDefaultAuthorName: SettingSource;
@@ -684,6 +715,13 @@ const DEFAULT_PAGE: PageSettings = {
     blog: true,
     bits: true,
     archive: true
+  },
+  pagination: {
+    home: { ...ADMIN_PAGINATION_DEFAULTS.home },
+    blog: { ...ADMIN_PAGINATION_DEFAULTS.blog },
+    bits: { ...ADMIN_PAGINATION_DEFAULTS.bits },
+    devlog: { ...ADMIN_PAGINATION_DEFAULTS.devlog },
+    archive: { ...ADMIN_PAGINATION_DEFAULTS.archive }
   }
 };
 
@@ -820,6 +858,12 @@ const asNullableSingleLineString = (value: unknown, maxLength?: number): string 
 const asInteger = (value: unknown): number | undefined => {
   if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
   return Number.isInteger(value) ? value : undefined;
+};
+
+const asPaginationPageSize = (value: unknown): number | undefined => {
+  const next = asInteger(value);
+  if (next === undefined) return undefined;
+  return next >= ADMIN_PAGINATION_PAGE_SIZE_MIN && next <= ADMIN_PAGINATION_PAGE_SIZE_MAX ? next : undefined;
 };
 
 const asFooterStartYear = (value: unknown): number | undefined => {
@@ -1386,6 +1430,23 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
   const listRssBlog = resolveListRss('blog');
   const listRssBits = resolveListRss('bits');
   const listRssArchive = resolveListRss('archive');
+  const pagePaginationJson = isRecord(pageJson?.pagination) ? pageJson.pagination : undefined;
+  const resolvePagination = (scope: keyof PaginationSettings) => {
+    const raw = isRecord(pagePaginationJson?.[scope]) ? pagePaginationJson[scope] : undefined;
+    return {
+      enabled: resolveValue(asBoolean(raw?.enabled), undefined, DEFAULT_PAGE.pagination[scope].enabled),
+      pageSize: resolveValue(
+        asPaginationPageSize(raw?.pageSize),
+        undefined,
+        DEFAULT_PAGE.pagination[scope].pageSize
+      )
+    };
+  };
+  const paginationHome = resolvePagination('home');
+  const paginationBlog = resolvePagination('blog');
+  const paginationBits = resolvePagination('bits');
+  const paginationDevlog = resolvePagination('devlog');
+  const paginationArchive = resolvePagination('archive');
   const pageBlogJson = isRecord(pageJson?.blog) ? pageJson.blog : undefined;
   const pageProjectsJson = isRecord(pageJson?.projects) ? pageJson.projects : undefined;
   const pageArchiveJson = isRecord(pageJson?.archive) ? pageJson.archive : undefined;
@@ -1905,6 +1966,13 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
           subtitle: archiveSubtitle.value,
           versionMode: archiveVersionMode.value
         },
+        pagination: {
+          home: { enabled: paginationHome.enabled.value, pageSize: paginationHome.pageSize.value },
+          blog: { enabled: paginationBlog.enabled.value, pageSize: paginationBlog.pageSize.value },
+          bits: { enabled: paginationBits.enabled.value, pageSize: paginationBits.pageSize.value },
+          devlog: { enabled: paginationDevlog.enabled.value, pageSize: paginationDevlog.pageSize.value },
+          archive: { enabled: paginationArchive.enabled.value, pageSize: paginationArchive.pageSize.value }
+        },
         bits: {
           title: bitsTitle.value,
           subtitle: bitsSubtitle.value,
@@ -2025,6 +2093,16 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         archiveTitle: archiveTitle.source,
         archiveSubtitle: archiveSubtitle.source,
         archiveVersionMode: archiveVersionMode.source,
+        paginationHomeEnabled: paginationHome.enabled.source,
+        paginationHomePageSize: paginationHome.pageSize.source,
+        paginationBlogEnabled: paginationBlog.enabled.source,
+        paginationBlogPageSize: paginationBlog.pageSize.source,
+        paginationBitsEnabled: paginationBits.enabled.source,
+        paginationBitsPageSize: paginationBits.pageSize.source,
+        paginationDevlogEnabled: paginationDevlog.enabled.source,
+        paginationDevlogPageSize: paginationDevlog.pageSize.source,
+        paginationArchiveEnabled: paginationArchive.enabled.source,
+        paginationArchivePageSize: paginationArchive.pageSize.source,
         bitsTitle: bitsTitle.source,
         bitsSubtitle: bitsSubtitle.source,
         bitsDefaultAuthorName: bitsDefaultAuthorName.source,
@@ -2139,6 +2217,13 @@ const buildEditableThemeSettingsSnapshot = (
       blog: { ...resolved.settings.page.blog },
       projects: { ...resolved.settings.page.projects },
       archive: { ...resolved.settings.page.archive },
+      pagination: {
+        home: { ...resolved.settings.page.pagination.home },
+        blog: { ...resolved.settings.page.pagination.blog },
+        bits: { ...resolved.settings.page.pagination.bits },
+        devlog: { ...resolved.settings.page.pagination.devlog },
+        archive: { ...resolved.settings.page.pagination.archive }
+      },
       bits: {
         title: resolved.settings.page.bits.title,
         subtitle: resolved.settings.page.bits.subtitle,

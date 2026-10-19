@@ -6,7 +6,6 @@ import { createWithBase, getBlogDerivedText, type BlogListItem } from '../lib/co
 import { getThemeSettings, getVisibleArticleMetaTags } from '../lib/theme-settings';
 import { collectTagSummary, type TagSummary } from '../lib/tags';
 import { joinPageSubtitleText } from '../utils/format';
-import { PAGE_SIZE_BLOG } from '../../site.config.mjs';
 
 const { items, resultCount } = Astro.props as {
   items: BlogListItem[];
@@ -26,6 +25,7 @@ const {
 } = getThemeSettings();
 /** 列表页描述行里的 RSS 由后台「内页设置 → RSS 订阅」控制（总开关且本页开关）。 */
 const showListRss = page.listRss.enabled !== false && page.listRss.blog !== false;
+const pagination = page.pagination?.blog ?? { enabled: true, pageSize: 12 };
 
 const pageTitleText = page.blog.title || '博客';
 const subtitleText = joinPageSubtitleText(page.blog.subtitle, `共 ${resultCount} 篇`);
@@ -42,7 +42,7 @@ const fallbackListId = 'blog-tag-list';
     class="entry-filters"
     data-entry-filters
     data-index-url="/blog/index.json"
-    data-page-size={String(PAGE_SIZE_BLOG)}
+    data-page-size={pagination.enabled ? String(pagination.pageSize) : undefined}
   >
     <TagFilterHeader
       pageTitleText={pageTitleText}

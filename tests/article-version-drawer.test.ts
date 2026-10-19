@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  */
 
 const NOTICE_COMPONENT = 'src/components/ArticleVersionNotice.astro';
+const VERSION_CSS = 'src/styles/components/article-version.css';
 
 const drawerMarkup = (id: string) => `
   <dialog id="${id}" class="version-drawer" data-version-drawer aria-label="版本历史（2）">
@@ -139,6 +140,48 @@ describe('article-version-drawer', () => {
 
     expect(trigger.getAttribute('aria-expanded')).toBe('true');
     expect(dialog.open).toBe(true);
+  });
+
+  it('关闭按钮用 X 图标、触发器用右侧栏图标，不再用 ^ / down caret', async () => {
+    const source = await readFile(path.join(process.cwd(), NOTICE_COMPONENT), 'utf8');
+
+    expect(source).toMatch(/<button class="version-drawer__close"[\s\S]*?<UiIcon name="x"/);
+    expect(source).toMatch(/class="article-version-trigger"[\s\S]*?<UiIcon name="panel-right-open"/);
+    expect(source).not.toContain('article-version-trigger__caret');
+    expect(source).not.toMatch(/>\s*\^\s*</);
+  });
+
+  it('关闭按钮是裸图标而非圆形描边，指针聚焦有显式去焦点环标记', async () => {
+    const css = await readFile(path.join(process.cwd(), VERSION_CSS), 'utf8');
+    const closeRule = /^\.version-drawer__close\s*\{([^}]*)\}/m.exec(css)?.[1] ?? '';
+
+    expect(closeRule, '需要 .version-drawer__close 规则').not.toBe('');
+    expect(closeRule).toMatch(/border:\s*0/);
+    expect(closeRule).not.toMatch(/border-radius:\s*999px/);
+    expect(closeRule).toMatch(/width:\s*30px/);
+    expect(css).toMatch(/data-pointer-focus/);
+  });
+
+  it('指针点击打开/关闭时不把焦点环留在按钮上', async () => {
+    const { trigger, dialog } = appendDrawer({ insideSection: true });
+    await importDrawerScript();
+
+    trigger.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+    await flushAnimationFrame();
+
+    const closeButton = dialog.querySelector<HTMLButtonElement>('[data-version-close]')!;
+    expect(dialog.open).toBe(true);
+    expect(document.activeElement).toBe(closeButton);
+    expect(closeButton.hasAttribute('data-pointer-focus')).toBe(true);
+
+    // 键盘再次聚焦/按键后撤掉标记，焦点环恢复。
+    closeButton.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
+    expect(closeButton.hasAttribute('data-pointer-focus')).toBe(false);
+
+    closeButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+    expect(dialog.open).toBe(false);
+    expect(document.activeElement).toBe(trigger);
+    expect(trigger.hasAttribute('data-pointer-focus')).toBe(true);
   });
 
   it('源码契约：data-version-drawer 位于 data-article-version 的 section 内', async () => {
