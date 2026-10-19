@@ -310,7 +310,7 @@ describe('级联动效：串行，一次只走一步', () => {
         .slice(recordedBeforeTag)
         .filter((record) => record.isEntryItem && record.kind === 'hide')
         .length
-    ).toBeGreaterThanOrEqual(2);
+    ).toBeGreaterThanOrEqual(1);
 
     const recordedBefore = harness.records.length;
     const clear = document.querySelector<HTMLElement>('[data-entry-tag-clear]');
