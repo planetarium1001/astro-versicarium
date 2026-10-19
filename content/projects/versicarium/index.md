@@ -20,6 +20,6 @@ draft: false
 
 主题更新通过 `theme.json` 的基准提交做三方合并，纯文本按行交给 `git merge-file`，二进制文件整文件取舍，`content/`、设置、图片、字体与 `theme.json` 等站点自有路径不被覆盖。`main` 保持模板与更新来源，`demo` 承载完整示例站并部署到 GitHub Pages。
 
-本次预览包含改名与品牌重做：英文名 Versicarium，中文名垄录，仓库地址改为 `planetarium1001/astro-versicarium`，示例站部署在 `planetarium1001.github.io/astro-versicarium/`。首次公开版本号为 `1.0.0`，标签 `v1.0.0`；当前处于预览阶段，Release 尚未发布。
+本次预览包含改名与品牌重做：英文名 Versicarium，中文名垄录，仓库地址改为 `planetarium1001/astro-versicarium`，示例站部署在 `planetarium1001.github.io/astro-versicarium/`。首次公开版本号为 `1.0.0`，标签 `v1.0.0` 保留在本地；当前处于预览阶段，Release 尚未发布。
 
 [仓库](https://github.com/planetarium1001/astro-versicarium) · [示例站](https://planetarium1001.github.io/astro-versicarium/) · [开发日志](/devlog/#versicarium-2026-10-20-versicarium-rename)

@@ -54,7 +54,7 @@ release PR 合并前检查三处一致：`package.json` 的版本、`CHANGELOG.m
 
 ## 发布清单
 
-正式发布时按以下顺序执行。本次 1.0.0 预览只做本地提交，不创建 Release。
+正式发布时按以下顺序执行。本次 1.0.0 预览只做本地提交，`v1.0.0` 标签保留在本地，不创建 Release、不推送。
 
 1. 在 `main` 上按 Conventional Commits 提交并推送，确认 CI 通过。
 2. 等 Release Please 打开或更新 release PR，检查版本号、CHANGELOG 与文档一致。
