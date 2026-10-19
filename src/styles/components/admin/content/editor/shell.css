@@ -1,4 +1,4 @@
-/* Admin Content Editor Shell
+/* 后台内容编辑器壳层
    承载 Svelte EditorShell 根层变量、格式行、布局控件和操作菜单；不承载 pane grid、toolbar tooltip 或预览正文内容。
 */
 

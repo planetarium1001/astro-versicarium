@@ -55,8 +55,18 @@ const TARGETS = [
     property: 'min-height',
     note: 'bits「重置筛选」'
   },
-  { selector: '.project-dialog__close', property: 'width', note: 'projects 弹窗关闭' },
-  { selector: '.project-dialog__close', property: 'height', note: 'projects 弹窗关闭' }
+  {
+    selector: '.project-dialog__close',
+    property: 'width',
+    note: '弹窗关闭（视觉 32px，热区由 ::before 提供）',
+    hitOverlay: { selector: '.project-dialog__close::before', property: 'width' }
+  },
+  {
+    selector: '.project-dialog__close',
+    property: 'height',
+    note: '弹窗关闭（视觉 32px，热区由 ::before 提供）',
+    hitOverlay: { selector: '.project-dialog__close::before', property: 'height' }
+  }
 ];
 
 // 解析 var() 链（--float-button-size → var(--tap-min-h) → 44px）。

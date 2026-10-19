@@ -1440,3 +1440,31 @@
   background: var(--border);
   flex: none;
 }
+
+/* 条目版本：预览沿用文章元信息 / 浏览数据的「帮助文本 + 预览值」排版 */
+.admin-help--entry-version-preview {
+  margin-top: 8px;
+}
+
+.admin-entry-version-preview {
+  display: inline;
+}
+
+.admin-entry-version-preview__variant {
+  display: inline;
+}
+
+.admin-entry-version-preview__variant[hidden] {
+  display: none;
+}
+
+.admin-entry-version-preview .entry-title {
+  font-size: 13px;
+  vertical-align: baseline;
+}
+
+.admin-entry-version-preview .entry-title .badge,
+.admin-entry-version-preview .entry-title .muted-pill {
+  height: 18px;
+  font-size: 11px;
+}

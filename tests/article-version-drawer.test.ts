@@ -1,21 +1,17 @@
 // @vitest-environment jsdom
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * `/blog/...` 版本历史抽屉：
- * - 结构契约：drawer 必须落在 `[data-article-version]` 的 section 内，避免脚本 query 落空；
  * - 行为契约：trigger/aria-expanded/dialog.open 同步，关闭后焦点回到 trigger；
+ * - 关闭契约：先挂 data-closing 播退出动画，animationend 或 240ms 兜底后才真正关闭；
  * - 兜底契约：即使 dialog 被挪到 section 外，trigger 的 aria-controls 仍能找回它。
  */
-
-const NOTICE_COMPONENT = 'src/components/ArticleVersionNotice.astro';
-const VERSION_CSS = 'src/styles/components/article-version.css';
 
 const drawerMarkup = (id: string) => `
   <dialog id="${id}" class="version-drawer" data-version-drawer aria-label="版本历史（2）">
     <div class="version-drawer__panel">
+      <h2 class="version-drawer__title" tabindex="-1">版本历史（2）</h2>
       <button type="button" data-version-close aria-label="关闭版本历史">关闭</button>
       <ol class="version-list">
         <li class="version-item">v2.0 最新版</li>
@@ -32,8 +28,11 @@ const triggerMarkup = (id: string) => `
     data-version-trigger
     aria-expanded="false"
     aria-controls="${id}"
+    aria-label="打开版本历史（2）"
   >
-    <span>版本历史 (2)</span>
+    <span class="article-version-trigger__label" aria-hidden="true">版本历史</span>
+    <span class="article-version-trigger__icon article-version-trigger__icon--wide" aria-hidden="true"></span>
+    <span class="article-version-trigger__icon article-version-trigger__icon--narrow" aria-hidden="true"></span>
   </button>
 `;
 
@@ -59,12 +58,56 @@ const appendDrawer = ({ insideSection }: { insideSection: boolean }) => {
   return { trigger, dialog };
 };
 
+/**
+ * jsdom 只实现了 HTMLDialogElement.open，没有 showModal/close。
+ * 需要断言「动画结束才 close()」的用例手动补上浏览器行为。
+ */
+const installDialogMethods = (dialog: HTMLDialogElement) => {
+  const closingStates: Array<string | undefined> = [];
+  dialog.showModal = vi.fn(() => {
+    dialog.setAttribute('open', '');
+  });
+  const close = vi.fn(() => {
+    // 记录 close() 调用瞬间的 data-closing：必须先关闭再清标记，避免面板回弹一帧。
+    closingStates.push(dialog.dataset.closing);
+    dialog.removeAttribute('open');
+    dialog.dispatchEvent(new Event('close'));
+  });
+  dialog.close = close;
+  return { close, closingStates };
+};
+
 const importDrawerScript = async () => {
   await import('../src/scripts/article-version-drawer');
 };
 
 const flushAnimationFrame = async () => {
   await new Promise((resolve) => setTimeout(resolve, 0));
+};
+
+const dispatchAnimationEnd = (dialog: HTMLDialogElement, animationName: string) => {
+  const panel = dialog.querySelector<HTMLElement>('.version-drawer__panel')!;
+  const event = new Event('animationend', { bubbles: true });
+  Object.defineProperty(event, 'animationName', { value: animationName });
+  panel.dispatchEvent(event);
+};
+
+const stubReducedMotion = (matches: boolean) => {
+  (window as unknown as { matchMedia: (query: string) => MediaQueryList }).matchMedia = (query: string) =>
+    ({
+      matches,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false
+    }) as unknown as MediaQueryList;
+};
+
+const clearReducedMotionStub = () => {
+  delete (window as unknown as { matchMedia?: unknown }).matchMedia;
 };
 
 describe('article-version-drawer', () => {
@@ -79,13 +122,16 @@ describe('article-version-drawer', () => {
   });
 
   afterEach(() => {
+    clearReducedMotionStub();
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
-  it('首次点击打开抽屉并同步 aria-expanded / dataset，关闭按钮恢复状态与焦点', async () => {
+  it('首次点击打开抽屉并同步 aria-expanded / dataset，关闭动画结束后恢复状态与焦点', async () => {
     const { trigger, dialog } = appendDrawer({ insideSection: true });
     await importDrawerScript();
+    const { close, closingStates } = installDialogMethods(dialog);
 
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
     expect(dialog.open).toBe(false);
@@ -99,34 +145,122 @@ describe('article-version-drawer', () => {
 
     dialog.querySelector<HTMLButtonElement>('[data-version-close]')!.click();
 
+    // 退出动画期间 dialog 仍然打开，只挂 data-closing。
+    expect(dialog.open).toBe(true);
+    expect(dialog.dataset.closing).toBe('true');
+    expect(close).not.toHaveBeenCalled();
+
+    dispatchAnimationEnd(dialog, 'version-drawer-out');
+
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(closingStates).toEqual(['true']);
+    expect(dialog.open).toBe(false);
+    expect(dialog.dataset.closing).toBeUndefined();
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
     expect(trigger.dataset.versionOpen).toBe('false');
-    expect(dialog.open).toBe(false);
     expect(document.activeElement).toBe(trigger);
   });
 
-  it('再次点击 trigger 可关闭，backdrop 点击与 Esc(cancel) 也能关闭', async () => {
+  it('点击文字说明（版本历史）与点击图标一样展开抽屉', async () => {
+    const { trigger, dialog } = appendDrawer({ insideSection: true });
+    await importDrawerScript();
+    installDialogMethods(dialog);
+
+    const label = trigger.querySelector<HTMLElement>('.article-version-trigger__label');
+    expect(label?.textContent).toBe('版本历史');
+
+    label!.click();
+    await flushAnimationFrame();
+
+    expect(dialog.open).toBe(true);
+    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('没有 animationend 时 600ms 兜底关闭', async () => {
+    const { trigger, dialog } = appendDrawer({ insideSection: true });
+    await importDrawerScript();
+
+    trigger.click();
+    await flushAnimationFrame();
+    expect(dialog.open).toBe(true);
+
+    vi.useFakeTimers();
+    trigger.click();
+
+    expect(dialog.open).toBe(true);
+    expect(dialog.dataset.closing).toBe('true');
+
+    vi.advanceTimersByTime(599);
+    expect(dialog.open).toBe(true);
+
+    vi.advanceTimersByTime(1);
+    expect(dialog.open).toBe(false);
+    expect(dialog.dataset.closing).toBeUndefined();
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('prefers-reduced-motion 时跳过动画立即关闭', async () => {
+    const { trigger, dialog } = appendDrawer({ insideSection: true });
+    await importDrawerScript();
+    const { close } = installDialogMethods(dialog);
+    stubReducedMotion(true);
+
+    trigger.click();
+    await flushAnimationFrame();
+    trigger.click();
+
+    expect(dialog.open).toBe(false);
+    expect(dialog.dataset.closing).toBeUndefined();
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('再次点击 trigger 可关闭，backdrop 点击与 Esc(cancel) 也走关闭动画', async () => {
     const { trigger, dialog } = appendDrawer({ insideSection: true });
     await importDrawerScript();
 
     trigger.click();
     trigger.click();
+    expect(dialog.open).toBe(true);
+    expect(dialog.dataset.closing).toBe('true');
+    dispatchAnimationEnd(dialog, 'version-drawer-out');
     expect(dialog.open).toBe(false);
 
     trigger.click();
-    expect(dialog.open).toBe(true);
     dialog.click();
+    expect(dialog.open).toBe(true);
+    expect(dialog.dataset.closing).toBe('true');
+    dispatchAnimationEnd(dialog, 'version-drawer-out');
     expect(dialog.open).toBe(false);
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
 
     trigger.click();
-    expect(dialog.open).toBe(true);
     const cancelEvent = new Event('cancel', { cancelable: true });
     dialog.dispatchEvent(cancelEvent);
     expect(cancelEvent.defaultPrevented).toBe(true);
+    expect(dialog.open).toBe(true);
+    expect(dialog.dataset.closing).toBe('true');
+    dispatchAnimationEnd(dialog, 'version-drawer-out');
     expect(dialog.open).toBe(false);
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
     expect(document.activeElement).toBe(trigger);
+  });
+
+  it('退出动画的 animationend 名称不匹配时不提前关闭', async () => {
+    const { trigger, dialog } = appendDrawer({ insideSection: true });
+    await importDrawerScript();
+
+    trigger.click();
+    trigger.click();
+    expect(dialog.open).toBe(true);
+
+    dispatchAnimationEnd(dialog, 'version-drawer-in');
+    expect(dialog.open).toBe(true);
+    expect(dialog.dataset.closing).toBe('true');
+
+    dispatchAnimationEnd(dialog, 'version-drawer-out');
+    expect(dialog.open).toBe(false);
   });
 
   it('dialog 不在 section 内时回退到 trigger 的 aria-controls', async () => {
@@ -142,61 +276,63 @@ describe('article-version-drawer', () => {
     expect(dialog.open).toBe(true);
   });
 
-  it('关闭按钮用 X 图标、触发器用右侧栏图标，不再用 ^ / down caret', async () => {
-    const source = await readFile(path.join(process.cwd(), NOTICE_COMPONENT), 'utf8');
+  it('指针按下 trigger 时打 pointer 标记，键盘/失焦时清除', async () => {
+    const { trigger } = appendDrawer({ insideSection: true });
+    await importDrawerScript();
 
-    expect(source).toMatch(/<button class="version-drawer__close"[\s\S]*?<UiIcon name="x"/);
-    expect(source).toMatch(/class="article-version-trigger"[\s\S]*?<UiIcon name="panel-right-open"/);
-    expect(source).not.toContain('article-version-trigger__caret');
-    expect(source).not.toMatch(/>\s*\^\s*</);
-  });
+    trigger.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    expect(trigger.hasAttribute('data-pointer-focus')).toBe(true);
 
-  it('关闭按钮是裸图标而非圆形描边，指针聚焦有显式去焦点环标记', async () => {
-    const css = await readFile(path.join(process.cwd(), VERSION_CSS), 'utf8');
-    const closeRule = /^\.version-drawer__close\s*\{([^}]*)\}/m.exec(css)?.[1] ?? '';
+    trigger.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
+    expect(trigger.hasAttribute('data-pointer-focus')).toBe(false);
 
-    expect(closeRule, '需要 .version-drawer__close 规则').not.toBe('');
-    expect(closeRule).toMatch(/border:\s*0/);
-    expect(closeRule).not.toMatch(/border-radius:\s*999px/);
-    expect(closeRule).toMatch(/width:\s*30px/);
-    expect(css).toMatch(/data-pointer-focus/);
+    trigger.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    expect(trigger.hasAttribute('data-pointer-focus')).toBe(true);
+
+    trigger.dispatchEvent(new FocusEvent('blur'));
+    expect(trigger.hasAttribute('data-pointer-focus')).toBe(false);
   });
 
   it('指针点击打开/关闭时不把焦点环留在按钮上', async () => {
     const { trigger, dialog } = appendDrawer({ insideSection: true });
     await importDrawerScript();
 
+    trigger.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
     trigger.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
     await flushAnimationFrame();
 
     const closeButton = dialog.querySelector<HTMLButtonElement>('[data-version-close]')!;
+    const dialogTitle = dialog.querySelector<HTMLElement>('.version-drawer__title')!;
     expect(dialog.open).toBe(true);
-    expect(document.activeElement).toBe(closeButton);
-    expect(closeButton.hasAttribute('data-pointer-focus')).toBe(true);
+    // 打开时焦点落在标题，不自动选中关闭按钮。
+    expect(document.activeElement).toBe(dialogTitle);
 
-    // 键盘再次聚焦/按键后撤掉标记，焦点环恢复。
+    // 关闭按钮仍可被键盘聚焦，并显示主题焦点环。
+    closeButton.setAttribute('data-pointer-focus', 'true');
+    closeButton.focus();
     closeButton.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
     expect(closeButton.hasAttribute('data-pointer-focus')).toBe(false);
 
     closeButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+    dispatchAnimationEnd(dialog, 'version-drawer-out');
+
     expect(dialog.open).toBe(false);
     expect(document.activeElement).toBe(trigger);
     expect(trigger.hasAttribute('data-pointer-focus')).toBe(true);
   });
 
-  it('源码契约：data-version-drawer 位于 data-article-version 的 section 内', async () => {
-    const source = await readFile(path.join(process.cwd(), NOTICE_COMPONENT), 'utf8');
+  it('键盘 Esc 关闭后焦点回到 trigger 且不带 pointer 标记', async () => {
+    const { trigger, dialog } = appendDrawer({ insideSection: true });
+    await importDrawerScript();
 
-    // section 开始标签带 class:list 且跨多行，用 [^>]* 留出属性与换行余地。
-    const sectionStart = /<section\b[^>]*\bdata-article-version\b[^>]*>/.exec(source);
-    expect(sectionStart, '组件里应有带 data-article-version 的 <section>').not.toBeNull();
+    trigger.click();
+    await flushAnimationFrame();
 
-    const sectionOpenEnd = (sectionStart?.index ?? 0) + (sectionStart?.[0].length ?? 0);
-    const sectionCloseIndex = source.indexOf('</section>', sectionOpenEnd);
-    const drawerIndex = source.search(/<dialog\b[^>]*\bdata-version-drawer\b/);
+    const cancelEvent = new Event('cancel', { cancelable: true });
+    dialog.dispatchEvent(cancelEvent);
+    dispatchAnimationEnd(dialog, 'version-drawer-out');
 
-    expect(sectionCloseIndex).toBeGreaterThanOrEqual(sectionOpenEnd);
-    expect(drawerIndex, '组件里应有 data-version-drawer 的 <dialog>').toBeGreaterThanOrEqual(sectionOpenEnd);
-    expect(drawerIndex, 'dialog 不能是 section 的兄弟节点，必须在 </section> 之前').toBeLessThan(sectionCloseIndex);
+    expect(document.activeElement).toBe(trigger);
+    expect(trigger.hasAttribute('data-pointer-focus')).toBe(false);
   });
 });

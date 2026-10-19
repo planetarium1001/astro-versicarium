@@ -614,6 +614,23 @@ const bitsAuthorAvatarFallback = $derived(
       {@render projectText('icon', '图标路径（可选，如 images/projects/demo/icon.webp）')}
       {@render projectText('image', '展示图路径（可选，如 images/projects/demo/cover.webp）')}
 
+      <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('slug'))}>
+        <span class="admin-field__label">稳定 slug（可选，发布后不要修改）</span>
+        <input
+          class="admin-field__control"
+          name="slug"
+          type="text"
+          bind:value={value.slug}
+          spellcheck="false"
+          placeholder="content-workflow"
+          aria-invalid={getIssue('slug') ? 'true' : undefined}
+          aria-describedby={getFieldDescribedBy('slug')}
+          oninput={onDirty}
+          {disabled}
+        />
+        <p id={getFieldIssueId('slug')} class="admin-content-editor__error" hidden={!getIssue('slug')}>{getIssue('slug')}</p>
+      </label>
+
       <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('date'))}>
         <span class="admin-field__label">日期</span>
         <input
@@ -682,14 +699,15 @@ const bitsAuthorAvatarFallback = $derived(
       </label>
 
       <label class="admin-field admin-content-editor__field">
-        <span class="admin-field__label">项目标识 projectSlug（对应 projects 条目 id，可选）</span>
+        <span class="admin-field__label">项目稳定 slug（或旧条目 id）；项目改 slug 后需同步更新这里</span>
         <input
           class="admin-field__control"
           name="projectSlug"
           type="text"
           bind:value={value.projectSlug}
           spellcheck="false"
-          placeholder="2026-01-08-sample-project"
+          placeholder="content-workflow"
+          oninput={onDirty}
           {disabled}
         />
       </label>

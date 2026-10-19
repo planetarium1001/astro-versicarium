@@ -5,7 +5,7 @@
   "icon-192.png": true,
   "icon-512.png": true,
   "favicon.ico": true,
-  "rootIco": true,
-  "rootIcoHash": "78f78036a0d32fffe308d0d1271108862667c362ca24db4f9bdeff9326047787",
+  "rootIco": false,
+  "rootIcoHash": "dff2b984751235a083494a2deab8a5ef3907a4cf0cb4b04662c39e2ad9dc8f60",
   "source": "public/favicon-32x32.png"
 }

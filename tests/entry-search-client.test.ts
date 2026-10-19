@@ -629,4 +629,65 @@ describe('entry-search 客户端行为', () => {
     expect(window.location.search).toContain('ops=');
     expect(window.location.search).not.toContain('mode=');
   });
+
+  it('blog：翻页走列表整块过渡，动画结束后才落下一页', async () => {
+    await loadPage(PAGES[1]);
+    // 归档默认不分页；本用例单独强制 20/页，验证分页器与列表过渡本身。
+    document.querySelector<HTMLElement>('[data-entry-filters]')!.dataset.pageSize = '4';
+    await importEntrySearch();
+
+    const inner = document.querySelector<HTMLElement>('[data-entry-pagination-inner]');
+    expect(inner).not.toBeNull();
+    const next = inner!.querySelectorAll<HTMLButtonElement>('.pagination__link')[1];
+    expect(next).toBeDefined();
+
+    // 初始渲染时还没有 WAAPI，逐条淡入淡出走同步分支；替换 animate 只影响翻页。
+    const animations: {
+      duration: number;
+      finished: Promise<void>;
+      resolve: () => void;
+      cancel: () => void;
+      canceled: boolean;
+    }[] = [];
+    Object.defineProperty(Element.prototype, 'animate', {
+      configurable: true,
+      writable: true,
+      value: (keyframes: Keyframe[], options: KeyframeAnimationOptions) => {
+        let resolveFinished = () => {};
+        const finished = new Promise<void>((resolve) => {
+          resolveFinished = resolve;
+        });
+        const record = {
+          keyframes,
+          duration: Number(options.duration ?? 0),
+          finished,
+          canceled: false,
+          resolve: resolveFinished,
+          cancel: () => {
+            record.canceled = true;
+          }
+        };
+        animations.push(record);
+        return record as unknown as Animation;
+      }
+    });
+
+    try {
+      next!.click();
+
+      expect(animations).toHaveLength(1);
+      expect(animations[0]!.duration).toBe(110);
+      expect(inner!.textContent).toContain('1 / 2');
+
+      animations[0]!.resolve();
+      await vi.waitFor(() => {
+        expect(inner!.textContent).toContain('2 / 2');
+      });
+
+      expect(animations).toHaveLength(2);
+      expect(animations[1]!.duration).toBe(180);
+    } finally {
+      delete (Element.prototype as { animate?: unknown }).animate;
+    }
+  });
 });

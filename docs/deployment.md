@@ -4,47 +4,67 @@
 
 | 分支 | 内容 | 用途 |
 | --- | --- | --- |
-| `main` | 主题代码、每类一到数条种子内容、中性默认设置 | 模板与更新来源 |
-| `demo` | 完整示例内容、示例截图与站点设置 | 部署到 GitHub Pages |
+| `main` | 主题代码、模板设置与文档，不含示例站内容 | 模板与主题更新来源 |
+| `demo` | 完整示例内容、示例设置与页面截图 | 部署到 GitHub Pages |
 
-主题改动先在 `main` 完成，再在 `demo` 检出上执行 `npm run theme:update` 同步；不要创建 `demo` 合回 `main` 的请求。两个分支在内容、设置与测试快照上刻意不同，反向合并会把模板重新变成示例站。同步方向与冲突处理见 [upstream.md](upstream.md)。
+主题改动先在 `main` 完成，再在 `demo` 检出上执行 `npm run theme:update` 同步。方向固定为 `main` 到 `demo`；反向合并会把示例内容、设置与测试快照带回模板分支。
 
 ## 工作流
 
 | 工作流 | 触发 | 作用 | 权限 |
 | --- | --- | --- | --- |
-| `ci.yml` | push / PR 到 `main`、`demo` | `npm ci` 后执行 `npm run ci` | `contents: read` |
+| `ci.yml` | push / PR 到 `main`、`demo` | `npm ci` 后以固定 `SITE_URL` 执行 `npm run ci` | `contents: read` |
 | `pages.yml` | push 到 `demo`、手动触发 | 构建并发布到 GitHub Pages | `contents: read`、`pages: write`、`id-token: write` |
+| `release.yml` | push `v*` 标签 | 校验版本、执行 `npm run ci`、生成源码 zip 与 `SHA256SUMS` | `contents: write` |
 
-`pages.yml` 固定在 `demo` 分支运行，工作流文件本身留在默认分支，因此仍可从 Actions 页面手动触发。`main` 不参与部署。
+`ci.yml` 从 `.nvmrc` 读取 Node 版本，`SITE_URL` 为 `https://planetarium1001.github.io`。`pages.yml` 固定在 `demo` 分支检出并构建；工作流文件本身留在默认分支，因此仍可从 Actions 页面手动触发。`release.yml` 检出触发标签的提交，校验该提交位于 `main` 上，并要求标签去掉 `v` 后与 `package.json` 的 `version` 一致。
 
 ## 构建期环境变量
 
 | 变量 | 作用 |
 | --- | --- |
-| `SITE_URL` | 站点 origin，用于 RSS、canonical、og 与 sitemap。为空时 RSS 回落到 `https://example.invalid`，canonical、og:url 与 og:image 省略，sitemap 不生成 |
-| `ASTRO_WHONO_BASE_PATH` | 部署子路径，默认 `/`。项目页部署在仓库子路径时由 Pages 工作流推导 |
+| `SITE_URL` | 站点 origin，例如 `https://planetarium1001.github.io`。用于 RSS、canonical、分享图绝对地址与 sitemap |
+| `ASTRO_WHONO_BASE_PATH` | 部署子路径，例如 `/astro-whono-tweaked/`；默认 `/` |
+| `SITE_TIMEZONE` | IANA 时区，覆盖 `site.json` 的 `timezone`；未设置时使用 `site.json`，再回退 `Asia/Shanghai` |
 
-产物守卫断言 sitemap 存在，因此 CI 与发布构建必须提供 `SITE_URL`；本地仅预览时可省略。
+`SITE_URL` 应只包含 origin，不要写部署子路径，子路径交给 `ASTRO_WHONO_BASE_PATH`。为空时 RSS 回退 `https://example.invalid`，canonical 与分享图不输出，sitemap 不生成，`robots.txt` 不写 Sitemap 行；`check:prod-artifacts` 会失败。
 
-## 配置 GitHub Pages
+`ASTRO_WHONO_BASE_PATH` 必须是 URL 路径。Git Bash 的 MSYS 路径转换可能把 `/blog` 改写成 Windows 文件路径，配置期会直接报错；此时在命令前加 `MSYS_NO_PATHCONV=1`。
 
-1. 仓库设为 public。Free 计划下私有仓库无法使用 Pages。
-2. Settings → Pages → Source 选 **GitHub Actions**。不要选「Deploy from a branch」：该路径会走 GitHub 内置的 Jekyll 构建，对 Astro 项目必然失败。
-3. Settings → Environments → `github-pages` → **Deployment branches and tags** → 加入部署分支（本仓库为 `demo`）。该策略默认只放行默认分支；不放行时 `deploy` 作业会在没有任何步骤执行的情况下立即失败，而 `build` 仍然成功。
-4. 触发一次部署：向部署分支推送，或在 Actions → `pages` → Run workflow。
+## GitHub Pages
+
+1. 仓库启用 GitHub Pages；私有仓库是否可用取决于账户计划。
+2. Settings → Pages → Source 选择 **GitHub Actions**。不要选择 “Deploy from a branch”，该路径使用 Jekyll 构建，无法处理 Astro 产物。
+3. Settings → Environments → `github-pages` → Deployment branches and tags，加入 `demo`。该策略默认只放行默认分支；未放行时 `deploy` 作业会立即失败，而 `build` 仍成功。
+4. 向 `demo` 推送，或在 Actions 中手动运行 `pages`。
+
+部署地址由工作流推导：
+
+- 仓库名为 `<owner>.github.io` 时，`SITE_URL=https://<owner>.github.io`，base 为 `/`；
+- 其他仓库名时，`SITE_URL=https://<owner>.github.io`，base 为 `/<repo>/`。
 
 ## 部署自己的站点
 
-`pages.yml` 默认只部署 `demo`：`on.push.branches` 与 `actions/checkout` 的 `ref` 都指向它。内容放在 `main` 时要把这两处一起改掉，否则部署的仍是 `demo` 的内容：
+工作流默认只部署 `demo`。内容放在 `main` 时，需要同时修改两处，否则部署的仍是 `demo`：
 
-- `on.push.branches` 改为自己的部署分支；
-- `actions/checkout` 去掉 `ref: demo`，让它检出发起运行的那个提交。
+- `pages.yml` 的 `on.push.branches` 改为自己的部署分支；
+- 构建作业的 `actions/checkout` 去掉 `ref: demo`，检出触发运行的提交。
 
-改完后同样要在 `github-pages` 环境里放行新的部署分支。站点地址由工作流按仓库名推导：项目页发布在 `https://<owner>.github.io/<repo>/`，仓库名为 `<owner>.github.io` 时发布在根路径。绑定自定义域名后，把工作流中的 `SITE_URL` 与 `ASTRO_WHONO_BASE_PATH` 改为固定值（`https://你的域名` 与 `/`），否则资源路径会带上仓库子路径而 404。
+修改后仍需在 `github-pages` 环境放行新的部署分支。使用自定义域名时，把工作流中的 `SITE_URL` 改为 `https://你的域名`、`ASTRO_WHONO_BASE_PATH` 改为 `/`，并在 `public/CNAME` 写入域名。否则页面与资源会继续带仓库子路径。
+
+也可以本地构建后直接上传 `dist/`：
+
+```bash
+SITE_URL=https://example.com ASTRO_WHONO_BASE_PATH=/ npm run build
+```
 
 ## 其他静态托管
 
-构建产物 `dist/` 可直接发布。仓库自带 Netlify 配置（`npm run build` + 发布 `dist`），也可用于 Nginx、对象存储或其他静态托管。
+构建产物 `dist/` 是纯静态文件，可发布到 Nginx、对象存储或静态托管平台。仓库自带 `netlify.toml`，构建命令为 `npm run build`，发布目录为 `dist/`。
 
-如果站点前面有反向代理或 Anubis 一类挑战层，favicon 图片请求可能被拦截。排查与策略配置见 [favicon.md](favicon.md)。
+- 站点使用 `trailingSlash: 'always'`，托管方需把 `/path/` 映射到 `/path/index.html`；不要配置成单页应用回退。
+- `public/_headers` 提供安全响应头，仅对支持该约定的托管方生效；其他平台需在服务端配置同等头部。
+- 子路径部署时，`SITE_URL` 与 `ASTRO_WHONO_BASE_PATH` 必须同时正确，否则 RSS、canonical、站内链接与静态资源路径会不一致。
+- 修改部署根路径后，重新执行 `npm run verify`；产物类守卫会按 `ASTRO_WHONO_BASE_PATH` 检查链接前缀。
+
+版本发布与模板下载见 [release.md](release.md)。

@@ -34,6 +34,38 @@ describe('admin content entry payload contract', () => {
     }
   });
 
+  it('loads the optional projects stable slug into editor values', async () => {
+    const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
+
+    const initial = await readAdminContentEntryEditorPayload('projects', 'demo-project');
+    if (initial.collection !== 'projects') throw new Error('Expected projects payload');
+    expect(initial.values.slug).toBe('');
+
+    const projectPath = path.join(getTempRoot(), 'content', 'projects', 'demo-project', 'index.md');
+    await writeFile(
+      projectPath,
+      [
+        '---',
+        'title: Demo Project',
+        'subtitle: Demo subtitle',
+        'description: Demo description',
+        'type: 开源',
+        'slug: content-workflow',
+        'date: 2026-02-01T00:00:00.000Z',
+        'draft: false',
+        '---',
+        '',
+        'Project body',
+        ''
+      ].join('\n'),
+      'utf8'
+    );
+
+    const payload = await readAdminContentEntryEditorPayload('projects', 'demo-project');
+    if (payload.collection !== 'projects') throw new Error('Expected projects payload');
+    expect(payload.values.slug).toBe('content-workflow');
+  });
+
   it('loads and validates source files whose names differ from Astro public ids', async () => {
     const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
     const { POST } = await import('../src/pages/api/admin/content/entry');

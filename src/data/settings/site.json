@@ -1,6 +1,6 @@
 {
   "title": "Astro Whono Tweaked",
-  "description": "一个极简双栏 Astro 主题的展示站，本仓库为 planetarium1001/astro-whono-tweaked。",
+  "description": "面向开发者的极简 Astro 主题，用于分享技术文章、项目实践与开发日志。",
   "defaultLocale": "zh-CN",
   "timezone": "Asia/Shanghai",
   "titleMaxPercent": 50,
@@ -8,7 +8,7 @@
   "footer": {
     "startYear": 2025,
     "showCurrentYear": true,
-    "copyright": "Astro Whono Tweaked · Theme Demo"
+    "copyright": "Astro Whono Tweaked · Planetarium"
   },
   "filings": {
     "scope": "all",
@@ -27,14 +27,14 @@
     "hiddenMessage": "作者暂未公开此页面。"
   },
   "favicon": {
-    "svg": null,
-    "png": null,
-    "appleTouchIcon": null
+    "svg": "/favicon.svg",
+    "png": "/favicon-32x32.png",
+    "appleTouchIcon": "/apple-touch-icon.png"
   },
   "socialLinks": {
     "github": "https://github.com/planetarium1001/astro-whono-tweaked",
     "x": null,
-    "email": "Astro@Whono.me",
+    "email": "me@planetarium1001.com",
     "presetOrder": {
       "github": 1,
       "x": 3,

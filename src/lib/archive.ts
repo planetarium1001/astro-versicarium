@@ -4,10 +4,11 @@ import {
   getBlogDerivedText,
   getVisibleBlogRouting,
   getVisibleDevlogs,
-  getVisibleProjects
+  getVisibleProjectGroups
 } from './content';
 import { getBlogEntryHrefMap } from './blog-routing';
 import { stripTrailingLinks } from './trailing-links';
+import { deriveEntryDescription } from './entry-body';
 import { flattenEntryIdToSlug } from '../utils/slug-rules';
 
 export type ArchiveRowKind = 'blog' | 'projects' | 'devlog';
@@ -97,7 +98,7 @@ export type ArchiveRow = {
   description: string;
   tags: string[];
   text: string;
-  /** 项目大版本（含当前版本）；只有配置了版本字段的项目才有。 */
+  /** legacy `versions[]` 元数据历史（可选）；只有项目最新版行携带。 */
   projectVersions?: ProjectVersionRecord[];
 };
 
@@ -128,9 +129,9 @@ const orderRows = (left: ArchiveRow, right: ArchiveRow): number => {
 export const getArchiveRows = async (
   options: { versionMode?: 'all' | 'latest' } = {}
 ): Promise<ArchiveRow[]> => {
-  const [routing, projects, devlogs] = await Promise.all([
+  const [routing, projectGroups, devlogs] = await Promise.all([
     getVisibleBlogRouting(),
-    getVisibleProjects(),
+    getVisibleProjectGroups(),
     getVisibleDevlogs()
   ]);
   const hrefByEntryId = getBlogEntryHrefMap(routing);
@@ -150,7 +151,8 @@ export const getArchiveRows = async (
         date: entry.data.date,
         ...meta,
         versionOrder: entry.data.versionOrder ?? 0,
-        versionLabel: entry.data.versionLabel?.trim() || meta.dateText,
+        versionLabel: entry.data.versionLabel?.trim() || '',
+        ...(entry.data.versionName?.trim() ? { versionName: entry.data.versionName.trim() } : {}),
         isLatest,
         series: group.series,
         description: entry.data.description ?? '',
@@ -160,30 +162,54 @@ export const getArchiveRows = async (
     });
   });
 
-  const projectRows: ArchiveRow[] = projects.map((entry) => {
-    const meta = toDateMeta(entry.data.date, entry.data.dateText);
-    const projectVersions = getProjectVersionHistory(entry.data, meta.dateText);
-    return {
-      kind: 'projects',
-      key: `projects:${entry.id}`,
-      id: entry.id,
-      title: entry.data.title,
-      href: `/projects/#${entry.id}`,
-      date: entry.data.date,
-      ...meta,
-      versionOrder: entry.data.versionOrder ?? 0,
-      ...(entry.data.versionLabel?.trim() ? { versionLabel: entry.data.versionLabel.trim() } : {}),
-      ...(entry.data.versionName?.trim() ? { versionName: entry.data.versionName.trim() } : {}),
-      ...(entry.data.versionSummary?.trim() ? { versionSummary: entry.data.versionSummary.trim() } : {}),
-      ...(projectVersions.length > 0 ? { isLatest: true, projectVersions } : {}),
-      description: entry.data.description ?? '',
-      tags: [],
-      text: [entry.data.subtitle, entry.data.description].filter(Boolean).join(' ')
-    };
+  /**
+   * 项目按文档版本成行：同一项目的各版本文档共享 `tags: [group.title]`，
+   * 以便 `#项目` 过滤能一次选中该项目的所有版本。
+   * legacy `versions[]` 只有元数据，不再单独成行，仅附在最新版行的 `projectVersions`。
+   */
+  const projectRows: ArchiveRow[] = projectGroups.flatMap((group) => {
+    const versions =
+      versionMode === 'latest'
+        ? [group.latest]
+        : group.versions.filter((version) => version.hasDocument);
+
+    return versions.map((version) => {
+      const entry = version.entry;
+      const meta = toDateMeta(entry.data.date, entry.data.dateText);
+      const versionLabel = entry.data.versionLabel?.trim();
+      const versionName = entry.data.versionName?.trim();
+      const versionSummary = entry.data.versionSummary?.trim();
+      const projectVersions = version.isLatest
+        ? getProjectVersionHistory(entry.data, meta.dateText)
+        : [];
+
+      return {
+        kind: 'projects',
+        key: `projects:${version.anchor}`,
+        id: version.entryId,
+        title: entry.data.title,
+        href: version.href,
+        date: entry.data.date,
+        ...meta,
+        versionOrder: entry.data.versionOrder ?? 0,
+        ...(versionLabel ? { versionLabel } : {}),
+        ...(versionName ? { versionName } : {}),
+        ...(versionSummary ? { versionSummary } : {}),
+        isLatest: version.isLatest,
+        ...(projectVersions.length > 0 ? { projectVersions } : {}),
+        description: entry.data.description ?? '',
+        tags: [group.title],
+        text: [entry.data.subtitle, entry.data.description, versionName, versionSummary]
+          .filter(Boolean)
+          .join(' ')
+      } satisfies ArchiveRow;
+    });
   });
 
   const devlogRows: ArchiveRow[] = devlogs.map((entry) => {
     const meta = toDateMeta(entry.data.date, entry.data.dateText);
+    // 与 /devlog/ 页共用同一套摘要派生：frontmatter 缺 description 时从正文截取。
+    const description = deriveEntryDescription(entry.data.description, entry.body) ?? '';
     return {
       kind: 'devlog',
       key: `devlog:${entry.id}`,
@@ -194,12 +220,12 @@ export const getArchiveRows = async (
       ...meta,
       versionOrder: 0,
       project: entry.data.project,
-      description: entry.data.description ?? '',
+      description,
       tags: [entry.data.project],
       text: [
         entry.data.project,
         entry.data.kind,
-        entry.data.description,
+        description,
         stripTrailingLinks(entry.body ?? '').replace(/\s+/g, ' ').trim()
       ].filter(Boolean).join(' ')
     };

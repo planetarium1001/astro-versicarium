@@ -233,6 +233,96 @@
   transition: color 0.2s ease;
 }
 
+/* 条目固定排版：分类胶囊 + 标题 + 版本号淡色胶囊。 */
+.entry-title {
+  --entry-title-font-size: 18px;
+  --entry-title-line-height: 1.75;
+  --entry-title-gap: 10px;
+  --entry-pill-height: 24px;
+
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0;
+  min-width: 0;
+}
+
+.entry-title--archive {
+  --entry-title-font-size: 15px;
+  --entry-title-line-height: 1.75;
+  --entry-title-gap: 8px;
+  --entry-pill-height: 20px;
+}
+
+.entry-title--project {
+  --entry-title-font-size: 16px;
+  --entry-title-line-height: 1.75;
+  --entry-title-gap: 10px;
+  --entry-pill-height: 22px;
+}
+
+.entry-title__gap {
+  flex: 0 0 var(--entry-title-gap);
+  width: var(--entry-title-gap);
+}
+
+.entry-title__colon {
+  color: var(--faint);
+  white-space: pre;
+}
+
+/* 归档的「项目名: 」前缀与标题同色。 */
+.entry-title--archive .entry-title__colon {
+  color: inherit;
+}
+
+/* 胶囊对齐标题第一行：行高减胶囊高度后取一半，换行标题仍固定在第一行。 */
+.entry-title .entry-title__badge,
+.entry-title .entry-title__version-label {
+  position: relative;
+  top: 0;
+  align-self: flex-start;
+  box-sizing: border-box;
+  height: var(--entry-pill-height);
+  margin-top: calc(
+    (var(--entry-title-font-size) * var(--entry-title-line-height) - var(--entry-pill-height)) / 2
+  );
+}
+
+.entry-title .entry-title__badge {
+  padding-inline: 7px;
+}
+
+.entry-title .entry-title__version-label {
+  display: inline-flex;
+  align-items: center;
+  padding-block: 0;
+  padding-inline: 6px;
+  line-height: calc(var(--entry-pill-height) - 2px);
+}
+
+.entry-title__version-name {
+  color: var(--muted);
+  font-size: 0.78em;
+  line-height: inherit;
+  white-space: nowrap;
+}
+
+.entry-title__project {
+  min-width: 0;
+}
+
+.entry-title__title {
+  min-width: 0;
+  line-height: var(--entry-title-line-height);
+}
+
+/* 归档标题沿用时间线现状：15px，字重跟随所在行。 */
+.entry-title--archive .entry-title__title {
+  font-size: 15px;
+  font-weight: inherit;
+}
+
 /* 只在标题文字悬停时高亮，与归档时间线的悬停样式一致；卡片悬停只改背景。 */
 .list-item__title:hover {
   color: var(--accent);
@@ -273,6 +363,21 @@
   background: #1f1f1f;
   border-color: #3f3f3f;
   color: var(--muted);
+}
+
+/* 淡色胶囊：归档版本号与版本名称共用的样式。 */
+.muted-pill {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 999px;
+  color: var(--faint);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  white-space: nowrap;
 }
 
 
@@ -319,6 +424,7 @@
 .meta-line {
   /* 日期组内的点与条目之间的点共用同一间距 */
   --meta-line-sep-gap: 0.6em;
+  --meta-line-tag-gap: 0.65em;
   margin-top: 10px;
   margin-bottom: 12px;
   font-size: 13px;
@@ -337,7 +443,7 @@
 }
 
 .meta-line__item--tags {
-  gap: 0.65em;
+  gap: var(--meta-line-tag-gap);
 }
 
 /* 同一组内的日期分隔符：与外层 .meta-line__item 之间的点共用同一间距。 */
@@ -350,6 +456,13 @@
   content: "·";
   margin: 0 var(--meta-line-sep-gap);
   color: var(--faint);
+}
+
+/* tags 组前的点本身是 flex item：右侧归零后，点→首个 tag 只剩 group gap，
+   否则会叠加成 margin-right + gap。放在通用规则之后并用更高特异性覆盖。 */
+.meta-line--items .meta-line__item--tags::before {
+  margin-left: var(--meta-line-sep-gap);
+  margin-right: 0;
 }
 
 .list-item .meta-line {

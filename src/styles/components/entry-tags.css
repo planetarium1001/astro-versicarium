@@ -489,43 +489,9 @@
   }
 }
 
+/* 视觉尺寸与焦点环由 global.css 的 [data-dialog-close] 统一提供。 */
 .entry-tags-dialog__close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  min-width: 32px;
-  min-height: 32px;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--faint);
-  cursor: pointer;
-  font: inherit;
-  font-family: "Segoe UI Symbol", "Segoe UI", sans-serif;
-  font-size: 18px;
-  line-height: 1;
-  transition: color 0.16s ease;
-}
-
-.entry-tags-dialog__close:hover {
-  color: var(--muted);
-}
-
-.entry-tags-dialog__close:focus-visible {
-  color: var(--text);
-  outline: 2px solid var(--accent);
-  outline-offset: var(--focus-ring-offset);
-}
-
-:root[data-theme='dark'] .entry-tags-dialog__close {
-  color: var(--muted);
-}
-
-:root[data-theme='dark'] .entry-tags-dialog__close:hover,
-:root[data-theme='dark'] .entry-tags-dialog__close:focus-visible {
-  color: var(--text);
+  margin: -2px -4px 0 0;
 }
 
 .entry-tags-dialog__toolbar {

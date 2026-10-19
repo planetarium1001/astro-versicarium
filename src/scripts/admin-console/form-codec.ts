@@ -11,6 +11,7 @@ import type {
   TypographyRole,
   TypographySettings
 } from '@/lib/theme-settings';
+import { normalizeEntryVersionNameMode } from '@/lib/entry-display';
 import {
   createWithBase,
   normalizeHeroImageSrc as normalizeHeroImageSrcValue,
@@ -165,6 +166,7 @@ type FormCodecContext = {
   inputTypographyCopy: HTMLElement;
   inputTypographyMono: HTMLElement;
   inputTypographyBrand: HTMLElement;
+  inputEntryVersionName: HTMLSelectElement;
 };
 
 const normalizeMultiline = (value: string): string => value.replace(/\r\n/g, '\n');
@@ -343,7 +345,8 @@ export const createFormCodec = ({
   inputTypographyReadable,
   inputTypographyCopy,
   inputTypographyMono,
-  inputTypographyBrand
+  inputTypographyBrand,
+  inputEntryVersionName
 }: FormCodecContext) => {
   const defaultHomeIntroLinks = [...ADMIN_HOME_INTRO_LINK_DEFAULT] as HomeIntroLinkKey[];
   const defaultPrimaryHomeIntroLink: HomeIntroLinkKey = ADMIN_HOME_INTRO_LINK_DEFAULT[0];
@@ -462,7 +465,7 @@ export const createFormCodec = ({
     }
 
     if (inputArticleMetaShowTags.checked) {
-      segments.push(ARTICLE_META_PREVIEW_TAGS.join('\u00A0\u00A0'));
+      segments.push(ARTICLE_META_PREVIEW_TAGS.join('\u00A0'));
     }
 
     if (inputArticleMetaShowWordCount.checked) {
@@ -508,6 +511,17 @@ export const createFormCodec = ({
     const { meta, footer } = getViewStatsPreviewTexts();
     viewStatsPreviewMetaEl.textContent = meta;
     viewStatsPreviewFooterEl.textContent = footer;
+  };
+
+  /** 条目版本下拉框与下方预览保持同步：只切换当前模式的示例块。 */
+  const refreshEntryVersionPreview = (): void => {
+    const mode = normalizeEntryVersionNameMode(inputEntryVersionName.value);
+    document.querySelectorAll<HTMLElement>('[data-entry-version-preview]').forEach((preview) => {
+      preview.dataset.mode = mode;
+      preview.querySelectorAll<HTMLElement>('[data-entry-version-preview-variant]').forEach((variant) => {
+        variant.hidden = (variant.dataset.entryVersionPreviewVariant ?? '') !== mode;
+      });
+    });
   };
 
   /** 总开关关掉时三个页面各自的勾选框置灰并加 `aria-disabled`。 */
@@ -860,7 +874,8 @@ export const createFormCodec = ({
           copy: getSelectedTypographyFontId('copy'),
           mono: getSelectedTypographyFontId('mono'),
           brand: getSelectedTypographyFontId('brand')
-        }
+        },
+        entryVersionName: normalizeEntryVersionNameMode(inputEntryVersionName.value)
       }
     };
   };
@@ -976,6 +991,8 @@ export const createFormCodec = ({
     inputArticleMetaShowReadingTime.checked = settings.ui?.articleMeta?.showReadingTime !== false;
     applySidebarDividerVariant(settings.ui?.layout?.sidebarDivider || ADMIN_SIDEBAR_DIVIDER_DEFAULT);
     applyTypographySettings(settings.ui?.typography);
+    inputEntryVersionName.value = normalizeEntryVersionNameMode(settings.ui?.entryVersionName);
+    refreshEntryVersionPreview();
     refreshFooterPreview();
     refreshFilingsPreview();
     refreshArticleMetaPreview();
@@ -1017,6 +1034,7 @@ export const createFormCodec = ({
     collectHomeIntroLinks,
     refreshArticleMetaPreview,
     refreshViewStatsPreview,
+    refreshEntryVersionPreview,
     refreshHomeIntroPreview,
     syncAdminOverviewControls,
     syncSidebarActionControls,

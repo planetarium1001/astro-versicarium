@@ -14,9 +14,9 @@ describe('admin content projects/devlog write contract', () => {
     const { POST } = await import('../src/pages/api/admin/content/entry');
 
     const current = await readAdminContentEntryEditorPayload('projects', 'demo-project');
-    // 字段袋只有基础字段
+    // 字段袋只有基础字段（slug 是项目稳定公开键）
     expect(Object.keys(current.values).sort()).toEqual(
-      ['title', 'subtitle', 'description', 'type', 'icon', 'image', 'date', 'draft'].sort()
+      ['title', 'subtitle', 'description', 'type', 'icon', 'image', 'slug', 'date', 'draft'].sort()
     );
 
     const nextValues = {
@@ -89,7 +89,7 @@ describe('admin content projects/devlog write contract', () => {
 
     const current = await readAdminContentEntryEditorPayload('projects', 'demo-project');
     expect(Object.keys(current.values).sort()).toEqual(
-      ['title', 'subtitle', 'description', 'type', 'icon', 'image', 'date', 'draft'].sort()
+      ['title', 'subtitle', 'description', 'type', 'icon', 'image', 'slug', 'date', 'draft'].sort()
     );
     expect('image' in current.values ? current.values.image : undefined).toBe('');
 
@@ -136,6 +136,65 @@ describe('admin content projects/devlog write contract', () => {
     const secondPayload = JSON.parse(await second.text());
     expect(secondPayload.ok).toBe(true);
     expect(secondPayload.result.changedFields).toEqual([]);
+  });
+
+  // 项目稳定 slug：写入、清空删除、非法值拒绝，语义与 blog slug 一致。
+  it('writes and clears the projects stable slug, and rejects invalid slugs', async () => {
+    const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
+    const { POST } = await import('../src/pages/api/admin/content/entry');
+
+    const sourcePath = path.join(getTempRoot(), 'content', 'projects', 'demo-project', 'index.md');
+    const save = async (
+      entryId: string,
+      revision: string,
+      frontmatter: Record<string, unknown>
+    ): Promise<{ status: number; payload: Record<string, any> }> => {
+      const response = await POST({
+        request: createJsonRequest('http://127.0.0.1:4321/api/admin/content/entry', {
+          collection: 'projects',
+          entryId,
+          revision,
+          frontmatter,
+          body: 'Project body'
+        }),
+        url: new URL('http://127.0.0.1:4321/api/admin/content/entry')
+      } as never);
+      return { status: response.status, payload: JSON.parse(await response.text()) };
+    };
+
+    const current = await readAdminContentEntryEditorPayload('projects', 'demo-project');
+    if (current.collection !== 'projects') throw new Error('Expected projects payload');
+    expect(current.values.slug).toBe('');
+
+    const withSlug = await save('demo-project', current.revision, {
+      ...current.values,
+      slug: 'content-workflow'
+    });
+    expect(withSlug.status).toBe(200);
+    expect(withSlug.payload.result.changedFields).toEqual(expect.arrayContaining(['slug']));
+    expect(await readFile(sourcePath, 'utf8')).toMatch(/^slug: content-workflow$/m);
+
+    const reread = await readAdminContentEntryEditorPayload('projects', 'demo-project');
+    if (reread.collection !== 'projects') throw new Error('Expected projects payload');
+    expect(reread.values.slug).toBe('content-workflow');
+
+    // 清空即删除 frontmatter.slug
+    const cleared = await save('demo-project', reread.revision, { ...reread.values, slug: '' });
+    expect(cleared.status).toBe(200);
+    expect(cleared.payload.result.changedFields).toEqual(['slug']);
+    expect(await readFile(sourcePath, 'utf8')).not.toMatch(/^slug:/m);
+
+    // 非法 slug 在写盘前被拒绝
+    const beforeInvalid = await readAdminContentEntryEditorPayload('projects', 'demo-project');
+    const invalid = await save('demo-project', beforeInvalid.revision, {
+      ...beforeInvalid.values,
+      slug: 'Bad Slug'
+    });
+    expect(invalid.status).toBe(400);
+    expect(invalid.payload.issues).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: 'slug' })])
+    );
+    expect(await readFile(sourcePath, 'utf8')).not.toMatch(/^slug:/m);
   });
 
   it('no longer exposes tags/repo/demo in the projects editor values', async () => {
@@ -214,6 +273,7 @@ describe('client write request body for new collections', () => {
           type: '',
           icon: '',
           image: '',
+          slug: '',
           date: '2026-02-01',
           draft: false
         }
@@ -221,6 +281,7 @@ describe('client write request body for new collections', () => {
           title: 'D',
           date: '2026-02-02',
           project: 'P',
+          projectSlug: '',
           kind: '',
           description: '',
           draft: false
@@ -257,6 +318,7 @@ describe('entry transport guards for new collections', () => {
           type: '',
           icon: '',
           image: '',
+          slug: '',
           date: '2026-02-01',
           draft: false
         }
@@ -264,6 +326,7 @@ describe('entry transport guards for new collections', () => {
           title: 'D',
           date: '2026-02-02',
           project: 'P',
+          projectSlug: '',
           kind: '',
           description: '',
           draft: false
@@ -315,5 +378,20 @@ describe('create trigger ownership', () => {
       source.indexOf('const CREATE_DIALOG_TITLES')
     );
     expect(allBlock).toContain('data-admin-content-bits-create-action');
+  });
+});
+
+describe('devlog create defaults', () => {
+  it('seeds projectSlug so the create payload matches the editor values type', async () => {
+    const source = await readFile(
+      path.join(process.cwd(), 'src', 'components', 'admin', 'editor', 'list-actions', 'ContentListActions.svelte'),
+      'utf8'
+    );
+    const block = source.slice(
+      source.indexOf('const createEmptyDevlogFrontmatter'),
+      source.indexOf('const createEmptyBitsFrontmatter')
+    );
+
+    expect(block).toContain("projectSlug: ''");
   });
 });

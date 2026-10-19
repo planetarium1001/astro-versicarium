@@ -31,8 +31,8 @@ export const site = {
   title: 'Astro Whono Tweaked',
   brandTitle: 'Astro Whono Tweaked',
   author: 'Planetarium',
-  authorAvatar: 'author/avatar.webp',
-  description: '基于 cxro/astro-whono 的极简双栏 Astro 主题模板，面向长文阅读做了增量改造。'
+  authorAvatar: 'author/avatar.svg',
+  description: '面向开发者的极简 Astro 主题，适合撰写技术文章、项目记录与开发日志。'
 };
 
 // 前端每页条目数：列表页写入 `[data-entry-filters][data-page-size]`，客户端分页读取。

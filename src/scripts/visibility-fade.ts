@@ -11,8 +11,8 @@ const MIN_TARGET_MS = 150;
 /** 环境是否支持 Web Animations 且未要求减少动效。 */
 export const canAnimate = (el: HTMLElement | null | undefined): boolean => {
   if (!el || typeof el.animate !== 'function') return false;
-  return typeof window.matchMedia === 'function'
-    && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 };
 
 type PhaseOptions = {

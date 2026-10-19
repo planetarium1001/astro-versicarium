@@ -1,4 +1,5 @@
 import { formatPageStatus, resolvePageWindow } from '../lib/pagination';
+import { animateListSwap, cancelListSwap } from './list-swap';
 
 /**
  * 通用列表分页（首页 / `/devlog/`）。
@@ -51,7 +52,11 @@ const initPagination = (root: PaginationRoot): void => {
 
   const eligibleItems = (): HTMLElement[] => items.filter((item) => !item.hidden);
 
-  const render = (options: { scroll?: boolean } = {}): void => {
+  /**
+   * 落分页状态。翻页按钮走 `render` 的整块过渡；初始渲染、筛选重置直接落，
+   * 但同样先作废旧动画，避免旧回调把新状态盖回去。
+   */
+  const applyPage = (options: { scroll?: boolean } = {}): void => {
     const eligible = eligibleItems();
     const window = resolvePageWindow(eligible.length, pageSize, currentPage);
     currentPage = window.page;
@@ -93,6 +98,15 @@ const initPagination = (root: PaginationRoot): void => {
       const first = eligible[window.start] ?? nav;
       first.scrollIntoView?.({ block: 'nearest' });
     }
+  };
+
+  const render = (options: { scroll?: boolean } = {}): void => {
+    if (options.scroll) {
+      animateListSwap(list, () => applyPage(options));
+      return;
+    }
+    cancelListSwap(list);
+    applyPage(options);
   };
 
   /** 锚点条目若被分页藏到第二页，首次进入先翻到它所在页，避免 `#id` 死链。 */

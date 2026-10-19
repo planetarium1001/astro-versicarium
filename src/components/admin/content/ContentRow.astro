@@ -89,17 +89,19 @@ const getContentInfoActionLabel = (): string => {
   </p>
 
   <div class="admin-content-item__title-row">
-    <a class="admin-content-row-title" href={entryTitleHref} data-admin-content-row-title>{item.title}</a>
+    <a class="admin-content-row-title" href={entryTitleHref} data-admin-content-row-title>{item.collection === 'devlog' && item.project ? <span class="admin-content-row-project">{`${item.project}: `}</span> : null}{item.title}</a>
     {
       item.collection === 'blog' && item.series ? (
         <>
-          <span
-            class="admin-content-row-version"
-            data-admin-content-row-version
-            title={item.versionName ?? undefined}
-          >
-            {item.versionLabel || item.dateLabel}
-          </span>
+          {item.versionLabel ? (
+            <span
+              class="admin-content-row-version"
+              data-admin-content-row-version
+              title={item.versionName ?? undefined}
+            >
+              {item.versionLabel}
+            </span>
+          ) : null}
           <span
             class:list={[
               'admin-content-row-mark',

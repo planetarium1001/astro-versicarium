@@ -217,7 +217,7 @@ const buildVersions = <TEntry extends BlogRoutingEntry>(
       entry,
       entryId: entry.id,
       title: entry.data.title,
-      versionLabel: entry.data.versionLabel?.trim() || entry.data.dateText || '',
+      versionLabel: entry.data.versionLabel?.trim() || '',
       versionName: entry.data.versionName?.trim() || entry.data.title,
       versionSummary: entry.data.versionSummary?.trim() || entry.data.description?.trim() || null,
       date: entry.data.dateText ?? '',
@@ -357,14 +357,14 @@ export const getBlogVersionInfo = <TEntry extends BlogRoutingEntry>(
   if (!group) {
     return {
       isLatest: true,
-      versionLabel: entry.data.versionLabel?.trim() || entry.data.dateText || '',
+      versionLabel: entry.data.versionLabel?.trim() || '',
       latestHref: getEntryDatedPath(entry),
       series: null
     };
   }
   return {
     isLatest: group.latest.id === entry.id,
-    versionLabel: entry.data.versionLabel?.trim() || entry.data.dateText || '',
+    versionLabel: entry.data.versionLabel?.trim() || '',
     latestHref: group.canonicalPath,
     series: group.series
   };
@@ -386,7 +386,7 @@ export const getStableSlugUsage = <TEntry extends BlogRoutingEntry>(
 const withDatePrefix = (slug: string, dateText: string): string =>
   slug.startsWith(`${dateText}-`) ? slug : `${dateText}-${slug}`;
 
-/** 按 PRD 规则生成候选：date-slug → -1 → -2；已占用集合由调用方提供。 */
+/** 生成候选：date-slug → -1 → -2；已占用集合由调用方提供。 */
 export const suggestAvailableBlogSlug = ({
   slug,
   dateText,

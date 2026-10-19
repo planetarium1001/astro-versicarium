@@ -45,4 +45,4 @@ jobs:
       - name: Run verification
         run: npm run ci
         env:
-          SITE_URL: https://astro-whono.example.com
+          SITE_URL: https://planetarium1001.github.io

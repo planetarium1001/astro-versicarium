@@ -1,6 +1,6 @@
 {
-  "introLead": "这是一个开源写作主题与示例内容库：包含 博客/blog、归档/archive、动态/bits、更新/devlog 与 关于/about，使用与配置请见 README。",
-  "introMore": "更多文章请访问",
+  "introLead": "面向开发者的极简 Astro 主题：技术文章、项目文档与开发日志在同一套内容结构中维护。",
+  "introMore": "按标签继续浏览",
   "introMoreLinks": [
     "tag",
     "blogTag"
@@ -9,5 +9,5 @@
   "showIntroMore": true,
   "heroPresetId": "default",
   "heroImageSrc": null,
-  "heroImageAlt": "Whono theme preview"
+  "heroImageAlt": "深色背景上的 Astro Whono Tweaked 几何折线图形"
 }

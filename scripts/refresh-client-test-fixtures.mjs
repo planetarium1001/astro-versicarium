@@ -36,7 +36,8 @@ const SOURCES = [
   ['dist/archive/index.html', 'archive-page.dev.html'],
   ['dist/archive/index.json', 'archive-index.dev.json'],
   [(await resolveArticleFixtureSource()) ?? 'dist/blog/<entry>/index.html', 'article-page.dev.html'],
-  ['dist/devlog/index.html', 'devlog-page.dev.html']
+  ['dist/devlog/index.html', 'devlog-page.dev.html'],
+  ['dist/projects/index.html', 'projects-page.dev.html']
 ];
 
 await mkdir(OUT, { recursive: true });

@@ -30,37 +30,50 @@ const statusLabel = (version: (typeof versions)[number]): string => {
     aria-label="版本信息"
     data-article-version
   >
-    <p class="article-version-notice__eyebrow">
-      <span class="article-version-notice__mark" aria-hidden="true"></span>
-      {isLatest ? '当前版本' : '历史版本'} · {currentVersion.versionLabel} · {currentVersion.date}
-    </p>
-    <p class="article-version-notice__message">
-      {isLatest
-        ? '这是本系列的最新内容。'
-        : '该版本已归档，部分内容可能过时。'}
-      {!isLatest ? (
-        <a class="article-version-notice__latest" href={withBase(latestVersion.href)}>查看最新版 →</a>
-      ) : null}
-    </p>
-    <button
-      class="article-version-trigger"
-      type="button"
-      data-version-trigger
-      aria-expanded="false"
-      aria-controls={drawerId}
-    >
-      <span>版本历史 ({versionCount})</span>
-      <span class="article-version-trigger__icon" aria-hidden="true">
-        <UiIcon name="panel-right-open" size={15} strokeWidth={1.7} />
-      </span>
-    </button>
+    <div class="article-version-notice__row">
+      <p class="article-version-notice__text">
+        <span class="article-version-notice__mark" aria-hidden="true"></span>
+        <span class="article-version-notice__meta">
+          <span>{isLatest ? '当前版本' : '历史版本'}</span>
+          <span aria-hidden="true">·</span>
+          <span>{currentVersion.versionLabel}</span>
+          <span aria-hidden="true">·</span>
+          <span>{currentVersion.date}</span>
+        </span>
+        <span class="article-version-notice__note">
+          {isLatest ? '这是本系列的最新内容。' : '该版本已归档，部分内容可能过时。'}
+        </span>
+        {!isLatest ? (
+          <a class="article-version-notice__latest" href={withBase(latestVersion.href)}>
+            查看最新版
+            <UiIcon name="chevron-up" size={14} strokeWidth={1.8} />
+          </a>
+        ) : null}
+      </p>
+      <button
+        class="article-version-trigger"
+        type="button"
+        data-version-trigger
+        aria-expanded="false"
+        aria-controls={drawerId}
+        aria-label={`打开版本历史（${versionCount}）`}
+      >
+        <span class="article-version-trigger__label" aria-hidden="true">版本历史</span>
+        <span class="article-version-trigger__icon article-version-trigger__icon--wide" aria-hidden="true">
+          <UiIcon name="chevron-left" size={16} strokeWidth={1.8} />
+        </span>
+        <span class="article-version-trigger__icon article-version-trigger__icon--narrow" aria-hidden="true">
+          <UiIcon name="chevron-up" size={16} strokeWidth={1.8} />
+        </span>
+      </button>
+    </div>
 
     <dialog class="version-drawer" id={drawerId} data-version-drawer aria-label={`版本历史（${versionCount}）`}>
       <div class="version-drawer__panel">
         <div class="version-drawer__head">
-          <h2 class="version-drawer__title">版本历史 ({versionCount})</h2>
-          <button class="version-drawer__close" type="button" data-version-close aria-label="关闭版本历史">
-            <UiIcon name="x" size={18} strokeWidth={1.8} />
+          <h2 class="version-drawer__title" tabindex="-1">版本历史 ({versionCount})</h2>
+          <button class="version-drawer__close" type="button" data-version-close data-dialog-close aria-label="关闭版本历史">
+            <UiIcon name="x" size={14} strokeWidth={1.8} />
           </button>
         </div>
         <ol class="version-list">

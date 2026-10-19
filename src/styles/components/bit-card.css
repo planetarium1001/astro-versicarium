@@ -489,31 +489,9 @@ a.bit-tag.tag--link:focus-visible {
   color: var(--faint);
 }
 
+/* 视觉尺寸与焦点环由 global.css 的 [data-dialog-close] 统一提供。 */
 .bit-dialog__close {
-  flex: 0 0 auto;
-  width: var(--tap-min-h);
-  height: var(--tap-min-h);
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--faint);
-  font: inherit;
-  font-family: "Segoe UI Symbol", "Segoe UI", sans-serif;
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-  transition: color 0.16s ease;
-}
-
-.bit-dialog__close:hover,
-.bit-dialog__close:focus-visible {
-  color: var(--text);
-}
-
-.bit-dialog__close:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  margin: -3px -4px 0 0;
 }
 
 .bit-dialog__content {

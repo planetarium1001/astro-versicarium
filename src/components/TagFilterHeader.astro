@@ -121,8 +121,8 @@ const tagTriggerText = `#${itemNoun}`;
           </div>
           <div class="entry-tags-dialog__actions">
             <button class="entry-tags-dialog__clear" type="button" data-entry-tag-clear hidden>清除筛选</button>
-            <button class="entry-tags-dialog__close" type="button" data-entry-tag-close aria-label={`关闭${itemNoun}选择器`}>
-              ✕
+            <button class="entry-tags-dialog__close" type="button" data-entry-tag-close data-dialog-close aria-label={`关闭${itemNoun}选择器`}>
+              <UiIcon name="x" size={14} strokeWidth={1.8} />
             </button>
           </div>
         </div>

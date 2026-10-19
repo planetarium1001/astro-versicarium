@@ -430,15 +430,25 @@ describe('项目卡片与末尾链接行', () => {
     expect(links).toMatch(/\.prose \.trailing-links a\s*\{[^}]*border-bottom:\s*0/);
   });
 
-  it('多列时所有行等高：行高由栅格统一，单卡仍有高度上限', async () => {
+  it('列数三档特调，多列时所有行等高且卡片撑满行高', async () => {
     const css = await read('src/styles/projects-page.css');
 
-    // grid-auto-rows: 1fr 让每一行都取最高卡片的高度，避免某一行更高；多列时才需要
+    // 窄屏一列、常规两列、极宽三列；不再用 auto-fit 无限增加列数
+    expect(css).toMatch(/\.projects-page \.project-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
     expect(css).toMatch(
-      /@media \(min-width: 641px\)\s*\{[^@]*?\.projects-page \.project-grid\s*\{[^}]*grid-auto-rows:\s*1fr/
+      /@media \(min-width: 760px\)\s*\{[^@]*?\.project-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/
+    );
+    expect(css).toMatch(
+      /@media \(min-width: 1500px\)\s*\{[^@]*?\.project-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/
+    );
+    expect(css).not.toContain('auto-fit');
+    // grid-auto-rows: 1fr 让每一行都取最高卡片的高度；卡片 height: 100% 撑满行高
+    expect(css).toMatch(
+      /@media \(min-width: 760px\)\s*\{[^@]*?\.project-grid\s*\{[^}]*grid-auto-rows:\s*1fr/
     );
     expect(css).toMatch(/\.projects-page \.project-grid\s*\{[^}]*align-items:\s*stretch/);
-    expect(css).toMatch(/\.project-card\s*\{[^}]*max-height:\s*320px/);
+    expect(css).toMatch(/\.project-card\s*\{[^}]*height:\s*100%/);
+    expect(css).not.toMatch(/\.project-card\s*\{[^}]*max-height:\s*320px/);
   });
 
   it('展示图：可选字段渲染成与文字左对齐的缩略图', async () => {
@@ -769,15 +779,19 @@ describe('#标签 与「切换标签」互斥', () => {
 });
 
 describe('项目弹窗的主次层级', () => {
-  it('关闭按钮更小、标题与副标题放大、正文不得大于标题', async () => {
-    const css = await read('src/styles/projects-page.css');
+  it('关闭按钮统一走 shared 样式、标题与副标题放大、正文不得大于标题', async () => {
+    const [css, global] = await Promise.all([
+      read('src/styles/projects-page.css'),
+      read('src/styles/global.css')
+    ]);
 
-    // 关闭按钮缩小（44px 热区保留）
+    // 视觉 32px、44px 热区由全局 [data-dialog-close] 提供；项目页只保留边距
     const close = /\.project-dialog__close\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
-    expect(close).toMatch(/font-size:\s*15px/);
-    expect(close).toMatch(/width:\s*var\(--tap-min-h\)/);
-    expect(close).toMatch(/border:\s*0/);
-    expect(close).toMatch(/background:\s*transparent/);
+    expect(close).not.toMatch(/width:/);
+    expect(close).not.toMatch(/font-size:/);
+    expect(global).toMatch(/\[data-dialog-close\]\s*\{[^}]*width:\s*32px[^}]*height:\s*32px/);
+    expect(global).toMatch(/\[data-dialog-close\]::before\s*\{[^}]*width:\s*44px[^}]*height:\s*44px/);
+    expect(global).toMatch(/\[data-dialog-close\]\[data-pointer-focus\]:focus\s*\{[^}]*outline:\s*none/);
 
     // 标题 / 副标题 / 类型胶囊放大
     const title = /\.project-dialog__title\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
@@ -854,18 +868,18 @@ describe('归档 tag 的作用域与语义', () => {
       read('src/lib/archive.ts')
     ]);
 
-    // 取值域
-    expect(page).toMatch(/const projectTags: TagSummary\[\] = \[\];/);
+    // 取值域：项目版本行按项目显示名打标签，all 作用域由行数据推导
+    expect(page).toMatch(/collectTagScopedSummary\('projects', projectRows, \(row\) => row\.tags\)/);
     expect(page).toMatch(/collectTagScopedSummary\('devlog', devlogs, \(entry\) => \[\s*entry\.data\.project\s*\]/);
-    expect(page).toMatch(/collectTagScopedSummary\(\s*'all',\s*\[\s*\.\.\.blogs,\s*\.\.\.devlogs\s*\]/);
+    expect(page).toMatch(/collectTagScopedSummary\('all', rows, \(row\) => row\.tags\)/);
     // archive row 的 devlog tags 只取项目名称，不含 kind；index.json 直接复用 row.tags
     expect(archiveLib).toMatch(/tags: \[entry\.data\.project\]/);
     expect(archiveLib).not.toMatch(/tags: \[entry\.data\.project, entry\.data\.kind\]/);
     expect(indexJson).toMatch(/tags: row\.tags/);
 
-    // 项目档隐藏 tag 入口；更新档把入口与标题按作用域改成「项目」
-    expect(scopeScript).toMatch(/TAG_TRIGGER\.hidden = isProjects/);
-    expect(scopeScript).toMatch(/const noun = scope === 'devlog' \? '项目' : '标签'/);
+    // 项目档与更新档都显示 tag 入口并称「项目」；不再隐藏
+    expect(scopeScript).toContain('TAG_TRIGGER.hidden = false');
+    expect(scopeScript).toMatch(/const noun = scope === 'projects' \|\| scope === 'devlog' \? '项目' : '标签'/);
     expect(scopeScript).toContain("ENTRY_ROOT.dataset.entryTagNoun = noun");
     // entry-search 读这个称谓来生成「切换项目 / 清除筛选」
     expect(entryScript).toMatch(/root\.dataset\.entryTagNoun/);
@@ -873,21 +887,25 @@ describe('归档 tag 的作用域与语义', () => {
   });
 });
 
-describe('归档的更新行补「项目名：」', () => {
-  it('devlog 行在标题前渲染项目名，样式用 muted 不抢标题', async () => {
-    const [page, css, archiveLib] = await Promise.all([
+describe('归档条目固定排版「项目名: 标题 v2.0」', () => {
+  it('归档行统一走 EntryTitleLine，冒号为半角冒号+空格，版本胶囊为淡色', async () => {
+    const [page, css, display] = await Promise.all([
       read('src/pages/archive/index.astro'),
-      read('src/styles/archive-page.css'),
-      read('src/lib/archive.ts')
+      read('src/styles/components/lists.css'),
+      read('src/lib/entry-display.ts')
     ]);
 
-    expect(page).toMatch(/row\.kind === 'devlog' && row\.project/);
-    expect(page).toContain('archive-timeline__project');
-    expect(archiveLib).toMatch(/project: entry\.data\.project/);
-    // 半角冒号，冒号后一个空格
-    expect(page).toMatch(/\$\{row\.project\}: `/);
-    // 项目名与标题继承同一个链接色，悬停整体高亮
-    expect(css).toMatch(/\.archive-timeline__project\s*\{[^}]*color:\s*inherit/);
+    expect(page).toContain('<EntryTitleLine');
+    expect(page).toContain('surface="archive"');
+    expect(page).toContain('titleTag="span"');
+    expect(page).toContain('kind={row.kind}');
+    // 固定排版：devlog 项目名前缀 + ': ' + 标题；版本段只由显式 versionLabel 触发。
+    expect(display).toContain("ENTRY_TITLE_COLON = ': '");
+    expect(display).toMatch(/kind === 'devlog'/);
+    expect(display).toMatch(/kind: 'version-label'/);
+    // 项目名分隔符继承标题色，不额外抢层级
+    expect(css).toMatch(/\.entry-title--archive \.entry-title__colon\s*\{[^}]*color:\s*inherit/);
+    expect(css).toMatch(/\.entry-title .entry-title__version-label[\s\S]*?height:\s*var\(--entry-pill-height\)/);
   });
 });
 

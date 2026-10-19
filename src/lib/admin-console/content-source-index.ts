@@ -68,6 +68,8 @@ export type AdminContentSourceIndexItem = {
   dateLabel: string;
   year: number | null;
   tags: string[];
+  // devlog 项目展示名：仅 devlog 从 frontmatter 读取，列表行用它生成 `项目名: 标题`。
+  project: string | null;
   // series/version 元数据：仅 blog 从 frontmatter 读取，其余 collection 保持空值。
   series: string | null;
   versionLabel: string | null;
@@ -288,6 +290,7 @@ const createBlogSourceIndexItem: FrontmatterAdapter = (record) => {
     dateLabel: hasSourceError ? SOURCE_ERROR_DATE_LABEL : label,
     year,
     tags,
+    project: null,
     searchHaystack: buildSearchHaystack([
       title,
       record.entryId,
@@ -341,6 +344,7 @@ const createBitsSourceIndexItem: FrontmatterAdapter = (record, context) => {
     dateLabel: hasSourceError ? SOURCE_ERROR_DATE_LABEL : label,
     year,
     tags,
+    project: null,
     searchHaystack: buildSearchHaystack([
       title,
       record.entryId,
@@ -373,6 +377,7 @@ const createAboutSourceIndexItem: FrontmatterAdapter = (record) => {
     dateLabel: hasSourceError ? SOURCE_ERROR_DATE_LABEL : label,
     year: null,
     tags: [],
+    project: null,
     searchHaystack: buildSearchHaystack([
       '关于',
       record.entryId,
@@ -415,6 +420,7 @@ const createProjectsSourceIndexItem: FrontmatterAdapter = (record) => {
     dateLabel: hasSourceError ? SOURCE_ERROR_DATE_LABEL : label,
     year,
     tags,
+    project: null,
     searchHaystack: buildSearchHaystack([
       title,
       subtitle,
@@ -460,6 +466,7 @@ const createDevlogSourceIndexItem: FrontmatterAdapter = (record) => {
     dateLabel: hasSourceError ? SOURCE_ERROR_DATE_LABEL : label,
     year,
     tags,
+    project: project || null,
     searchHaystack: buildSearchHaystack([
       title,
       project,

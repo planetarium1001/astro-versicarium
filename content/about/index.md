@@ -1,44 +1,41 @@
 ---
 ---
 
-你好，欢迎来到这里
+astro-whono-tweaked 是一个基于 Astro 的双栏博客主题，面向希望以代码和项目为主组织内容的开发者。它在 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）的基础上改造，保留上游的壳层、后台控制台、Markdown 扩展与字体子集流程，并围绕内容版本、项目文档与主题更新做了增量实现。
 
-这是 Whono 主题的 about 页面示例
+## 面向的读者
 
-示例内容覆盖站点介绍、友链列表、常见问题与联系说明，可按实际站点替换。
+这个主题假设站点首先是一个工程记录与项目展示空间，而不是写作平台。文章、项目、动态与开发日志分别建模；项目可以按独立文档维护多个版本；后台提供内容、资源与设置控制台。若目标只是尽快发布纯文字博客，上游主题或更轻的模板会更直接。
 
-## 致谢
+## 设计取向
 
-本主题基于 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）改造，由 [Astro](https://astro.build/) 构建。
+- 内容与代码分离：作者内容集中在 `content/`，主题代码留在 `src/`，升级主题时不覆盖站点内容。
+- 结构化集合：`blog`、`projects`、`bits`、`devlog`、`about` 五个集合各有路由与 frontmatter 约束。
+- 可用性优先：列表、归档、项目弹窗与版本提示共用同一套条目排版，前台关键交互不依赖客户端框架。
+- 可重复更新：`theme:update` 按文件三方合并主题变更，站点自有路径保持原样。
 
-## 朋友们
+## 来源与致谢
 
-:::friend{name="astro-whono-tweaked" url="https://github.com/planetarium1001/astro-whono-tweaked"}
-本主题仓库，也是本示例站点的源仓库
-:::
+本项目基于 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）改造，初始提交来自上游。感谢上游作者在双栏布局、后台控制台与 Markdown 管线上打下的基础。站点使用 [Astro](https://astro.build/) 构建，许可证见仓库中的 LICENSE。
 
-:::friend{name="Whono" url="https://github.com/cxro/astro-whono" avatar="author/avatar.webp"}
-上游主题，一个极简的双栏 Astro 主题
-:::
-
-:::friend{name="Astro" url="https://astro.build/" avatar="https://cdn.nodeimage.com/i/LAW2Al4JZrPhfTs7ObHbisPLGwWuR6x5.webp"}
-用于构建高性能内容网站的前端框架
-:::
+::site-info{name="astro-whono-tweaked" url="https://github.com/planetarium1001/astro-whono-tweaked" description="面向开发者的双栏 Astro 博客主题，支持内容版本、项目文档与三方合并更新。"}
 
 ## 常见问题
 
-:::faq{question="如何交换友链？"}
-可以通过 GitHub Issue 联系我或者 [发送邮件](mailto:你的邮箱@example.com?subject=交换友链申请&body=站点名称：%0A链接：%0A简介：%0A头像：)，请附上站点名称、链接、简介和头像。
-
-:::site-info{name="astro-whono-tweaked" url="https://planetarium1001.github.io/astro-whono-tweaked/" description="一个极简的双栏 Astro 主题" avatar="author/avatar.webp"}
+:::faq{question="它和上游主题是什么关系？"}
+本仓库保留上游的提交历史与核心结构，在其上增加项目多版本文档、资源控制台、主题更新通道与站点设置项。上游更新通过普通 git 合并吸收，主题更新通过 `theme:update` 分发到站点。
 :::
 
-:::faq{question="可以转载这里的内容吗？"}
-转载请注明出处；如果某篇文章单独标注了授权方式，以那篇文章的说明为准。
+:::faq{question="适合直接用来写博客吗？"}
+可以，但它的默认结构偏向工程记录与项目展示。只有 Markdown 文章时，`blog` 集合即可满足；项目、动态与开发日志可以留空。
+:::
+
+:::faq{question="主题更新会覆盖我的内容吗？"}
+不会。`content/`、`src/data/settings/`、`public/images/`、`public/author/`、`public/fonts/`、`tools/`、`tests/fixtures/` 与 `theme.json` 等站点自有路径不参与覆盖，`theme:update` 只在报告中列出。
 :::
 
 ## 联系
 
-如果你有问题、建议，或想订阅更新，欢迎联系。
-
-::contact-links
+- 邮箱：[me@planetarium1001.com](mailto:me@planetarium1001.com)
+- 仓库：[github.com/planetarium1001/astro-whono-tweaked](https://github.com/planetarium1001/astro-whono-tweaked)
+- 问题与建议：[提交 Issue](https://github.com/planetarium1001/astro-whono-tweaked/issues)

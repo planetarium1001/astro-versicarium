@@ -174,6 +174,96 @@ describe('admin media api', () => {
     ]);
   });
 
+  it('groups _shared assets into a collection-level shared node', async () => {
+    await mkdir(path.join(tempRoot, 'content', 'blog', '_shared', 'icons'), { recursive: true });
+    await writeFile(path.join(tempRoot, 'content', 'blog', '_shared', 'whono-mark.webp'), PNG_1X1);
+    await writeFile(path.join(tempRoot, 'content', 'blog', '_shared', 'icons', 'mark.svg'), '<svg />');
+    await mkdir(path.join(tempRoot, 'public', 'images', 'blog', '_shared'), { recursive: true });
+    await writeFile(path.join(tempRoot, 'public', 'images', 'blog', '_shared', 'public-mark.webp'), PNG_1X1);
+
+    const { GET } = await import('../src/pages/api/admin/media/list');
+    const list = async (query: string) => {
+      const response = await GET({
+        url: new URL(`http://127.0.0.1:4321/api/admin/media/list?${query}`)
+      } as never);
+      return JSON.parse(await response.text());
+    };
+
+    const payload = await list('collection=blog&limit=50');
+    const collectionNode = payload.result.tree.find(
+      (node: { collection: string }) => node.collection === 'blog'
+    );
+    const sharedNode = collectionNode.children.find(
+      (node: { kind: string }) => node.kind === 'shared'
+    );
+    const unassignedNode = collectionNode.children.find(
+      (node: { kind: string; label: string }) => node.kind === 'version' && node.label === '未归属资源'
+    );
+
+    expect(sharedNode).toEqual(expect.objectContaining({
+      kind: 'shared',
+      label: '共享资源',
+      entryId: '_shared',
+      series: '',
+      version: ''
+    }));
+    expect(unassignedNode).toBeTruthy();
+    expect(collectionNode.children.indexOf(sharedNode)).toBeLessThan(
+      collectionNode.children.indexOf(unassignedNode)
+    );
+    expect(sharedNode.children.map((node: { directory: string }) => node.directory))
+      .toEqual(['', 'icons']);
+    expect(sharedNode.children.every(
+      (node: { directory: string }) => !node.directory.includes('_shared')
+    )).toBe(true);
+
+    expect(payload.result.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        path: 'content/blog/_shared/whono-mark.webp',
+        entryId: '_shared',
+        entryLabel: '共享资源',
+        entryExists: true,
+        hasSeries: false,
+        version: '_shared',
+        versionLabel: '共享资源',
+        directory: ''
+      }),
+      expect.objectContaining({
+        path: 'content/blog/_shared/icons/mark.svg',
+        entryId: '_shared',
+        directory: 'icons'
+      }),
+      expect.objectContaining({
+        path: 'public/images/blog/_shared/public-mark.webp',
+        origin: 'public',
+        entryId: '_shared',
+        entryLabel: '共享资源',
+        directory: ''
+      })
+    ]));
+    expect(payload.result.items.some(
+      (item: { directory: string }) => item.directory === '_shared'
+    )).toBe(false);
+
+    const sharedPayload = await list('collection=blog&entry=_shared&limit=50');
+    expect(sharedPayload.result.items.every(
+      (item: { entryId: string }) => item.entryId === '_shared'
+    )).toBe(true);
+    expect(sharedPayload.result.breadcrumb.map((crumb: { label: string }) => crumb.label))
+      .toEqual(['全部媒体', '博客', '共享资源']);
+
+    const directoryPayload = await list('collection=blog&entry=_shared&dir=icons&limit=50');
+    expect(directoryPayload.result.breadcrumb.map((crumb: { label: string }) => crumb.label))
+      .toEqual(['全部媒体', '博客', '共享资源', 'icons']);
+
+    expect(payload.result.options.versions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ value: '_shared', label: '共享资源' })
+    ]));
+    expect(payload.result.options.directories.map(
+      (option: { value: string }) => option.value
+    )).not.toContain('_shared');
+  });
+
   it('filters by reference status, type and modified time', async () => {
     const { GET } = await import('../src/pages/api/admin/media/list');
     const list = async (query: string) => {

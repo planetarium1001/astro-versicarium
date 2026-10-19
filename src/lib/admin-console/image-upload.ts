@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { CONTENT_ROOT } from '../../../site.config.mjs';
 import {
   AdminContentEntryResolutionError,
   resolveAdminContentEntrySourcePath
@@ -31,6 +32,39 @@ export { AdminImageUploadError } from './image-upload-error';
 
 const SUPPORTED_IMAGE_EXTENSIONS = new Set(['.avif', '.gif', '.jpg', '.jpeg', '.png', '.svg', '.webp']);
 const ADMIN_IMAGE_UPLOAD_MAX_BYTES = 12 * 1024 * 1024;
+const SHARED_ENTRY_ID = '_shared';
+
+const normalizeSharedUploadEntryId = (entryId: string): string =>
+  entryId.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+
+/**
+ * `_shared` 是 collection 级共享资源目录，没有 Markdown 主文件；
+ * 只作为上传落点，不参与条目解析。
+ */
+const isSharedUploadEntryId = (entryId: string): boolean =>
+  normalizeSharedUploadEntryId(entryId) === SHARED_ENTRY_ID;
+
+const assertInsideContentRoot = (contentRoot: string, target: string): void => {
+  const relative = path.relative(contentRoot, target);
+  const escapesRoot = relative === '..' || relative.startsWith(`..${path.sep}`);
+  if (!relative || escapesRoot || path.isAbsolute(relative)) {
+    throw new AdminImageUploadError('共享资源目录不在 content 目录内', 400);
+  }
+};
+
+const resolveSharedUploadDirectory = (
+  collection: 'blog' | 'projects' | 'bits' | 'devlog',
+  entryId: string,
+  assetDirectory: 'images' | 'files'
+): { directory: string; entryDirectory: string } | null => {
+  if (!isSharedUploadEntryId(entryId)) return null;
+
+  const contentRoot = path.join(getProjectRoot(), CONTENT_ROOT);
+  const entryDirectory = path.join(contentRoot, collection, SHARED_ENTRY_ID);
+  const directory = path.join(entryDirectory, assetDirectory);
+  assertInsideContentRoot(contentRoot, directory);
+  return { directory, entryDirectory };
+};
 
 const toRelativeProjectPath = (filePath: string): string =>
   path.relative(getProjectRoot(), filePath).replace(/\\/g, '/');
@@ -73,22 +107,26 @@ const assertUploadFile = (file: File): void => {
 };
 
 /**
- * 条目图片落点：`content/{collection}/{entryId}/images/filename.ext`。
+ * 条目资源落点：`content/{collection}/{entryId}/{images|files}/filename.ext`。
  * entryId 可能包含多段，实际目录以条目主文件所在目录为准。
  */
-const resolveEntryImageUploadDirectory = (
+const resolveEntryAssetUploadDirectory = (
   collection: 'blog' | 'projects' | 'bits' | 'devlog',
-  entryId: string
+  entryId: string,
+  assetDirectory: 'images' | 'files'
 ): { directory: string; entryDirectory: string } => {
+  const shared = resolveSharedUploadDirectory(collection, entryId, assetDirectory);
+  if (shared) return shared;
+
   const sourcePath = assertContentEntryCanReceiveImage(collection, entryId);
   const entryDirectory = path.dirname(sourcePath);
   return {
-    directory: path.join(entryDirectory, 'images'),
+    directory: path.join(entryDirectory, assetDirectory),
     entryDirectory
   };
 };
 
-const toEntryRelativeImageSrc = (assetPath: string, entryDirectory: string): string => {
+const toEntryRelativeAssetSrc = (assetPath: string, entryDirectory: string): string => {
   const relative = path.relative(entryDirectory, assetPath).replace(/\\/g, '/');
   return relative.startsWith('.') ? relative : `./${relative}`;
 };
@@ -133,7 +171,7 @@ const writeLocalImageFile = async (
   safeFileName: string,
   buffer: Buffer
 ): Promise<{ assetPath: string; relativePath: string; entryDirectory: string }> => {
-  const { directory, entryDirectory } = resolveEntryImageUploadDirectory(collection, entryId);
+  const { directory, entryDirectory } = resolveEntryAssetUploadDirectory(collection, entryId, 'images');
   const assetPath = await writeUniqueImageFile(directory, safeFileName, buffer);
   return { assetPath, relativePath: toRelativeProjectPath(assetPath), entryDirectory };
 };
@@ -200,14 +238,16 @@ const uploadAdminMarkdownBodyImage = async ({
   entryId,
   file
 }: {
-  collection: 'blog' | 'projects' | 'devlog';
+  collection: 'blog' | 'projects' | 'bits' | 'devlog';
   entryId: string;
   file: File;
 }): Promise<AdminImageUploadResult> => {
   assertUploadFile(file);
 
-  // 条目必须存在（否则落到别人的目录里）。
-  assertContentEntryCanReceiveImage(collection, entryId);
+  // 条目必须存在（否则落到别人的目录里）；_shared 是上传专用目录，不要求 Markdown。
+  if (!isSharedUploadEntryId(entryId)) {
+    assertContentEntryCanReceiveImage(collection, entryId);
+  }
   const safeFileName = getSafeImageFileName(file.name);
   const buffer = Buffer.from(await file.arrayBuffer());
 
@@ -219,7 +259,7 @@ const uploadAdminMarkdownBodyImage = async ({
   const meta = await readFreshImageInspectionMeta(relativePath);
 
   return {
-    src: toEntryRelativeImageSrc(assetPath, entryDirectory),
+    src: toEntryRelativeAssetSrc(assetPath, entryDirectory),
     path: relativePath,
     fileName: path.basename(assetPath),
     width: meta.width,
@@ -262,32 +302,8 @@ export const uploadAdminBitsImage = async ({
 }: {
   entryId: string;
   file: File;
-}): Promise<AdminImageUploadResult> => {
-  assertUploadFile(file);
-
-  assertContentEntryCanReceiveImage('bits', entryId);
-
-  const safeFileName = getSafeImageFileName(file.name);
-  const buffer = Buffer.from(await file.arrayBuffer());
-
-  if (isAdminImageCloudStorageEnabled()) {
-    return uploadAdminCloudImage({ collection: 'bits', entryId, file, safeFileName, buffer });
-  }
-
-  const { assetPath, relativePath, entryDirectory } = await writeLocalImageFile('bits', entryId, safeFileName, buffer);
-  const src = toEntryRelativeImageSrc(assetPath, entryDirectory);
-  const meta = await readFreshImageInspectionMeta(relativePath);
-
-  return {
-    src,
-    path: relativePath,
-    fileName: path.basename(assetPath),
-    width: meta.width,
-    height: meta.height,
-    size: meta.size,
-    mimeType: meta.mimeType ?? (file.type.trim() || null)
-  };
-};
+}): Promise<AdminImageUploadResult> =>
+  uploadAdminMarkdownBodyImage({ collection: 'bits', entryId, file });
 
 const SUPPORTED_FILE_UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
 
@@ -295,18 +311,6 @@ const getSafeFileName = (fileName: string): string => {
   const extension = path.extname(fileName).toLowerCase();
   const baseName = normalizeFileBaseName(path.basename(fileName, path.extname(fileName)));
   return `${baseName}${extension}`;
-};
-
-const resolveEntryFileUploadDirectory = (
-  collection: 'blog' | 'projects' | 'bits' | 'devlog',
-  entryId: string
-): { directory: string; entryDirectory: string } => {
-  const sourcePath = assertContentEntryCanReceiveImage(collection, entryId);
-  const entryDirectory = path.dirname(sourcePath);
-  return {
-    directory: path.join(entryDirectory, 'files'),
-    entryDirectory
-  };
 };
 
 export const uploadAdminContentFile = async ({
@@ -324,18 +328,14 @@ export const uploadAdminContentFile = async ({
   }
 
   const safeFileName = getSafeFileName(file.name);
-  if (!safeFileName || safeFileName === path.extname(file.name)) {
-    throw new AdminImageUploadError('无法生成可用的文件名');
-  }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const { directory, entryDirectory } = resolveEntryFileUploadDirectory(collection, entryId);
+  const { directory, entryDirectory } = resolveEntryAssetUploadDirectory(collection, entryId, 'files');
   const assetPath = await writeUniqueImageFile(directory, safeFileName, buffer);
   const relativePath = toRelativeProjectPath(assetPath);
-  const relativeSrc = path.relative(entryDirectory, assetPath).replace(/\\/g, '/');
 
   return {
-    src: relativeSrc.startsWith('.') ? relativeSrc : `./${relativeSrc}`,
+    src: toEntryRelativeAssetSrc(assetPath, entryDirectory),
     path: relativePath,
     fileName: path.basename(assetPath),
     size: buffer.length,

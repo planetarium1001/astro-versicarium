@@ -3,6 +3,7 @@ import {
   parseBlogDateInput,
   parseBlogPublishedAtInput
 } from '../../utils/date-only';
+import { BLOG_PUBLIC_SLUG_RE } from '../../utils/slug-rules';
 import { normalizeAdminBitsImageSource } from './image-shared';
 import {
   patchMarkdownFrontmatter,
@@ -556,6 +557,10 @@ const buildProjectsWritePlan = (
   if (!title) issues.push(createIssue('title', 'frontmatter.title 不能为空'));
 
   const date = parseProjectsOptionalDate(values.date, issues);
+  const slug = values.slug.trim();
+  if (slug && !BLOG_PUBLIC_SLUG_RE.test(slug)) {
+    issues.push(createIssue('slug', 'frontmatter.slug 必须是 lowercase kebab-case（允许 CJK）'));
+  }
   if (issues.length > 0) {
     return { issues, changedFields: [], patches: [] };
   }
@@ -567,6 +572,7 @@ const buildProjectsWritePlan = (
     { field: 'type', path: ['type'], currentValue: getCurrentOptionalText(frontmatter, 'type'), nextValue: values.type.trim() || undefined },
     { field: 'icon', path: ['icon'], currentValue: getCurrentOptionalText(frontmatter, 'icon'), nextValue: values.icon.trim() || undefined },
     { field: 'image', path: ['image'], currentValue: getCurrentOptionalText(frontmatter, 'image'), nextValue: values.image.trim() || undefined },
+    { field: 'slug', path: ['slug'], currentValue: getCurrentOptionalText(frontmatter, 'slug'), nextValue: slug || undefined },
     { field: 'date', path: ['date'], currentValue: getCurrentTextValue(frontmatter, 'date', ''), nextValue: date?.toISOString() },
     { field: 'draft', path: ['draft'], currentValue: getCurrentBooleanValue(frontmatter, 'draft', false), nextValue: values.draft }
   ];
@@ -774,6 +780,7 @@ export const parseAdminProjectsEditorInput = (
     'type',
     'icon',
     'image',
+    'slug',
     'date'
   ]);
 

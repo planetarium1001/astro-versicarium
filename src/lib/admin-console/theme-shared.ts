@@ -22,6 +22,10 @@ import {
 } from '../fonts/registry';
 import { isValidIanaTimeZone } from '../../utils/timezone';
 import {
+  isEntryVersionNameMode,
+  normalizeEntryVersionNameMode
+} from '../entry-display';
+import {
   getBitsAvatarLocalFilePath as getAdminBitsAvatarLocalFilePath,
   getHeroImageLocalFilePath as getAdminHeroImageLocalFilePath,
   getSiteFaviconLocalFilePath as getAdminSiteFaviconLocalFilePath,
@@ -116,7 +120,8 @@ export const ADMIN_PAGINATION_DEFAULTS = {
   blog: { enabled: true, pageSize: 12 },
   bits: { enabled: true, pageSize: 20 },
   devlog: { enabled: false, pageSize: 10 },
-  archive: { enabled: true, pageSize: 20 }
+  // 归档是完整时间线：默认一次展示全部条目，避免分页把较早的 devlog 藏到第二页。
+  archive: { enabled: false, pageSize: 20 }
 } as const satisfies Record<AdminPaginationScope, { enabled: boolean; pageSize: number }>;
 export const ADMIN_PAGINATION_PAGE_OPTIONS: ReadonlyArray<{
   id: AdminPaginationScope;
@@ -845,7 +850,8 @@ export const canonicalizeAdminThemeSettings = (
         copy: asThemeFontIdForRole('copy', rawTypographyCopy) ?? ADMIN_TYPOGRAPHY_DEFAULT.copy,
         mono: asThemeFontIdForRole('mono', rawTypographyMono) ?? ADMIN_TYPOGRAPHY_DEFAULT.mono,
         brand: asThemeFontIdForRole('brand', rawTypographyBrand) ?? ADMIN_TYPOGRAPHY_DEFAULT.brand
-      }
+      },
+      entryVersionName: normalizeEntryVersionNameMode(ui.entryVersionName)
     }
   };
 };
@@ -925,7 +931,8 @@ export const createAdminWritableThemeSettingsGroups = (
     articleMeta: { ...settings.ui.articleMeta },
     cardDateDisplay: settings.ui.cardDateDisplay,
     layout: { ...settings.ui.layout },
-    typography: { ...settings.ui.typography }
+    typography: { ...settings.ui.typography },
+    entryVersionName: settings.ui.entryVersionName
   }
 });
 
@@ -1465,6 +1472,10 @@ export const validateAdminThemeSettings = (
     pushIssue('ui.typography.brand', '品牌字体必须从注册表可选项中选择');
   }
 
+  if (!isEntryVersionNameMode(settings.ui?.entryVersionName ?? '')) {
+    pushIssue('ui.entryVersionName', '版本名称只允许 不显示 / 标题后 / 版本号后');
+  }
+
   const nav = Array.isArray(settings.shell.nav) ? settings.shell.nav : [];
   if (nav.length !== ADMIN_NAV_IDS.length) {
     pushIssue('shell.nav', 'Sidebar 导航项数量必须与既有导航一致');
@@ -1779,6 +1790,18 @@ const fillAdminThemeSettingsUiCompatibilityDefaults = (
       const defaults = Object.fromEntries(fields.map((field) => [field, canonicalGroup[field]]));
       next = { ...next, [key]: { ...defaults, ...rawGroup } };
     }
+  }
+
+  // 条目版本名称是后加的顶层标量：旧 ui.json 缺该键时补默认，避免读取期被判定锁住后台。
+  if (canonicalUi.entryVersionName !== undefined && next.entryVersionName === undefined) {
+    next = { ...next, entryVersionName: canonicalUi.entryVersionName };
+  }
+
+  // 旧的条目格式组合器已移除：保留该键会被误判为 schema-mismatch，读取时直接忽略，
+  // 下次保存会自然把它从 ui.json 里去掉。
+  if ('entryFormat' in next) {
+    const { entryFormat: _removedEntryFormat, ...rest } = next;
+    next = rest;
   }
 
   return next;

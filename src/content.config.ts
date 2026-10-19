@@ -194,7 +194,7 @@ const bitsAuthorAvatar = z
     if (normalized === undefined) {
       ctx.addIssue({
         code: 'custom',
-        message: 'author.avatar 只允许相对图片路径（例如 author/avatar.webp），不要带 public/、不要以 / 开头，也不要使用 URL、..、?、#'
+        message: 'author.avatar 只允许相对图片路径（例如 author/avatar.svg），不要带 public/、不要以 / 开头，也不要使用 URL、..、?、#'
       });
     }
   })
@@ -205,16 +205,12 @@ const bitsAuthor = z.object({
   avatar: bitsAuthorAvatar.optional()
 });
 
-const commonDateShape = {
-  ...baseFields
-};
-
 const blog = defineCollection({
   loader: entryDirLoader({ collection: 'blog' }),
   schema: ({ image }) =>
     z
       .object({
-        ...commonDateShape,
+        ...baseFields,
         ...blogVersionFields,
         title: z.string().trim(),
         description: z.string().trim().optional(),
@@ -279,8 +275,11 @@ const projects = defineCollection({
         type: z.string().trim().optional(),
         icon: createOptionalEntryImage(image),
         image: createOptionalEntryImage(image),
+        // 同一项目的多个版本文档共享这个稳定键；留空或写成日期形式时按单版本处理，
+        // 最新版锚点直接回退到 entry.id 压平后的 `YYYY-MM-DD-title`。
+        slug: slugRule.optional(),
         ...projectVersionFields,
-        ...commonDateShape
+        ...baseFields
       })
       .transform((data, ctx) => {
         const date = parseDateOrReport(data.date, 'date', ctx);
@@ -337,7 +336,7 @@ const devlog = defineCollection({
       projectSlug: seriesRule.optional(),
       kind: z.string().trim().optional(),
       description: z.string().trim().optional(),
-      ...commonDateShape
+      ...baseFields
     })
     .transform((data, ctx) => {
       const date = parseDateOrReport(data.date, 'date', ctx);

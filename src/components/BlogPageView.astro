@@ -79,6 +79,11 @@ const fallbackListId = 'blog-tag-list';
         visibleTags={getVisibleArticleMetaTags(item.entry.data.tags, 'list')}
         articleMetaSettings={articleMeta}
         badge={item.entry.data.badge}
+        series={item.series}
+        versionLabel={item.versionLabel}
+        versionName={item.entry.data.versionName ?? null}
+        versionSummary={item.entry.data.versionSummary ?? null}
+        versionOrder={item.entry.data.versionOrder ?? null}
       />
     ))}
   </div>

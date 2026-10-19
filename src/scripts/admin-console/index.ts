@@ -158,7 +158,8 @@ if (!root) {
       inputTypographyReadable: controls.inputTypographyReadable,
       inputTypographyCopy: controls.inputTypographyCopy,
       inputTypographyMono: controls.inputTypographyMono,
-      inputTypographyBrand: controls.inputTypographyBrand
+      inputTypographyBrand: controls.inputTypographyBrand,
+      inputEntryVersionName: controls.inputEntryVersionName
     });
 
     const getNavFieldTarget = (

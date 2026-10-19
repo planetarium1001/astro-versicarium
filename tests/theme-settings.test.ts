@@ -12,6 +12,7 @@ import {
   resetThemeSettingsCache,
   toEditableThemeSettingsPayload
 } from '../src/lib/theme-settings';
+import { DEFAULT_ENTRY_VERSION_NAME_MODE } from '../src/lib/entry-display';
 
 describe('theme-settings revision semantics', () => {
   const originalInternalTestFlag = process.env.ASTRO_WHONO_INTERNAL_TEST_SETTINGS;
@@ -126,6 +127,90 @@ describe('theme-settings revision semantics', () => {
     expect(resolved.sources.ui.articleMetaDateGranularity).toBe('default');
     expect(getThemeSettingsReadDiagnostics(resolved)).toEqual([]);
     expect(state.ok).toBe(true);
+  });
+
+  it('defaults ui.entryVersionName without locking the console when ui.json lacks it', async () => {
+    const settingsDir = await createTempSettingsFixture();
+    const uiPath = path.join(settingsDir, 'ui.json');
+    const uiJson = JSON.parse(await readFile(uiPath, 'utf8')) as Record<string, unknown>;
+    delete uiJson.entryVersionName;
+    await writeFile(uiPath, `${JSON.stringify(uiJson, null, 2)}\n`, 'utf8');
+
+    const resolved = getThemeSettings();
+    const state = getEditableThemeSettingsState(resolved);
+
+    expect(resolved.settings.ui.entryVersionName).toBe(DEFAULT_ENTRY_VERSION_NAME_MODE);
+    expect(resolved.sources.ui.entryVersionName).toBe('default');
+    expect(getThemeSettingsReadDiagnostics(resolved)).toEqual([]);
+    expect(state.ok).toBe(true);
+    expect(getEditableThemeSettingsPayload(resolved).settings.ui.entryVersionName).toBe(
+      DEFAULT_ENTRY_VERSION_NAME_MODE
+    );
+  });
+
+  it('normalizes an unknown ui.entryVersionName to the default and reports a schema mismatch', async () => {
+    const settingsDir = await createTempSettingsFixture();
+    const uiPath = path.join(settingsDir, 'ui.json');
+    const uiJson = JSON.parse(await readFile(uiPath, 'utf8')) as Record<string, unknown>;
+    uiJson.entryVersionName = 'sideways';
+    await writeFile(uiPath, `${JSON.stringify(uiJson, null, 2)}\n`, 'utf8');
+
+    const resolved = getThemeSettings();
+
+    expect(resolved.settings.ui.entryVersionName).toBe(DEFAULT_ENTRY_VERSION_NAME_MODE);
+    expect(getEditableThemeSettingsState(resolved).ok).toBe(false);
+    expect(getThemeSettingsReadDiagnostics(resolved)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ group: 'ui', code: 'schema-mismatch' })])
+    );
+  });
+
+  it('accepts the three version-name modes', async () => {
+    const settingsDir = await createTempSettingsFixture();
+    const uiPath = path.join(settingsDir, 'ui.json');
+    const uiJson = JSON.parse(await readFile(uiPath, 'utf8')) as Record<string, unknown>;
+
+    for (const mode of ['hidden', 'before-label', 'after-label'] as const) {
+      uiJson.entryVersionName = mode;
+      await writeFile(uiPath, `${JSON.stringify(uiJson, null, 2)}\n`, 'utf8');
+      expect(getThemeSettings().settings.ui.entryVersionName).toBe(mode);
+    }
+  });
+
+  it('changes revision when the version-name mode changes', () => {
+    const resolved = getThemeSettings();
+    const mutated = structuredClone(resolved);
+    mutated.settings.ui.entryVersionName = 'after-label';
+
+    expect(getThemeSettingsRevision(mutated)).not.toBe(getThemeSettingsRevision(resolved));
+  });
+
+  it('ignores a removed ui.entryFormat key without locking the console', async () => {
+    const settingsDir = await createTempSettingsFixture();
+    const uiPath = path.join(settingsDir, 'ui.json');
+    const uiJson = JSON.parse(await readFile(uiPath, 'utf8')) as Record<string, unknown>;
+    uiJson.entryFormat = {
+      list: {
+        tokens: [
+          { id: 'badge', tone: 'pill' },
+          { id: 'title', tone: 'plain' }
+        ],
+        separators: [{ mode: 'gap', text: '' }]
+      },
+      archive: {
+        tokens: [
+          { id: 'title', tone: 'plain' },
+          { id: 'versionLabel', tone: 'muted-pill' }
+        ],
+        separators: [{ mode: 'gap', text: '' }]
+      }
+    };
+    await writeFile(uiPath, `${JSON.stringify(uiJson, null, 2)}\n`, 'utf8');
+
+    const resolved = getThemeSettings();
+
+    expect(getThemeSettingsReadDiagnostics(resolved)).toEqual([]);
+    expect(getEditableThemeSettingsState(resolved).ok).toBe(true);
+    expect(resolved.settings.ui.entryVersionName).toBe(DEFAULT_ENTRY_VERSION_NAME_MODE);
   });
 
   it('keeps the console unlocked when ui.json lacks the typography block', async () => {

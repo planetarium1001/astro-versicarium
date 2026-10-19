@@ -3,6 +3,8 @@
    仅在日期处用页面底色断开成节点；摘要一刀切：任一条被压成省略号或处于窄屏档时，
    列表内不展示摘要，回退到展开正文顶部（devlog-excerpts.ts / devlog-drawer.ts）。 */
 
+@import "./components/entry-body.css";
+
 /* 条目（行）排版与 /archive/ 共用。 */
 @import "./components/timeline-entry.css";
 
@@ -41,33 +43,28 @@
 }
 
 /**
- * 时间线逐行、逐面板各画一段：最后一条未展开时其下不再有线，展开时才补上。
+ * 时间线只画一条：整条列表一条连续虚线，dash 相位不再在行/面板处接缝。
+ * 行的日期底色遮出节点断口；最后一条的补丁负责收起时的收尾。
  */
-.devlog-row__toggle::before {
+.devlog-list::before {
   content: '';
   position: absolute;
   top: 0;
   bottom: 0;
   left: var(--devlog-line-x);
-  border-left: 1px dashed var(--devlog-line-color);
+  width: 1px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--devlog-line-color) 0 3px,
+    transparent 3px 7px
+  );
   pointer-events: none;
 }
 
-.devlog-panel__inner {
-  position: relative;
-}
-
-.devlog-panel__inner::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 6px;
-  left: var(--devlog-line-x);
-  border-left: 1px dashed var(--devlog-line-color);
-  pointer-events: none;
-}
-
+/* 行内容压在线上方；position 不参与布局 */
 .devlog-row {
+  position: relative;
+  z-index: 1;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -319,7 +316,7 @@
 
 @media (max-width: 900px) {
   /**
-   * 窄屏时间线与桌面共用同一套 ::before，逐行、逐面板各画一段。
+   * 窄屏与桌面共用列表上的同一条时间线，这里只改条目排版。
    */
   .devlog-row__toggle {
     display: flex;

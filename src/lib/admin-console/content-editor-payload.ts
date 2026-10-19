@@ -60,6 +60,8 @@ export type AdminProjectsEditorValues = {
   type: string;
   icon: string;
   image: string;
+  /** 项目稳定 slug：同一项目的多个版本文档共享，发布后不要修改。 */
+  slug: string;
   date: string;
   draft: boolean;
 };
@@ -251,6 +253,7 @@ const toProjectsEditorValues = (state: AdminContentSourceState): AdminProjectsEd
     type: normalizeOptionalText(frontmatter.type),
     icon: normalizeOptionalText(frontmatter.icon),
     image: normalizeOptionalText(frontmatter.image),
+    slug: normalizeOptionalText(frontmatter.slug),
     date: getDateString(frontmatter, 'date', ''),
     draft: frontmatter.draft === true
   };

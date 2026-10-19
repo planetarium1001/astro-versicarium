@@ -70,11 +70,13 @@ export const bindAdminThemeFieldEvents = ({
     inputHomeIntroMoreLinkPrimary,
     inputHomeIntroMoreLinkSecondaryEnabled,
     inputHomeIntroMoreLinkSecondary,
-    inputHomeShowHero
+    inputHomeShowHero,
+    inputEntryVersionName
   } = controls;
   const {
     refreshArticleMetaPreview,
     refreshViewStatsPreview,
+    refreshEntryVersionPreview,
     refreshHomeIntroPreview,
     syncAdminOverviewControls,
     syncSidebarActionControls,
@@ -129,6 +131,7 @@ export const bindAdminThemeFieldEvents = ({
   inputViewStatsShowUv.addEventListener('change', refreshViewStatsPreview);
   inputViewStatsOnArticleMeta.addEventListener('change', refreshViewStatsPreview);
   inputViewStatsOnIndexPages.addEventListener('change', refreshViewStatsPreview);
+  inputEntryVersionName.addEventListener('change', refreshEntryVersionPreview);
   inputHomeIntroMore.addEventListener('input', refreshHomeIntroPreview);
   inputHomeShowIntroMore.addEventListener('change', refreshHomeIntroPreview);
   inputHomeIntroMoreLinkPrimary.addEventListener('change', () => {

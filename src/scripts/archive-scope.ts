@@ -17,7 +17,7 @@ if (ROOT) {
   // 必须从 document 找：标签 dialog 由 TagFilterHeader 渲染在 timeline 之外。
   const TAG_LIST = document.querySelector<HTMLElement>('.entry-tags-dialog__list');
   const TAG_DATA_EL = document.getElementById('archive-tag-scope-data');
-  /** 页头的 tag 入口（`#标签` / `#项目`）：切到「项目」作用域时整体隐藏。 */
+  /** 页头的 tag 入口（`#标签` / `#项目`）：称谓随作用域切换，项目档与更新档都以项目名过滤。 */
   const TAG_TRIGGER = document.querySelector<HTMLElement>('[data-entry-tag-trigger]');
   const TAG_DIALOG_TITLE = document.querySelector<HTMLElement>('.entry-tags-dialog__title');
   const TAG_COUNT = document.querySelector<HTMLElement>('[data-entry-tag-count]');
@@ -60,15 +60,18 @@ if (ROOT) {
     );
   };
 
-  /** 归档的 tag 入口随一级胶囊换语义：项目档隐藏入口，更新档改称「项目」，其余档为「标签」。 */
+  /**
+   * 归档的 tag 入口随一级胶囊换语义：项目档与更新档的取值都是项目显示名，统一称「项目」；
+   * 其余档为「标签」；项目档也显示入口。
+   */
   const syncTagEntryLabels = (scope: ScopeId) => {
-    const isProjects = scope === 'projects';
-    const noun = scope === 'devlog' ? '项目' : '标签';
+    const noun = scope === 'projects' || scope === 'devlog' ? '项目' : '标签';
     const pageTitle = (TAG_DIALOG_TITLE?.textContent ?? '').replace(/(标签|项目)\s*$/, '').trim() || '归档';
 
     if (TAG_TRIGGER) {
-      TAG_TRIGGER.hidden = isProjects;
-      if (!isProjects) TAG_TRIGGER.textContent = `#${noun}`;
+      // 旧版在项目档隐藏过入口；这里显式恢复，避免残留 hidden 状态。
+      TAG_TRIGGER.hidden = false;
+      TAG_TRIGGER.textContent = `#${noun}`;
     }
     if (TAG_DIALOG_TITLE) TAG_DIALOG_TITLE.textContent = `${pageTitle}${noun}`;
     if (ENTRY_ROOT) ENTRY_ROOT.dataset.entryTagNoun = noun;

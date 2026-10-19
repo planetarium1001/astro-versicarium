@@ -7,23 +7,23 @@
   },
   "blog": {
     "title": "文章",
-    "subtitle": "散者归之，各归其地"
+    "subtitle": "技术文章与工程记录"
   },
   "projects": {
-    "title": "作品",
-    "subtitle": "散者归之，各归其地"
+    "title": "项目",
+    "subtitle": "主题版本与项目实践"
   },
   "archive": {
     "title": "归档",
-    "subtitle": "散者归之，各归其地 · 全站时间线",
+    "subtitle": "按时间串联文章、项目与开发日志",
     "versionMode": "all"
   },
   "bits": {
     "title": "动态",
-    "subtitle": "生活不只是长篇",
+    "subtitle": "开发过程中的短记录",
     "defaultAuthor": {
-      "name": "Whono",
-      "avatar": "author/avatar.webp"
+      "name": "Planetarium",
+      "avatar": "author/avatar.svg"
     }
   },
   "devlog": {
@@ -52,7 +52,7 @@
       "pageSize": 10
     },
     "archive": {
-      "enabled": true,
+      "enabled": false,
       "pageSize": 20
     }
   }

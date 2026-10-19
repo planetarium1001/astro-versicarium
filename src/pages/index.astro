@@ -518,6 +518,44 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
   white-space: nowrap;
 }
 
+/* 首屏固定条目排版：badge + 10px 间隙 + 标题 + 版本号胶囊。 */
+.entry-title {
+  --entry-title-font-size: 18px;
+  --entry-title-line-height: 1.75;
+  --entry-title-gap: 10px;
+  --entry-pill-height: 24px;
+
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0;
+  min-width: 0;
+}
+
+.entry-title__gap {
+  flex: 0 0 var(--entry-title-gap, 10px);
+  width: var(--entry-title-gap, 10px);
+}
+
+.entry-title__colon {
+  color: var(--faint);
+  white-space: pre;
+}
+
+.entry-title .entry-title__badge,
+.entry-title .entry-title__version-label {
+  align-self: flex-start;
+  box-sizing: border-box;
+  height: var(--entry-pill-height);
+  margin-top: calc(
+    (var(--entry-title-font-size) * var(--entry-title-line-height) - var(--entry-pill-height)) / 2
+  );
+}
+
+.entry-title__title {
+  min-width: 0;
+}
+
 .list-item__title {
   margin: 0;
   font-size: 18px;
@@ -539,6 +577,8 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
 }
 
 .meta-line {
+  --meta-line-sep-gap: 0.6em;
+  --meta-line-tag-gap: 0.65em;
   margin-top: 10px;
   margin-bottom: 12px;
   font-size: 13px;
@@ -557,13 +597,25 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
 }
 
 .meta-line__item--tags {
-  gap: 0.65em;
+  gap: var(--meta-line-tag-gap);
+}
+
+/* 日期分隔符与条目之间的点共用同一间距。 */
+.meta-line__sep {
+  margin: 0 var(--meta-line-sep-gap);
+  color: var(--faint);
 }
 
 .meta-line__item + .meta-line__item::before {
   content: "·";
-  margin: 0 0.45em;
+  margin: 0 var(--meta-line-sep-gap);
   color: var(--faint);
+}
+
+/* tags 组前的点不再叠加 margin-right 与 group gap。 */
+.meta-line--items .meta-line__item--tags::before {
+  margin-left: var(--meta-line-sep-gap);
+  margin-right: 0;
 }
 
 .list-item .meta-line {
@@ -852,6 +904,11 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
           visibleTags={visibleTags}
           articleMetaSettings={articleMeta}
           excerpt={getBlogDerivedText(item.entry).excerpt}
+          series={item.series}
+          versionLabel={item.versionLabel}
+          versionName={item.entry.data.versionName ?? null}
+          versionSummary={item.entry.data.versionSummary ?? null}
+          versionOrder={item.entry.data.versionOrder ?? null}
         />
       );
     })}

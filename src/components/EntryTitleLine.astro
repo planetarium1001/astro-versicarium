@@ -1,0 +1,98 @@
+---
+import { getThemeSettings } from '../lib/theme-settings';
+import {
+  ENTRY_TITLE_COLON,
+  buildEntryTitleSegments,
+  type EntryTitleKind,
+  type EntryTitleSurface,
+  type EntryVersionNameMode
+} from '../lib/entry-display';
+
+interface Props {
+  surface: EntryTitleSurface;
+  kind?: EntryTitleKind | null;
+  title: string;
+  badge?: string | null;
+  project?: string | null;
+  versionLabel?: string | null;
+  versionName?: string | null;
+  titleAs?: 'link' | 'span';
+  /** 显式指定标题标签；归档行/项目卡片整块被按钮或链接包裹时传 span。 */
+  titleTag?: 'h2' | 'h3' | 'span';
+  titleHref?: string;
+  titleId?: string;
+  titleClass?: string;
+  class?: string;
+  /** 仅后台预览使用：按指定模式渲染，不读取当前站点设置。 */
+  versionNameMode?: EntryVersionNameMode;
+}
+
+const {
+  surface,
+  kind = null,
+  title,
+  badge = null,
+  project = null,
+  versionLabel = null,
+  versionName = null,
+  titleAs = 'span',
+  titleTag,
+  titleHref = '#',
+  titleId,
+  titleClass: titleClassProp = '',
+  class: className = '',
+  versionNameMode
+} = Astro.props as Props;
+
+const {
+  settings: { ui }
+} = getThemeSettings();
+
+const segments = buildEntryTitleSegments(
+  { kind, badge, project, title, versionLabel, versionName },
+  surface,
+  versionNameMode ?? ui.entryVersionName
+);
+
+const TitleTag = titleTag ?? (titleAs === 'link' ? 'h2' : 'h3');
+/** 根节点与标题标签随 `titleTag` 切换；span 根用于整块被链接或按钮包裹的场景。 */
+const RootTag = TitleTag === 'span' ? 'span' : 'div';
+const titleClassName = [
+  'entry-title__title',
+  surface === 'list' ? 'list-item__title' : '',
+  titleClassProp
+].filter(Boolean).join(' ');
+const rootClassName = `entry-title entry-title--${surface}${className ? ` ${className}` : ''}`;
+---
+
+<RootTag class={rootClassName} data-entry-title={surface}>
+  {segments.map((segment) => {
+    if (segment.kind === 'badge') {
+      return <span class="badge entry-title__badge" data-entry-title-token="badge">{segment.text}</span>;
+    }
+    if (segment.kind === 'project') {
+      return <span class="entry-title__project" data-entry-title-token="project">{segment.text}</span>;
+    }
+    if (segment.kind === 'gap') {
+      return <span class="entry-title__gap" aria-hidden="true"></span>;
+    }
+    if (segment.kind === 'colon') {
+      return <span class="entry-title__colon" aria-hidden="true">{ENTRY_TITLE_COLON}</span>;
+    }
+    if (segment.kind === 'version-name') {
+      return <span class="entry-title__version-name" data-entry-title-token="version-name">{segment.text}</span>;
+    }
+    if (segment.kind === 'version-label') {
+      return (
+        <span class="muted-pill entry-title__version-label" data-entry-title-token="version-label">
+          {segment.text}
+        </span>
+      );
+    }
+
+    const titleContent = titleAs === 'link'
+      ? <a class="list-item__stretch" href={titleHref}>{title}</a>
+      : <span>{title}</span>;
+    return <TitleTag class={titleClassName} id={titleId} tabindex={titleId ? -1 : undefined} data-entry-title-token="title">{titleContent}</TitleTag>;
+  })}
+</RootTag>

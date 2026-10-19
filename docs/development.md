@@ -1,104 +1,131 @@
 # 开发
 
-## 环境要求
+## 环境
 
-Node.js ≥ 22.12.0，版本基线写在 `.nvmrc`（当前 22.22.0）并与 `package.json` 的 `engines` 一致，CI 优先读取 `.nvmrc`。包管理器使用 npm，依赖锁定在 `package-lock.json`。
+需要 Node.js 22.12.0 或更高版本与 npm。`.nvmrc` 固定当前基线 22.22.0，`package.json` 的 `engines` 给出最低版本；CI 优先读取 `.nvmrc`。依赖锁定在 `package-lock.json`，安装使用 `npm ci`。
 
-## 常用命令
+## 命令
 
 | 命令 | 作用 |
 | --- | --- |
 | `npm run dev` | 启动开发服务器，后台与 `/api/admin/*` 可用 |
-| `npm run dev:clean` | 清理 Vite 缓存后启动 |
+| `npm run dev:clean` | 删除 `node_modules/.vite` 后启动 |
 | `npm run build` | 构建静态产物到 `dist/` |
 | `npm run preview` | 预览构建产物 |
-| `npm run check` | 类型检查与源码类守卫 |
+| `npm run check` | `astro check`、Svelte 编译与源码类守卫 |
 | `npm test` | Vitest 用例 |
-| `npm run verify` | check、build、刷新 fixture、test 与产物类校验依次执行 |
+| `npm run verify` | check、build、刷新 fixture、test 与产物类守卫 |
 | `npm run ci` | 等价于 `verify`，CI 使用 |
 | `npm run new:bit` | 生成一条动态草稿 |
-| `npm run theme:update` | 从主题仓库同步更新，见 [../README.md](../README.md) 的「主题同步」 |
-| `npm run font:charset`、`npm run font:subset`、`npm run font:build` | 字体字符集与子集 |
-
-构建期生成 RSS、canonical 与 sitemap 需要提供 `SITE_URL`，产物类守卫也依赖它。构建期环境变量见 [deployment.md](deployment.md) 的「构建期环境变量」。
+| `npm run theme:update` | 同步主题更新；`-- --check` 只报告 |
+| `npm run font:charset` | 重算字符集 |
+| `npm run font:subset` | 依据字符集重建 WOFF2 子集 |
+| `npm run font:build` | 依次执行字符集与子集 |
+| `npm run check:markdown-smoke` | 在 `dist/` 上检查 Markdown 渲染契约 |
+| `npm run smoke:cloud-images` | 云端图片冒烟，需显式开启与凭据 |
 
 ## 验证流水线
 
 ```bash
-npm run check     # astro check + 下列源码类守卫
+npm run check     # 源码与类型
 npm test          # Vitest
-npm run verify    # check → build → test:fixtures → test → 三项产物校验
+npm run verify    # check → build → test:fixtures → test → 产物守卫
 npm run ci        # 等价于 verify
 ```
 
-源码类守卫只读取源文件或设置 JSON；产物类守卫读取 `dist/`，必须在构建后执行，因此统一挂在 `verify` 的后半段。客户端用例读取 `tests/fixtures/` 的渲染快照，快照由 `test:fixtures` 从 `dist/` 复制，所以刷新排在 `build` 之后、`test` 之前：站点同步主题后第一次跑 `verify` 时，用例读到的是与当前渲染一致的快照。`SITE_URL` 为空时 sitemap 不生成，`check:prod-artifacts` 会失败。
+`verify` 的实际顺序是：
 
-| 脚本 | 作用 | 阶段 |
-| --- | --- | --- |
-| `astro check` | 类型与模板诊断 | `check` |
-| `check:svelte` | 编译全部 `.svelte` 组件；`astro check` 与 build 都不编译只在开发环境挂载的后台编辑器岛 | `check` |
-| `check:admin-content-source-boundary` | 后台内容模块不越界引用源文件索引与服务端专用模块 | `check` |
-| `check:home-critical-css` | `src/pages/index.astro` 的首屏快照与 `src/styles` 未漂移 | `check` |
-| `check:image-references` | Markdown、HTML `src`、`srcset` 与 frontmatter 字段的图片引用可解析 | `check` |
-| `check:font-charset` | 字符集文件与实际使用一致，且 woff2 未过期 | `check` |
-| `test:fixtures` | 用构建产物刷新 `tests/fixtures/` | `verify`（build 后） |
-| `check:prod-artifacts` | 产物文件清单、后台只读壳、RSS / sitemap / robots 内容 | `verify`（build 后） |
-| `check:layout-geometry` | 解析产物 CSS 与 `<html>` 内联属性，断言壳层几何不变量 | `verify`（build 后） |
-| `check:touch-targets` | 按声明顺序取最终生效尺寸，断言交互元素不小于 44px | `verify`（build 后） |
+1. `npm run check`
+2. `npm run build`
+3. `npm run test:fixtures`
+4. `npm run test`
+5. `npm run check:prod-artifacts`
+6. `npm run check:layout-geometry`
+7. `npm run check:touch-targets`
 
-未纳入 `check` 与 `verify` 的脚本按需单独运行：
+源码类守卫只读源文件或设置 JSON；产物类守卫读取 `dist/`，必须在构建后执行。`SITE_URL` 为空时 sitemap 不生成，`check:prod-artifacts` 会失败；本地只预览页面可以省略，执行 `verify` 与 CI 必须提供。
 
-| 脚本 | 用途 |
+## 源码守卫
+
+`npm run check` 依次包含：
+
+| 检查 | 内容 |
 | --- | --- |
-| `check:markdown-smoke` | Markdown 渲染契约，需要已构建的 `dist/` |
+| `astro check` | Astro 页面、TypeScript 与模板诊断 |
+| `check:svelte` | 编译全部 `.svelte`；后台编辑器岛只在开发环境挂载，构建不会覆盖 |
+| `check:admin-content-source-boundary` | 后台内容模块不越界引用公开内容模块或服务端专用索引 |
+| `check:home-critical-css` | 首页 critical CSS 快照与 `global.css`、`layout.css` 未漂移 |
+| `check:image-references` | Markdown、HTML `src`/`srcset`、frontmatter 与设置中的本地图片可解析 |
+| `check:font-charset` | `tools/charset-common.txt` 与实际文本一致，且字体子集指纹未过期 |
+
+另有按需执行的检查：
+
+| 检查 | 用途 |
+| --- | --- |
+| `check:markdown-smoke` | 渲染 `src/test-fixtures/markdown-smoke.md`，断言代码工具栏、公式与样式表输出；需要已构建的 `dist/` |
 | `check:admin-editor-emoji-boundary` | 编辑器工具栏与 emoji 选择器的引用边界 |
-| `smoke:cloud-images` | 云端图片，需要对象存储凭据，未设置 `ASTRO_WHONO_CLOUD_SMOKE=1` 时跳过 |
-| `audit:prod` | 生产依赖的已知漏洞 |
+| `smoke:cloud-images` | 对象存储上传与列举；未设置 `ASTRO_WHONO_CLOUD_SMOKE=1` 时跳过 |
+| `audit:prod` | 生产依赖的已知漏洞扫描 |
 
-## fixture 与快照
+## 构建产物守卫
 
-`tests/fixtures/` 是从构建产物复制出来的页面快照，包含 `/bits/`、`/blog/`、`/archive/` 的 HTML 与 `index.json`、一篇博客详情页（字典序第一项）与 `/devlog/` 页。客户端行为用例依赖真实渲染后的 `data-*` 属性、内联 JSON 与脚本加载顺序，这些只有构建产物里才完整。
+| 检查 | 内容 |
+| --- | --- |
+| `check:prod-artifacts` | 必需文件、后台只读壳、无后台导航与开发偏好资源、RSS / sitemap / robots 内容 |
+| `check:layout-geometry` | 解析产物 CSS 与 `<html>` 内联属性，断言侧栏、外缘间隙、浮动列与目录把手几何 |
+| `check:touch-targets` | 按规则顺序取最终生效尺寸，断言交互元素不小于 44px |
 
-`npm run test:fixtures` 负责刷新这些文件，已包含在 `verify` 中。改动列表页或文章页的服务端输出结构后，需要让它重新生成并提交更新后的快照。
+后台只读壳的判定包括：产物中不出现后台写入根节点、bootstrap 数据、后台导航或开发专用 UI 偏好资源；`/admin/` 带 `noindex,nofollow`。改动后台页面或样式后应重新构建并执行这些检查。
 
-## 字体子集与字符集
+## fixture
 
-仓库提交的是子集化后的 WOFF2 字体，按 latin / cjk-common / cjk-ext 三段切分，`global.css` 用 `unicode-range` 按需加载，clone 后无需额外步骤。
+`tests/fixtures/` 是从 `dist/` 复制出的页面快照，包含：
 
-字符集由 `src/content`、`src/pages`、`src/components`、`src/layouts`、`src/data/settings`、`site.config.mjs` 的文本与 `tools/charset-base.txt`（3500 常用字）共同生成，写入 `tools/charset-common.txt`，不要手改。
+- `/bits/`、`/blog/`、`/archive/`、`/devlog/`、`/projects/` 的 HTML；
+- `/bits/index.json`、`/blog/index.json`、`/archive/index.json`；
+- 构建产物中字典序第一篇文章的详情页 HTML。
 
-`npm run font:charset` 只重算字符集，`npm run font:build` 等于 `font:charset` 加 `font:subset`。`font:subset` 每次都会重建全部子集，成功后把字符集指纹写入 `tools/charset-common.sha256`，供 `check:font-charset` 校验 woff2 未过期。
+客户端用例依赖真实渲染后的 `data-*` 属性、内联 JSON 与脚本加载顺序，这些只在构建产物中完整。`npm run test:fixtures` 负责刷新，已包含在 `verify` 中；改动列表页或文章页的服务端输出结构后，需要重新生成并提交快照。
 
-重新生成子集需要 Python 3 与 `pyftsubset`（`python -m pip install fonttools brotli zopfli`，并确保 Python Scripts 目录在 `PATH` 中），源字体放在 `tools/fonts-src/`（不入库）。缺字时把字符补进 `tools/charset-base.txt` 后重跑，`check:font-charset` 会指出不一致。
+## 字体
+
+未使用 Astro Fonts API 的字体由 `public/fonts/` 提供自托管 WOFF2 子集，`global.css` 以 `@font-face` 与 `unicode-range` 分段声明。
+
+字符集由 `content/`、`src/pages/`、`src/components/`、`src/layouts/`、`src/data/settings/` 的文本、`site.config.mjs` 与 `tools/charset-base.txt` 汇总，写入 `tools/charset-common.txt`；不要手改该文件。`font:subset` 依赖 `pyftsubset`：
+
+```bash
+python -m pip install fonttools brotli zopfli
+# 源字体放入 tools/fonts-src/，该目录不入库
+npm run font:build
+```
+
+子集按 latin / cjk-common / cjk-ext 切分到 `public/fonts/`，成功后写入指纹 `tools/charset-common.sha256`。缺字时补充 `tools/charset-base.txt` 后重新生成。选择 `src/lib/fonts/registry.ts` 中的 Astro Fonts API 字体时，构建期只注册被选中的条目并下载自托管，不需要本地源字体；修改 `ui.json` 的字体选择后需重启开发服务器。
 
 ## 测试组织
 
-Vitest 配置在 `vitest.config.ts`，用例位于 `tests/*.test.ts`，默认运行在 Node 环境。需要 DOM 的用例在文件首行声明 `// @vitest-environment jsdom`，不使用全局环境切换。
+Vitest 配置在 `vitest.config.ts`，用例位于 `tests/*.test.ts`，默认 Node 环境；需要 DOM 的文件在首行声明 `// @vitest-environment jsdom`。
 
-| 目录与文件 | 覆盖范围 |
+| 范围 | 文件 |
 | --- | --- |
-| `tests/admin-content-*.test.ts`、`tests/admin-images-*.test.ts` | 后台内容与图片契约、读写流程、批量操作 |
-| `tests/admin-editor-*.test.ts` | 编辑器转换、检索、大纲与恢复 |
-| `tests/*-client.test.ts` | 前台列表页、目录、筛选等客户端行为 |
-| `tests/markdown-*.test.ts`、`tests/about-directives.test.ts` | Markdown 管线与指令渲染 |
-| `tests/theme-settings.test.ts`、`tests/filings.test.ts`、`tests/view-stats.test.ts` | 设置解析、备案与浏览数据 |
-| `tests/fixtures/` | 由构建产物生成的页面快照 |
-| `src/test-fixtures/*.md` | Markdown 冒烟夹具，渲染结果由 `check:markdown-smoke` 断言 |
+| 后台内容、图片、媒体与编辑器 | `tests/admin-content-*.test.ts`、`tests/admin-images-*.test.ts`、`tests/admin-editor-*.test.ts` |
+| 前台列表、目录、筛选与弹窗 | `tests/*-client.test.ts`、`tests/projects-dialog-*.test.ts`、`tests/devlog-*.test.ts` |
+| Markdown 与关于页指令 | `tests/markdown-*.test.ts`、`tests/about-directives.test.ts`、`tests/trailing-links.test.ts` |
+| 设置、日期、路由与版本 | `tests/theme-settings.test.ts`、`tests/filings.test.ts`、`tests/view-stats.test.ts`、`tests/project-routing.test.ts`、`tests/blog-routing.test.ts` |
+| 页面快照与 Markdown 夹具 | `tests/fixtures/`、`src/test-fixtures/` |
 
-写入类用例通过 `tests/admin-content-write-fixture.ts` 在系统临时目录搭出内容目录，并用环境变量把设置目录与项目根指向临时位置，测试结束即清理，不触碰仓库内的真实内容。`theme-settings.test.ts` 的 favicon 默认态用例同样使用临时 settings，不读实时 `site.json`；槽位与反向代理说明见 [favicon.md](favicon.md)。
+写入类用例通过 `tests/admin-content-write-fixture.ts` 在系统临时目录搭建内容目录，并把设置目录与项目根指向临时位置，测试结束清理，不触碰仓库内容。
 
-## 内容命名规范
+## 内容命名
 
-内容源文件名即条目 ID，规范为 `YYYY-MM-DD-title`：
+内容条目的目录名即条目 ID，规范为 `YYYY-MM-DD-title`。构造入口是 `src/utils/slug-rules.ts` 的 `buildContentEntryId()`：
 
-- 日期取 UTC 分量，与 frontmatter 的 `date` 对齐；
-- 标题段经 NFKC 归一化、转小写、空白与符号折叠为单个连字符，允许中文；超出长度上限时截断并追加稳定短哈希；
-- 标题段为空时回退为 `untitled`，命中 Windows 保留设备名时追加 `-entry`。
+- 日期取站点时区的日历日期，与 frontmatter 的 `date` 对齐；
+- 标题经 NFKC 归一化、转小写，空白与符号折叠为单个连字符，允许中文；
+- 超过 120 个字符时截断并追加稳定短哈希；
+- 标题段为空时回退 `untitled`，命中 Windows 保留设备名时追加 `-entry`。
 
-构造逻辑集中在 `src/utils/slug-rules.ts` 的 `buildContentEntryId()`，后台写作页新建条目时调用它。`npm run new:bit` 按 `YYYY-MM-DD-HHMM` 生成动态草稿。博客详情的公开 slug 默认由条目 ID 去掉日期前缀得到，可用 frontmatter 的 `slug` 覆盖，取值须为小写 kebab-case（允许 CJK），且不得与 `/blog/` 下的静态路由冲突。
+博客默认公开路径使用完整条目 ID，例如 `/blog/2026-10-01-theme-quick-start/`；frontmatter 的 `slug` 可覆盖为更短的稳定路径。`npm run new:bit` 按 `bits-YYYY-MM-DD-HHMM` 生成动态草稿，日期时间带站点时区偏移。
 
-## CI 与发布
+## CI
 
-工作流、分支模型、GitHub Pages 配置与环境变量见 [deployment.md](deployment.md)，与上游的同步方向见 [upstream.md](upstream.md)。
-
-CI 以 `SITE_URL=https://astro-whono.example.com` 执行 `npm run ci`，按 `.nvmrc` 安装 Node。`SITE_URL` 必须提供：`astro.config.mjs` 只在它非空时注册 sitemap 集成，产物守卫会断言 `dist/sitemap-*.xml` 存在。
+`.github/workflows/ci.yml` 在推送到 `main`、`demo` 或向两者提交 PR 时运行：按 `.nvmrc` 安装 Node，执行 `npm ci`，再以 `SITE_URL=https://planetarium1001.github.io` 运行 `npm run ci`。发布工作流同样在打包前执行 `npm run ci`；部署工作流见 [deployment.md](deployment.md)。

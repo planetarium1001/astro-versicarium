@@ -6,6 +6,12 @@ import { getThemeSettings } from '../../lib/theme-settings';
 import { joinPageSubtitleText } from '../../utils/format';
 import { flattenEntryIdToSlug } from '../../utils/slug-rules';
 import { deriveEntryDescription, renderEntryBody } from '../../lib/entry-body';
+import { containsMarkdownMath } from '../../lib/markdown-math';
+import {
+  MARKDOWN_MATH_STYLESHEET_DATA_ATTR,
+  MARKDOWN_MATH_STYLESHEET_HREF,
+  MARKDOWN_MATH_STYLESHEET_ID
+} from '../../lib/markdown-math-styles';
 import '../../styles/devlog-page.css';
 
 /**
@@ -38,6 +44,7 @@ type DevlogRow = {
   kind: string | null;
   description: string | null;
   hasBody: boolean;
+  hasMath: boolean;
   /** 正文 html（含末尾链接行标记）；无正文时为空串 */
   bodyHtml: string;
 };
@@ -56,6 +63,7 @@ const rows: DevlogRow[] = await Promise.all(
       kind: entry.data.kind?.trim() || null,
       description: deriveEntryDescription(entry.data.description, body),
       hasBody,
+      hasMath: containsMarkdownMath(body),
       bodyHtml: html
     };
   })
@@ -70,9 +78,22 @@ const projectOptions = projectValues.map((value) => ({
   label: value,
   count: items.filter((item) => item.data.project === value).length
 }));
+const hasMath = rows.some((row) => row.hasMath);
+const katexStylesheetAttrs = { [MARKDOWN_MATH_STYLESHEET_DATA_ATTR]: 'true' };
 ---
 
 <BaseLayout title={pageTitleText} description={pageDescription} bodyClass="devlog-page">
+  <Fragment slot="head">
+    {hasMath ? (
+      <link
+        id={MARKDOWN_MATH_STYLESHEET_ID}
+        rel="stylesheet"
+        href={MARKDOWN_MATH_STYLESHEET_HREF}
+        {...katexStylesheetAttrs}
+      />
+    ) : null}
+  </Fragment>
+
   <TagFilterHeader
     showSearch={true}
     searchPlaceholder="搜索：标题 / 摘要 / 项目"

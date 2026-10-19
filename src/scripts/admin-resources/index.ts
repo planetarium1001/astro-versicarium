@@ -44,7 +44,7 @@ type MediaItem = {
 
 type TreeNode = {
   id: string;
-  kind: 'collection' | 'series' | 'version' | 'directory';
+  kind: 'collection' | 'series' | 'version' | 'directory' | 'shared';
   label: string;
   count: number;
   imageCount: number;
@@ -102,6 +102,9 @@ const REFERENCE_LABELS: Record<ReferenceStatus, string> = {
   unreferenced: '未引用',
   orphan: '孤儿'
 };
+
+const SHARED_ENTRY_ID = '_shared';
+const SHARED_LABEL = '共享资源';
 
 const COLLECTION_LABELS: Record<string, string> = {
   blog: '博客',
@@ -341,7 +344,8 @@ const init = () => {
   const exportEndpoint = root.dataset.exportEndpoint ?? '';
   const importEndpoint = root.dataset.importEndpoint ?? '';
   const textEndpoint = root.dataset.textEndpoint ?? '';
-  const status = root.querySelector<HTMLElement>('[data-admin-resources-status]');
+  const status = document.querySelector<HTMLElement>('[data-admin-resources-status]');
+  const statusLive = document.querySelector<HTMLElement>('#admin-resources-status-live');
   const treeEl = root.querySelector<HTMLElement>('[data-resources-tree]')!;
   const breadcrumbEl = root.querySelector<HTMLElement>('[data-resources-breadcrumb]')!;
   const searchEl = root.querySelector<HTMLInputElement>('[data-resources-search]')!;
@@ -409,8 +413,17 @@ const init = () => {
     localStorage.setItem(TREE_COLLAPSED_KEY, collapsed ? '1' : '0');
   };
 
+  // 状态元素在 AdminShell 的 status slot 里，不在资源 section 内；必须从 document 查询。
+  let statusMissingWarned = false;
   const setStatus = (message: string, state: 'idle' | 'ok' | 'error' | 'loading' = 'idle') => {
-    if (!status) return;
+    if (statusLive) statusLive.textContent = message;
+    if (!status) {
+      if (!statusMissingWarned) {
+        statusMissingWarned = true;
+        console.warn('未找到 [data-admin-resources-status] 状态元素，资源库状态不会显示。');
+      }
+      return;
+    }
     status.textContent = message;
     status.dataset.state = state;
   };
@@ -547,7 +560,7 @@ const init = () => {
     state = {
       ...state,
       collection: node.collection,
-      series: node.kind === 'collection' ? '' : node.series,
+      series: node.kind === 'collection' || node.kind === 'shared' ? '' : node.series,
       entry: node.kind === 'series' || node.kind === 'collection' ? '' : node.entryId,
       dir: node.kind === 'directory' ? node.directory : '',
       page: 1
@@ -558,6 +571,7 @@ const init = () => {
   const isNodeActive = (node: TreeNode): boolean => {
     if (node.kind === 'collection') return state.collection === node.collection && !state.series && !state.entry && !state.dir;
     if (node.kind === 'series') return state.collection === node.collection && state.series === node.series && !state.entry && !state.dir;
+    if (node.kind === 'shared') return state.collection === node.collection && state.entry === SHARED_ENTRY_ID && !state.dir;
     if (node.kind === 'version') return state.entry === node.entryId && state.dir === '';
     return state.entry === node.entryId && state.dir === node.directory;
   };
@@ -1128,7 +1142,8 @@ const init = () => {
         setStatus('请先从左侧选择一个版本或条目，再上传资源', 'error');
         return;
       }
-      uploadTarget.textContent = `上传到 ${getCollectionLabel(state.collection)} / ${state.entry}`;
+      const entryLabel = state.entry === SHARED_ENTRY_ID ? SHARED_LABEL : state.entry;
+      uploadTarget.textContent = `上传到 ${getCollectionLabel(state.collection)} / ${entryLabel}`;
       uploadDialog.showModal();
     });
   });

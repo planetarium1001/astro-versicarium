@@ -459,68 +459,100 @@
   font-size: 13px;
 }
 
-/* 文章上下篇导航 */
+/* 文章上下篇导航：文字极简，无边框/背景，热区仍保留 44px 高 */
 .prev-next {
-  margin-top: 28px;
+  margin-top: 32px;
   display: flex;
-  gap: 10px;
-  flex-wrap: nowrap;
+  justify-content: space-between;
+  gap: 24px;
 }
 
 .prev-next__item {
-  flex: 1 1 0;
   min-width: 0;
+  max-width: 48%;
+}
+
+.prev-next__item--next {
+  margin-left: auto;
+  text-align: right;
 }
 
 .prev-next__link {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  color: var(--text);
-  background: transparent;
-  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  transition: color 160ms ease;
 }
 
-.prev-next__link:hover {
-  color: var(--text);
-  border-color: var(--border);
-  background: var(--panel);
-}
-
-@supports (color: color-mix(in srgb, black 50%, white)) {
-  .prev-next__link:hover {
-    border-color: color-mix(in srgb, var(--border) 85%, var(--muted) 15%);
-  }
-}
-
-.prev-next__link--next {
-  text-align: right;
-  align-items: flex-end;
+.prev-next__link:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .prev-next__label {
+  flex: none;
   font-size: 12px;
   color: var(--faint);
 }
 
-.prev-next__title {
-  display: block;
-  font-size: 13px;
-  color: var(--muted);
-  width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.prev-next__arrow {
+  flex: none;
+  color: var(--faint);
 }
 
-.prev-next__placeholder {
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 48px;
+.prev-next__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  transition: color 160ms ease;
+}
+
+.prev-next__link:hover .prev-next__title,
+.prev-next__link:focus-visible .prev-next__title {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* 窄屏：左右各占一行，下一篇继续右对齐 */
+@media (max-width: 700px) {
+  .prev-next {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .prev-next__item {
+    max-width: 100%;
+  }
+}
+
+/* 公开页进入：轻微淡入上移，仅动 opacity/transform，不引起布局位移 */
+@media (prefers-reduced-motion: no-preference) {
+  body:not(.admin-page) .list,
+  body:not(.admin-page) .archive-timeline,
+  body:not(.admin-page) .devlog-list,
+  body.article-page .content__inner {
+    animation: page-enter 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes page-enter {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 /* Admin rail：窄屏与页面级 rail 共用同一套声明。 */

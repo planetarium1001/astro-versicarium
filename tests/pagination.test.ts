@@ -21,6 +21,8 @@ describe('分页纯计算', () => {
 describe('首页 / devlog 通用分页脚本', () => {
   afterEach(() => {
     vi.resetModules();
+    vi.unstubAllGlobals();
+    delete (Element.prototype as { animate?: unknown }).animate;
     document.body.innerHTML = '';
   });
 
@@ -77,5 +79,94 @@ describe('首页 / devlog 通用分页脚本', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  type PendingAnimation = {
+    keyframes: Keyframe[];
+    duration: number;
+    finished: Promise<void>;
+    canceled: boolean;
+    resolve: () => void;
+    cancel: () => void;
+  };
+
+  const stubAnimations = (): PendingAnimation[] => {
+    const animations: PendingAnimation[] = [];
+    Object.defineProperty(Element.prototype, 'animate', {
+      configurable: true,
+      writable: true,
+      value: (keyframes: Keyframe[], options: KeyframeAnimationOptions) => {
+        let resolveFinished = () => {};
+        const finished = new Promise<void>((resolve) => {
+          resolveFinished = resolve;
+        });
+        const record = {
+          keyframes,
+          duration: Number(options.duration ?? 0),
+          finished,
+          canceled: false,
+          resolve: resolveFinished,
+          cancel: () => {
+            record.canceled = true;
+          }
+        } as PendingAnimation;
+        animations.push(record);
+        return record as unknown as Animation;
+      }
+    });
+    return animations;
+  };
+
+  const stubMotion = (reduced: boolean) => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: reduced && query.includes('prefers-reduced-motion'),
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false
+    }));
+  };
+
+  const flushMicrotasks = async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  };
+
+  it('翻页使用 110ms 淡出 + 180ms 淡入，动画结束后才落下一页', async () => {
+    stubMotion(false);
+    const animations = stubAnimations();
+    const { inner, items } = mount(5, 2);
+    await import('../src/scripts/page-pagination');
+
+    (inner.querySelectorAll('.pagination__link')[1] as HTMLButtonElement).click();
+
+    expect(animations).toHaveLength(1);
+    expect(animations[0]!.duration).toBe(110);
+    // 淡出期间保持旧页
+    expect(inner.textContent).toContain('1 / 3');
+    expect(items.filter((item) => !item.hasAttribute('data-page-hidden'))[0]!.textContent).toBe('item 0');
+
+    animations[0]!.resolve();
+    await flushMicrotasks();
+
+    expect(inner.textContent).toContain('2 / 3');
+    expect(items.filter((item) => !item.hasAttribute('data-page-hidden'))[0]!.textContent).toBe('item 2');
+    expect(animations).toHaveLength(2);
+    expect(animations[1]!.duration).toBe(180);
+  });
+
+  it('减少动效时翻页同步落状态，不创建动画', async () => {
+    stubMotion(true);
+    const animations = stubAnimations();
+    const { inner } = mount(5, 2);
+    await import('../src/scripts/page-pagination');
+
+    (inner.querySelectorAll('.pagination__link')[1] as HTMLButtonElement).click();
+
+    expect(animations).toHaveLength(0);
+    expect(inner.textContent).toContain('2 / 3');
   });
 });

@@ -59,7 +59,7 @@ export type AdminMediaFilterOption = {
 
 export type AdminMediaTreeNode = {
   id: string;
-  kind: 'collection' | 'series' | 'version' | 'directory';
+  kind: 'collection' | 'series' | 'version' | 'directory' | 'shared';
   label: string;
   count: number;
   imageCount: number;
@@ -139,6 +139,8 @@ const IGNORED_FILE_NAMES = new Set(['.DS_Store', 'Thumbs.db']);
 const UNASSIGNED_SERIES = '(未归类)';
 const UNASSIGNED_VERSION = '(未归类)';
 const UNASSIGNED_LABEL = '未归属条目';
+const SHARED_ENTRY_ID = '_shared';
+const SHARED_LABEL = '共享资源';
 const DEFAULT_LIMIT = 40;
 const MAX_LIMIT = 100;
 
@@ -471,13 +473,19 @@ const loadAssets = async (
     for (const filePath of await walkFiles(collectionRoot)) {
       const relativePath = toRelativePath(filePath);
       if (MARKDOWN_EXT_RE.test(relativePath)) continue;
+      const relativeToCollection = relativePath.slice(`content/${collection}/`.length);
+      // _shared 是 collection 级共享资源目录，不属于任何条目。
+      const isShared = relativeToCollection.startsWith(`${SHARED_ENTRY_ID}/`);
       const entry = findEntryForContentPath(relativePath, entries);
       // 条目已删除但目录里还留着文件时也照样列出，标记为孤儿而不是静默丢弃。
       const relativeToEntry = entry
         ? relativePath.slice(entry.dirRel.length + 1)
-        : relativePath.slice(`content/${collection}/`.length);
-      const fileName = path.posix.basename(relativeToEntry);
-      const directory = path.posix.dirname(relativeToEntry).replace(/^\.$/, '');
+        : relativeToCollection;
+      const relativeToAssetRoot = isShared
+        ? relativeToCollection.slice(SHARED_ENTRY_ID.length + 1)
+        : relativeToEntry;
+      const fileName = path.posix.basename(relativeToAssetRoot);
+      const directory = path.posix.dirname(relativeToAssetRoot).replace(/^\.$/, '');
       assets.push({
         path: relativePath,
         origin: 'content',
@@ -487,14 +495,14 @@ const loadAssets = async (
         size: 0,
         mtimeMs: null,
         collection: entry?.collection ?? collection,
-        series: entry?.series ?? UNASSIGNED_SERIES,
-        seriesLabel: entry?.seriesLabel ?? UNASSIGNED_LABEL,
-        hasSeries: entry?.hasSeries ?? false,
-        version: entry?.version ?? UNASSIGNED_VERSION,
-        versionLabel: entry?.versionLabel ?? UNASSIGNED_LABEL,
-        entryId: entry?.entryId ?? '',
-        entryLabel: entry?.entryLabel ?? UNASSIGNED_LABEL,
-        entryExists: Boolean(entry),
+        series: isShared ? '' : entry?.series ?? UNASSIGNED_SERIES,
+        seriesLabel: isShared ? SHARED_LABEL : entry?.seriesLabel ?? UNASSIGNED_LABEL,
+        hasSeries: isShared ? false : entry?.hasSeries ?? false,
+        version: isShared ? SHARED_ENTRY_ID : entry?.version ?? UNASSIGNED_VERSION,
+        versionLabel: isShared ? SHARED_LABEL : entry?.versionLabel ?? UNASSIGNED_LABEL,
+        entryId: isShared ? SHARED_ENTRY_ID : entry?.entryId ?? '',
+        entryLabel: isShared ? SHARED_LABEL : entry?.entryLabel ?? UNASSIGNED_LABEL,
+        entryExists: isShared ? true : Boolean(entry),
         directory,
         previewSrc: isImageFile(fileName) ? toPreviewSrc(relativePath) : null
       });
@@ -509,6 +517,7 @@ const loadAssets = async (
     if (!resolved || !isImageFile(relativePath)) continue;
     const fileName = path.posix.basename(relativePath);
     const entry = resolved.entry;
+    const isShared = resolved.entryId === SHARED_ENTRY_ID;
     assets.push({
       path: relativePath,
       origin: 'public',
@@ -518,14 +527,14 @@ const loadAssets = async (
       size: 0,
       mtimeMs: null,
       collection: resolved.collection,
-      series: entry?.series ?? resolved.entryId ?? UNASSIGNED_SERIES,
-      seriesLabel: entry?.seriesLabel ?? resolved.entryId ?? UNASSIGNED_LABEL,
-      hasSeries: entry?.hasSeries ?? false,
-      version: entry?.version ?? resolved.entryId ?? UNASSIGNED_VERSION,
-      versionLabel: entry?.versionLabel ?? resolved.entryId ?? UNASSIGNED_LABEL,
-      entryId: resolved.entryId,
-      entryLabel: entry?.entryLabel ?? resolved.entryId ?? UNASSIGNED_LABEL,
-      entryExists: Boolean(entry),
+      series: isShared ? '' : entry?.series ?? resolved.entryId ?? UNASSIGNED_SERIES,
+      seriesLabel: isShared ? SHARED_LABEL : entry?.seriesLabel ?? resolved.entryId ?? UNASSIGNED_LABEL,
+      hasSeries: isShared ? false : entry?.hasSeries ?? false,
+      version: isShared ? SHARED_ENTRY_ID : entry?.version ?? resolved.entryId ?? UNASSIGNED_VERSION,
+      versionLabel: isShared ? SHARED_LABEL : entry?.versionLabel ?? resolved.entryId ?? UNASSIGNED_LABEL,
+      entryId: isShared ? SHARED_ENTRY_ID : resolved.entryId,
+      entryLabel: isShared ? SHARED_LABEL : entry?.entryLabel ?? resolved.entryId ?? UNASSIGNED_LABEL,
+      entryExists: isShared ? true : Boolean(entry),
       directory: resolved.directory,
       previewSrc: toPreviewSrc(relativePath)
     });
@@ -662,6 +671,43 @@ const buildMediaTree = (items: readonly AdminMediaItem[]): AdminMediaTreeNode[] 
     }
     addToCounts(collectionNode, item);
 
+    // 共享资源是 collection 级节点，与未归属资源同级，目录直接挂在它下面。
+    if (item.entryId === SHARED_ENTRY_ID) {
+      let sharedNode = collectionNode.children.find((child) => child.kind === 'shared');
+      if (!sharedNode) {
+        sharedNode = createTreeNode('shared', SHARED_LABEL, {
+          collection: item.collection,
+          series: '',
+          version: '',
+          entryId: SHARED_ENTRY_ID,
+          directory: ''
+        });
+        collectionNode.children.push(sharedNode);
+      }
+      addToCounts(sharedNode, item);
+
+      const sharedDirectoryKey = item.directory;
+      let sharedDirectoryNode = sharedNode.children.find(
+        (child) => child.directory === sharedDirectoryKey
+      );
+      if (!sharedDirectoryNode) {
+        sharedDirectoryNode = createTreeNode(
+          'directory',
+          sharedDirectoryKey || '条目根目录',
+          {
+            collection: item.collection,
+            series: '',
+            version: '',
+            entryId: SHARED_ENTRY_ID,
+            directory: sharedDirectoryKey
+          }
+        );
+        sharedNode.children.push(sharedDirectoryNode);
+      }
+      addToCounts(sharedDirectoryNode, item);
+      continue;
+    }
+
     const seriesKey = item.hasSeries ? (item.series || UNASSIGNED_SERIES) : '';
     let parentNode = collectionNode;
 
@@ -725,6 +771,8 @@ const buildMediaTree = (items: readonly AdminMediaItem[]): AdminMediaTreeNode[] 
 
   const sortNodes = (nodes: AdminMediaTreeNode[]): void => {
     nodes.sort((left, right) => {
+      if (left.kind === 'shared' && right.kind !== 'shared') return -1;
+      if (right.kind === 'shared' && left.kind !== 'shared') return 1;
       if (left.kind === 'collection' && right.kind === 'collection') {
         return ADMIN_CONTENT_COLLECTION_KEYS.indexOf(left.collection)
           - ADMIN_CONTENT_COLLECTION_KEYS.indexOf(right.collection);
@@ -773,6 +821,36 @@ const buildBreadcrumb = (
 
   const entryId = filters.entry || filters.version;
   if (!entryId) return breadcrumb;
+
+  if (entryId === SHARED_ENTRY_ID) {
+    const sharedNode = collectionNode.children.find((node) => node.kind === 'shared');
+    if (!sharedNode) return breadcrumb;
+    breadcrumb.push({
+      id: sharedNode.id,
+      label: sharedNode.label,
+      filters: {
+        collection: filters.collection,
+        entry: SHARED_ENTRY_ID
+      }
+    });
+    if (!filters.directory) return breadcrumb;
+
+    const sharedDirectoryNode = sharedNode.children.find(
+      (node) => node.directory === filters.directory
+    );
+    if (sharedDirectoryNode) {
+      breadcrumb.push({
+        id: sharedDirectoryNode.id,
+        label: sharedDirectoryNode.label,
+        filters: {
+          collection: filters.collection,
+          entry: SHARED_ENTRY_ID,
+          directory: filters.directory
+        }
+      });
+    }
+    return breadcrumb;
+  }
 
   const versionNode = parentNode.children.find(
     (node) => node.kind === 'version' && node.entryId === entryId

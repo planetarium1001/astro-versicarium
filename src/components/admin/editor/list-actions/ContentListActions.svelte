@@ -127,6 +127,7 @@ const createEmptyProjectsFrontmatter = (): AdminProjectsEditorValues => ({
   type: '',
   icon: '',
   image: '',
+  slug: '',
   date: '',
   draft: false
 });
@@ -135,6 +136,7 @@ const createEmptyDevlogFrontmatter = (): AdminDevlogEditorValues => ({
   title: '',
   date: '',
   project: '',
+  projectSlug: '',
   kind: '',
   description: '',
   draft: false

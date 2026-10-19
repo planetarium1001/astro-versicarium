@@ -521,6 +521,16 @@
   white-space: nowrap;
 }
 
+.admin-content-row-project {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.admin-content-row-title:hover .admin-content-row-project,
+.admin-content-row-title:focus-visible .admin-content-row-project {
+  color: inherit;
+}
+
 .admin-content-row-title:hover,
 .admin-content-row-title:focus-visible {
   text-decoration: underline;

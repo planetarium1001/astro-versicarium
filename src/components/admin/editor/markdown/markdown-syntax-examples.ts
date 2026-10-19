@@ -42,7 +42,6 @@ export const MARKDOWN_SYNTAX_EXAMPLES: readonly MarkdownSyntaxExample[] = [
   { label: '提示块', icon: 'message-square-text', syntax: ':::note[标题]' },
   { label: '行内公式', icon: 'sigma', syntax: '$$x$$' },
   { label: '块级公式', icon: 'square-sigma', syntax: '$$\nx\n$$' },
-  { label: '表情', icon: 'smile', syntax: '🙂' },
   { label: '代码', icon: 'code', syntax: '`代码`' },
   { label: '代码块', icon: 'code-block', syntax: '```语言' },
   { label: '无序列表', icon: 'list', syntax: '- 项目' },

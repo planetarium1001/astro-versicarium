@@ -380,6 +380,10 @@ export const createValidation = ({
         break;
     }
 
+    if (path === 'ui.entryVersionName') {
+      return () => form.querySelector<HTMLElement>('#ui-entry-version-name');
+    }
+
     if (path.startsWith('site.socialLinks.presetOrder.')) {
       const presetId = path.slice('site.socialLinks.presetOrder.'.length) as SiteSocialPresetId;
       return getPresetFieldTarget(presetId, 'order');

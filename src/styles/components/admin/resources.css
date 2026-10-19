@@ -1,31 +1,41 @@
-/* Resources Console
-   图片与附件的统一资源管理页。 */
+/* 资源控制台
+   图片与附件的统一资源管理页。页面标题由 AdminShell 提供，这里只负责工作区布局。 */
 
 .resources-console {
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-width: 0;
-  padding: 20px;
-  border: 1px solid var(--admin-border);
-  border-radius: 16px;
-  background: var(--admin-surface);
 }
 
-.resources-hero {
+.resources-intro {
   display: flex;
-  align-items: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 2px 2px 18px;
-  border-bottom: 1px solid var(--admin-border);
-}
-
-.resources-hero__copy {
+  gap: 10px 16px;
   min-width: 0;
+  padding-inline: var(--admin-row-table-padding-inline);
 }
 
-.resources-hero__eyebrow,
+.resources-intro__description {
+  flex: 1 1 420px;
+  min-width: 0;
+  max-width: 720px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.resources-intro__actions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 .resources-tree__eyebrow,
 .resources-dialog__eyebrow,
 .resources-drawer__eyebrow {
@@ -35,28 +45,6 @@
   font-weight: 600;
   letter-spacing: .08em;
   text-transform: uppercase;
-}
-
-.resources-hero__title {
-  margin: 0;
-  font-size: 25px;
-  font-weight: 600;
-  letter-spacing: -.02em;
-}
-
-.resources-hero__description {
-  max-width: 720px;
-  margin: 7px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.7;
-}
-
-.resources-hero__actions {
-  display: flex;
-  flex: none;
-  gap: 8px;
-  align-items: center;
 }
 
 .resources-layout {
@@ -119,7 +107,7 @@
   min-height: 420px;
   max-height: calc(100vh - 120px);
   border: 1px solid var(--admin-border);
-  border-radius: 13px;
+  border-radius: var(--admin-panel-radius);
   background: var(--admin-surface-soft);
   overflow: hidden;
 }
@@ -455,7 +443,7 @@
   align-items: center;
   padding: 9px;
   border: 1px solid var(--admin-border);
-  border-radius: 11px;
+  border-radius: var(--admin-panel-radius);
   background: var(--admin-surface-soft);
 }
 
@@ -469,7 +457,7 @@
   padding: 0 10px;
   border: 1px solid var(--admin-border);
   border-radius: 8px;
-  background: var(--bg);
+  background: transparent;
   color: var(--faint);
 }
 
@@ -496,7 +484,7 @@
   padding: 2px;
   border: 1px solid var(--admin-border);
   border-radius: 8px;
-  background: var(--bg);
+  background: transparent;
 }
 
 .resources-tabs__item {
@@ -547,7 +535,7 @@
 .resources-filters {
   padding: 12px;
   border: 1px solid var(--admin-border);
-  border-radius: 11px;
+  border-radius: var(--admin-panel-radius);
   background: var(--admin-surface-soft);
 }
 
@@ -731,7 +719,7 @@
   gap: 2px;
   padding: 4px;
   border: 1px solid var(--admin-border);
-  border-radius: 11px;
+  border-radius: var(--admin-panel-radius);
   background: var(--admin-surface-soft);
 }
 
@@ -742,7 +730,7 @@
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--admin-border);
-  border-radius: 11px;
+  border-radius: var(--admin-panel-radius);
   background: var(--bg);
   transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease;
 }
@@ -785,7 +773,7 @@
   justify-content: center;
   aspect-ratio: 4 / 3;
   overflow: hidden;
-  border-radius: 10px 10px 0 0;
+  border-radius: calc(var(--admin-panel-radius) - 1px) calc(var(--admin-panel-radius) - 1px) 0 0;
   background-color: var(--admin-surface-soft);
   border-bottom: 1px solid var(--admin-border);
 }
@@ -1060,7 +1048,7 @@
   gap: 6px;
   padding: 54px 18px;
   border: 1px dashed var(--admin-border);
-  border-radius: 13px;
+  border-radius: var(--admin-panel-radius);
   text-align: center;
 }
 
@@ -1366,19 +1354,6 @@
 }
 
 @media (max-width: 640px) {
-  .resources-console {
-    padding: 14px;
-  }
-
-  .resources-hero {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .resources-hero__title {
-    font-size: 21px;
-  }
-
   .resources-filters__grid {
     grid-template-columns: 1fr;
   }

@@ -1,4 +1,6 @@
 ---
+import UiIcon from './UiIcon.astro';
+
 const {
   id = 'lightbox',
   className = '',
@@ -27,7 +29,9 @@ const classes = className ? `lightbox ${className}` : 'lightbox';
   tabindex="-1"
   hidden
 >
-  <button class="lightbox-close" type="button" data-lightbox-close aria-label="关闭">×</button>
+  <button class="lightbox-close" type="button" data-lightbox-close data-dialog-close aria-label="关闭">
+    <UiIcon name="x" size={14} strokeWidth={1.8} />
+  </button>
   <div class="lightbox-navs">
     <button class="lightbox-nav lightbox-prev" type="button" data-lightbox-prev aria-label="上一张">‹</button>
     <button class="lightbox-nav lightbox-next" type="button" data-lightbox-next aria-label="下一张">›</button>

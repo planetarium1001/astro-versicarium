@@ -107,6 +107,8 @@ const createCopyIcon = () => createSvgElement(
 const createCheckIcon = () => createSvgElement(
   {
     className: ['icon-check'],
+    width: 16,
+    height: 16,
     viewBox: '0 0 24 24',
     'aria-hidden': 'true'
   },

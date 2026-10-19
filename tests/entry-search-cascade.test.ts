@@ -323,7 +323,12 @@ describe('级联动效：串行，一次只走一步', () => {
     const lateHides = harness.records
       .slice(recordedBefore)
       .filter((record) => record.isEntryItem && record.kind === 'hide');
-    expect(lateHides.length, '旧队列必须立即停止，不能继续往下吞').toBe(0);
+    // 清空筛选后回到第一页，分页会正常收起第二页条目；旧队列不得再隐藏最终可见的条目。
+    const finalVisible = new Set(visibleSlugs());
+    const staleHides = lateHides.filter((record) =>
+      finalVisible.has(((record.el as HTMLElement).dataset.slug ?? '').trim())
+    );
+    expect(staleHides.length, '旧队列必须立即停止，不能继续往下吞').toBe(0);
 
     // 且最终收敛到第一页可见（客户端分页会隐藏第一页之外的条目）
     const pageSize = Number(
@@ -407,6 +412,9 @@ describe('级联动效：串行，一次只走一步', () => {
   it('archive：一级胶囊切换走内容左右滑动（页头不参与）', async () => {
     await loadPage(PAGES[2]);
     await importEntrySearch({ archiveScope: true });
+    // 首屏分页会先对第一页之外的条目做收起动画；记录基线，只断言本轮没有新增。
+    await harness.settleAll();
+    const itemRecordsBeforeScope = harness.entryItemRecords().length;
 
     const devlogPill = document.querySelector<HTMLElement>('[data-archive-scope="devlog"]')!;
     devlogPill.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
@@ -428,7 +436,7 @@ describe('级联动效：串行，一次只走一步', () => {
     }
 
     // 滑动期间不叠逐条淡出（两套动作不能同时跑）
-    expect(harness.entryItemRecords().length).toBe(0);
+    expect(harness.entryItemRecords().length).toBe(itemRecordsBeforeScope);
 
     // 推进到滑出结束（中间可能还有别的动画边界，例如上一轮标签胶囊的退场）
     for (let step = 0; step < 5 && slides().length < 2; step += 1) {
@@ -437,7 +445,7 @@ describe('级联动效：串行，一次只走一步', () => {
     expect(slides().length).toBe(2);
     expect(slides()[1]!.kind, '第二段必须是从另一侧滑入').toBe('show');
     expect(slides()[1]!.start).toBeGreaterThanOrEqual(slides()[0]!.end);
-    expect(harness.entryItemRecords().length).toBe(0);
+    expect(harness.entryItemRecords().length).toBe(itemRecordsBeforeScope);
 
     await harness.settleAll();
     const devlogSlugs = pageItems()

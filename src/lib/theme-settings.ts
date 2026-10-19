@@ -17,6 +17,11 @@ import {
 import { DEFAULT_SITE_FAVICON, GENERATED_SITE_FAVICON } from '../utils/favicon-defaults';
 import { isValidIanaTimeZone } from '../utils/timezone';
 import {
+  DEFAULT_ENTRY_VERSION_NAME_MODE,
+  normalizeEntryVersionNameMode,
+  type EntryVersionNameMode
+} from './entry-display';
+import {
   ADMIN_ARTICLE_DATE_GRANULARITY_DEFAULT,
   ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT,
   ADMIN_ARTICLE_META_DATE_LABEL_MAX_LENGTH,
@@ -353,6 +358,7 @@ interface UiSettings {
     sidebarDivider: SidebarDividerVariant;
   };
   typography: TypographySettings;
+  entryVersionName: EntryVersionNameMode;
 }
 
 interface ThemeSettings {
@@ -461,6 +467,7 @@ interface ThemeSettingsSources {
     typographyCopy: SettingSource;
     typographyMono: SettingSource;
     typographyBrand: SettingSource;
+    entryVersionName: SettingSource;
   };
 }
 
@@ -699,7 +706,7 @@ const DEFAULT_PAGE: PageSettings = {
     subtitle: LEGACY_BITS_SUBTITLE,
     defaultAuthor: {
       name: 'Whono',
-      avatar: 'author/avatar.webp'
+      avatar: 'author/avatar.svg'
     }
   },
   devlog: {
@@ -764,7 +771,8 @@ const DEFAULT_UI: UiSettings = {
   },
   typography: {
     ...ADMIN_TYPOGRAPHY_DEFAULT
-  }
+  },
+  entryVersionName: DEFAULT_ENTRY_VERSION_NAME_MODE
 };
 
 const NAV_IDS: ReadonlySet<SidebarNavId> = new Set(['blog', 'projects', 'bits', 'devlog', 'archive', 'about']);
@@ -1655,12 +1663,12 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
     DEFAULT_HOME.heroImageAlt
   );
 
-  const BlogTitle = resolveValue(
+  const blogTitle = resolveValue(
     asNullableString(pageBlogJson?.title),
     undefined,
     DEFAULT_PAGE.blog.title
   );
-  const BlogSubtitle = resolveValue(
+  const blogSubtitle = resolveValue(
     asNullableString(pageBlogJson?.subtitle),
     LEGACY_BLOG_SUBTITLE,
     DEFAULT_PAGE.blog.subtitle
@@ -1739,6 +1747,11 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
   const uiArticleMeta = isRecord(uiJson?.articleMeta) ? uiJson.articleMeta : undefined;
   const uiLayout = isRecord(uiJson?.layout) ? uiJson.layout : undefined;
   const uiTypography = isRecord(uiJson?.typography) ? uiJson.typography : undefined;
+  const entryVersionName = resolveValue<EntryVersionNameMode>(
+    uiJson?.entryVersionName === undefined ? undefined : normalizeEntryVersionNameMode(uiJson.entryVersionName),
+    undefined,
+    DEFAULT_UI.entryVersionName
+  );
 
   const showLineNumbers = resolveValue(
     asBoolean(uiCodeBlock?.showLineNumbers),
@@ -1954,8 +1967,8 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
       },
       page: {
         blog: {
-          title: BlogTitle.value,
-          subtitle: BlogSubtitle.value
+          title: blogTitle.value,
+          subtitle: blogSubtitle.value
         },
         projects: {
           title: projectsTitle.value,
@@ -2038,7 +2051,8 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
           copy: typographyCopy.value,
           mono: typographyMono.value,
           brand: typographyBrand.value
-        }
+        },
+        entryVersionName: entryVersionName.value
       }
     },
     sources: {
@@ -2086,8 +2100,8 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         heroImageAlt: heroImageAlt.source
       },
       page: {
-        BlogTitle: BlogTitle.source,
-        BlogSubtitle: BlogSubtitle.source,
+        BlogTitle: blogTitle.source,
+        BlogSubtitle: blogSubtitle.source,
         projectsTitle: projectsTitle.source,
         projectsSubtitle: projectsSubtitle.source,
         archiveTitle: archiveTitle.source,
@@ -2138,7 +2152,8 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         typographyReadable: typographyReadable.source,
         typographyCopy: typographyCopy.source,
         typographyMono: typographyMono.source,
-        typographyBrand: typographyBrand.source
+        typographyBrand: typographyBrand.source,
+        entryVersionName: entryVersionName.source
       }
     }
   };
@@ -2243,7 +2258,8 @@ const buildEditableThemeSettingsSnapshot = (
       articleMeta: { ...resolved.settings.ui.articleMeta },
       cardDateDisplay: resolved.settings.ui.cardDateDisplay,
       layout: { ...resolved.settings.ui.layout },
-      typography: { ...resolved.settings.ui.typography }
+      typography: { ...resolved.settings.ui.typography },
+      entryVersionName: resolved.settings.ui.entryVersionName
     }
   });
 

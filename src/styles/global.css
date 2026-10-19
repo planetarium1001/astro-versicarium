@@ -418,3 +418,56 @@ hr {
     margin: 12px 0 18px;
   }
 }
+
+/* 公共弹窗关闭按钮：统一 32px 视觉、44px 热区；默认无底色，hover 才出现轻底 */
+[data-dialog-close] {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--faint);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+/* 视觉 32px，热区固定 44px */
+[data-dialog-close]::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+  border-radius: 12px;
+}
+
+[data-dialog-close]:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+[data-dialog-close]:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* 指针打开时浏览器会自动聚焦关闭按钮；先压掉焦点环，键盘 Tab 进入时仍可见 */
+[data-dialog-close][data-pointer-focus]:focus {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-dialog-close] {
+    transition: none;
+  }
+}

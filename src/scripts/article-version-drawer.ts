@@ -1,5 +1,8 @@
 type VersionDrawerRoot = HTMLElement;
 
+/** 退出动画 220ms，兜底留 20ms 余量：animationend 丢失时也不会把抽屉卡住。 */
+const CLOSE_FALLBACK_MS = 600;
+
 /**
  * 先按组件结构在 root 内找 drawer；结构变化时再按 trigger 的 aria-controls 回退到 document。
  * 两段都用同一份 trigger→dialog 约定，避免模板挪动位置后交互静默失效。
@@ -34,6 +37,10 @@ const clearPointerFocus = (element: HTMLElement | null): void => {
   delete element.dataset.pointerFocus;
 };
 
+const prefersReducedMotion = (): boolean =>
+  typeof window.matchMedia === 'function'
+  && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 const roots = Array.from(document.querySelectorAll<VersionDrawerRoot>('[data-article-version]'));
 
 for (const root of roots) {
@@ -43,6 +50,9 @@ for (const root of roots) {
   if (!dialog) continue;
 
   const closeButton = dialog.querySelector<HTMLButtonElement>('[data-version-close]');
+  const dialogTitle = dialog.querySelector<HTMLElement>('.version-drawer__title');
+  const panel = dialog.querySelector<HTMLElement>('.version-drawer__panel');
+  let closeTimer: number | undefined;
   let restoreFocus = true;
   let restoreFocusWithoutRing = false;
 
@@ -61,14 +71,55 @@ for (const root of roots) {
     element.addEventListener('keydown', () => clearPointerFocus(element));
   }
 
+  // 指针按下时先打标记：按钮在 mousedown 获得焦点时不会闪出焦点环。
+  trigger.addEventListener('pointerdown', () => {
+    trigger.dataset.pointerFocus = 'true';
+  });
+
+  const clearCloseTimer = () => {
+    if (closeTimer !== undefined) {
+      window.clearTimeout(closeTimer);
+      closeTimer = undefined;
+    }
+  };
+
+  const clearClosingState = () => {
+    clearCloseTimer();
+    delete dialog.dataset.closing;
+  };
+
+  const restoreTriggerFocus = () => {
+    if (!restoreFocus) return;
+    if (restoreFocusWithoutRing) focusWithoutRing(trigger);
+    else trigger.focus({ preventScroll: true });
+  };
+
+  const commitClose = () => {
+    clearCloseTimer();
+    if (typeof dialog.close === 'function') {
+      // 先 close()，data-closing 由 close 事件统一清掉；避免先撤标记导致面板回弹一帧。
+      dialog.close();
+      return;
+    }
+    // jsdom / 旧浏览器没有 dialog.close()：先隐藏面板，再清标记并手动收尾。
+    dialog.removeAttribute('open');
+    delete dialog.dataset.closing;
+    setExpanded(false);
+    restoreTriggerFocus();
+  };
+
+  const finishClose = () => {
+    if (dialog.dataset.closing !== 'true') return;
+    commitClose();
+  };
+
   const open = (pointer: boolean) => {
     if (dialog.open) return;
     restoreFocus = true;
     restoreFocusWithoutRing = pointer;
-    // showModal() 自己会把焦点放到第一个可聚焦元素（这里是关闭按钮）；
-    // 指针打开时先打上标记，自动聚焦也不会出现白/蓝默认焦点框。
-    if (pointer) closeButton?.setAttribute('data-pointer-focus', 'true');
-    else clearPointerFocus(closeButton);
+    clearClosingState();
+    // 焦点由标题接管，不再让 showModal() 的默认聚焦落到关闭按钮上。
+    clearPointerFocus(closeButton);
 
     if (typeof dialog.showModal === 'function') {
       dialog.showModal();
@@ -76,28 +127,36 @@ for (const root of roots) {
       dialog.setAttribute('open', '');
     }
     setExpanded(true);
+    // 打开时把焦点放到标题，不落在关闭按钮上；关闭按钮仍可 Tab 到。
     window.requestAnimationFrame(() => {
-      if (!closeButton) return;
-      if (pointer) focusWithoutRing(closeButton);
-      else closeButton.focus({ preventScroll: true });
+      dialogTitle?.focus({ preventScroll: true });
     });
   };
 
   const close = (restore = true, pointer = false) => {
     if (!dialog.open) return;
+    if (dialog.dataset.closing === 'true') return;
     restoreFocus = restore;
     restoreFocusWithoutRing = pointer;
-    if (typeof dialog.close === 'function') {
-      dialog.close();
+
+    // 减少动效时不做退出过渡，立即关闭。
+    if (prefersReducedMotion()) {
+      commitClose();
       return;
     }
-    dialog.removeAttribute('open');
-    setExpanded(false);
-    if (restoreFocus) {
-      if (restoreFocusWithoutRing) focusWithoutRing(trigger);
-      else trigger.focus({ preventScroll: true });
-    }
+
+    dialog.dataset.closing = 'true';
+    closeTimer = window.setTimeout(finishClose, CLOSE_FALLBACK_MS);
   };
+
+  // 面板退出动画结束即可关闭；窄屏用 version-drawer-out-bottom，前缀判断一并覆盖。
+  panel?.addEventListener('animationend', (event) => {
+    if (event.target !== panel) return;
+    if (dialog.dataset.closing !== 'true') return;
+    const animationName = (event as AnimationEvent).animationName;
+    if (animationName && !animationName.startsWith('version-drawer-out')) return;
+    finishClose();
+  });
 
   trigger.addEventListener('click', (event) => {
     const pointer = isPointerEvent(event);
@@ -115,10 +174,10 @@ for (const root of roots) {
   });
 
   dialog.addEventListener('close', () => {
+    clearClosingState();
     setExpanded(false);
     if (!restoreFocus) return;
-    if (restoreFocusWithoutRing) focusWithoutRing(trigger);
-    else trigger.focus({ preventScroll: true });
+    restoreTriggerFocus();
   });
 
   dialog.addEventListener('click', (event) => {

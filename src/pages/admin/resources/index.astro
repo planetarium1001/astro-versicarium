@@ -41,7 +41,7 @@ const endpoints = {
     {isDev ? (
       <div slot="status" class="admin-status-slot">
         <p id="admin-resources-status-live" class="admin-sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
-        <p id="admin-resources-status" class="admin-status" data-state="idle" data-admin-resources-status>准备中</p>
+        <p id="admin-resources-status" class="admin-status" data-state="idle" data-admin-resources-status>载入中…</p>
       </div>
     ) : null}
 
@@ -57,15 +57,11 @@ const endpoints = {
         data-export-endpoint={endpoints.export}
         data-import-endpoint={endpoints.import}
       >
-        <header class="resources-hero">
-          <div class="resources-hero__copy">
-            <p class="resources-hero__eyebrow">内容资源</p>
-            <h1 class="resources-hero__title">图片与附件</h1>
-            <p class="resources-hero__description">
-              按内容集合、系列和版本浏览资源。上传会自动落到当前条目的 images/ 或 files/，构建时只输出被引用的文件。
-            </p>
-          </div>
-          <div class="resources-hero__actions">
+        <div class="resources-intro">
+          <p class="resources-intro__description">
+            按内容集合、系列和版本浏览资源。上传会自动落到当前条目的 images/ 或 files/，构建时只输出被引用的文件。
+          </p>
+          <div class="resources-intro__actions">
             <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-import-open>
               <AdminIcon name="download" size={15} />
               <span>导入条目</span>
@@ -75,7 +71,7 @@ const endpoints = {
               <span>上传资源</span>
             </button>
           </div>
-        </header>
+        </div>
 
         <div class="resources-layout" data-resources-layout>
           <aside class="resources-tree" id="resources-tree-panel" aria-label="资源目录">

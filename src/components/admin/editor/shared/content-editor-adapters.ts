@@ -74,6 +74,7 @@ const cloneProjectsValues = (value: AdminProjectsEditorValues): AdminProjectsEdi
   type: value.type,
   icon: value.icon,
   image: value.image,
+  slug: value.slug,
   date: value.date,
   draft: value.draft
 });
@@ -171,6 +172,7 @@ const PROJECTS_FRONTMATTER_ISSUE_PATHS = new Set([
   'type',
   'icon',
   'image',
+  'slug',
   'date',
   'draft'
 ]);
@@ -179,6 +181,7 @@ const DEVLOG_FRONTMATTER_ISSUE_PATHS = new Set([
   'title',
   'date',
   'project',
+  'projectSlug',
   'kind',
   'description',
   'draft'
@@ -191,6 +194,7 @@ const PROJECTS_FIELD_LABELS: Readonly<Record<string, string>> = {
   type: '类型',
   icon: '图标',
   image: '展示图',
+  slug: '稳定 slug',
   date: '日期',
   draft: '草稿状态',
   body: '正文'

@@ -4,7 +4,7 @@
 /* 年份胶囊复用 /archive/ 一级胶囊的共享样式 */
 @import "./scope-pills.css";
 
-/* Bits（絮语） */
+/* 动态（bits） */
 
 .bits-toolbar {
   display: flex;
