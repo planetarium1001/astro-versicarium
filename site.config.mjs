@@ -28,11 +28,11 @@ export const DEFAULT_SITE_TIMEZONE = 'Asia/Shanghai';
 
 export const site = {
   url: hasSiteUrl ? siteUrl : fallbackSiteUrl,
-  title: 'Astro Whono Tweaked',
-  brandTitle: 'Astro Whono Tweaked',
+  title: 'Versicarium',
+  brandTitle: 'Versicarium',
   author: 'Planetarium',
   authorAvatar: 'author/avatar.svg',
-  description: '面向开发者的极简 Astro 主题，适合撰写技术文章、项目记录与开发日志。'
+  description: '面向开发者的极简 Astro 写作主题：文章、项目版本、开发日志与动态共用同一套内容结构。'
 };
 
 // 前端每页条目数：列表页写入 `[data-entry-filters][data-page-size]`，客户端分页读取。

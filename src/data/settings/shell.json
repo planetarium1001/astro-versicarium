@@ -1,6 +1,7 @@
 {
-  "brandTitle": "<div class=\"whono-left\">Astro Whono</div>\n<div class=\"whono-right\">开发者主题</div>",
-  "quote": "<div class=\"whono-left\">极简 Astro 主题</div>\n<div class=\"whono-left\">为代码笔记、项目与开发日志而作。</div>\n专注阅读，\n开放扩展。",
+  "brandTitle": "<div class=\"whono-left\">Versicarium</div>\n<div class=\"whono-right\">垄录</div>",
+  "titleNarrow": "垄录",
+  "quote": "<div class=\"whono-left\">一行一垄，</div>\n<div class=\"whono-left\">一版一录。</div>\n以短行收存\n每一次转向。",
   "nav": [
     {
       "id": "blog",
@@ -25,7 +26,7 @@
     },
     {
       "id": "devlog",
-      "label": "开发日志",
+      "label": "日志",
       "ornament": "·",
       "order": 4,
       "visible": true

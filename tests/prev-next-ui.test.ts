@@ -49,8 +49,8 @@ describe('上一篇/下一篇：文字极简结构', () => {
     const layout = await read(ARTICLE_LAYOUT);
 
     expect(layout).toMatch(/<nav class="prev-next" aria-label="上一篇\/下一篇">/);
-    expect(layout).toMatch(/<a class="prev-next__link" href=\{prev\.href\} rel="prev">/);
-    expect(layout).toMatch(/<a class="prev-next__link" href=\{next\.href\} rel="next">/);
+    expect(layout).toMatch(/<a class="prev-next__link" href=\{withBase\(prev\.href\)\} rel="prev">/);
+    expect(layout).toMatch(/<a class="prev-next__link" href=\{withBase\(next\.href\)\} rel="next">/);
 
     // 上一篇：箭头在前、标签、标题；下一篇：标题、标签、箭头在后
     expect(layout).toMatch(

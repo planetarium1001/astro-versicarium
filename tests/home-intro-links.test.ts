@@ -1,9 +1,13 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   ADMIN_HOME_INTRO_LINK_KEY_SET,
   ADMIN_HOME_INTRO_LINK_OPTIONS,
   getAdminHomeIntroLinkOption
 } from '../src/lib/admin-console/theme-shared';
+
+const read = (relative: string) => readFile(path.join(process.cwd(), relative), 'utf8');
 
 /**
  * 首页导语要能直达 tag，blog 与 archive 两个作用域都要有入口。
@@ -39,5 +43,33 @@ describe('首页导语 tag 入口的选项表', () => {
     expect(getAdminHomeIntroLinkOption('blogTag').id).toBe('blogTag');
     // 兜底：未知键回落到第一项，且不会抛
     expect(getAdminHomeIntroLinkOption('tag').href).not.toBe('');
+  });
+});
+
+describe('首页导语 #标签 链接与首屏标题', () => {
+  it('#归档标签 / #博客标签 用站内标签红，且不覆盖全局链接色', async () => {
+    const [page, css] = await Promise.all([
+      read('src/pages/index.astro'),
+      read('src/styles/home.css')
+    ]);
+
+    // 两个入口（分支里的两处锚点）都挂专用类，样式只落在导语链接上
+    expect(page.match(/class="intro__tag-link"/g)).toHaveLength(2);
+    expect(css).not.toMatch(/^a\s*\{[^}]*color:\s*#d34/m);
+
+    const tagLink = /\.intro__tag-link\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(tagLink, '需要 .intro__tag-link 规则').not.toBe('');
+    // 与 .bit-tag--normal 的标签红一致
+    expect(tagLink).toMatch(/color:\s*#d34/);
+    // 无类名链接的悬停下划线由 global.css 提供；命中类名后在这里补回
+    expect(tagLink).toMatch(/border-bottom:\s*1px solid transparent/);
+    expect(css).toMatch(/\.intro__tag-link:hover\s*\{[^}]*border-bottom-color:\s*currentColor/);
+  });
+
+  it('首屏 sr-only h1 使用新品牌名', async () => {
+    const page = await read('src/pages/index.astro');
+
+    expect(page).toContain('<h1 class="sr-only">Versicarium</h1>');
+    expect(page).not.toContain('Astro Themes by Whono');
   });
 });

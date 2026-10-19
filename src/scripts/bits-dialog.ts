@@ -8,5 +8,8 @@ initCardDialogs({
   panelSelector: '[data-bit-dialog-panel]',
   dialogIdAttribute: 'data-bit-dialog',
   focusSelector: '.bit-dialog__identity',
-  scrollResetSelector: '.bit-dialog__content'
+  scrollResetSelector: '.bit-dialog__content',
+  /** 与 `/projects/` 弹窗一致：内容淡入淡出，关闭时弹窗本体与遮罩同步淡出。 */
+  animatePanels: true,
+  panelMotionSelector: '.bit-dialog__inner'
 });

@@ -42,6 +42,20 @@
   margin-left: 0.12em;
 }
 
+/*
+ * 首页导语的 #标签 入口与站内标签同色（.bit-tag--normal 的 #d34）。
+ * 用专用类而不是改全局 a：无类名链接的悬停表现由 global.css 提供，
+ * 命中类名后要在这里补回相同的 hover 下划线。
+ */
+.intro__tag-link {
+  color: #d34;
+  border-bottom: 1px solid transparent;
+}
+
+.intro__tag-link:hover {
+  border-bottom-color: currentColor;
+}
+
 .intro--serif {
   font-family: var(--font-readable);
 }

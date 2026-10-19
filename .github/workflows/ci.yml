@@ -42,6 +42,7 @@ jobs:
       # npm run ci 等价于 npm run verify，已包含构建、测试与全部产物守卫。
       # astro.config.mjs 只在 SITE_URL 非空时注册 sitemap 集成，而产物守卫会断言
       # dist/sitemap-*.xml 存在，因此 CI 必须提供它。
+      # SITE_URL 只给仓库 owner 的 github.io origin；项目页子路径由构建时的 base 决定。
       - name: Run verification
         run: npm run ci
         env:

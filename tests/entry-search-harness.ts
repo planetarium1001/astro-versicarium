@@ -29,6 +29,32 @@ export const pageItems = () => Array.from(document.querySelectorAll<HTMLElement>
 export const visibleItems = () => pageItems().filter((el) => !el.hidden);
 export const visibleSlugs = () => visibleItems().map((el) => (el.dataset.slug ?? '').trim());
 
+/**
+ * demo 内容重建后 `/bits/` 的条目都落在同一年，年份胶囊的收敛与「全部」复位需要至少两个年份。
+ * 这里沿用真实页面：把最后一条条目的年份改到更早一年，并补上对应胶囊，之后再初始化脚本。
+ * 条目 slug 仍在 index.json 里，筛选逻辑与真实页面一致。
+ */
+export const seedEarlierBitsYear = (year = 2025) => {
+  const items = pageItems();
+  expect(items.length, '需要至少两条 bits 条目才能派生更早年份').toBeGreaterThan(1);
+  items.at(-1)!.dataset.entryYear = String(year);
+
+  const bar = document.querySelector<HTMLElement>('[data-bits-year-bar]');
+  expect(bar, '需要年份胶囊条').not.toBeNull();
+
+  const pill = document.createElement('button');
+  pill.type = 'button';
+  pill.className = 'scope-pills__item';
+  pill.dataset.bitsYearItem = '';
+  pill.dataset.bitsYear = String(year);
+  pill.setAttribute('aria-label', `筛选 ${year} 年动态`);
+  pill.setAttribute('aria-pressed', 'false');
+  pill.textContent = String(year);
+  bar!.append(pill);
+
+  return String(year);
+};
+
 export const tagButtons = () => Array.from(document.querySelectorAll<HTMLElement>('[data-entry-tag-key]'));
 export const tagButton = (key: string) =>
   tagButtons().find((el) => (el.dataset.entryTagKey ?? '').trim() === key) ?? null;

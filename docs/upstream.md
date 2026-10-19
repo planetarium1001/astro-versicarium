@@ -1,6 +1,8 @@
 # 与上游的关系
 
-Astro Whono Tweaked 基于 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）改造。仓库保留上游的初始提交、双栏壳层、后台框架、Markdown 扩展与字体子集流程，并在此基础上调整内容模型、后台能力与更新方式。上游的 MIT 许可证与版权声明保留在 [../LICENSE](../LICENSE)。
+Versicarium（垄录）基于 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）改造。上游首次提交于 2026-01-17；本项目在 2026-10-02 从上游建立自己的基线，保留双栏壳层、后台框架、Markdown 扩展与字体子集流程，并在此基础上调整内容模型、后台能力与更新方式。上游的 MIT 许可证与版权声明保留在 [../LICENSE](../LICENSE)。
+
+上游是主题的起点，不是本项目的旧版本。仓库保留上游结构与许可，品牌、内容模型、后台界面与版本流程由本项目维护。
 
 ## 相对上游的改造
 

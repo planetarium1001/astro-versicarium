@@ -1,5 +1,7 @@
 # 站点图标
 
+仓库自带 Versicarium 的几何标记作为默认图标，可按站点需要替换。图标由 `site.json` 的三个槽位与生成脚本共同决定。
+
 ## 槽位
 
 站点图标由 `src/data/settings/site.json` 的 `favicon` 块控制：

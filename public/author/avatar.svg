@@ -1,5 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Planetarium avatar">
-  <rect width="64" height="64" fill="#17191e" />
-  <path d="M9 16V48L21 28L32 48L43 28L55 48V16" stroke="#fffefc" stroke-width="5" stroke-linecap="square" stroke-linejoin="miter" fill="none" />
-  <rect x="44" y="11" width="8" height="8" fill="#b91c1c" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Versicarium">
+  <title>Versicarium</title>
+  <rect x="10" y="10" width="80" height="80" rx="18" fill="#1f2328"/>
+  <rect x="28" y="22" width="48" height="56" rx="4" fill="#ffffff"/>
+  <rect x="18" y="32" width="18" height="8" rx="4" fill="#1f2328"/>
+  <rect x="18" y="46" width="18" height="8" rx="4" fill="#1f2328"/>
+  <rect x="18" y="60" width="18" height="8" rx="4" fill="#1f2328"/>
+  <rect x="42" y="32" width="22" height="4" rx="2" fill="#8c959f"/>
+  <rect x="42" y="46" width="26" height="6" rx="3" fill="#0969da"/>
+  <rect x="42" y="60" width="16" height="4" rx="2" fill="#8c959f"/>
 </svg>

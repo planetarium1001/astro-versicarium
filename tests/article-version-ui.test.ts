@@ -39,7 +39,10 @@ describe('ArticleVersionNotice：版本提示合并为一行', () => {
     expect(source).toContain('该版本已归档，部分内容可能过时。');
     expect(source).toContain('article-version-notice__latest');
     expect(source).toContain('查看最新版');
-    expect(source).toContain('chevron-up');
+    const latest = /<a\b[^>]*class="article-version-notice__latest"[\s\S]*?<\/a>/.exec(source)?.[0] ?? '';
+    expect(latest, '需要「查看最新版」链接').not.toBe('');
+    // 只保留文字：箭头图标已删除，窄屏版本历史入口的 chevron-up 不受影响
+    expect(latest).not.toContain('<UiIcon');
     expect(source).toContain('article-version-notice__note');
   });
 

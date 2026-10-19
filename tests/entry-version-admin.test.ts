@@ -44,7 +44,7 @@ describe('后台：条目版本名称唯一选项', () => {
     expect(uiSection).toContain('data-entry-version-preview');
     expect(uiSection).toContain('data-entry-version-preview-variant={option.id}');
     expect(uiSection).toContain('versionNameMode={option.id}');
-    expect(uiSection).toContain('Whono Astro 主题');
+    expect(uiSection).toContain('Versicarium 主题示例');
     // 预览只用主题自身做示例，避免引入第三方项目
     expect(uiSection).not.toContain('NixOS 发布看板');
 

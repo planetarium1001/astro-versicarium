@@ -1,6 +1,7 @@
 name: pages
 
 # main 承载模板，demo 承载示例站点。部署固定在 demo 分支：
+# 示例站 astro-versicarium 发布到 https://planetarium1001.github.io/astro-versicarium/，
 # 工作流文件本身留在默认分支，因此仍可从 Actions 页面手动触发。
 on:
   push:
@@ -45,7 +46,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # 项目页部署在 /<repo>/ 子路径下：站点域名给 origin，子路径交给 base；
+      # 项目页部署在 /<repo>/ 子路径下：站点域名给 owner 的 github.io，子路径交给 base。
+      # 示例站仓库是 astro-versicarium，base 动态推导为 /astro-versicarium/。
       # 仓库名若是 <owner>.github.io（用户主页仓库），则部署在根路径。
       # 绑定自定义域名后，把这两项改成固定的域名与 `/`。
       - name: Resolve site URL and base path

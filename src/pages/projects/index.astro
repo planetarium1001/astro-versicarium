@@ -216,7 +216,7 @@ const katexStylesheetAttrs = { [MARKDOWN_MATH_STYLESHEET_DATA_ATTR]: 'true' };
 
           {/* 末尾链接组渲染在摘要下一行，与展开正文里的链接行共用同一套标记 */}
           {card.links.length > 0 ? (
-            <Fragment set:html={renderTrailingLinksHtml(card.links)} />
+            <Fragment set:html={renderTrailingLinksHtml(card.links, base)} />
           ) : null}
         </article>
       );

@@ -1,5 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Astro Whono Tweaked">
-  <rect width="64" height="64" rx="11" fill="#17191e" />
-  <path d="M9 16V48L21 28L32 48L43 28L55 48V16" stroke="#fffefc" stroke-width="5" stroke-linecap="square" stroke-linejoin="miter" fill="none" />
-  <rect x="49" y="7" width="8" height="8" fill="#b91c1c" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Versicarium">
+  <title>Versicarium</title>
+  <defs>
+    <mask id="punch">
+      <rect width="100" height="100" fill="#ffffff"/>
+      <rect x="14" y="31.5" width="22" height="9" rx="4.5" fill="#000000"/>
+      <rect x="14" y="45.5" width="22" height="9" rx="4.5" fill="#000000"/>
+      <rect x="14" y="59.5" width="22" height="9" rx="4.5" fill="#000000"/>
+    </mask>
+  </defs>
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .shell { fill: #c9d1d9; }
+      .paper { fill: #0d1117; }
+      .line { fill: #30363d; }
+      .active { fill: #58a6ff; }
+    }
+  </style>
+  <rect class="shell" x="10" y="10" width="80" height="80" rx="18" fill="#1f2328" mask="url(#punch)"/>
+  <rect class="paper" x="30" y="20" width="46" height="60" rx="5" fill="#ffffff"/>
+  <rect class="line" x="44" y="34" width="20" height="4" rx="2" fill="#8c959f"/>
+  <rect class="active" x="44" y="45.5" width="24" height="9" rx="4.5" fill="#0969da"/>
+  <rect class="line" x="44" y="62" width="14" height="4" rx="2" fill="#8c959f"/>
 </svg>

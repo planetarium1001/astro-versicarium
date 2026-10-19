@@ -76,6 +76,37 @@ const clickOption = (value: string) => {
 const subtitleText = () =>
   document.querySelector<HTMLElement>('.page-subtitle__text')?.textContent?.trim() ?? '';
 
+const SECOND_PROJECT = '上游参考';
+
+/**
+ * demo 内容重建后 `/devlog/` 只有 Versicarium 一个项目；项目筛选收敛、单选复位与
+ * 「深链接目标被筛掉后复位」需要至少两个项目。这里沿用真实页面派生第二条项目：
+ * 把最后一条的 `data-devlog-project` 与可见项目名改掉，并在 dialog 里补对应选项。
+ */
+const seedSecondProject = () => {
+  const row = rows().at(-1)!;
+  row.dataset.devlogProject = SECOND_PROJECT;
+  const projectLabel = row.querySelector<HTMLElement>('.devlog-row__project');
+  if (projectLabel) projectLabel.textContent = SECOND_PROJECT;
+
+  const optionsRoot = dialog()!.querySelector<HTMLElement>('[data-entry-tag-options]');
+  expect(optionsRoot, '需要 tag dialog 的选项容器').not.toBeNull();
+
+  const optionEl = document.createElement('button');
+  optionEl.type = 'button';
+  optionEl.className = 'entry-tag-option';
+  optionEl.dataset.entryTagKey = SECOND_PROJECT;
+  optionEl.setAttribute('aria-pressed', 'false');
+  const labelEl = document.createElement('span');
+  labelEl.className = 'entry-tag-option__label';
+  labelEl.textContent = SECOND_PROJECT;
+  const countEl = document.createElement('span');
+  countEl.className = 'entry-tag-option__count';
+  countEl.textContent = '1';
+  optionEl.append(labelEl, countEl);
+  optionsRoot!.append(optionEl);
+};
+
 describe('/devlog/ 的「项目」筛选与行内展开', () => {
   // jsdom 不实现 scrollIntoView（抽屉在锚点命中时会调用它）——按环境缺口补桩，不改产品代码
   const originalScrollIntoView = Element.prototype.scrollIntoView;
@@ -113,6 +144,7 @@ describe('/devlog/ 的「项目」筛选与行内展开', () => {
 
   it('复用 tag dialog，取值域只有 project、没有 kind', async () => {
     await loadPage();
+    seedSecondProject();
     await importScripts();
 
     // 样式载体是 tag dialog
@@ -162,6 +194,7 @@ describe('/devlog/ 的「项目」筛选与行内展开', () => {
 
   it('选中一个项目：只剩该项目的条目，单选状态与副标题计数同步', async () => {
     await loadPage();
+    seedSecondProject();
     await importScripts();
 
     const project = projects()[0]!;
@@ -222,6 +255,7 @@ describe('/devlog/ 的「项目」筛选与行内展开', () => {
 
   it('单选语义：点同一个项目 = 回到「全部」；点「全部」也回全部', async () => {
     await loadPage();
+    seedSecondProject();
     await importScripts();
 
     const project = projects()[0]!;
@@ -241,9 +275,10 @@ describe('/devlog/ 的「项目」筛选与行内展开', () => {
   });
 
   it('?project= 首屏直接按该项目筛选（归档时间线的项目名链接会带过来）', async () => {
-    const project = projects()[projects().length - 1]!;
-    window.history.replaceState(null, '', `/devlog/?project=${encodeURIComponent(project)}`);
     await loadPage();
+    seedSecondProject();
+    const project = SECOND_PROJECT;
+    window.history.replaceState(null, '', `/devlog/?project=${encodeURIComponent(project)}`);
     await importScripts();
 
     const expected = rows()
@@ -283,6 +318,7 @@ describe('/devlog/ 的「项目」筛选与行内展开', () => {
 
   it('深链接 #<entryId> 自动展开；被当前筛选藏住时自动复位到「全部」', async () => {
     await loadPage();
+    seedSecondProject();
     await importScripts();
 
     const row = rows()[0]!;

@@ -43,7 +43,7 @@
 | `dateGranularity` | 否 | `date` 或 `datetime`，覆盖文章元信息粒度 |
 | `badge` | 否 | 标题前的纯文本角标 |
 | `series` | 否 | 系列键，小写 kebab-case；同一系列的不同版本文档共用 |
-| `versionLabel` | 否 | 版本号，例如 `1.1.0` |
+| `versionLabel` | 否 | 版本号，例如 `1.0.0` |
 | `versionName` | 否 | 版本名称，默认取标题 |
 | `versionSummary` | 否 | 版本摘要 |
 | `versionOrder` | 否 | 非负整数，同日期时的排序依据 |
@@ -100,7 +100,7 @@
 | `description` | 否 | 摘要 |
 | `draft` | 否 | 默认 `false` |
 
-`devlog` 没有 `links` 字段，外链写在正文末尾链接组。`devlog` 按项目分目录存放：`content/devlog/<projectSlug>/<entry>/index.md`。页面锚点会把目录分隔压成 `-`，例如 `#whono-theme-2026-02-05-main-demo-split`。
+`devlog` 没有 `links` 字段，外链写在正文末尾链接组。`devlog` 按项目分目录存放：`content/devlog/<projectSlug>/<entry>/index.md`。页面锚点会把目录分隔压成 `-`，例如 `#versicarium-2026-10-14-content-model-and-navigation`。
 
 `projectSlug` 依次按项目稳定 slug、任一版本文档的条目 ID、版本锚点解析；未命中时回退到 `project` 显示名，且仅在显示名唯一匹配时生效。非空但未解析的值会在构建期告警。
 
@@ -173,7 +173,7 @@ content/projects/2025-10-01-your-project/index.md      # 历史版
 ```markdown
 项目正文的最后一段。
 
-[仓库](https://github.com/planetarium1001/astro-whono-tweaked) · [文档](https://github.com/planetarium1001/astro-whono-tweaked/tree/main/docs)
+[仓库](https://github.com/planetarium1001/astro-versicarium) · [文档](https://github.com/planetarium1001/astro-versicarium/tree/main/docs)
 ```
 
 - 链接组前留一个空行，与正文分成两段。

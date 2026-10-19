@@ -428,6 +428,29 @@ a.bit-tag.tag--link:focus-visible {
 .bit-dialog::backdrop {
   background: var(--overlay-20);
   backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 500ms ease;
+}
+
+.bit-dialog[open]::backdrop {
+  opacity: 1;
+}
+
+/* 与脚本的退出动画同时长：关闭时遮罩跟着弹窗本体一起淡出。 */
+.bit-dialog[data-closing='true']::backdrop {
+  opacity: 0;
+}
+
+@starting-style {
+  .bit-dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bit-dialog::backdrop {
+    transition: none;
+  }
 }
 
 /* 内容整体在弹窗内滚动，弹窗高度随内容自适应但有上限 */

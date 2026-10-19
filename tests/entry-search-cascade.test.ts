@@ -7,6 +7,7 @@ import {
   importEntrySearch,
   loadPage,
   pageItems,
+  seedEarlierBitsYear,
   stubEntrySearchEnvironment,
   stubMatchMedia,
   tagButtons,
@@ -550,6 +551,8 @@ describe('级联动效：串行，一次只走一步', () => {
   // 按年份数值比较会正好相反。往右点一颗 = 内容向左滑出、从右侧滑入。
   it('bits：年份前进与后退的滑动方向相反（按胶囊条位置顺序）', async () => {
     await loadPage(PAGES[0]);
+    // 示例内容都在同一年；派生一个更早年份，才能构造「往前 / 往后各一颗」。
+    seedEarlierBitsYear();
     await importEntrySearch({ bitsYear: true });
 
     const slides = () => harness.containerRecords('[data-bits-browse]');

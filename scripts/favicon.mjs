@@ -95,7 +95,7 @@ const main = async () => {
 
   const title = typeof settings.title === 'string' && settings.title.trim()
     ? settings.title.trim()
-    : 'Astro Whono';
+    : 'Versicarium';
   const manifest = {
     name: title,
     short_name: title,

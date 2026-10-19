@@ -124,8 +124,10 @@ Vitest 配置在 `vitest.config.ts`，用例位于 `tests/*.test.ts`，默认 No
 - 超过 120 个字符时截断并追加稳定短哈希；
 - 标题段为空时回退 `untitled`，命中 Windows 保留设备名时追加 `-entry`。
 
-博客默认公开路径使用完整条目 ID，例如 `/blog/2026-10-01-theme-quick-start/`；frontmatter 的 `slug` 可覆盖为更短的稳定路径。`npm run new:bit` 按 `bits-YYYY-MM-DD-HHMM` 生成动态草稿，日期时间带站点时区偏移。
+博客默认公开路径使用完整条目 ID，例如 `/blog/2026-10-20-theme-quick-start/`；frontmatter 的 `slug` 可覆盖为更短的稳定路径。`npm run new:bit` 按 `bits-YYYY-MM-DD-HHMM` 生成动态草稿，日期时间带站点时区偏移。
 
-## CI
+## CI 与发布
 
-`.github/workflows/ci.yml` 在推送到 `main`、`demo` 或向两者提交 PR 时运行：按 `.nvmrc` 安装 Node，执行 `npm ci`，再以 `SITE_URL=https://planetarium1001.github.io` 运行 `npm run ci`。发布工作流同样在打包前执行 `npm run ci`；部署工作流见 [deployment.md](deployment.md)。
+`.github/workflows/ci.yml` 在推送到 `main`、`demo` 或向两者提交 PR 时运行：按 `.nvmrc` 安装 Node，执行 `npm ci`，再以 `SITE_URL=https://planetarium1001.github.io` 运行 `npm run ci`。
+
+Release Please 在推送到 `main` 时运行，维护版本号、CHANGELOG、标签与 Release；GitHub Release 发布后再由 `release.yml` 校验标签与版本一致，并打包模板附件。工作流细节见 [deployment.md](deployment.md)，版本与发布流程见 [release.md](release.md)。

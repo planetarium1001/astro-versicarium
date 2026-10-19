@@ -2,7 +2,9 @@
 
 本文件记录面向模板使用者的公共变更。版本号遵循 Semantic Versioning，日期使用 `YYYY-MM-DD`。
 
-## [1.1.0] - 2026-10-20
+## [1.0.0] - 2026-10-20
+
+首次公开预览，项目更名为 Versicarium · 垄录。上游基于 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）。
 
 ### Added
 
@@ -10,16 +12,18 @@
 - 后台资源库支持集合级共享资源、资源状态与共享目录上传。
 - 归档支持项目版本行与项目名过滤，开发日志与归档共用同一套摘要派生。
 - 文章版本界面增加版本历史入口与退出动画，项目版本弹窗支持深链与版本切换。
-- 模板发布工作流：`v*` 标签生成源码压缩包与 SHA-256 校验文件。
+- Release Please 管理版本与 CHANGELOG；Release 创建后打包模板源码压缩包与 SHA-256 校验文件。
 - 完整的开发者向示例内容：主题手册系列、项目版本、开发日志与动态。
+- Versicarium · 垄录品牌资源：logo、avatar、favicon、apple touch icon 与 hero 图。
 
 ### Changed
 
+- 项目、仓库与包名迁移到 `astro-versicarium`；示例站部署在 `https://planetarium1001.github.io/astro-versicarium/`。
+- 行文与界面文案改写为 Versicarium · 垄录口径；旧名字只保留在上游致敬与必要历史说明中。
 - `main` 作为最小模板分支，`demo` 作为完整示例站；主题更新继续按文件三方合并。
 - 条目排版统一为分类、标题与版本号的固定顺序，版本名称位置可配置。
 - 后台主题设置、内容列表、媒体资源与错误提示统一为同一套界面语言。
 - 主题文档、README 与示例内容围绕开发者使用场景重写。
-- 站点品牌资源替换为本项目自有的 SVG/PNG 资产。
 
 ### Fixed
 
@@ -33,12 +37,4 @@
 - 上游示例内容、示例图片、头像与截图。
 - 已废弃的条目格式组合器与相关后台字段。
 - 内部设计草稿、临时文档与未使用的静态资源。
-
-## [1.0.0] - 2026-09-28
-
-### Added
-
-- 首个主题版本：双栏壳层、内容集合、后台控制台、主题同步与字体子集。
-
-[1.1.0]: https://github.com/planetarium1001/astro-whono-tweaked/compare/33bbfbc...v1.1.0
-[1.0.0]: https://github.com/planetarium1001/astro-whono-tweaked/commit/33bbfbc
+- 旧的 `1.1.0` 版本记录与 `v*` 标签发布流程。

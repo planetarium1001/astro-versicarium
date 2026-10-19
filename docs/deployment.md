@@ -15,16 +15,17 @@
 | --- | --- | --- | --- |
 | `ci.yml` | push / PR 到 `main`、`demo` | `npm ci` 后以固定 `SITE_URL` 执行 `npm run ci` | `contents: read` |
 | `pages.yml` | push 到 `demo`、手动触发 | 构建并发布到 GitHub Pages | `contents: read`、`pages: write`、`id-token: write` |
-| `release.yml` | push `v*` 标签 | 校验版本、执行 `npm run ci`、生成源码 zip 与 `SHA256SUMS` | `contents: write` |
+| `release-please.yml` | push 到 `main` | 维护 release PR、版本号、CHANGELOG、标签与 GitHub Release | `contents: write`、`pull-requests: write` |
+| `release.yml` | GitHub Release 发布 | 校验标签与版本号，生成模板 zip 与 `SHA256SUMS` 并附加到 Release | `contents: write` |
 
-`ci.yml` 从 `.nvmrc` 读取 Node 版本，`SITE_URL` 为 `https://planetarium1001.github.io`。`pages.yml` 固定在 `demo` 分支检出并构建；工作流文件本身留在默认分支，因此仍可从 Actions 页面手动触发。`release.yml` 检出触发标签的提交，校验该提交位于 `main` 上，并要求标签去掉 `v` 后与 `package.json` 的 `version` 一致。
+`ci.yml` 从 `.nvmrc` 读取 Node 版本，`SITE_URL` 为 `https://planetarium1001.github.io`。`pages.yml` 固定在 `demo` 分支检出并构建；工作流文件本身留在默认分支，因此仍可从 Actions 页面手动触发。`release-please.yml` 只负责版本与 Release；`release.yml` 在 Release 发布后打包附件，不自行创建 Release。发布流程见 [release.md](release.md)。
 
 ## 构建期环境变量
 
 | 变量 | 作用 |
 | --- | --- |
 | `SITE_URL` | 站点 origin，例如 `https://planetarium1001.github.io`。用于 RSS、canonical、分享图绝对地址与 sitemap |
-| `ASTRO_WHONO_BASE_PATH` | 部署子路径，例如 `/astro-whono-tweaked/`；默认 `/` |
+| `ASTRO_WHONO_BASE_PATH` | 部署子路径，例如 `/astro-versicarium/`；默认 `/` |
 | `SITE_TIMEZONE` | IANA 时区，覆盖 `site.json` 的 `timezone`；未设置时使用 `site.json`，再回退 `Asia/Shanghai` |
 
 `SITE_URL` 应只包含 origin，不要写部署子路径，子路径交给 `ASTRO_WHONO_BASE_PATH`。为空时 RSS 回退 `https://example.invalid`，canonical 与分享图不输出，sitemap 不生成，`robots.txt` 不写 Sitemap 行；`check:prod-artifacts` 会失败。
@@ -42,6 +43,8 @@
 
 - 仓库名为 `<owner>.github.io` 时，`SITE_URL=https://<owner>.github.io`，base 为 `/`；
 - 其他仓库名时，`SITE_URL=https://<owner>.github.io`，base 为 `/<repo>/`。
+
+示例站仓库为 `planetarium1001/astro-versicarium`，因此 `SITE_URL=https://planetarium1001.github.io`、base 为 `/astro-versicarium/`，站点地址为 <https://planetarium1001.github.io/astro-versicarium/>。
 
 ## 部署自己的站点
 

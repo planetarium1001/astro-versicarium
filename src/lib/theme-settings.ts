@@ -580,18 +580,18 @@ const LEGACY_PROJECTS_TITLE = '项目';
 const LEGACY_DEVLOG_TITLE = '更新';
 const LEGACY_ABOUT_TITLE = '关于';
 const LEGACY_QUOTE = 'A minimal Astro theme\nfor blogs, notes, and docs.\nDesigned for reading,\nopen-source.';
-const LEGACY_FOOTER_START_YEAR = 2025;
+const LEGACY_FOOTER_START_YEAR = 2026;
 const LEGACY_FOOTER_SHOW_CURRENT_YEAR = true;
-const LEGACY_FOOTER_COPYRIGHT = 'Whono · Theme Demo · by cxro';
+const LEGACY_FOOTER_COPYRIGHT = 'Versicarium · 垄录 · Planetarium';
 const DEFAULT_PRESET_SOCIAL_ORDER: SiteSocialPresetOrder = {
   github: 1,
   x: 2,
   email: 3
 };
 const LEGACY_SOCIAL_LINKS: SiteSocialLinks = {
-  github: 'https://github.com/planetarium1001/astro-whono-tweaked',
+  github: 'https://github.com/planetarium1001/astro-versicarium',
   x: null,
-  email: 'Whono@linux.do',
+  email: 'me@planetarium1001.com',
   presetOrder: { ...DEFAULT_PRESET_SOCIAL_ORDER },
   custom: [],
   resolvedSocialItems: []
@@ -634,8 +634,8 @@ const cloneThemeSettingsReadDiagnostics = (
 ): ThemeSettingsReadDiagnostic[] => diagnostics.map((diagnostic) => ({ ...diagnostic }));
 
 const DEFAULT_SITE: SiteSettings = {
-  title: 'Whono',
-  description: '一个 Astro 主题的展示站：轻量、可维护、可复用。',
+  title: 'Versicarium',
+  description: '面向开发者的极简 Astro 写作主题：文章、项目版本、开发日志与动态共用同一套内容结构。',
   defaultLocale: 'zh-CN',
   timezone: DEFAULT_SITE_TIMEZONE,
   titleMaxPercent: ADMIN_SITE_TITLE_PERCENT_DEFAULT,
@@ -670,7 +670,7 @@ const DEFAULT_SITE: SiteSettings = {
 };
 
 const DEFAULT_SHELL: ShellSettings = {
-  brandTitle: 'Whono',
+  brandTitle: 'Versicarium',
   titleNarrow: null,
   quote: LEGACY_QUOTE,
   nav: cloneNavItems(LEGACY_NAV)
@@ -705,7 +705,7 @@ const DEFAULT_PAGE: PageSettings = {
     title: LEGACY_BITS_TITLE,
     subtitle: LEGACY_BITS_SUBTITLE,
     defaultAuthor: {
-      name: 'Whono',
+      name: 'Versicarium',
       avatar: 'author/avatar.svg'
     }
   },

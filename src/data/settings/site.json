@@ -1,14 +1,14 @@
 {
-  "title": "Astro Whono Tweaked",
-  "description": "面向开发者的极简 Astro 主题，用于分享技术文章、项目实践与开发日志。",
+  "title": "Versicarium",
+  "description": "面向开发者的极简 Astro 写作主题：文章、项目版本、开发日志与动态共用同一套内容结构。",
   "defaultLocale": "zh-CN",
   "timezone": "Asia/Shanghai",
   "titleMaxPercent": 50,
   "pageGapPx": 32,
   "footer": {
-    "startYear": 2025,
+    "startYear": 2026,
     "showCurrentYear": true,
-    "copyright": "Astro Whono Tweaked · Planetarium"
+    "copyright": "Versicarium · 垄录 · Planetarium"
   },
   "filings": {
     "scope": "all",
@@ -32,7 +32,7 @@
     "appleTouchIcon": "/apple-touch-icon.png"
   },
   "socialLinks": {
-    "github": "https://github.com/planetarium1001/astro-whono-tweaked",
+    "github": "https://github.com/planetarium1001/astro-versicarium",
     "x": null,
     "email": "me@planetarium1001.com",
     "presetOrder": {

@@ -142,6 +142,25 @@ describe('bits 卡片：详情弹窗', () => {
     expect(controller).not.toContain('bit-dialog');
     expect(controller).not.toContain('project-dialog');
   });
+
+  it('弹窗与 /projects/ 一致：内容淡入淡出，弹窗本体与遮罩同步淡出', async () => {
+    const [bits, css] = await Promise.all([read('src/scripts/bits-dialog.ts'), read(BIT_CARD_CSS)]);
+
+    expect(bits).toContain('animatePanels: true');
+    expect(bits).toMatch(/panelMotionSelector: '\.bit-dialog__inner'/);
+
+    const backdrop = /\.bit-dialog::backdrop \{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(backdrop).toMatch(/opacity:\s*0/);
+    expect(backdrop).toMatch(/transition:\s*opacity 500ms ease/);
+    expect(css).toMatch(/\.bit-dialog\[open\]::backdrop\s*\{[^}]*opacity:\s*1/);
+    expect(css).toMatch(/\.bit-dialog\[data-closing='true'\]::backdrop\s*\{[^}]*opacity:\s*0/);
+    expect(css).toMatch(
+      /@starting-style\s*\{\s*\.bit-dialog\[open\]::backdrop\s*\{[^}]*opacity:\s*0/
+    );
+    expect(css).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.bit-dialog::backdrop\s*\{[^}]*transition:\s*none/
+    );
+  });
 });
 
 describe('bits 卡片：标签链接', () => {
