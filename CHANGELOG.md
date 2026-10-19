@@ -2,9 +2,11 @@
 
 本文件记录面向模板使用者的公共变更。版本号遵循 Semantic Versioning，日期使用 `YYYY-MM-DD`。
 
-## [1.0.0] - 2026-10-20
+## [1.0.0-rc.1] - 2026-10-20
 
-首次公开预览，项目更名为 Versicarium · 垄录。上游基于 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）。
+首个预览候选，项目更名为 Versicarium · 垄录。稳定版 `1.0.0` 将在预览验证与文档补全后发布。上游基于 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）。
+
+本条目对应本地标签 `v1.0.0-rc.1`，尚未创建 GitHub Release。
 
 ### Added
 

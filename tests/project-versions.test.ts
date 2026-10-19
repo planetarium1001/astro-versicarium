@@ -401,11 +401,11 @@ describe('项目弹窗样式契约', () => {
     for (const [index, file] of files.entries()) {
       const source = await readSource(file);
       expect(source, file).toMatch(/^slug: versicarium$/m);
-      expect(source, file).toMatch(/^versionLabel: "?(1\.0\.0|0\.5\.0|0\.1\.0)"?$/m);
+      expect(source, file).toMatch(/^versionLabel: "?(1\.0\.0-rc\.1|0\.5\.0|0\.1\.0)"?$/m);
       expect(source, file).toMatch(/^versionOrder: [123]$/m);
       if (index === 0) {
         expect(file, '最新版目录使用稳定 slug，不带日期前缀').not.toMatch(/\d{4}-\d{2}-\d{2}/);
-        expect(source, file).toMatch(/^versionLabel: "?1\.0\.0"?$/m);
+        expect(source, file).toMatch(/^versionLabel: "?1\.0\.0-rc\.1"?$/m);
       } else {
         expect(file).toMatch(/\/\d{4}-\d{2}-\d{2}-versicarium\//);
       }

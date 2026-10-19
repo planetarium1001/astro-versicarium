@@ -43,7 +43,7 @@
 | `dateGranularity` | 否 | `date` 或 `datetime`，覆盖文章元信息粒度 |
 | `badge` | 否 | 标题前的纯文本角标 |
 | `series` | 否 | 系列键，小写 kebab-case；同一系列的不同版本文档共用 |
-| `versionLabel` | 否 | 版本号，例如 `1.0.0` |
+| `versionLabel` | 否 | 版本号，例如 `1.0.0` 或 `1.0.0-rc.1` |
 | `versionName` | 否 | 版本名称，默认取标题 |
 | `versionSummary` | 否 | 版本摘要 |
 | `versionOrder` | 否 | 非负整数，同日期时的排序依据 |
