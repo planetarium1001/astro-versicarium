@@ -91,10 +91,17 @@
   background: var(--overlay-45);
 }
 
-.lightbox-nav:hover:not([disabled]),
 .lightbox-nav:focus-visible:not([disabled]) {
   background: var(--overlay-60);
   transform: scale(1.04);
+}
+
+/* 触屏点按后 :hover 会粘住导航键的缩放与底色，悬停视觉只在非触屏输入下生效。 */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .lightbox-nav:hover:not([disabled]) {
+    background: var(--overlay-60);
+    transform: scale(1.04);
+  }
 }
 
 .lightbox-figure {
@@ -180,8 +187,11 @@
   display: inline-block;
 }
 
-.prose img[data-lightbox]:hover {
-  opacity: 0.92;
+/* 触屏点按后 :hover 会粘住图片的透明度变化，悬停反馈只在非触屏输入下生效。 */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .prose img[data-lightbox]:hover {
+    opacity: 0.92;
+  }
 }
 
 .prose [data-lightbox-trigger="true"]:focus-visible {

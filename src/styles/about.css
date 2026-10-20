@@ -93,14 +93,17 @@
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
-.friend-card:hover {
-  background: #f7f7f5;
-  border-color: #dfdcd8;
-}
+/* 触屏点按后 :hover 会一直粘在卡片上，悬停底色与边框只在非触屏输入下生效。 */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .friend-card:hover {
+    background: #f7f7f5;
+    border-color: #dfdcd8;
+  }
 
-:root[data-theme="dark"] .friend-card:hover {
-  background: #252525;
-  border-color: #3d3d3d;
+  :root[data-theme="dark"]:not([data-input="touch"]) .friend-card:hover {
+    background: #252525;
+    border-color: #3d3d3d;
+  }
 }
 
 .friend-card__avatar {
@@ -192,10 +195,12 @@
   opacity: 0.62;
 }
 
-.about-site-info__copy:hover:not(:disabled) {
-  border-color: #dfdcd8;
-  background: #f7f7f5;
-  color: var(--text);
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .about-site-info__copy:hover:not(:disabled) {
+    border-color: #dfdcd8;
+    background: #f7f7f5;
+    color: var(--text);
+  }
 }
 
 .about-site-info__copy:focus-visible {
@@ -217,9 +222,11 @@
   display: block;
 }
 
-:root[data-theme="dark"] .about-site-info__copy:hover:not(:disabled) {
-  border-color: #3d3d3d;
-  background: #252525;
+@media (hover: hover) {
+  :root[data-theme="dark"]:not([data-input="touch"]) .about-site-info__copy:hover:not(:disabled) {
+    border-color: #3d3d3d;
+    background: #252525;
+  }
 }
 
 :root[data-theme="dark"] .about-site-info__copy[data-state="copied"] {

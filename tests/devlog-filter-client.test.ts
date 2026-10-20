@@ -74,7 +74,7 @@ const clickOption = (value: string) => {
 };
 
 const subtitleText = () =>
-  document.querySelector<HTMLElement>('.page-subtitle__text')?.textContent?.trim() ?? '';
+  document.querySelector<HTMLElement>('[data-page-subtitle-count]')?.textContent?.trim() ?? '';
 
 const SECOND_PROJECT = '上游参考';
 

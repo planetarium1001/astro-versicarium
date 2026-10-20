@@ -1,10 +1,21 @@
 /* archive / blog 的标签入口、当前筛选状态与标签选择器。 */
 
+/*
+ * 描述行自适应：描述与「计数 · RSS · 标签入口」是两个 flex 项。
+ * 同一行放得下就并排；放不下时整组回退到第二行，描述留在第一行。
+ * 描述与计数组之间的「·」由脚本按实际布局补：绝对定位、不参与 flex 布局，
+ * 换行时行末与行首都不会残留分隔符（见 scripts/page-subtitle.ts）。
+ */
 .page-subtitle--entry-filters {
-  display: inline-flex;
+  /* 「·」是绝对定位、不占布局宽度，因此组间距要让出它自身的字宽，
+     再按两侧各留 0.55em（与计数组内部点一致）反推：gap = 2 * 0.55em + 点宽。 */
+  --page-subtitle-dot-width: 0.35em;
+  --page-subtitle-gap: calc(1.1em + var(--page-subtitle-dot-width));
+  display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0;
+  column-gap: var(--page-subtitle-gap);
+  row-gap: 2px;
 }
 
 .page-title-row {
@@ -104,15 +115,22 @@
   transition: color 0.16s ease;
 }
 
-.entry-tag-chip__label:hover,
 .entry-tag-chip__label:focus-visible {
   color: var(--accent);
-}
-
-.entry-tag-chip__label:focus-visible {
   outline: var(--focus-ring);
   outline-offset: var(--focus-ring-offset);
   border-radius: 3px;
+}
+
+/*
+ * 触屏点按后 :hover 会一直粘住，悬停变色只在非触屏输入下生效。
+ * 目标选择器包在 :where() 里，让门禁不改变原 :hover 的级联优先级，
+ * 后面的 :focus-visible / .is-active / [aria-pressed='true'] 仍能覆盖悬停样式。
+ */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) :where(.entry-tag-chip__label:hover) {
+    color: var(--accent);
+  }
 }
 
 /* × 无圆圈底与边框；宽度 13px，不用 padding 撑开。 */
@@ -133,10 +151,15 @@
   transition: color 0.16s ease;
 }
 
-/* hover 只变颜色，不出现圆圈底 */
-.entry-tag-chip__remove:hover,
+/* hover 只变颜色，不出现圆圈底；触屏点按后 :hover 会粘住，故只在非触屏输入下生效。 */
 .entry-tag-chip__remove:focus-visible {
   color: var(--text);
+}
+
+@media (hover: hover) {
+  :root:not([data-input="touch"]) :where(.entry-tag-chip__remove:hover) {
+    color: var(--text);
+  }
 }
 
 /* 触控热区：视觉 13px，可点高度 44px，用不占布局的覆盖层实现。
@@ -181,14 +204,17 @@
   transition: color 0.18s ease;
 }
 
-.entry-tag-op:hover,
 .entry-tag-op:focus-visible {
   color: var(--text);
-}
-
-.entry-tag-op:focus-visible {
   outline: var(--focus-ring);
   outline-offset: var(--focus-ring-offset);
+}
+
+/* 触屏点按后 :hover 会一直粘住，悬停变色只在非触屏输入下生效。 */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) :where(.entry-tag-op:hover) {
+    color: var(--text);
+  }
 }
 
 /* 「切换标签 / 清除筛选」由脚本渲染为 <button>，此处只做按钮归一化：去掉 UA 边框、底色与字体。 */
@@ -220,6 +246,42 @@
   min-height: 1.4em;
 }
 
+/* 描述可收缩并在自己的行内换行；计数组不收缩，放不下时整体换行。 */
+.page-subtitle__text {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* 「·」只在描述与计数组同行时显示。它挂在计数组的左侧、以自身中心对齐组间间距的中点，
+   因此不依赖「·」的字宽；绝对定位不占布局宽度，换行判定也不会因它抖动。 */
+.page-subtitle--entry-filters[data-meta-inline] .page-subtitle__meta::before {
+  content: "·";
+  position: absolute;
+  left: calc(var(--page-subtitle-gap) / -2);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--faint);
+  pointer-events: none;
+}
+
+.page-subtitle__meta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-height: 1.4em;
+  white-space: nowrap;
+}
+
+/* 计数组内的分隔符是生成内容，不会成为独立命中目标；它的盒区仍属于父元素，
+   父元素是链接时点击会落在该链接上，因此命中范围比纯文字宽约一个分隔符宽度。 */
+.page-subtitle__meta > * + *::before {
+  content: "·";
+  margin: 0 0.55em;
+  color: var(--faint);
+  pointer-events: none;
+}
+
 /* display: inline-flex 会压过 UA 的 [hidden] { display: none }，需显式隐藏。 */
 .page-subtitle__item[hidden],
 .page-subtitle__text[hidden],
@@ -227,32 +289,10 @@
   display: none;
 }
 
-/* 分隔符判定须基于「后面还有可见项」：:not(:last-child) 会把 hidden 的兄弟算在内，末尾留下孤立的「·」。 */
-.page-subtitle__text:has(~ .page-subtitle__item:not([hidden]))::after {
-  content: "·";
-  margin: 0 0.55em;
-  color: var(--faint);
-}
-
-/* 「·」用绝对定位 + pointer-events: none：行内 ::after 会被算进链接的点击盒子。 */
-.page-subtitle__item {
-  position: relative;
-}
-
-.page-subtitle__item:not(:last-child) {
-  margin-right: 1.1em;
-}
-
-/* 可点元素只在后面还有可见项时才画「·」 */
-.page-subtitle__item:not([hidden]):has(~ .page-subtitle__item:not([hidden]))::after {
-  content: "·";
-  position: absolute;
-  top: 50%;
-  left: 100%;
-  margin-left: 0.55em;
-  transform: translateY(-50%);
-  pointer-events: none;
-  color: var(--faint);
+.page-subtitle__count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.4em;
 }
 
 .page-subtitle__action {
@@ -524,14 +564,22 @@
   text-decoration: none;
 }
 
-.entry-tags-dialog__clear:hover,
+/*
+ * 触屏点按后 :hover 会一直粘住文字色与背景，悬停视觉只在非触屏输入下生效。
+ * 块放在 :focus-visible 规则之前：同特异性下焦点环仍由后者覆盖。
+ */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) :where(.entry-tags-dialog__clear:hover) {
+    color: var(--text);
+    background: var(--code-content-bg);
+    outline: 2px solid transparent;
+  }
+}
+
 .entry-tags-dialog__clear:focus-visible {
   color: var(--text);
   background: var(--code-content-bg);
   outline: 2px solid transparent;
-}
-
-.entry-tags-dialog__clear:focus-visible {
   outline-color: var(--accent);
   outline-offset: var(--focus-ring-offset);
 }
@@ -610,12 +658,15 @@
     transform 0.16s ease;
 }
 
-.entry-tag-option:hover {
-  color: var(--text);
-  background: var(--bg);
-  border-color: var(--faint);
-  box-shadow: 0 8px 18px -16px var(--overlay-45);
-  transform: translateY(-1px);
+/* 触屏点按后 :hover 会粘住文字色、背景、边框与位移，悬停视觉只在非触屏输入下生效。 */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) :where(.entry-tag-option:hover) {
+    color: var(--text);
+    background: var(--bg);
+    border-color: var(--faint);
+    box-shadow: 0 8px 18px -16px var(--overlay-45);
+    transform: translateY(-1px);
+  }
 }
 
 .entry-tag-option:focus-visible {
@@ -663,9 +714,11 @@
   font-variant-numeric: tabular-nums;
 }
 
-.entry-tag-option:hover .entry-tag-option__count {
-  color: var(--text);
-  background: var(--panel);
+@media (hover: hover) {
+  :root:not([data-input="touch"]) :where(.entry-tag-option:hover) .entry-tag-option__count {
+    color: var(--text);
+    background: var(--panel);
+  }
 }
 
 .entry-tag-option:focus-visible .entry-tag-option__count {
@@ -751,19 +804,13 @@
   }
 
   .page-subtitle--entry-filters {
+    /* 窄屏内部点间距收到 0.5em，组间距同步：gap = 2 * 0.5em + 点宽。 */
+    --page-subtitle-gap: calc(1em + var(--page-subtitle-dot-width));
     row-gap: 2px;
   }
 
-  .page-subtitle__text:has(~ .page-subtitle__item:not([hidden]))::after {
+  .page-subtitle__meta > * + *::before {
     margin: 0 0.5em;
-  }
-
-  .page-subtitle__item:not(:last-child) {
-    margin-right: 1em;
-  }
-
-  .page-subtitle__item:not(:last-child)::after {
-    margin-left: 0.5em;
   }
 
   .entry-tags-dialog {

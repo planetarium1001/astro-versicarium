@@ -56,6 +56,7 @@ export type AdminThemeControls = RequiredElements<{
   inputSiteTimezone: HTMLInputElement | null;
   inputSiteTitleMaxPercent: HTMLInputElement | null;
   inputSitePageGapPx: HTMLInputElement | null;
+  inputSiteRailOffsetPx: HTMLInputElement | null;
   inputPageListRssEnabled: HTMLInputElement | null;
   inputPageListRssBlog: HTMLInputElement | null;
   inputPageListRssBits: HTMLInputElement | null;
@@ -181,6 +182,7 @@ export const queryAdminThemeControls = (): AdminThemeControls | null => {
     inputSiteTimezone: byId<HTMLInputElement>('site-timezone'),
     inputSiteTitleMaxPercent: byId<HTMLInputElement>('site-title-max-percent'),
     inputSitePageGapPx: byId<HTMLInputElement>('site-page-gap-px'),
+    inputSiteRailOffsetPx: byId<HTMLInputElement>('site-rail-offset-px'),
     inputPageListRssEnabled: byId<HTMLInputElement>('page-list-rss-enabled'),
     inputPageListRssBlog: byId<HTMLInputElement>('page-list-rss-blog'),
     inputPageListRssBits: byId<HTMLInputElement>('page-list-rss-bits'),

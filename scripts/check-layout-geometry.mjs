@@ -18,7 +18,14 @@ const ROOT = process.cwd();
 const GUTTER = 15; // html { scrollbar-gutter: stable } 在桌面浏览器上的槽宽
 const TOLERANCE = 0.5;
 const MIN_RAIL_INSET = 4; // 悬浮列右缘距 初始包含块 右缘的下限，再小就贴住滚动条槽
+const MIN_HIT_CLEARANCE = 2; // 相邻 44px 热区之间至少留的净空，避免边界上互相抢点击
 const MIN_CLEARANCE = 4;
+// 窄屏浮动列右侧距离由后台设置：构建期写成 <html> 内联变量，窄屏 CSS 只允许引用该变量。
+const NARROW_RAIL_OFFSET_DEFAULT = 6;
+const NARROW_RAIL_OFFSET_MIN = 0;
+const NARROW_RAIL_OFFSET_MAX = 32;
+// 窄屏 CSS 的合法写法：var(--rail-action-offset-narrow, 6px)
+const NARROW_RAIL_VAR_RE = /^var\(\s*--rail-action-offset-narrow\s*,\s*(\d+(?:\.\d+)?)px\s*\)$/;
 
 const problems = [];
 const lines = [];
@@ -97,6 +104,36 @@ const specificity = (selector) => {
   return ids * 10000 + classes * 100 + elements;
 };
 
+/**
+ * 取出所有 `@media` 块的 prelude 与块体。
+ * 构建产物会把 `max-width: 900px` 压成 `width<=900px`，也可能把逗号分隔的查询拆成多个块，
+ * 因此按块扫描、只按语义匹配 prelude，不依赖某一种书写形式。
+ */
+const collectMediaBlocks = (css) => {
+  const blocks = [];
+  const matcher = /@media\b([^{]*)\{/g;
+  let match;
+  while ((match = matcher.exec(css))) {
+    const open = match.index + match[0].length - 1;
+    let depth = 0;
+    let close = -1;
+    for (let index = open; index < css.length; index += 1) {
+      if (css[index] === '{') depth += 1;
+      else if (css[index] === '}') {
+        depth -= 1;
+        if (depth === 0) {
+          close = index;
+          break;
+        }
+      }
+    }
+    if (close === -1) break;
+    blocks.push({ prelude: match[1].trim(), body: css.slice(open + 1, close) });
+    matcher.lastIndex = close;
+  }
+  return blocks;
+};
+
 const main = async () => {
   const sources = await collectDistStyleSources(ROOT);
   if (sources.length === 0) {
@@ -121,7 +158,7 @@ const main = async () => {
     );
     process.exit(1);
   }
-  for (const name of ['--page-inline', '--page-gap-inline']) {
+  for (const name of ['--page-inline', '--page-gap-inline', '--rail-action-offset-narrow']) {
     const value = inlineVariables.get(name);
     if (value) variables.set(name, value);
     else problems.push(`构建页面的 <html> 内联属性缺少 ${name}`);
@@ -135,6 +172,7 @@ const main = async () => {
   const contentPad = readPx('--public-content-padding-inline');
   const railOffset = readPx('--rail-action-offset');
   const railSize = readPx('--rail-action-size');
+  const tapMin = readPx('--tap-min-h');
 
   const navGap = evaluatePx(bySelector.get('.nav a')?.get('gap') ?? '', variables);
   const dot = evaluatePx(bySelector.get('.nav .dot')?.get('width') ?? '', variables);
@@ -161,7 +199,7 @@ const main = async () => {
   lines.push(
     `[check-layout-geometry] --page-inline=${O} --page-gap-inline=${pageGap} gutter=${gutter}`
     + ` sidebarPad=${sidebarPad} contentPad=${contentPad} navGap=${navGap} dot=${dot}`
-    + ` railOffset=${railOffset} railSize=${railSize}`
+    + ` railOffset=${railOffset} railSize=${railSize} tapMin=${tapMin}`
   );
 
   const requireNumber = (label, value) => {
@@ -179,6 +217,8 @@ const main = async () => {
     requireNumber('--sidebar-padding-inline', sidebarPad),
     requireNumber('--public-content-padding-inline', contentPad),
     requireNumber('--rail-action-offset', railOffset),
+    requireNumber('--rail-action-size', railSize),
+    requireNumber('--tap-min-h', tapMin),
     requireNumber('.nav a gap', navGap),
     requireNumber('.nav .dot width', dot),
     requireNumber('.shell padding-inline（起始）', shellPadStart),
@@ -192,6 +232,29 @@ const main = async () => {
     console.error('\n[check-layout-geometry] 有无法解析的取值：');
     for (const problem of problems) console.error(`  - ${problem}`);
     process.exit(1);
+  }
+
+  // 后台「窄屏浮动列右侧距离」：构建期写成 <html> 内联属性，必须落在 0–32 的整数区间。
+  const narrowRailOffset = evaluatePx(
+    variables.get('--rail-action-offset-narrow') ?? '',
+    variables
+  );
+  if (narrowRailOffset === null) {
+    // 缺失问题已在内联属性检查里报过，这里不重复。
+  } else if (
+    !Number.isInteger(narrowRailOffset)
+    || narrowRailOffset < NARROW_RAIL_OFFSET_MIN
+    || narrowRailOffset > NARROW_RAIL_OFFSET_MAX
+  ) {
+    problems.push(
+      `--rail-action-offset-narrow(${narrowRailOffset}) 必须是 `
+      + `${NARROW_RAIL_OFFSET_MIN}–${NARROW_RAIL_OFFSET_MAX} 的整数 px`
+    );
+  } else {
+    lines.push(
+      `  窄屏浮动列右侧距离 = ${narrowRailOffset}px`
+      + `（后台可配，${NARROW_RAIL_OFFSET_MIN}–${NARROW_RAIL_OFFSET_MAX}）`
+    );
   }
 
   const near = (a, b) => Math.abs(a - b) <= TOLERANCE;
@@ -279,6 +342,64 @@ const main = async () => {
     lines.push(
       `  悬浮列左缘(${floatLeftInset}) 在正文右缘(${proseRightInset}) 右侧，净空 `
       + `${(proseRightInset - floatLeftInset).toFixed(1)}px`
+    );
+  }
+
+  /**
+   * 窄屏（单列壳层，构建产物里是宽度媒体查询块）：
+   * 1) 右缘偏移必须引用后台可配的内联变量 `--rail-action-offset-narrow`，不能写死；
+   * 2) 相邻 44px 热区靠 gap 留净空，避免相切时互相抢点击。
+   * 后台设置的实际值从 dist/index.html 的 <html> 内联属性校验（0–32 整数）。
+   * 注意：44px 热区外沿仍可能压在系统手势判定区边界上，属已知残余，不在这里断言。
+   */
+  const touchBlocks = sources
+    .flatMap(({ css }) => collectMediaBlocks(css))
+    .filter(({ prelude }) => /(?:max-width\s*:\s*900px|width\s*<=\s*900px)/.test(prelude));
+  let narrowRailDeclaration = null;
+  let touchGap = null;
+  for (const { body } of touchBlocks) {
+    // 构建产物可能把 body 上的 token 规则与相邻规则合并，按整块找声明更稳；
+    // 这个媒体查询里只有窄屏公开页面会声明 --rail-action-offset。
+    const offsetValue = /--rail-action-offset\s*:\s*([^;}]+)/.exec(body)?.[1]?.trim() ?? null;
+    if (offsetValue !== null) narrowRailDeclaration = offsetValue;
+
+    const stackRule = /\.float-stack\s*\{([^}]*)\}/.exec(body)?.[1] ?? '';
+    const gapValue = evaluatePx(/(?:^|;)\s*gap\s*:\s*([^;}]+)/.exec(stackRule)?.[1] ?? '', variables);
+    if (gapValue !== null) touchGap = gapValue;
+  }
+
+  const narrowRailFallback = narrowRailDeclaration === null
+    ? null
+    : NARROW_RAIL_VAR_RE.exec(narrowRailDeclaration)?.[1] ?? null;
+  if (narrowRailDeclaration === null) {
+    problems.push(
+      '窄屏缺少 --rail-action-offset 覆盖：应引用构建期内联变量 --rail-action-offset-narrow'
+    );
+  } else if (narrowRailFallback === null) {
+    problems.push(
+      `窄屏 --rail-action-offset 必须写成 var(--rail-action-offset-narrow, `
+      + `${NARROW_RAIL_OFFSET_DEFAULT}px)，实际为 \`${narrowRailDeclaration}\``
+    );
+  } else if (Number(narrowRailFallback) !== NARROW_RAIL_OFFSET_DEFAULT) {
+    problems.push(
+      `内联变量的缺省值必须与桌面默认 ${NARROW_RAIL_OFFSET_DEFAULT}px 一致，`
+      + `实际为 ${narrowRailFallback}px`
+    );
+  } else {
+    lines.push(`  窄屏 --rail-action-offset = var(--rail-action-offset-narrow, ${narrowRailFallback}px)`);
+  }
+
+  if (touchGap === null) {
+    problems.push('窄屏缺少 .float-stack gap 覆盖：无法保证相邻 44px 热区不互相抢点击');
+  } else if (railSize + touchGap < tapMin + MIN_HIT_CLEARANCE - TOLERANCE) {
+    problems.push(
+      `窄屏相邻热区中心距(${railSize + touchGap}px) 不足：需要 ${tapMin}px 热区 + `
+      + `${MIN_HIT_CLEARANCE}px 净空（--rail-action-size ${railSize} + gap ${touchGap}）`
+    );
+  } else {
+    lines.push(
+      `  窄屏相邻热区中心距 ${railSize + touchGap}px = ${tapMin}px 热区 + `
+      + `${(railSize + touchGap - tapMin).toFixed(1)}px 净空`
     );
   }
 

@@ -38,7 +38,8 @@ const blogCount = rows.filter((row) => row.kind === 'blog').length;
 const projectRows = rows.filter((row) => row.kind === 'projects');
 const projectCount = projectRows.length;
 const devlogCount = rows.filter((row) => row.kind === 'devlog').length;
-const subtitleText = joinPageSubtitleText(page.archive.subtitle, `共 ${totalCount} 篇内容`);
+const subtitleText = joinPageSubtitleText(page.archive.subtitle);
+const countText = `共 ${totalCount} 篇内容`;
 const pageDescription = joinPageSubtitleText(
   `${pageTitleText}列表`,
   page.archive.subtitle,
@@ -81,6 +82,7 @@ const tagPayload = { blog: blogTags, projects: projectTags, devlog: devlogTags, 
     <TagFilterHeader
       pageTitleText={pageTitleText}
       subtitleText={subtitleText}
+      countText={countText}
       rssHref={withBase('/blog/rss.xml')}
       pickerHref="#archive-timeline"
       fallbackListId="archive-timeline"

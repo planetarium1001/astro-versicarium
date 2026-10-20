@@ -57,6 +57,37 @@ describe('entry-search 客户端行为', () => {
     expect(visibleItems().length).toBe(pageItems().length);
   });
 
+  it.each(PAGES)('$name：描述与计数组分开渲染（窄屏放不下时整组回退第二行的前提）', async (page) => {
+    await loadPage(page);
+    const subtitle = document.querySelector<HTMLElement>('.page-subtitle--entry-filters');
+    const text = subtitle?.querySelector<HTMLElement>('.page-subtitle__text');
+    const meta = subtitle?.querySelector<HTMLElement>('.page-subtitle__meta');
+    const count = subtitle?.querySelector<HTMLElement>('[data-page-subtitle-count]');
+    expect(subtitle, '页头需要描述行容器').not.toBeNull();
+    expect(text, '描述行需要描述文本').not.toBeNull();
+    expect(meta, '描述行需要计数组').not.toBeNull();
+    expect(count, '计数组需要计数元素').not.toBeNull();
+    // 计数不在描述文本里：换行后描述行末尾不会有「共 N 篇」或残留分隔符
+    expect(text!.textContent ?? '').not.toContain('共');
+    expect((text!.textContent ?? '').trim().endsWith('·')).toBe(false);
+    expect((count!.textContent ?? '').trim()).toMatch(/^共 \d+ (篇|条)/);
+    // 计数、RSS、标签入口同属一个不换行的整体
+    expect(meta!.contains(count!)).toBe(true);
+    expect(meta!.querySelector('.page-subtitle__link, [data-entry-tag-trigger]')).not.toBeNull();
+  });
+
+  it('bits：标签筛选后计数保留「动态」后缀', async () => {
+    await loadPage(PAGES[0]);
+    await importEntrySearch();
+    const key = (tagButtons()[0]?.dataset.entryTagKey ?? '').trim();
+    expect(key, '需要至少一个标签').not.toBe('');
+    await clickTag(key);
+    await vi.waitFor(() => {
+      const count = document.querySelector<HTMLElement>('[data-page-subtitle-count]')?.textContent ?? '';
+      expect(count).toMatch(/^共 \d+ 条动态$/);
+    });
+  });
+
   it.each(PAGES)('$name：点击一个标签后只剩命中条目', async (page) => {
     const { indexItems } = await loadPage(page);
     await importEntrySearch();
@@ -182,7 +213,7 @@ describe('entry-search 客户端行为', () => {
     devlogPill!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
 
     await vi.waitFor(() => {
-      const subtitle = document.querySelector<HTMLElement>('.page-subtitle__text')?.textContent ?? '';
+      const subtitle = document.querySelector<HTMLElement>('[data-page-subtitle-count]')?.textContent ?? '';
       expect(subtitle).toContain(`共 ${devlogCount} 条内容`);
     });
   });

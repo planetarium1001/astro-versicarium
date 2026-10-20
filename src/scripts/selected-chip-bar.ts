@@ -214,29 +214,43 @@ export const unmountSelectedChipBar = (host: SelectedChipHost): HTMLElement | nu
   return existing;
 };
 
-/** 副标题里的「共 N 篇 / 条」及其后的限定词。 */
-const SUBTITLE_COUNT_RE = /共\s*\d+\s*(?:篇|条)(内容|絮语|动态|文章|更新)?/;
+/** 计数元素里的「共 N 篇 / 条」原文及其限定词（如 `内容` / `更新`）。 */
+const SUBTITLE_COUNT_RE = /^共\s*\d+\s*(篇|条)(.*)$/;
 
-/** 刷新副标题里的「共 N 篇 / 条」；`count` 为 null 时恢复模板原文。 */
+/**
+ * 刷新副标题里的计数（`共 N 篇`）；`count` 为 null 时恢复计数原文。
+ * 计数与描述分开渲染：窄屏放不下时描述留在第一行，计数、RSS 与标签入口
+ * 整体回退到第二行（布局见 `entry-tags.css` 的 `.page-subtitle--entry-filters`）。
+ */
 export const syncSubtitleCount = (
-  textEl: HTMLElement | null,
+  countEl: HTMLElement | null,
   template: string,
   count: number | null,
-  { defaultUnit, keep, unit: forcedUnit }: { defaultUnit: '篇' | '条'; keep?: string; unit?: '篇' | '条' }
+  {
+    defaultUnit,
+    keep,
+    unit: forcedUnit
+  }: {
+    defaultUnit: '篇' | '条';
+    /** 计数后缀里保留的限定词；传多个时按模板实际后缀匹配（如「内容」「动态」）。 */
+    keep?: string | readonly string[];
+    unit?: '篇' | '条';
+  }
 ): void => {
-  if (!textEl || !template) return;
+  if (!countEl) return;
   if (count === null) {
-    textEl.textContent = template;
+    countEl.textContent = template;
     return;
   }
-  const match = SUBTITLE_COUNT_RE.exec(template);
+  const match = SUBTITLE_COUNT_RE.exec(template.trim());
   if (!match) {
-    textEl.textContent = `共 ${count} ${defaultUnit}`;
+    countEl.textContent = `共 ${count} ${defaultUnit}`;
     return;
   }
-  const unit = forcedUnit ?? (match[0].includes('条') ? '条' : '篇');
-  const trailing = match[1] === keep ? match[1] : '';
-  textEl.textContent = template.replace(SUBTITLE_COUNT_RE, `共 ${count} ${unit}${trailing}`);
+  const unit = forcedUnit ?? (match[1] === '条' ? '条' : '篇');
+  const keepList = typeof keep === 'string' ? [keep] : (keep ?? []);
+  const trailing = keepList.includes(match[2] ?? '') ? (match[2] ?? '') : '';
+  countEl.textContent = `共 ${count} ${unit}${trailing}`;
 };
 
 /** 页头搜索面板的开合：同步 `is-open`、`aria-expanded` / `aria-hidden` 与输入框的 Tab 可达性。 */

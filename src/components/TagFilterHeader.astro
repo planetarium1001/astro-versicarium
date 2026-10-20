@@ -1,5 +1,6 @@
 ---
 import UiIcon from './UiIcon.astro';
+import PageSubtitle from './PageSubtitle.astro';
 
 type TagOption = {
   count: number;
@@ -24,6 +25,7 @@ const {
   showRss = true,
   showSearch = true,
   subtitleText = null,
+  countText = null,
   tagOptions = []
 } = Astro.props as {
   /** 传值时在选项列表最前面渲染一个「全部」选项（key 为空串），供单选筛选使用。 */
@@ -46,7 +48,10 @@ const {
   showRss?: boolean;
   /** `/bits/` 自带工具栏搜索，页头搜索重复且会再请求一次 `index.json`，那里传 false。 */
   showSearch?: boolean;
+  /** 描述文案；与 `countText` 分开渲染，窄屏放不下时整行回退两行。 */
   subtitleText?: string | null;
+  /** 计数文案（`共 N 篇`）；客户端筛选只改这一处。 */
+  countText?: string | null;
   tagOptions?: TagOption[];
 };
 
@@ -61,8 +66,7 @@ const tagTriggerText = `#${itemNoun}`;
     <div class="page-title-row">
       <h1 class="page-title">{pageTitleText}</h1>
     </div>
-    <span class:list={['page-subtitle', 'page-subtitle--entry-filters']}>
-      {subtitleText ? <span class="page-subtitle__text">{subtitleText}</span> : null}
+    <PageSubtitle subtitleText={subtitleText} countText={countText}>
       {showRss ? <a class="page-subtitle__link page-subtitle__item" href={rssHref}>RSS</a> : null}
       {hasTagEntry ? (
         <a
@@ -76,7 +80,7 @@ const tagTriggerText = `#${itemNoun}`;
           {tagTriggerText}
         </a>
       ) : null}
-    </span>
+    </PageSubtitle>
   </div>
   <div class="page-actions">
     {showSearch ? (

@@ -63,9 +63,12 @@
   transform-origin: right center;
 }
 
-.sidebar__title:hover {
-  transform: scale(1.05);
-  border-bottom-color: transparent;
+/* 触屏点按后 :hover 会一直粘住，缩放类悬停视觉只在非触屏输入下生效。 */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .sidebar__title:hover {
+    transform: scale(1.05);
+    border-bottom-color: transparent;
+  }
 }
 
 .sidebar__title-text {
@@ -137,9 +140,16 @@
   transition: transform 0.2s ease;
 }
 
-.nav a:hover {
-  transform: scale(1.05);
-  border-bottom-color: transparent;
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .nav a:hover {
+    transform: scale(1.05);
+    border-bottom-color: transparent;
+  }
+}
+
+/* 触屏点按的即时反馈由 :active 承担：去掉浏览器默认高亮后，点按时文字淡化一档。 */
+.nav a:active {
+  opacity: 0.6;
 }
 
 .nav a[aria-current="page"] {
@@ -291,8 +301,10 @@
   color: var(--faint);
 }
 
-.site-footer__filing:hover {
-  color: var(--muted);
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .site-footer__filing:hover {
+    color: var(--muted);
+  }
 }
 
 .site-footer__filing-icon {
@@ -413,10 +425,13 @@
   transition: color 0.2s ease, background 0.2s ease;
 }
 
-.page-header .icon-link:hover {
-  color: var(--text);
-  background: var(--panel);
-  border-bottom: 0;
+/* 悬停只改背景：触屏点按后 :hover 粘住会留下整块高亮，故按输入模态门禁。 */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .page-header .icon-link:hover {
+    color: var(--text);
+    background: var(--panel);
+    border-bottom: 0;
+  }
 }
 
 .page-header .icon-link:focus-visible {
@@ -448,9 +463,14 @@
   color: currentColor;
 }
 
-.page-header .page-subtitle .page-subtitle__link:hover,
 .page-header .page-subtitle .page-subtitle__link:focus-visible {
   color: var(--text);
+}
+
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .page-header .page-subtitle .page-subtitle__link:hover {
+    color: var(--text);
+  }
 }
 
 .page-subtitle {
@@ -514,11 +534,18 @@
   transition: color 160ms ease;
 }
 
-.prev-next__link:hover .prev-next__title,
 .prev-next__link:focus-visible .prev-next__title {
   color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .prev-next__link:hover .prev-next__title {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
 }
 
 /* 窄屏：左右各占一行，下一篇继续右对齐 */
@@ -1032,6 +1059,12 @@ body.admin-page .sidebar-actions .icon-button[data-tooltip]::after {
 @media (max-width: 900px) {
   :where(body:not(.admin-page)) .shell {
     grid-template-columns: 1fr;
+    /**
+     * 单列壳层的宽度上限用 100%（初始包含块）而不是 100vw：vw 在移动端不含滚动条占位，
+     * 反而会把壳层推出视口。任何内容的最小内容宽度都不该把壳层推宽——一旦推宽，
+     * 移动端浏览器会缩放到能容纳内容，固定定位的浮动列随之落到可视区外。
+     */
+    max-width: 100%;
   }
 
   :where(body:not(.admin-page)) .divider {
@@ -1099,19 +1132,21 @@ body.admin-page .sidebar-actions .icon-button[data-tooltip]::after {
     width: 100%;
   }
 
+  /**
+   * 窄屏导航用普通文字链接外观：去掉 999px 胶囊圆角。部分 Android/厂商内核点按时仍会画
+   * UA 焦点框或点按高亮，矩形细线远不如半圆醒目；触控高度仍由 min-height 保证，
+   * 当前页仍由下方 [aria-current] 规则画下划线。
+   */
   :where(body:not(.admin-page)) .nav a {
     justify-content: center;
     padding: 6px 8px;
     min-height: var(--tap-min-h);
-    border-radius: 999px;
-    transform-origin: left center;
   }
 
-  :where(body:not(.admin-page)) .nav a[aria-current="page"] {
-    text-decoration: underline;
-    text-underline-offset: 6px;
-    text-decoration-thickness: 2px;
-  }
+  /*
+   * 窄屏当前页下划线沿用桌面档的粗细与 offset：之前单独加粗到 2px、offset 6px，
+   * 与横屏观感不一致；同一份文本下划线在不同宽度下应保持同样的粗细与位置。
+   */
 
   :where(body:not(.admin-page)) .nav .dot,
   :where(body:not(.admin-page)) .nav .nav-ornament {
@@ -1258,11 +1293,18 @@ body.admin-page .sidebar-actions .icon-button[data-tooltip]::after {
   cursor: pointer;
 }
 
-.pagination__link:hover:not(:disabled),
 .pagination__link:focus-visible {
   color: var(--text);
   text-decoration: underline;
   text-underline-offset: 4px;
+}
+
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .pagination__link:hover:not(:disabled) {
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
 }
 
 .pagination__link:focus-visible {
@@ -1379,21 +1421,75 @@ body.admin-page .sidebar-actions .icon-button[data-tooltip]::after {
   transform: translate(-50%, 0);
 }
 
-.icon-button:hover {
-  color: var(--text);
+/**
+ * 窄屏顶栏贴页面顶部，上方空间不足：提示改到按钮下方，箭头随之翻转。
+ * 水平锚点必须同时改——按钮靠右，居中 + nowrap 会让长文案（主题按钮的动态标签）
+ * 右半段伸出视口；绝对定位的盒子即使 opacity 为 0 也计入 scrollWidth，
+ * 这正是窄屏能左右平移、右侧多出一块空白的成因。右缘对齐按钮，再用宽度上限兜住换行。
+ * 只作用于公开站点布局：后台窄屏侧栏是竖向 rail，提示方向另有约定。
+ */
+@media (max-width: 900px) {
+  :where(body:not(.admin-page)) .sidebar-actions .icon-button[data-tooltip]::after {
+    top: calc(100% + 8px);
+    bottom: auto;
+    left: auto;
+    right: 0;
+    width: max-content;
+    /* 两侧各留一个正文内边距，再收 24px 避开按钮与安全区 */
+    max-width: calc(100vw - 2 * var(--pad-x) - 24px);
+    white-space: normal;
+    text-align: center;
+    transform: translateY(-4px);
+  }
+
+  :where(body:not(.admin-page)) .sidebar-actions .icon-button[data-tooltip]::before {
+    /* 气泡右缘对齐按钮，箭头仍锚在按钮中心 */
+    left: 50%;
+    top: 100%;
+    bottom: auto;
+    transform: translate(-50%, -2px);
+    border-top-color: transparent;
+    border-bottom-color: var(--panel);
+  }
+
+  :where(body:not(.admin-page)) .sidebar-actions .icon-button[data-tooltip]:is(:hover, :focus-visible)::after {
+    transform: translateY(0);
+  }
+
+  :where(body:not(.admin-page)) .sidebar-actions .icon-button[data-tooltip]:is(:hover, :focus-visible)::before {
+    transform: translate(-50%, 0);
+  }
 }
 
-.icon-button:hover .icon {
-  transform: scale(1.06);
+/**
+ * 触屏模态下关掉「悬停」触发的提示：点按后浏览器会让 :hover 一直粘在按钮上，
+ * 提示会永久挂在页面上。媒体查询挡不住这种设备——它可能把指针上报成 fine，
+ * (hover: none) 不命中，因此以 <html data-input> 为准（见 scripts/input-modality.ts）。
+ * 只覆盖 :hover 一支，键盘 :focus-visible 的提示与焦点环保持不变。
+ */
+:root[data-input="touch"] .sidebar-actions .icon-button[data-tooltip]:hover::after,
+:root[data-input="touch"] .sidebar-actions .icon-button[data-tooltip]:hover::before {
+  opacity: 0;
+}
+
+/* 悬停颜色与缩放只在非触屏输入下生效：触屏点按后 :hover 粘住会像“选中”。 */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .icon-button:hover {
+    color: var(--text);
+  }
+
+  :root:not([data-input="touch"]) .icon-button:hover .icon {
+    transform: scale(1.06);
+  }
+
+  :root:not([data-input="touch"]) .theme-toggle:hover .icon {
+    transform: rotate(20deg);
+  }
 }
 
 /* 主题切换按钮 */
 .theme-toggle {
   align-self: center;
-}
-
-.theme-toggle:hover .icon {
-  transform: rotate(20deg);
 }
 
 .theme-toggle:active .icon {
@@ -1477,7 +1573,10 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
   /**
    * 右缘距视口初始包含块右缘的统一偏移（浮动列按钮与目录把手共用，保证同一条竖线）。
    * position: fixed 相对初始包含块，正文右缘已含壳层内边距，偏移只定义这一份；
-   * 6px 使按钮贴住滚动条槽，与正文之间留 6px 净空。相交判定见 check-layout-geometry.mjs。
+   * 6px 使按钮贴住滚动条槽，与正文之间留 6px 净空。这是桌面值；
+   * 窄屏公开页面由 body 上的 --rail-action-offset 覆盖成后台可配值（见文件末尾宽度断点）。
+   * 44px 覆盖层比视觉按钮每侧外扩 5px，热区外沿仍可能压在系统手势判定区边界上，属已知残余。
+   * 相交判定见 check-layout-geometry.mjs。
    */
   --rail-action-offset: 6px;
 }
@@ -1513,12 +1612,21 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
   align-items: center;
   justify-content: center;
   transition: color 0.18s ease, border-color 0.18s ease;
+  /**
+   * 触摸路径上禁用长按选择与系统呼出菜单：华为 ArkWeb 等内核对可选中内容会先进入
+   * 长按/选择判定，首次点按可能被吞掉（表现为「点一下没反应，点几次才行」）。
+   * 按钮只有图标、没有可复制文本，禁用选择不影响信息获取。
+   */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /**
  * 触控热区：视觉 34px，可点 44px，用不占布局的覆盖层实现，不为热区撑大圆形按钮。
- * 相邻按钮中心距 = 34px + gap(10px) = 44px，热区恰好相接、互不重叠；
- * check-touch-targets 按本伪元素判定有效触控尺寸。
+ * 热区以视觉按钮为中心：44px 覆盖层比 34px 视觉按钮每侧外扩 5px。
+ * 桌面相邻中心距 = 34px + gap(10px) = 44px，恰好相切；窄屏 gap 收到 12px 后留 2px 净空，
+ * 避免相邻热区在边界上互相抢点击。check-touch-targets 按本伪元素判定有效触控尺寸。
  */
 .float-stack__button::before {
   content: '';
@@ -1534,9 +1642,34 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
   display: none;
 }
 
-.float-stack__button:hover {
+/**
+ * 悬停视觉只在「非触屏输入」下生效：触屏点按后浏览器会让 :hover 一直粘在按钮上，
+ * 按钮会长期显示成「已选中」。媒体查询不足以判定——上报 hover: hover / pointer: fine 的
+ * 触屏设备照样命中 (hover: hover)，因此以 <html data-input> 为准（见 scripts/input-modality.ts）。
+ * 触屏的即时反馈交给 :active，真实状态交给 aria-pressed。
+ */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .float-stack__button:hover {
+    color: var(--text);
+    border-color: var(--muted);
+  }
+}
+
+.float-stack__button:active {
   color: var(--text);
   border-color: var(--muted);
+}
+
+/* 阅读模式开启是真实状态，与悬停同级的视觉表达 */
+.float-stack__button[aria-pressed="true"] {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+/* 键盘焦点环；触屏点按产生的描边由 global.css 的触屏模态压制规则统一关闭 */
+.float-stack__button:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .float-stack__button[aria-disabled="true"] {
@@ -1557,6 +1690,41 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
 @media (prefers-reduced-motion: reduce) {
   .float-stack__button {
     transition: none;
+  }
+}
+
+/**
+ * 相邻 44px 热区原来恰好相切（中心距 34px + 10px = 44px），边界上会互相抢点击；
+ * 窄屏放宽到 12px 后中心距 46px、净空 2px，这是触屏点按变可靠的真正原因。
+ * 视觉间距与桌面保持同一 token（6px，真机确认 24px 太靠内），不再整体内移；
+ * 44px 热区外沿（视觉 34px 之外的 5px 透明外溢）仍可能压在系统手势判定区边界上，属已知残余。
+ * 这里不用 :where() 降特异性：首页内联的首屏快照在 global.css 之后输出，
+ * 快照里 `.float-stack { gap: 10px }` 会压过同特异性规则，必须保持更高特异性才能与其他页面一致；
+ * 快照的桌面几何断言由 check-home-critical-css.mjs 单独负责。
+ */
+@media (max-width: 900px) {
+  /**
+   * 窄屏浮动列到右缘的距离由后台「站点设置 → 窄屏浮动列右侧距离」控制
+   * （`<html>` 内联的 --rail-action-offset-narrow，0–32px，默认 6px），
+   * 供使用者绕开部分浏览器（华为 ArkWeb）占用的右侧滚动条判定区；
+   * 桌面仍用 :root 的 6px，后台页面（body.admin-page）不受影响。
+   */
+  body:not(.admin-page) {
+    --rail-action-offset: var(--rail-action-offset-narrow, 6px);
+  }
+
+  body:not(.admin-page) .float-stack {
+    gap: 12px;
+  }
+
+  /**
+   * 44px 热区整体向内侧（左）偏 5px，右缘与视觉按钮右缘对齐：
+   * 总宽仍是 44px、相邻热区净空也不变，但去掉了一段朝视口右缘伸出的不可见热区。
+   * 华为浏览器（ArkWeb）的右侧边缘返回手势判定区比 Chrome 大，贴边的额外热区
+   * 只会让触摸起点更容易被系统手势接管；向内侧收后，用户点在按钮左侧也能命中。
+   */
+  body:not(.admin-page) .float-stack__button::before {
+    transform: translateX(-5px);
   }
 }
 

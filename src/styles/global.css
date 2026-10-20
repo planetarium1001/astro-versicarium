@@ -221,20 +221,58 @@ body {
 
 html {
   /**
-   * 兜住多余的横向溢出：窄屏一旦出现横向滚动，浏览器会缩放到能容纳内容，
-   * 固定定位的浮动列随之被推到可视区外。clip 不建立滚动容器，桌面端 sticky 侧栏不受影响。
+   * 根元素上的横向裁剪：保持初始包含块不被横向撑开，桌面端 sticky 侧栏不受影响。
+   * 注意它单独并不足以把布局视口压回设备宽度——真正约束 scrollWidth 的是下面 body 那条，
+   * 但 html 必须同时为 clip：html 为 visible 时 body 的 clip 会被绕过（实测）。
    */
   overflow-x: clip;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  /* 固定滚动条槽位：页面高度变化时可用宽度不变，避免壳层重新居中导致整页横跳 */
-  scrollbar-gutter: stable;
 }
 
-/* 老版本 Safari 无 scrollbar-gutter：退化为常驻滚动条，宽度同样保持稳定 */
-@supports not (scrollbar-gutter: stable) {
+/**
+ * 窄屏兜底落在 body 上：根元素（html）的 overflow 不约束初始包含块，只有 body 上的裁剪
+ * 才把布局视口压回设备宽度。窄屏没有 sticky 侧栏（≤900px 时 .sidebar 是 static），
+ * 因此可以安全用 body 承接；桌面若给 body 加 overflow 会破坏 sticky，故限定在窄屏。
+ * 放在 body:not(.admin-page) 上，后台窄屏保持自己的滚动策略。
+ */
+@media (max-width: 900px) {
+  body:not(.admin-page) {
+    overflow-x: clip;
+  }
+}
+
+/* 不支持 overflow: clip 的内核退化为 hidden：整页同样不能被横向拖动 */
+@supports not (overflow: clip) {
   html {
-    overflow-y: scroll;
+    overflow-x: hidden;
+  }
+
+  @media (max-width: 900px) {
+    body:not(.admin-page) {
+      overflow-x: hidden;
+    }
+  }
+}
+
+/**
+ * 滚动条槽位只对桌面双栏壳层有意义：壳层居中，页面高度变化引起的槽位增减会让整页横跳。
+ * 窄屏是单列铺满，没有居中位移，不需要槽位；而在使用经典（占位）滚动条的移动内核上，
+ * 这个槽会真的占住右侧一个滚动条宽度的空白。窄屏的 --page-gap-inline 与 --page-inline
+ * 都是 0，没有内边距能补偿它，overflow-x 兜底也掩盖不了，表现为「右边多出一块间隙」。
+ */
+@media (min-width: 901px) {
+  html {
+    scrollbar-gutter: stable;
+  }
+}
+
+/* 老版本 Safari 无 scrollbar-gutter：退化为常驻滚动条，宽度同样保持稳定。只在桌面生效，理由同上 */
+@supports not (scrollbar-gutter: stable) {
+  @media (min-width: 901px) {
+    html {
+      overflow-y: scroll;
+    }
   }
 }
 
@@ -276,14 +314,54 @@ a:where(:not([class])) {
   border-bottom: 1px solid transparent;
 }
 
-a:where(:not([class])):hover {
-  border-bottom-color: currentColor;
+/*
+ * 默认文本链接的悬停下划线只在「非触屏输入」下出现。
+ * 否则点按后 :hover 会一直粘住，导航链接会在 44px 盒底留下一条比文字更长、更远的下划线，
+ * 与当前页的粗下划线叠成两层。
+ */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) a:where(:not([class])):hover {
+    border-bottom-color: currentColor;
+  }
 }
 
 a:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-bottom-color: transparent;
+}
+
+/**
+ * 指针 / 触屏点按产生的 :focus 不是键盘焦点。Android 与 Samsung Internet 等内核对点按也会
+ * 画默认焦点框（项目只为 :focus-visible 定义焦点环），导航链接上会因此留下非设计的描边。
+ * 非键盘焦点统一去掉浏览器默认描边；键盘可达的 :focus-visible 焦点环不受影响。
+ */
+:where(a, button, summary, [role='button']):focus:not(:focus-visible) {
+  outline: none;
+}
+
+/**
+ * 触屏模态下把 :focus 与 :focus-visible 的描边一起关掉：部分 Android/厂商内核对点按也会命中
+ * :focus-visible，只压 :focus:not(:focus-visible) 时 UA 焦点框仍会被画出（真机复现）。
+ * 键盘输入不直接改写 data-input（那会同时解开触屏的 hover 门禁），而是由
+ * scripts/input-modality.ts 打上 data-keyboard 标记；这里用 :not([data-keyboard]) 放行设计焦点环。
+ * 取舍：手机接外部键盘时，若最近一次输入是触摸，焦点环不会显示；按一次 Tab 即可恢复。
+ * 分成两条规则而不是选择器列表：调试与契约测试都要能单独取到每条规则的声明。
+ */
+:root[data-input="touch"]:not([data-keyboard]) :where(a, button, summary, [role='button']):focus {
+  outline: none;
+}
+
+:root[data-input="touch"]:not([data-keyboard]) :where(a, button, summary, [role='button']):focus-visible {
+  outline: none;
+}
+
+/**
+ * 点按高亮按内核约定写在 :root 上即可继承；但旧 WebView 与部分厂商内核对继承处理不一致，
+ * 这里在交互元素上再显式声明一次，避免点按出现设计外的色块。
+ */
+:where(a, button, summary, [role='button']) {
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* 目录横条等可点元素用主题焦点环，避免浏览器默认焦点框 */
@@ -306,8 +384,11 @@ dialog:focus-visible {
   border-bottom: 1px dashed currentColor;
 }
 
-.content__inner :where(p, li, blockquote, figcaption) a:where(:not([class])):hover {
-  border-bottom-style: solid;
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .content__inner :where(p, li, blockquote, figcaption)
+    a:where(:not([class])):hover {
+    border-bottom-style: solid;
+  }
 }
 
 hr {
@@ -451,9 +532,11 @@ hr {
   border-radius: 12px;
 }
 
-[data-dialog-close]:hover {
-  color: var(--text);
-  background: color-mix(in srgb, var(--text) 6%, transparent);
+@media (hover: hover) {
+  :root:not([data-input="touch"]) [data-dialog-close]:hover {
+    color: var(--text);
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+  }
 }
 
 [data-dialog-close]:focus-visible {

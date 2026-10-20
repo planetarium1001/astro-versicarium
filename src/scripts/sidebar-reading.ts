@@ -1,3 +1,5 @@
+import { bindTouchActivate } from './touch-activate';
+
 const body = document.body;
 
 // 阅读模式入口在右下角浮动列里；同一按钮兼顾进入与退出。
@@ -107,8 +109,9 @@ const initReader = () => {
 
   applyReader(false);
 
-  readerBtn.addEventListener('click', () => {
-    applyReader(!isReaderOn());
+  // 触摸兜底 + 原生 click：华为等内核会吞 click，但 pointer 事件正常。
+  bindTouchActivate(readerBtn, () => applyReader(!isReaderOn()), {
+    disabled: () => readerBtn.hidden
   });
 
   // 顶栏高度会随换行/旋转变化，展开态下重新量缓存。

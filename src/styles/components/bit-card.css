@@ -292,34 +292,60 @@
   transition: opacity 0.2s ease, transform 0.2s ease, max-width 0.2s ease;
 }
 
-.bit-media-item--more:hover .bit-media-more,
 .bit-media-item--more:focus-visible .bit-media-more {
   background: var(--overlay-70);
   padding: 4px 10px 4px 8px;
   gap: 0;
 }
 
-.bit-media-item--more:hover::after,
 .bit-media-item--more:focus-visible::after {
   opacity: 1;
 }
 
-.bit-media-item--more:hover > img,
 .bit-media-item--more:focus-visible > img {
   transform: scale(1.02);
 }
 
-.bit-media-item--more:hover .bit-media-more-short,
 .bit-media-item--more:focus-visible .bit-media-more-short {
   opacity: 0;
   max-width: 0;
 }
 
-.bit-media-item--more:hover .bit-media-more-full,
 .bit-media-item--more:focus-visible .bit-media-more-full {
   opacity: 1;
   transform: translateX(0);
   max-width: 160px;
+}
+
+/*
+ * 「查看其余 N 张」的图片缩放与遮罩只在非触屏输入下跟随悬停：
+ * 触屏点按会打开灯箱，:hover 粘住会让缩略图关闭后仍保持放大与遮罩。
+ */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .bit-media-item--more:hover .bit-media-more {
+    background: var(--overlay-70);
+    padding: 4px 10px 4px 8px;
+    gap: 0;
+  }
+
+  :root:not([data-input="touch"]) .bit-media-item--more:hover::after {
+    opacity: 1;
+  }
+
+  :root:not([data-input="touch"]) .bit-media-item--more:hover > img {
+    transform: scale(1.02);
+  }
+
+  :root:not([data-input="touch"]) .bit-media-item--more:hover .bit-media-more-short {
+    opacity: 0;
+    max-width: 0;
+  }
+
+  :root:not([data-input="touch"]) .bit-media-item--more:hover .bit-media-more-full {
+    opacity: 1;
+    transform: translateX(0);
+    max-width: 160px;
+  }
 }
 
 .bit-media-item:focus-visible {
@@ -397,18 +423,21 @@ a.bit-tag.tag--link {
   color: inherit;
 }
 
-.bit-tag-token.tag--link:hover,
 .bit-tag-token.tag--link:focus-visible,
-a.bit-tag.tag--link:hover,
 a.bit-tag.tag--link:focus-visible {
   text-decoration: underline;
   text-underline-offset: 2px;
-}
-
-.bit-tag-token.tag--link:focus-visible,
-a.bit-tag.tag--link:focus-visible {
   outline: var(--focus-ring);
   outline-offset: var(--focus-ring-offset, 2px);
+}
+
+/* 触屏点按后 :hover 会粘住下划线，悬停视觉只在非触屏输入下生效。 */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .bit-tag-token.tag--link:hover,
+  :root:not([data-input="touch"]) a.bit-tag.tag--link:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
 }
 
 /* 详情弹窗（>=641px：居中；<=640px：底部抽屉） */

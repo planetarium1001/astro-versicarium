@@ -1,4 +1,4 @@
-import { createWithBase, formatDateTimeInTimeZone } from '../utils/format';
+import { createWithBase, formatDateTimeInTimeZone, formatISODateInTimeZone } from '../utils/format';
 import { DEFAULT_SITE_TIMEZONE } from '../../site.config.mjs';
 import { deriveMarkdownText, truncateTextAtWord } from '../utils/excerpt';
 import { normalizeBitsImageSource } from './bits-image-source';
@@ -61,6 +61,10 @@ type BitsCardViewModelInput = {
   bodyText: string;
   tags?: readonly string[] | undefined;
   date?: Date | string | null;
+  /** 站点时区下的日历日期（YYYY-MM-DD）；纯日期条目用它，避免按时间点格式化出 00:00。 */
+  dateText?: string | undefined;
+  /** frontmatter 是否显式带时分；只有 false 时按纯日期展示，未传按带时分处理（后台预览调用点兼容）。 */
+  dateHasTime?: boolean | undefined;
   images?: readonly BitsCardImageInput[] | undefined;
   author?: BitsCardAuthorInput | null | undefined;
   defaultAuthor?: BitsCardAuthorInput | null | undefined;
@@ -112,15 +116,45 @@ const toPositiveInteger = (value: number | string | undefined): number | undefin
   return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 };
 
-const toDateLabel = (value: Date | string | null | undefined, timeZone: string): string => {
+const DATE_ONLY_TEXT_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+type BitsDateLabelOptions = {
+  dateText?: string | undefined;
+  dateHasTime?: boolean | undefined;
+};
+
+/**
+ * 卡片、弹窗与搜索索引共用的日期文案。
+ * frontmatter 只写日期（`dateHasTime === false`）时按时间点格式化会凭空带出 00:00，
+ * 此时优先用站点时区换算好的 dateText，退回按站点时区格式化日期部分；
+ * 未传 dateHasTime 时保持原有「日期 + 时分」格式，后台预览的调用点不因此退化。
+ */
+export const formatBitsDateLabel = (
+  value: Date | string | null | undefined,
+  timeZone: string,
+  { dateText, dateHasTime }: BitsDateLabelOptions = {}
+): string => {
+  const usesDateOnly = dateHasTime === false;
+  const preferredDateText = dateText?.trim() ?? '';
+
   if (value instanceof Date) {
-    return Number.isNaN(value.valueOf()) ? '' : formatDateTimeInTimeZone(value, timeZone);
+    if (Number.isNaN(value.valueOf())) return '';
+    if (!usesDateOnly) return formatDateTimeInTimeZone(value, timeZone);
+    return preferredDateText || formatISODateInTimeZone(value, timeZone);
   }
+
   if (typeof value !== 'string') return '';
   const trimmed = value.trim();
   if (!trimmed) return '';
   const parsed = new Date(trimmed);
-  return Number.isNaN(parsed.valueOf()) ? trimmed : formatDateTimeInTimeZone(parsed, timeZone);
+
+  if (!usesDateOnly) {
+    return Number.isNaN(parsed.valueOf()) ? trimmed : formatDateTimeInTimeZone(parsed, timeZone);
+  }
+  if (preferredDateText) return preferredDateText;
+  // 纯日期字符串本身就是日历日期，跨时区重新格式化会前移一天。
+  if (DATE_ONLY_TEXT_RE.test(trimmed)) return trimmed;
+  return Number.isNaN(parsed.valueOf()) ? trimmed : formatISODateInTimeZone(parsed, timeZone);
 };
 
 export const deriveBitsCardText = (bodyText: string): BitsCardText => {
@@ -139,6 +173,8 @@ export const buildBitsCardViewModel = ({
   bodyText,
   tags = [],
   date = null,
+  dateText,
+  dateHasTime,
   images = [],
   author = null,
   defaultAuthor = null,
@@ -188,7 +224,7 @@ export const buildBitsCardViewModel = ({
     placeTag: placeTag && placeText ? toTagLink(placeText, withBase, placeTag) : null,
     normalTagItems,
     hasTags: Boolean(placeText || normalTagItems.length),
-    dateLabel: toDateLabel(date, timeZone),
+    dateLabel: formatBitsDateLabel(date, timeZone, { dateText, dateHasTime }),
     imageItems,
     visibleImages: imageItems.slice(0, BITS_CARD_VISIBLE_IMAGE_LIMIT),
     firstImage: totalImages === 1 ? imageItems[0] ?? null : null,

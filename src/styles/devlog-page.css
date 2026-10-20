@@ -218,10 +218,17 @@
 
 /**
  * 悬停 / 聚焦只给下划线，不做红色高亮。
+ * 触屏点按后 :hover 会一直粘在行上，悬停视觉只在非触屏输入下生效；
+ * 键盘态由 :focus-visible 单独表达。
  */
-.devlog-row__toggle:hover .devlog-row__title,
 .devlog-row__toggle:focus-visible .devlog-row__title {
   text-decoration: underline;
+}
+
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .devlog-row__toggle:hover .devlog-row__title {
+    text-decoration: underline;
+  }
 }
 
 .devlog-row__action {
@@ -233,8 +240,10 @@
   white-space: nowrap;
 }
 
-.devlog-row__toggle:hover .devlog-row__action {
-  color: var(--muted);
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .devlog-row__toggle:hover .devlog-row__action {
+    color: var(--muted);
+  }
 }
 
 .devlog-row__caret {

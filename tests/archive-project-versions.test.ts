@@ -240,8 +240,13 @@ describe('归档渲染接入契约', () => {
     expect(listsCss).toMatch(/\.entry-title--archive \.entry-title__title \{\s*font-size:\s*15px/);
     expect(listsCss).toMatch(/\.entry-title--archive \.entry-title__title \{[\s\S]*?font-weight:\s*inherit/);
     expect(listsCss).toMatch(/\.muted-pill \{[\s\S]*?color:\s*var\(--faint\)/);
+    // 键盘聚焦不参与门禁
     expect(archiveCss).toMatch(
-      /\.archive-timeline__entry:hover \.entry-title__title,\s*\n\.archive-timeline__entry:focus-visible \.entry-title__title \{[\s\S]*?color:\s*var\(--accent\);[\s\S]*?text-decoration:\s*underline;/
+      /\.archive-timeline__entry:focus-visible \.entry-title__title \{[\s\S]*?color:\s*var\(--accent\);[\s\S]*?text-decoration:\s*underline;/
+    );
+    // 悬停视觉按输入模态门禁：触屏点按后 :hover 会粘住高亮
+    expect(archiveCss).toMatch(
+      /@media \(hover: hover\) \{\s*:root:not\(\[data-input="touch"\]\) \.archive-timeline__entry:hover \.entry-title__title \{[\s\S]*?color:\s*var\(--accent\);[\s\S]*?text-decoration:\s*underline;/
     );
   });
 

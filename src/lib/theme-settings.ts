@@ -48,6 +48,9 @@ import {
   ADMIN_SITE_PAGE_GAP_DEFAULT,
   ADMIN_SITE_PAGE_GAP_MAX,
   ADMIN_SITE_PAGE_GAP_MIN,
+  ADMIN_SITE_RAIL_OFFSET_DEFAULT,
+  ADMIN_SITE_RAIL_OFFSET_MAX,
+  ADMIN_SITE_RAIL_OFFSET_MIN,
   ADMIN_SITE_TITLE_PERCENT_DEFAULT,
   ADMIN_SITE_TITLE_PERCENT_MAX,
   ADMIN_SITE_TITLE_PERCENT_MIN,
@@ -242,6 +245,13 @@ interface SiteSettings {
    * 渲染时换算成 --page-inline = 间隙 - SCROLLBAR_GUTTER_INLINE_PX，作为壳层的结束内边距。
    */
   pageGapPx: number;
+  /**
+   * 窄屏浮动列到屏幕右侧的距离（px）。
+   * 默认 6，范围 0–32，由后台「主题 → 站点设置」维护；
+   * 只在 ≤900px 的公开页面覆盖 --rail-action-offset（桌面固定 6px），
+   * 用于绕开部分浏览器（华为 ArkWeb）占用的右侧滚动条判定区。
+   */
+  railOffsetPx: number;
   footer: SiteFooterSettings;
   filings: SiteFilingsSettings;
   adminOverview: SiteAdminOverviewSettings;
@@ -640,6 +650,7 @@ const DEFAULT_SITE: SiteSettings = {
   timezone: DEFAULT_SITE_TIMEZONE,
   titleMaxPercent: ADMIN_SITE_TITLE_PERCENT_DEFAULT,
   pageGapPx: ADMIN_SITE_PAGE_GAP_DEFAULT,
+  railOffsetPx: ADMIN_SITE_RAIL_OFFSET_DEFAULT,
   footer: {
     startYear: LEGACY_FOOTER_START_YEAR,
     showCurrentYear: LEGACY_FOOTER_SHOW_CURRENT_YEAR,
@@ -901,6 +912,18 @@ const asSitePageGap = (value: unknown): number | undefined => {
   const next = asInteger(value);
   if (next === undefined) return undefined;
   return next >= ADMIN_SITE_PAGE_GAP_MIN && next <= ADMIN_SITE_PAGE_GAP_MAX
+    ? next
+    : undefined;
+};
+
+/**
+ * 窄屏浮动列右侧距离（`site.railOffsetPx`）。
+ * 非整数 / 越界一律视为「没配」，由默认值兜底（后台表单会给出校验提示）。
+ */
+const asSiteRailOffset = (value: unknown): number | undefined => {
+  const next = asInteger(value);
+  if (next === undefined) return undefined;
+  return next >= ADMIN_SITE_RAIL_OFFSET_MIN && next <= ADMIN_SITE_RAIL_OFFSET_MAX
     ? next
     : undefined;
 };
@@ -1508,6 +1531,11 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
     undefined,
     DEFAULT_SITE.pageGapPx
   );
+  const siteRailOffset = resolveValue(
+    asSiteRailOffset(siteJson?.railOffsetPx),
+    undefined,
+    DEFAULT_SITE.railOffsetPx
+  );
   const adminOverviewPublicVisible = resolveValue(
     asBoolean(siteAdminOverviewJson?.publicVisible),
     undefined,
@@ -1914,6 +1942,7 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         timezone: timezone.value,
         titleMaxPercent: siteTitlePercent.value,
         pageGapPx: sitePageGap.value,
+        railOffsetPx: siteRailOffset.value,
         footer: {
           startYear: footerStartYear.value,
           showCurrentYear: footerShowCurrentYear.value,
@@ -2195,6 +2224,7 @@ const buildEditableThemeSettingsSnapshot = (
       timezone: resolved.settings.site.timezone,
       titleMaxPercent: resolved.settings.site.titleMaxPercent,
       pageGapPx: resolved.settings.site.pageGapPx,
+      railOffsetPx: resolved.settings.site.railOffsetPx,
       footer: {
         ...resolved.settings.site.footer
       },

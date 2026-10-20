@@ -662,6 +662,24 @@ a.admin-site-overview__recent-row:hover {
   }
 }
 
+/**
+ * 窄屏结构行：桌面三列（标签 104px + 条形 1fr + 计数 max-content）的最小宽度是
+ * 104 + 12 + 96 + 12 + 计数，超过窄屏可用宽度，整行会把页面撑宽。
+ * 改成「标签 + 计数」一行、条形独占第二行：计数列不再与条形同排参与最小宽度计算，
+ * 标签列可压缩（copy 已设 overflow-wrap: anywhere）。
+ */
+@media (max-width: 900px) {
+  .admin-site-overview__structure-row {
+    grid-template-columns: minmax(0, 1fr) max-content;
+    row-gap: 8px;
+  }
+
+  .admin-site-overview__structure-bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .admin-site-overview__system-state span {
     animation: none;

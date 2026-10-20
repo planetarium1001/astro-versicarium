@@ -220,6 +220,7 @@ const MOBILE_HEADER_SELECTORS = [
   ['.sidebar', ':where(body:not(.admin-page)) .sidebar'],
   ['.sidebar__title', ':where(body:not(.admin-page)) .sidebar__title'],
   ['.nav', ':where(body:not(.admin-page)) .nav'],
+  ['.nav a', ':where(body:not(.admin-page)) .nav a'],
   ['.sidebar-actions', ':where(body:not(.admin-page)) .sidebar-actions']
 ];
 
@@ -291,6 +292,22 @@ if (!snapshotMobile || !layoutMobile) {
       }
     });
   });
+}
+
+// 首页快照曾保留窄屏导航胶囊圆角与 transform-origin，覆盖了 layout.css 的去胶囊改动；
+// 单向比较只查“源里有、快照缺”，查不到“快照多出的旧声明”，这里显式断言删除。
+const snapshotMobileNavLink = mediaSelectorDeclarations(snapshotMobile, '.nav a');
+['border-radius', 'transform-origin'].forEach((property) => {
+  if (snapshotMobileNavLink && property in snapshotMobileNavLink) {
+    problems.push(
+      `${MOBILE_QUERY} .nav a 快照仍保留应删除的 ${property}：${snapshotMobileNavLink[property]}`
+    );
+  }
+});
+
+// 窄屏当前页下划线已统一到 layout.css 的基础档，首页快照不得再保留旧的加粗覆盖。
+if (mediaSelectorDeclarations(snapshotMobile, '.nav a[aria-current="page"]')) {
+  problems.push(`${MOBILE_QUERY} 首页快照仍保留 .nav a[aria-current="page"] 覆盖，应删除并沿用 layout.css 的基础档`);
 }
 
 // 页脚贴底依赖内容区底部不留内边距；快照漏了这条，首页页脚就会比其它页面高出一截。

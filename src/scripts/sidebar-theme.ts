@@ -108,6 +108,10 @@ type StartViewTransitionLike = (callback: () => void) => ViewTransitionLike;
 
 const RIPPLE_DURATION_MS = 1040;
 const RIPPLE_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
+// 快照原点相对视口原点的合理上限；超出视为测量异常，不参与补偿。
+const RIPPLE_ORIGIN_OFFSET_LIMIT_PX = 160;
+// 透明探针元素在过渡期间以命名快照存在，用于读取快照坐标系的位置。
+const RIPPLE_PROBE_NAME = 'theme-ripple-origin';
 
 const prefersReducedMotion = () =>
   typeof window.matchMedia === 'function'
@@ -120,8 +124,10 @@ const getStartViewTransition = (): StartViewTransitionLike | null => {
   return (candidate as StartViewTransitionLike).bind(document);
 };
 
+type RipplePoint = { x: number; y: number };
+
 // 圆心取主题切换按钮自身的中心；按钮缺失或量不到尺寸时回退到视口顶部中点。
-const resolveRippleOrigin = () => {
+const resolveRippleOrigin = (): RipplePoint => {
   const rect = themeBtn?.getBoundingClientRect();
   if (rect && (rect.width > 0 || rect.height > 0)) {
     return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
@@ -130,11 +136,116 @@ const resolveRippleOrigin = () => {
   return { x: window.innerWidth / 2, y: 0 };
 };
 
+const clampRippleOffset = (value: number) =>
+  Number.isFinite(value) ? Math.min(Math.max(value, 0), RIPPLE_ORIGIN_OFFSET_LIMIT_PX) : 0;
+
+/**
+ * 透明探针以命名快照参与过渡：新旧快照里它都在按钮中心，因此
+ * `::view-transition-group()` 的位移可直接用来反推出快照坐标系。
+ */
+const createRippleProbe = (origin: RipplePoint): HTMLElement | null => {
+  if (!document.body) return null;
+  const probe = document.createElement('div');
+  probe.setAttribute('aria-hidden', 'true');
+  probe.style.cssText = `position: fixed; left: ${origin.x}px; top: ${origin.y}px; width: 1px; height: 1px; background: transparent; pointer-events: none; view-transition-name: ${RIPPLE_PROBE_NAME};`;
+  document.body.appendChild(probe);
+  return probe;
+};
+
+const readPseudoPx = (pseudo: string, property: string): number | null => {
+  const value = Number.parseFloat(
+    getComputedStyle(document.documentElement, pseudo).getPropertyValue(property)
+  );
+  return Number.isFinite(value) ? value : null;
+};
+
+/**
+ * 读取快照坐标系相对 layout viewport 的原点偏移。
+ * 伪元素的参考盒是 snapshot containing block：带可收缩地址栏的移动浏览器会把它放在
+ * 浏览器 UI 之下，原点因此高于 layout viewport。命名快照的 group 位移按规范以该
+ * 坐标系为基准，减去元素自身的视口坐标就是这段偏移。桌面与当前以视口为坐标系的
+ * iOS Safari 读数为 0，不会误补偿；读不到或数值异常时同样不补偿。
+ */
+const readRippleOriginOffset = (origin: RipplePoint): RipplePoint => {
+  const transform = getComputedStyle(
+    document.documentElement,
+    `::view-transition-group(${RIPPLE_PROBE_NAME})`
+  ).transform;
+  const match = /^matrix\(([^)]+)\)$/.exec(transform);
+  if (!match) return { x: 0, y: 0 };
+
+  const values = (match[1] ?? '').split(',').map((value) => Number.parseFloat(value));
+  if (values.length !== 6) return { x: 0, y: 0 };
+
+  const translateX = values[4];
+  const translateY = values[5];
+  if (
+    translateX === undefined || translateY === undefined
+    || !Number.isFinite(translateX) || !Number.isFinite(translateY)
+  ) {
+    return { x: 0, y: 0 };
+  }
+
+  return {
+    x: clampRippleOffset(translateX - origin.x),
+    y: clampRippleOffset(translateY - origin.y)
+  };
+};
+
+// clip-path 的百分比按被动画伪元素的参考盒解析；该盒在桌面等于视口，在快照原点
+// 高于视口的移动浏览器上是完整的 snapshot containing block。读不到时回退到视口尺寸。
+const readRippleReferenceBox = (pseudo: string): { width: number; height: number } => {
+  const width = readPseudoPx(pseudo, 'width');
+  const height = readPseudoPx(pseudo, 'height');
+  if (width && height && width > 0 && height > 0) return { width, height };
+
+  return { width: window.innerWidth, height: window.innerHeight };
+};
+
+const resolveRippleCenter = (origin: RipplePoint, expanding: boolean): RipplePoint => {
+  const pseudo = expanding ? '::view-transition-new(root)' : '::view-transition-old(root)';
+  const box = readRippleReferenceBox(pseudo);
+  const offset = readRippleOriginOffset(origin);
+  const x = origin.x + offset.x;
+  const y = origin.y + offset.y;
+
+  return {
+    x: (x / box.width) * 100,
+    y: (y / box.height) * 100
+  };
+};
+
 /**
  * 涟漪方向标记（`<html>` 的 `data-theme-ripple`）：`expand` 动画新快照，`converge` 动画旧快照，
  * 两个方向的层叠顺序不同（样式见 `global.css`）。
  */
 const RIPPLE_ATTR = 'themeRipple';
+
+type RippleSession = {
+  probe: HTMLElement | null;
+  previousDirection: string | undefined;
+  inlineColorScheme: string;
+  /** 极端内核可能既不 resolve 也不 reject `ready`，用超时兜底回收探针与标记。 */
+  watchdog: number | undefined;
+};
+
+let activeRipple: RippleSession | null = null;
+
+/**
+ * 结束一次涟漪的共享状态。连续切换时新过渡会接管标记与 color-scheme，
+ * 旧过渡的清理只能回收自己的探针，不能改回新过渡的状态。
+ */
+const endRippleSession = (session: RippleSession) => {
+  if (session.watchdog !== undefined) window.clearTimeout(session.watchdog);
+  session.probe?.remove();
+  if (activeRipple !== session) return;
+
+  activeRipple = null;
+  if (session.previousDirection === undefined) delete root.dataset[RIPPLE_ATTR];
+  else root.dataset[RIPPLE_ATTR] = session.previousDirection;
+  if (session.inlineColorScheme) root.style.colorScheme = session.inlineColorScheme;
+  else root.style.removeProperty('color-scheme');
+};
 
 const applyThemeWithRipple = (apply: () => void, targetTheme: Theme) => {
   const startViewTransition = getStartViewTransition();
@@ -143,13 +254,18 @@ const applyThemeWithRipple = (apply: () => void, targetTheme: Theme) => {
     return;
   }
 
-  const { x, y } = resolveRippleOrigin();
-  const radius = Math.hypot(
-    Math.max(x, window.innerWidth - x),
-    Math.max(y, window.innerHeight - y)
-  );
-  const center = `${x}px ${y}px`;
-  const circle = (r: number) => `circle(${Math.ceil(r)}px at ${center})`;
+  if (activeRipple) endRippleSession(activeRipple);
+
+  const origin = resolveRippleOrigin();
+  const session: RippleSession = {
+    probe: null,
+    previousDirection: root.dataset[RIPPLE_ATTR],
+    inlineColorScheme: root.style.colorScheme,
+    watchdog: undefined
+  };
+  activeRipple = session;
+  // 探针必须在新旧快照拍摄前插入，否则 group 不存在，偏移读数会退化为 0。
+  session.probe = createRippleProbe(origin);
 
   // 只有有效主题发生变化才会走到这里：切到亮色 = 发散（新快照从小圆放大到整屏），
   // 切到暗色 = 收缩（旧快照从整屏收到按钮中心）。
@@ -158,18 +274,29 @@ const applyThemeWithRipple = (apply: () => void, targetTheme: Theme) => {
 
   /** 过渡期间把 `color-scheme` 钉在旧主题：View Transition 不拍滚动条快照，否则滚动条会先变新主题。 */
   const previousScheme = root.dataset.theme === 'dark' ? 'dark' : 'light';
-  const inlineColorScheme = root.style.colorScheme;
   root.style.colorScheme = previousScheme;
 
-  const clearRippleFlag = () => {
-    delete root.dataset[RIPPLE_ATTR];
-    if (inlineColorScheme) root.style.colorScheme = inlineColorScheme;
-    else root.style.removeProperty('color-scheme');
-  };
+  const clearRippleFlag = () => endRippleSession(session);
 
-  const transition = startViewTransition(apply);
+  // circle() 的百分比半径按参考盒对角线的 1/sqrt(2) 解析，150% 从任意圆心都能覆盖视口。
+  const radius = 150;
+
+  let transition: ViewTransitionLike;
+  try {
+    transition = startViewTransition(apply);
+  } catch (_) {
+    // 过渡无法启动（文档状态或内核限制）时放弃本次涟漪，并回收探针与共享状态。
+    clearRippleFlag();
+    return;
+  }
+
+  // 动画本身 1040ms；留出两帧余量后兜底清理，避免异常内核让探针与标记长期残留。
+  session.watchdog = window.setTimeout(clearRippleFlag, RIPPLE_DURATION_MS + 800);
+
   transition.ready
     .then(() => {
+      const center = resolveRippleCenter(origin, expanding);
+      const circle = (percent: number) => `circle(${percent}% at ${center.x}% ${center.y}%)`;
       const animation = document.documentElement.animate(
         {
           clipPath: expanding
