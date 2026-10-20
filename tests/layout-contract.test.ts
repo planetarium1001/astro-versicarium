@@ -357,6 +357,132 @@ describe('触屏设备：滚动条不占宽度，正文左右必须对称', () =
   });
 });
 
+describe('窄屏横向溢出：真实宽度约束与 clip 回退', () => {
+  it('html 的滚动条槽位只对桌面生效，窄屏不得预留', async () => {
+    const [globalCss, indexPage] = await Promise.all([
+      read('src/styles/global.css'),
+      read('src/pages/index.astro')
+    ]);
+
+    // 顶层 html 规则只管横向兜底，不能直接固定槽位
+    const htmlBlock = /\nhtml\s*\{([^}]*)\}/.exec(globalCss)?.[1] ?? '';
+    expect(htmlBlock).toContain('overflow-x: clip');
+    expect(htmlBlock).not.toContain('scrollbar-gutter');
+
+    // 槽位声明必须落在桌面断点内：窄屏单列铺满没有居中位移，槽位只会变成右侧空白
+    expect(globalCss).toMatch(
+      /@media \(min-width: 901px\)\s*\{\s*html\s*\{[^}]*scrollbar-gutter:\s*stable/
+    );
+    // 老内核的 overflow-y: scroll 退化同样只在桌面生效
+    expect(globalCss).toMatch(
+      /@supports not \(scrollbar-gutter: stable\)\s*\{\s*@media \(min-width: 901px\)\s*\{\s*html\s*\{[^}]*overflow-y:\s*scroll/
+    );
+
+    // 首页首屏快照必须同形，否则首屏会先闪一下右侧空白
+    const snapshot = /String\.raw`([\s\S]*?)`\s*\]\s*\.join/.exec(indexPage)?.[1] ?? '';
+    expect(snapshot).toMatch(
+      /@media \(min-width: 901px\)\s*\{\s*html\s*\{[^}]*scrollbar-gutter:\s*stable/
+    );
+    expect(/\nhtml\s*\{([^}]*)\}/.exec(snapshot)?.[1] ?? '').not.toContain('scrollbar-gutter');
+  });
+
+  it('不支持 overflow: clip 的内核有 overflow-x: hidden 等效兜底', async () => {
+    const [globalCss, indexPage] = await Promise.all([
+      read('src/styles/global.css'),
+      read('src/pages/index.astro')
+    ]);
+
+    const fallback = /@supports not \(overflow: clip\)\s*\{\s*html\s*\{[^}]*overflow-x:\s*hidden/;
+    expect(globalCss).toMatch(fallback);
+    // 首屏也要有：否则首屏在旧内核上仍可被横向拖动
+    expect(/String\.raw`([\s\S]*?)`\s*\]\s*\.join/.exec(indexPage)?.[1] ?? '').toMatch(fallback);
+  });
+
+  // 根元素上的 overflow 不约束初始包含块：只写 html 时布局视口照样被真实溢出撑宽。
+  // 窄屏没有 sticky 侧栏（.sidebar 是 static），兜底因此可以安全落在 body 上；
+  // 桌面若给 body 加 overflow 会破坏 sticky 侧栏，所以必须限定在窄屏断点内。
+  it('窄屏横向兜底落在 body，而不是只靠 html', async () => {
+    const [globalCss, indexPage] = await Promise.all([
+      read('src/styles/global.css'),
+      read('src/pages/index.astro')
+    ]);
+
+    // global.css 要避开后台页，选择器带 body:not(.admin-page)
+    const bodyClip = /@media \(max-width: 900px\)\s*\{\s*body:not\(\.admin-page\)\s*\{\s*overflow-x:\s*clip/;
+    const bodyHidden = /@supports not \(overflow: clip\)\s*\{[\s\S]*?@media \(max-width: 900px\)\s*\{\s*body:not\(\.admin-page\)\s*\{\s*overflow-x:\s*hidden/;
+
+    expect(globalCss, 'global.css 需要在窄屏给 body 加 clip 兜底').toMatch(bodyClip);
+    expect(globalCss, 'global.css 需要窄屏 body 的 hidden 回退').toMatch(bodyHidden);
+
+    // 首屏快照是首页专用、永远不是后台页：用裸 body（带 .admin- 会命中首屏产物守卫）
+    const snapshot = /String\.raw`([\s\S]*?)`\s*\]\s*\.join/.exec(indexPage)?.[1] ?? '';
+    const snapshotClip = /@media \(max-width: 900px\)\s*\{\s*body\s*\{\s*overflow-x:\s*clip/;
+    const snapshotHidden = /@supports not \(overflow: clip\)\s*\{[\s\S]*?@media \(max-width: 900px\)\s*\{\s*body\s*\{\s*overflow-x:\s*hidden/;
+    expect(snapshot, '首屏快照需要窄屏 body 的 clip 兜底').toMatch(snapshotClip);
+    expect(snapshot, '首屏快照需要窄屏 body 的 hidden 回退').toMatch(snapshotHidden);
+    // 与 check-production-artifacts 同义：首屏出现 .admin- 规则即说明快照混入了后台样式
+    expect(snapshot, '首屏快照不得包含 .admin- 规则').not.toMatch(/\.admin-/);
+
+    // 桌面不能给 body 加横向 overflow：会让 .sidebar 的 sticky 失效
+    expect(globalCss).not.toMatch(
+      /@media \(min-width: 901px\)\s*\{[^}]*body:not\(\.admin-page\)\s*\{[^}]*overflow-x/
+    );
+  });
+
+  it('窄屏壳层有 max-width 上限，且用 100% 而不是 100vw', async () => {
+    const [layoutCss, indexPage] = await Promise.all([
+      read(LAYOUT_CSS),
+      read('src/pages/index.astro')
+    ]);
+
+    // 单列壳层的上限取初始包含块：100vw 在移动端不含滚动条占位，会把壳层推出视口
+    const shellRules = Array.from(
+      layoutCss.matchAll(/:where\(body:not\(\.admin-page\)\) \.shell \{([^}]*)\}/g),
+      (match) => match[1] ?? ''
+    );
+    const narrowShell = shellRules.find((body) => body.includes('grid-template-columns: 1fr')) ?? '';
+    expect(narrowShell, '需要窄屏单列壳层规则').not.toBe('');
+    // 注释里会提到 100vw 作为反例，断言只看声明
+    const declarations = narrowShell.replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(declarations).toMatch(/max-width:\s*100%;/);
+    expect(declarations).not.toMatch(/100vw/);
+    // 首屏快照同形
+    const snapshot = /String\.raw`([\s\S]*?)`\s*\]\s*\.join/.exec(indexPage)?.[1] ?? '';
+    expect(snapshot).toMatch(/\.shell \{[^}]*max-width:\s*100%;/);
+  });
+});
+
+describe('后台概览：结构行窄屏不撑宽', () => {
+  const OVERVIEW_CSS = 'src/styles/components/admin/overview.css';
+
+  it('窄屏把结构行改成两行网格，桌面三列保持不变', async () => {
+    const overview = await read(OVERVIEW_CSS);
+
+    // 桌面三列（标签 104px + 条形 + 计数 max-content）的最小宽度超出窄屏可用宽度
+    expect(overview).toMatch(
+      /\.admin-site-overview__structure-row \{[^}]*grid-template-columns: 104px minmax\(96px, 1fr\) max-content/
+    );
+
+    // 窄屏必须存在覆盖，且不得沿用同一套三列
+    const narrow = /@media \(max-width: 900px\) \{([\s\S]*?)\n\}/.exec(
+      overview.slice(overview.indexOf('窄屏结构行'))
+    )?.[1] ?? '';
+    expect(narrow, '需要窄屏结构行覆盖').not.toBe('');
+    expect(narrow).toMatch(
+      /\.admin-site-overview__structure-row \{[^}]*grid-template-columns: minmax\(0, 1fr\) max-content/
+    );
+    expect(narrow).not.toContain('104px');
+    // 条形独占第二行，计数列不再与它同排参与最小宽度计算
+    expect(narrow).toMatch(
+      /\.admin-site-overview__structure-bar \{[^}]*grid-column: 1 \/ -1/
+    );
+    // 覆盖必须排在基础三列规则之后，否则同特异性下会被覆盖
+    expect(overview.indexOf('窄屏结构行')).toBeGreaterThan(
+      overview.indexOf('grid-template-columns: 104px minmax(96px, 1fr) max-content')
+    );
+  });
+});
+
 describe('页面外缘间隙：后台 px 设置', () => {
   it('BaseLayout 把间隙与换算后的 --page-inline 写成 <html> 内联属性', async () => {
     const [layout, globalCss, themeSettings] = await Promise.all([
@@ -406,6 +532,61 @@ describe('页面外缘间隙：后台 px 设置', () => {
     expect(layoutCss.match(shell), '公开壳层与后台壳层都要按起始/结束分别取值').toHaveLength(2);
     // 首屏快照必须同形，否则首屏会跳一下
     expect(critical).toContain('padding-inline: var(--page-gap-inline) var(--page-inline);');
+  });
+});
+
+describe('浮动列：后台可配的窄屏右缘距离与热区几何守卫', () => {
+  it('守卫保留桌面断言，并校验窄屏只引用构建期内联变量', async () => {
+    const guard = await read('scripts/check-layout-geometry.mjs');
+
+    // 桌面既有断言不因窄屏改动而削弱
+    expect(guard).toContain('const MIN_RAIL_INSET = 4;');
+    expect(guard).toMatch(/near\(floatRight, railOffset\)/);
+    expect(guard).toContain("bySelector.get('.float-stack')");
+    expect(guard).toContain("bySelector.get('.article-toc__rail-head')");
+
+    // 窄屏偏移必须来自后台设置：守卫检查 var() 形式与内联值范围
+    expect(guard).toContain('NARROW_RAIL_OFFSET_DEFAULT = 6');
+    expect(guard).toContain('NARROW_RAIL_OFFSET_MIN = 0');
+    expect(guard).toContain('NARROW_RAIL_OFFSET_MAX = 32');
+    expect(guard).toContain('NARROW_RAIL_VAR_RE');
+    expect(guard).toMatch(/--rail-action-offset-narrow/);
+    expect(guard).toMatch(/窄屏 --rail-action-offset 必须写成 var\(--rail-action-offset-narrow/);
+    expect(guard).toContain('${NARROW_RAIL_OFFSET_MIN}–${NARROW_RAIL_OFFSET_MAX}');
+    expect(guard).toContain('的整数 px');
+
+    // 相邻 44px 热区的净空断言保留（交互改善的关键）
+    expect(guard).toContain('const MIN_HIT_CLEARANCE = 2;');
+    expect(guard).toContain('collectMediaBlocks');
+    expect(guard).toMatch(/窄屏相邻热区中心距/);
+  });
+
+  it('窄屏覆盖写成 var(--rail-action-offset-narrow, 6px)，桌面仍是 6px', async () => {
+    const [layoutCss, guard] = await Promise.all([
+      read(LAYOUT_CSS),
+      read('scripts/check-layout-geometry.mjs')
+    ]);
+
+    expect(layoutCss).toMatch(
+      /\.float-stack\s*\{[^}]*right:\s*calc\(var\(--rail-action-offset\)/s
+    );
+    // 两处声明：:root 的桌面 6px + 窄屏对后台变量的引用
+    expect(layoutCss.match(/--rail-action-offset:\s*[^;]+;/g), '桌面值 + 窄屏引用各一次').toHaveLength(2);
+    expect(layoutCss).toMatch(/--rail-action-offset:\s*6px/);
+    expect(layoutCss).toMatch(
+      /@media \(max-width: 900px\) \{[\s\S]*?--rail-action-offset:\s*var\(--rail-action-offset-narrow,\s*6px\)/
+    );
+
+    // 窄屏断点仍有间距覆盖（12px）与热区内收
+    const narrowFloatBlock =
+      /@media \(max-width: 900px\) \{[\s\S]*?body:not\(\.admin-page\) \.float-stack \{([^}]*)\}/.exec(
+        layoutCss
+      )?.[1] ?? '';
+    expect(narrowFloatBlock, '窄屏需要有 .float-stack 间距覆盖').not.toBe('');
+    expect(narrowFloatBlock).toMatch(/gap:\s*12px/);
+
+    // 守卫同时读 44px 热区下限，窄屏中心距要按它比较
+    expect(guard).toContain("readPx('--tap-min-h')");
   });
 });
 
@@ -711,25 +892,57 @@ describe('后台设置行的排版', () => {
 });
 
 describe('RSS 点击区域与 RSS 开关', () => {
-  it('可点元素右侧的「·」不接收点击', async () => {
+  it('描述行放不下时整组回退两行，组内分隔符不参与命中', async () => {
     const css = await read(ENTRY_TAGS_CSS);
 
-    // 分隔符绝对定位 + pointer-events: none，链接的点击盒子只剩文字
-    const sep =
-      /\.page-subtitle__item:not\(\[hidden\]\):has\(~ \.page-subtitle__item:not\(\[hidden\]\)\)::after\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
-    expect(sep).toMatch(/position:\s*absolute/);
+    // 描述与「计数 · RSS · 标签入口」是两个 flex 项：放得下并排，放不下整组换行。
+    const container = /\.page-subtitle--entry-filters\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(container).toMatch(/display:\s*flex/);
+    expect(container).toMatch(/flex-wrap:\s*wrap/);
+    // 两组之间只留白；间距抽成变量，描述分隔点也按同一间距居中。
+    expect(container).toMatch(/column-gap:\s*var\(--page-subtitle-gap\)/);
+
+    // 描述可收缩并在自己的行内换行；计数组不收缩、不内部换行，从而整体回退到第二行。
+    expect(css).toMatch(/\.page-subtitle__text\s*\{[^}]*flex:\s*0 1 auto/);
+    expect(css).toMatch(/\.page-subtitle__meta\s*\{[^}]*flex:\s*0 0 auto/);
+    expect(css).toMatch(/\.page-subtitle__meta\s*\{[^}]*white-space:\s*nowrap/);
+
+    // 组内分隔符是生成内容且 pointer-events: none：伪元素不成为独立命中目标，
+    // 但它仍属于所属链接的盒子，点击区比纯文字略宽，这是可接受的取舍。
+    const sep = /\.page-subtitle__meta > \* \+ \*::before\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(sep).toMatch(/content:\s*"·"/);
     expect(sep).toMatch(/pointer-events:\s*none/);
-    // 间距改由元素自身的 margin 提供（否则两段会贴在一起）
-    expect(css).toMatch(/\.page-subtitle__item:not\(:last-child\)\s*\{[^}]*margin-right:\s*1\.1em/);
-    // 纯文本那段（不可点）保持行内分隔符，但只在后面还有可见项时才画：
-    // hidden 的兄弟不算，否则末尾会多出一个「·」
-    expect(css).toMatch(
-      /\.page-subtitle__text:has\(~ \.page-subtitle__item:not\(\[hidden\]\)\)::after\s*\{[^}]*content:\s*"·"/
-    );
-    expect(css).toMatch(
-      /\.page-subtitle__item:not\(\[hidden\]\):has\(~ \.page-subtitle__item:not\(\[hidden\]\)\)::after/
-    );
-    expect(css).not.toMatch(/\.page-subtitle__text:not\(:last-child\)::after/);
+
+    // 一行显示时描述点与 RSS / #标签 之间的点距必须一致：
+    // 组间距 = 2 × 内部点单侧间距 + 「·」自身字宽（绝对定位不占布局宽度）。
+    const dotWidthEm = Number(/--page-subtitle-dot-width:\s*([\d.]+)em/.exec(container)?.[1] ?? NaN);
+    const gapBaseEm = Number(/--page-subtitle-gap:\s*calc\(([\d.]+)em/.exec(container)?.[1] ?? NaN);
+    const sepMarginEm = Number(/margin:\s*0\s*([\d.]+)em/.exec(sep)?.[1] ?? NaN);
+    expect(Number.isFinite(dotWidthEm), '需要声明「·」字宽变量').toBe(true);
+    expect(Number.isFinite(gapBaseEm), '组间距需要写成 calc(<x>em + 点宽)').toBe(true);
+    expect(Number.isFinite(sepMarginEm), '需要能解析内部点单侧间距').toBe(true);
+    expect(gapBaseEm, '组间距两侧留白应与内部点间距一致').toBeCloseTo(sepMarginEm * 2, 3);
+
+    // 窄屏 640 档同样要满足推导关系，防止只改桌面档造成两档漂移。
+    const mobileStart = css.indexOf('@media (max-width: 640px)');
+    const mobileBlock = mobileStart >= 0 ? css.slice(mobileStart) : '';
+    const narrowGapBaseEm = Number(/--page-subtitle-gap:\s*calc\(([\d.]+)em/.exec(mobileBlock)?.[1] ?? NaN);
+    const narrowSepMarginEm = Number(/margin:\s*0\s*([\d.]+)em/.exec(mobileBlock)?.[1] ?? NaN);
+    expect(Number.isFinite(narrowGapBaseEm), '窄屏需要重新声明组间距').toBe(true);
+    expect(Number.isFinite(narrowSepMarginEm), '窄屏需要重新声明内部点间距').toBe(true);
+    expect(narrowGapBaseEm, '窄屏组间距两侧留白应与内部点间距一致').toBeCloseTo(narrowSepMarginEm * 2, 3);
+
+    // 描述与计数组之间的「·」只在同一行显示，且必须是绝对定位：
+    // 否则它的宽度会参与换行判定，出现“去掉点就放得下、放得下又加点”的抖动。
+    // 点挂在计数组左侧、按组间间距的中点居中，不依赖「·」的字宽。
+    const inlineDot =
+      /\.page-subtitle--entry-filters\[data-meta-inline\]\s+\.page-subtitle__meta::before\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(inlineDot).toMatch(/content:\s*"·"/);
+    expect(inlineDot).toMatch(/position:\s*absolute/);
+    expect(inlineDot).toMatch(/pointer-events:\s*none/);
+    expect(inlineDot).toMatch(/left:\s*calc\(var\(--page-subtitle-gap\)\s*\/\s*-2\)/);
+    // 计数组内部不再用绝对定位的 ::after 画分隔符：换行时不会残留。
+    expect(css).not.toMatch(/\.page-subtitle__item[^{]*::after/);
   });
 
   it('内页设置里 RSS 订阅 = 总开关 + 三页各自勾选（样式参考首页导语）', async () => {
@@ -965,8 +1178,11 @@ describe('胶囊条视觉规格', () => {
     // 不指定 font-family，字体跟随正文
     expect(item).not.toContain('font-family');
     expect(item).toMatch(/font-size:\s*13px/);
-    // 悬停只变色，不加底色
-    const hover = /\.scope-pills__item:hover,[\s\S]{0,80}?\{([^}]*)\}/.exec(css)?.[1] ?? '';
+    // 悬停只变色，不加底色；触屏点按后 :hover 会粘住，故规则必须再按输入模态门禁。
+    const hoverMedia = /@media \(hover: hover\) \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+    const hover =
+      /:root:not\(\[data-input="touch"\]\) \.scope-pills__item:hover\s*\{([^}]*)\}/.exec(hoverMedia)?.[1] ?? '';
+    expect(hover, '悬停规则需要在 (hover: hover) 内并按 data-input 门禁').not.toBe('');
     expect(hover).toMatch(/color:\s*var\(--text\)/);
     expect(hover).not.toContain('background');
   });

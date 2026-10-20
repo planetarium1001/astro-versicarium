@@ -81,11 +81,16 @@
 }
 
 /**
- * 悬停只变色，不加底色。
+ * 悬停只变色，不加底色；触屏点按后 :hover 会粘住颜色，故悬停只在非触屏输入下生效。
  */
-.scope-pills__item:hover,
 .scope-pills__item:focus-visible {
   color: var(--text);
+}
+
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .scope-pills__item:hover {
+    color: var(--text);
+  }
 }
 
 .scope-pills__item.is-active {

@@ -46,9 +46,15 @@
   border-bottom: 0;
 }
 
-.content__inner .trailing-links a:hover,
 .content__inner .trailing-links a:focus-visible,
-.prose .trailing-links a:hover,
 .prose .trailing-links a:focus-visible {
   text-decoration: underline;
+}
+
+/* 触屏点按后 :hover 会粘住下划线，悬停视觉只在非触屏输入下生效。 */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .content__inner .trailing-links a:hover,
+  :root:not([data-input="touch"]) .prose .trailing-links a:hover {
+    text-decoration: underline;
+  }
 }

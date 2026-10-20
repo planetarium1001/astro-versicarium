@@ -1,0 +1,24 @@
+---
+/**
+ * 列表页描述行：描述与「计数 · 附加入口」是两个 flex 项，
+ * 窄屏放不下时整组回退第二行，描述留在第一行（布局见 entry-tags.css）。
+ * 附加入口通过默认 slot 传入（RSS、`#标签` 等）。
+ */
+const { subtitleText = null, countText = null } = Astro.props as {
+  subtitleText?: string | null;
+  countText?: string | null;
+};
+const hasMeta = Boolean(countText) || Astro.slots.has('default');
+---
+
+<span class:list={['page-subtitle', 'page-subtitle--entry-filters']}>
+  {subtitleText ? <span class="page-subtitle__text">{subtitleText}</span> : null}
+  {hasMeta ? (
+    <span class="page-subtitle__meta">
+      {countText ? (
+        <span class="page-subtitle__count" data-page-subtitle-count>{countText}</span>
+      ) : null}
+      <slot />
+    </span>
+  ) : null}
+</span>

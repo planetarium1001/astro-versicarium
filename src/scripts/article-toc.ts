@@ -2,6 +2,8 @@
 // rail / inline 两份目录按 data-toc-target 归组，统一更新高亮。
 // 窄屏浮动列的「查看目录」按钮也在这里接管：展开内联目录并滚过去。
 
+import { bindTouchActivate } from './touch-activate';
+
 const SPY_OFFSET_PX = 96;
 const ACTIVE_CLASS = 'is-active';
 const HEADING_SELECTOR = '.prose :is(h2, h3)[id]';
@@ -336,7 +338,7 @@ const initArticleToc = () => {
       return rect.top < window.innerHeight && rect.top + height > 0;
     };
 
-    tocJumpButton.addEventListener('click', () => {
+    const activateTocJump = () => {
       if (!isInlineTocOnly()) return;
       if (isInlineTocInView()) {
         // 目录就在眼前：原地点一下开、再点一下关，不记录返回位置。
@@ -354,7 +356,9 @@ const initArticleToc = () => {
       window.requestAnimationFrame(scrollToToc);
       // 过渡结束后再校准一次：展开抬高页高，末尾的滚动可能被夹紧。
       toggleInlineToc(true, () => window.requestAnimationFrame(scrollToToc));
-    });
+    };
+    // 触摸兜底 + 原生 click：华为等内核会吞 click，但 pointer 事件正常。
+    bindTouchActivate(tocJumpButton, activateTocJump);
     syncTocJumpButton();
   }
 

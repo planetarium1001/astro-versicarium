@@ -2,6 +2,8 @@
 // 位置记忆分两层：跨次打开按路径存 localStorage，本次会话用位置栈（目录跳转、回到顶部前入栈）。
 // 每条记「最近标题 + 段内偏移」与「滚动比例」，锚点优先、比例兜底。
 
+import { bindTouchActivate } from './touch-activate';
+
 const STACK_SIZE = 12;
 const STORAGE_KEY = 'astro-whono:reading-position';
 const SAVE_INTERVAL_MS = 1500;
@@ -58,8 +60,31 @@ const pruneStore = (store: Record<string, SavedPosition>) => {
 
 const initFloatingStack = () => {
   const stack = document.querySelector<HTMLElement>('[data-float-stack]');
-  // 两个按钮都由「浮动操作列」设置单独控制，只剩一个也要照常工作
-  if (!stack || (!stackButton && !resumeButton)) return;
+  if (!stack) return;
+
+  /**
+   * 浮动列按钮不保留 title：华为浏览器（HarmonyOS，ArkWeb 内核）会把 title 当原生长按提示，
+   * 触摸时可能吞掉首次点按；Chrome / Via 不会弹。可访问名称由 aria-label 提供，
+   * 桌面悬停提示暂时取消（如需恢复，改用 CSS 的 [data-tooltip] 机制）。
+   * sidebar-reading.ts 等脚本会动态写回 title，这里统一观察并移除，保证按钮始终没有原生提示。
+   */
+  const stripButtonTitles = () => {
+    stack.querySelectorAll<HTMLElement>('.float-stack__button[title]').forEach((button) => {
+      button.removeAttribute('title');
+    });
+  };
+  stripButtonTitles();
+  if (typeof MutationObserver === 'function') {
+    new MutationObserver(stripButtonTitles).observe(stack, {
+      attributes: true,
+      attributeFilter: ['title'],
+      subtree: true
+    });
+  }
+
+  // 标题清理要先于按钮判断：即使只保留阅读/目录按钮，也要阻止其它脚本写回 title。
+  // 两个按钮都由「浮动操作列」设置单独控制，只剩一个也要照常工作。
+  if (!stackButton && !resumeButton) return;
 
   const pageKey = `${window.location.pathname}${window.location.search}`;
   const headings = Array.from(document.querySelectorAll<HTMLElement>('.prose :is(h2, h3)[id]'));
@@ -162,8 +187,8 @@ const initFloatingStack = () => {
     resumeButton.hidden = !visible;
     if (visible) {
       const label = labelFor(next);
+      // 只写 aria-label：title 会触发部分内核的原生长按提示，见 stripButtonTitles 的说明。
       resumeButton.setAttribute('aria-label', label);
-      resumeButton.setAttribute('title', label);
     }
   };
 
@@ -183,18 +208,31 @@ const initFloatingStack = () => {
     syncScrollTopButton();
   };
 
-  stackButton?.addEventListener('click', () => {
-    // 状态可能过期（滚动事件还没同步）：先重算，避免这次点击被直接吞掉。
+  /**
+   * 两个按钮都走同一条激活路径：pointerdown/up 兜底（华为等会吞 click 的内核）
+   * + 原生 click（鼠标 / 键盘 / 未吞 click 的浏览器），由 touch-activate 去重。
+   */
+  const scrollTopDisabled = () => {
+    // 状态可能过期（滚动事件还没同步）：先重算，避免这次点按被直接吞掉。
     syncScrollTopButton();
-    if (stackButton?.getAttribute('aria-disabled') === 'true') return;
+    return !stackButton || stackButton.getAttribute('aria-disabled') === 'true';
+  };
+  const activateScrollTop = () => {
+    // disabled 已在激活前由绑定器复查；这里直接执行动作。
     pushCurrentPosition();
     scrollToY(0);
     syncAll();
-  });
+  };
+  if (stackButton) {
+    bindTouchActivate(stackButton, activateScrollTop, { disabled: scrollTopDisabled });
+  }
 
-  resumeButton?.addEventListener('click', () => {
-    // 同上：点击时先按当前位置重算可见性，再决定用栈顶还是跨次记录。
+  const resumeDisabled = () => {
+    // 先按当前位置重算可见性，再决定是否可用（与原来的 click 逻辑一致）。
     syncResumeButton();
+    return !resumeButton || resumeButton.hidden;
+  };
+  const activateResume = () => {
     const fromStored = positionStack.length === 0;
     const target = positionStack.pop() ?? storedPosition;
     if (!target) return;
@@ -212,7 +250,10 @@ const initFloatingStack = () => {
     }
     scrollToY(resolveTargetY(target));
     syncAll();
-  });
+  };
+  if (resumeButton) {
+    bindTouchActivate(resumeButton, activateResume, { disabled: resumeDisabled });
+  }
 
   // 目录按钮跳转前入栈（article-toc.ts 在滚动前派发）。
   window.addEventListener('astro-whono:toc-jump', () => {

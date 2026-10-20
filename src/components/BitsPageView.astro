@@ -39,7 +39,8 @@ const tagOptions: TagSummary[] = collectTagScopedSummary(
   items,
   (entry) => entry.data.tags
 );
-const subtitleText = joinPageSubtitleText(page.bits.subtitle, `共 ${resultCount} 条动态`);
+const subtitleText = joinPageSubtitleText(page.bits.subtitle);
+const countText = `共 ${resultCount} 条动态`;
 const pageDescription = joinPageSubtitleText(
   `${pageTitleText}列表`,
   page.bits.subtitle,
@@ -84,6 +85,7 @@ const katexStylesheetAttrs = { [MARKDOWN_MATH_STYLESHEET_DATA_ATTR]: 'true' };
     <TagFilterHeader
       pageTitleText={pageTitleText}
       subtitleText={subtitleText}
+      countText={countText}
       rssHref={withBase('/blog/rss.xml')}
       pickerHref="#bits-list"
       fallbackListId="bits-list"

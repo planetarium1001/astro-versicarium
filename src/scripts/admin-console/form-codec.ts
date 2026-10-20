@@ -34,6 +34,7 @@ import {
   ADMIN_PAGINATION_SCOPES,
   ADMIN_SIDEBAR_DIVIDER_DEFAULT,
   ADMIN_SITE_PAGE_GAP_DEFAULT,
+  ADMIN_SITE_RAIL_OFFSET_DEFAULT,
   ADMIN_SITE_TITLE_PERCENT_DEFAULT,
   ADMIN_SITE_TIMEZONE_DEFAULT,
   ADMIN_SOCIAL_PRESET_ORDER_DEFAULT,
@@ -81,6 +82,7 @@ type FormCodecContext = {
   inputSiteTimezone: HTMLInputElement;
   inputSiteTitleMaxPercent: HTMLInputElement;
   inputSitePageGapPx: HTMLInputElement;
+  inputSiteRailOffsetPx: HTMLInputElement;
   inputPageListRssEnabled: HTMLInputElement;
   inputPageListRssBlog: HTMLInputElement;
   inputPageListRssBits: HTMLInputElement;
@@ -261,6 +263,7 @@ export const createFormCodec = ({
   inputSiteTimezone,
   inputSiteTitleMaxPercent,
   inputSitePageGapPx,
+  inputSiteRailOffsetPx,
   inputPageListRssEnabled,
   inputPageListRssBlog,
   inputPageListRssBits,
@@ -739,6 +742,8 @@ export const createFormCodec = ({
         titleMaxPercent: parseInteger(inputSiteTitleMaxPercent.value) ?? ADMIN_SITE_TITLE_PERCENT_DEFAULT,
         /* 页面外缘间隙（px，内容盒到浏览器边缘的距离） */
         pageGapPx: parseInteger(inputSitePageGapPx.value) ?? ADMIN_SITE_PAGE_GAP_DEFAULT,
+        /* 窄屏浮动列到右缘的距离（px，仅 ≤900px 生效） */
+        railOffsetPx: parseInteger(inputSiteRailOffsetPx.value) ?? ADMIN_SITE_RAIL_OFFSET_DEFAULT,
         footer: {
           startYear: parseInteger(inputSiteFooterStartYear.value) ?? footerStartYearMax,
           showCurrentYear: Boolean(inputSiteFooterShowCurrentYear.checked),
@@ -888,6 +893,7 @@ export const createFormCodec = ({
     inputSiteTimezone.value = settings.site.timezone || ADMIN_SITE_TIMEZONE_DEFAULT;
     inputSiteTitleMaxPercent.value = String(settings.site.titleMaxPercent ?? ADMIN_SITE_TITLE_PERCENT_DEFAULT);
     inputSitePageGapPx.value = String(settings.site.pageGapPx ?? ADMIN_SITE_PAGE_GAP_DEFAULT);
+    inputSiteRailOffsetPx.value = String(settings.site.railOffsetPx ?? ADMIN_SITE_RAIL_OFFSET_DEFAULT);
     inputPageListRssEnabled.checked = settings.page.listRss.enabled !== false;
     inputPageListRssBlog.checked = settings.page.listRss.blog !== false;
     inputPageListRssBits.checked = settings.page.listRss.bits !== false;

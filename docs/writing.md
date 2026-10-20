@@ -22,7 +22,7 @@
 
 ## frontmatter
 
-`date` 接受 `YYYY-MM-DD`、`YYYY/MM/DD` 或日期时间；没有时区偏移的值按站点时区解释。`slug` 统一要求小写 kebab-case，允许中文；`entry` 是主文件选择标记，不参与公开字段。
+`date` 接受 `YYYY-MM-DD`、`YYYY/MM/DD` 或日期时间；没有时区偏移的值按站点时区解释。只写日期的条目在公开页面只显示日期，写了时分的按日期时间显示，动态卡片与检索索引遵循同一口径。`slug` 统一要求小写 kebab-case，允许中文；`entry` 是主文件选择标记，不参与公开字段。
 
 ### blog
 

@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   BITS_CARD_BODY_LINES,
@@ -5,7 +7,8 @@ import {
   BITS_CARD_FULL_RENDER_LIMIT,
   BITS_CARD_VISIBLE_IMAGE_LIMIT,
   buildBitsCardViewModel,
-  deriveBitsCardText
+  deriveBitsCardText,
+  formatBitsDateLabel
 } from '../src/lib/bits-card-view-model';
 import { toTagKey } from '../src/lib/tags';
 import { truncateTextAtWord } from '../src/utils/excerpt';
@@ -89,6 +92,68 @@ describe('bits card view model', () => {
       { src: '/blog/bits/a.webp', width: 800, height: 600, alt: 'A' },
       { src: 'https://example.com/b.webp', alt: '' }
     ]);
+  });
+
+  it('只写日期的条目只显示日期，带时分的条目保持日期 + 时分', () => {
+    const dateOnly = buildBitsCardViewModel({
+      id: 'date-only',
+      bodyText: 'Hello',
+      // 纯日期按站点时区解释为当日零点，按时间点格式化会带出 00:00。
+      date: new Date('2026-10-19T16:00:00.000Z'),
+      dateText: '2026-10-20',
+      dateHasTime: false,
+      timeZone: 'Asia/Shanghai'
+    });
+    expect(dateOnly.dateLabel).toBe('2026-10-20');
+    expect(dateOnly.dateLabel).not.toContain('00:00');
+
+    const withTime = buildBitsCardViewModel({
+      id: 'with-time',
+      bodyText: 'Hello',
+      date: new Date('2026-10-20T00:30:00.000Z'),
+      dateText: '2026-10-20T00:30:00+08:00',
+      dateHasTime: true,
+      timeZone: 'Asia/Shanghai'
+    });
+    expect(withTime.dateLabel).toBe('2026-10-20 08:30');
+  });
+
+  it('未传 dateHasTime 时保持原有时分格式，后台预览调用点不退化', () => {
+    const viewModel = buildBitsCardViewModel({
+      id: 'admin-preview',
+      bodyText: 'Hello',
+      date: new Date('2026-10-20T00:30:00.000Z'),
+      timeZone: 'Asia/Shanghai'
+    });
+    expect(viewModel.dateLabel).toBe('2026-10-20 08:30');
+  });
+
+  it('纯日期缺少 dateText 时按站点时区取日期部分，非法输入不编造时分', () => {
+    const withoutDateText = buildBitsCardViewModel({
+      id: 'no-date-text',
+      bodyText: 'Hello',
+      date: new Date('2026-10-19T16:00:00.000Z'),
+      dateHasTime: false,
+      timeZone: 'Asia/Shanghai'
+    });
+    expect(withoutDateText.dateLabel).toBe('2026-10-20');
+
+    const rawDateOnly = buildBitsCardViewModel({
+      id: 'raw-date-only',
+      bodyText: 'Hello',
+      date: '2026-10-20',
+      dateHasTime: false
+    });
+    expect(rawDateOnly.dateLabel).toBe('2026-10-20');
+
+    const invalid = buildBitsCardViewModel({
+      id: 'invalid-date',
+      bodyText: 'Hello',
+      date: 'not-a-date',
+      dateHasTime: false
+    });
+    expect(invalid.dateLabel).toBe('not-a-date');
+    expect(formatBitsDateLabel(new Date('invalid'), 'Asia/Shanghai', { dateHasTime: false })).toBe('');
   });
 
   it('keeps every card tag filterable through /bits/?tags=<key>', () => {
@@ -176,5 +241,20 @@ describe('bits card view model', () => {
     expect(truncateTextAtWord('hello world foo', 14)).toBe('hello world…');
     // 没超出预算时原样返回
     expect(truncateTextAtWord('短', 10)).toBe('短');
+  });
+});
+
+describe('bits 卡片日期行样式', () => {
+  it('日期与标签之间用全站 meta 行同款的 `·`，不再输出破折号', async () => {
+    const css = await readFile(
+      path.join(process.cwd(), 'src/styles/components/bits.css'),
+      'utf8'
+    );
+    const separator = /\.bit-meta \.bit-tags::before\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+
+    expect(separator, '窄屏需要日期与标签之间的分隔点').not.toBe('');
+    expect(separator).toContain('content: "·"');
+    expect(separator).toContain('color: var(--faint)');
+    expect(css).not.toContain('content: " - "');
   });
 });

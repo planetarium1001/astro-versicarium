@@ -9,6 +9,7 @@ import {
 import { getProjectAnchorAliases } from '../../lib/project-routing';
 import EntryTitleLine from '../../components/EntryTitleLine.astro';
 import UiIcon from '../../components/UiIcon.astro';
+import PageSubtitle from '../../components/PageSubtitle.astro';
 import { getThemeSettings } from '../../lib/theme-settings';
 import { joinPageSubtitleText } from '../../utils/format';
 import { getContentImageSrc } from '../../lib/content-image';
@@ -33,7 +34,8 @@ const {
 } = getThemeSettings();
 
 const pageTitleText = page.projects.title || '项目';
-const subtitleText = joinPageSubtitleText(page.projects.subtitle, `共 ${items.length} 个项目`);
+const subtitleText = joinPageSubtitleText(page.projects.subtitle);
+const countText = `共 ${items.length} 个项目`;
 const pageDescription = joinPageSubtitleText(
   `${pageTitleText}列表`,
   page.projects.subtitle,
@@ -152,7 +154,7 @@ const katexStylesheetAttrs = { [MARKDOWN_MATH_STYLESHEET_DATA_ATTR]: 'true' };
   <div class="page-header">
     <div class="page-heading">
       <h1 class="page-title">{pageTitleText}</h1>
-      {subtitleText ? <span class="page-subtitle">{subtitleText}</span> : null}
+      <PageSubtitle subtitleText={subtitleText} countText={countText} />
     </div>
   </div>
 

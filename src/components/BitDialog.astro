@@ -18,6 +18,8 @@ const card = buildBitsCardViewModel({
   bodyText: bitEntry.body ?? '',
   tags: bitEntry.data.tags ?? [],
   date: bitEntry.data.date,
+  dateText: bitEntry.data.dateText,
+  dateHasTime: bitEntry.data.dateHasTime,
   images: bitEntry.data.images ?? [],
   ...(bitEntry.data.author ? { author: bitEntry.data.author } : {}),
   defaultAuthor: settings.page.bits.defaultAuthor,

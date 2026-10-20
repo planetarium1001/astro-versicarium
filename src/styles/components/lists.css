@@ -34,6 +34,26 @@
   --entry-search-input-h: 26px;
   --entry-search-feedback-gap: 6px;
   --entry-search-feedback-h: 18px;
+  /* 蒙版核心贴合输入框与反馈行，向边缘外扩一圈后渐隐；数值取 8–16px，避免又变成一块边界生硬的矩形。 */
+  --entry-search-veil-fade-y: 14px;
+  --entry-search-veil-fade-left: 16px;
+  /* 右侧与搜索图标之间只有 8px 间距，外扩不能越过图标，否则会盖住按钮热区。 */
+  --entry-search-veil-fade-right: 8px;
+  --entry-search-veil-blur: 10px;
+  /* 支持模糊时透出更多背景；不支持时用更不透明的底色兜底，保证输入文字与占位符仍清晰可读。 */
+  --entry-search-veil-alpha: 70%;
+  --entry-search-veil-alpha-fallback: 88%;
+  /* 四角叠加径向遮罩，把外扩渐隐的直角收成圆角；核心 10px 内完全透明，34px 外恢复实心。 */
+  --entry-search-veil-radius: 24px;
+  --entry-search-veil-corner: 34px;
+  --entry-search-veil-corner-core: 10px;
+  /*
+   * 开合动效：打开 220ms、关闭 160ms，关闭更快才能跟手；
+   * 曲线前段略快、尾段收缓，淡出不会被 visibility 硬切成“突然”。
+   */
+  --entry-search-open-duration: 220ms;
+  --entry-search-close-duration: 160ms;
+  --entry-search-ease: cubic-bezier(0.2, 0.5, 0.25, 1);
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -58,8 +78,10 @@
   position: relative;
 }
 
-.entry-search-toggle:hover {
-  color: var(--text);
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .entry-search-toggle:hover {
+    color: var(--text);
+  }
 }
 
 .entry-search.is-open .entry-search-toggle {
@@ -79,8 +101,8 @@
   transition: transform 0.2s ease;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .entry-search-toggle:hover .icon {
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .entry-search-toggle:hover .icon {
     transform: translate(-1px, 4px) scale(1.12);
   }
 }
@@ -94,11 +116,90 @@
   flex-direction: column;
   gap: var(--entry-search-feedback-gap);
   visibility: hidden;
-  transform: translate(8px, 0);
   pointer-events: none;
-  transition: transform 0.2s ease, visibility 0s linear 0.2s;
-  background: var(--bg);
+  /*
+   * 面板本身不做 opacity，只切换可见性：蒙版伪元素带着 backdrop-filter，
+   * 祖先一旦有 opacity < 1 就会被合成成独立组，模糊会失效（Chromium/Safari 都是如此）。
+   * 淡入淡出交给蒙版自己的 opacity 与内容层的 opacity，visibility 延迟到淡出结束，
+   * 与最后一帧同帧切换，避免旧版“滑完突然消失”。
+   */
+  transition: visibility 0s linear var(--entry-search-close-duration);
+  background: none;
   z-index: 2;
+}
+
+/*
+ * 搜索蒙版放在伪元素上，并用遮罩只裁这层底色与模糊，输入框文字不被裁切。
+ * 底色是半透明 `--bg`，外圈先由双层线性 mask 控制左右与上下渐隐，
+ * 再叠四角径向 mask 收圆；没有 backdrop-filter 时只降级为更实的半透明底，
+ * 仍保留渐隐边缘，不会退回铺满的实心块。
+ * 淡入淡出用元素自身的 opacity：模糊结果按 alpha 混合，过渡中不会出现“先清晰后糊”的突变。
+ */
+.entry-search-panel::before {
+  content: "";
+  position: absolute;
+  inset:
+    calc(var(--entry-search-veil-fade-y) * -1)
+    calc(var(--entry-search-veil-fade-right) * -1)
+    calc(var(--entry-search-veil-fade-y) * -1)
+    calc(var(--entry-search-veil-fade-left) * -1);
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--entry-search-close-duration) var(--entry-search-ease);
+  border-radius: var(--entry-search-veil-radius);
+  /* 纯色兜底：不支持 color-mix 的内核仍有底色（仍受 mask 渐隐，不会变实心矩形）。 */
+  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) var(--entry-search-veil-alpha-fallback), transparent);
+  -webkit-mask-image:
+    linear-gradient(
+      to right,
+      transparent 0,
+      #000 var(--entry-search-veil-fade-left),
+      #000 calc(100% - var(--entry-search-veil-fade-right)),
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 var(--entry-search-veil-fade-y),
+      #000 calc(100% - var(--entry-search-veil-fade-y)),
+      transparent 100%
+    ),
+    radial-gradient(circle at 0 0, transparent 0, transparent var(--entry-search-veil-corner-core), #000 var(--entry-search-veil-corner)),
+    radial-gradient(circle at 100% 0, transparent 0, transparent var(--entry-search-veil-corner-core), #000 var(--entry-search-veil-corner)),
+    radial-gradient(circle at 0 100%, transparent 0, transparent var(--entry-search-veil-corner-core), #000 var(--entry-search-veil-corner)),
+    radial-gradient(circle at 100% 100%, transparent 0, transparent var(--entry-search-veil-corner-core), #000 var(--entry-search-veil-corner));
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(
+      to right,
+      transparent 0,
+      #000 var(--entry-search-veil-fade-left),
+      #000 calc(100% - var(--entry-search-veil-fade-right)),
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 var(--entry-search-veil-fade-y),
+      #000 calc(100% - var(--entry-search-veil-fade-y)),
+      transparent 100%
+    ),
+    radial-gradient(circle at 0 0, transparent 0, transparent var(--entry-search-veil-corner-core), #000 var(--entry-search-veil-corner)),
+    radial-gradient(circle at 100% 0, transparent 0, transparent var(--entry-search-veil-corner-core), #000 var(--entry-search-veil-corner)),
+    radial-gradient(circle at 0 100%, transparent 0, transparent var(--entry-search-veil-corner-core), #000 var(--entry-search-veil-corner)),
+    radial-gradient(circle at 100% 100%, transparent 0, transparent var(--entry-search-veil-corner-core), #000 var(--entry-search-veil-corner));
+  mask-composite: intersect;
+}
+
+/* 支持背景模糊时底色可以更透：模糊承担可读性，透出后方内容才不显突兀。 */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .entry-search-panel::before {
+    background: color-mix(in srgb, var(--bg) var(--entry-search-veil-alpha), transparent);
+    -webkit-backdrop-filter: blur(var(--entry-search-veil-blur));
+    backdrop-filter: blur(var(--entry-search-veil-blur));
+  }
 }
 
 .entry-search-bridge {
@@ -116,9 +217,37 @@
 
 .entry-search.is-open .entry-search-panel {
   visibility: visible;
-  transform: translate(0, 0);
   pointer-events: auto;
   transition-delay: 0s;
+}
+
+.entry-search.is-open .entry-search-panel::before {
+  opacity: 1;
+  transition-duration: var(--entry-search-open-duration);
+  /* 合成提示只在打开态声明，避免常驻 will-change 的显存开销。 */
+  will-change: opacity;
+}
+
+/*
+ * 内容层做淡入与 6px 位移、0.985 缩放；蒙版层位置固定、只做自身透明度过渡，
+ * 动画期间不移动也不改变 backdrop-filter 与 mask，模糊结果可以缓存后直接混合。
+ */
+.entry-search-panel input,
+.entry-search-panel .entry-search-feedback {
+  opacity: 0;
+  transform: translate(6px, 0) scale(0.985);
+  transform-origin: right center;
+  transition:
+    opacity var(--entry-search-close-duration) var(--entry-search-ease),
+    transform var(--entry-search-close-duration) var(--entry-search-ease);
+}
+
+.entry-search.is-open .entry-search-panel input,
+.entry-search.is-open .entry-search-panel .entry-search-feedback {
+  opacity: 1;
+  transform: translate(0, 0) scale(1);
+  transition-duration: var(--entry-search-open-duration), var(--entry-search-open-duration);
+  will-change: opacity, transform;
 }
 
 .entry-search-panel input {
@@ -127,7 +256,8 @@
   border: 0;
   border-bottom: 1px solid var(--border);
   border-radius: 0;
-  background: var(--bg);
+  /* 输入框不再自己铺底，否则会在柔和蒙版里又切出一个实心矩形；底色统一由蒙版层提供。 */
+  background: transparent;
   color: var(--text);
   font-size: 13px;
   line-height: 1.3;
@@ -161,6 +291,19 @@
   visibility: hidden;
 }
 
+/* 把时长归零即可复用同一套过渡声明，无需逐条重置 transition，也保证 reduced-motion 下无动画。 */
+@media (prefers-reduced-motion: reduce) {
+  .entry-search {
+    --entry-search-open-duration: 0s;
+    --entry-search-close-duration: 0s;
+  }
+
+  .entry-search-toggle,
+  .entry-search-toggle .icon {
+    transition: none;
+  }
+}
+
 [data-entry-item][hidden],
 [data-entry-section][hidden] {
   display: none;
@@ -185,8 +328,11 @@
   cursor: pointer;
 }
 
-.list-item--link:hover,
-.list-item--link:focus-within {
+/*
+ * 键盘聚焦保留整卡背景与焦点环；触屏点按后 :hover 会一直粘住，
+ * 悬停背景只在非触屏输入下生效。
+ */
+.list-item--link:has(:focus-visible) {
   background: var(--code-header-bg);
   border-bottom-color: transparent;
   outline: 2px solid transparent;
@@ -195,6 +341,14 @@
 .list-item--link:has(.list-item__stretch:focus-visible) {
   outline-color: var(--accent);
   outline-offset: var(--focus-ring-offset);
+}
+
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .list-item--link:hover {
+    background: var(--code-header-bg);
+    border-bottom-color: transparent;
+    outline: 2px solid transparent;
+  }
 }
 
 /* 整块可点的覆盖层：以最近的定位祖先（卡片）为包含块铺满 */
@@ -324,9 +478,11 @@
 }
 
 /* 只在标题文字悬停时高亮，与归档时间线的悬停样式一致；卡片悬停只改背景。 */
-.list-item__title:hover {
-  color: var(--accent);
-  text-decoration: underline;
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .list-item__title:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
 }
 
 .list-item__excerpt {
@@ -475,21 +631,24 @@
   color: var(--accent);
 }
 
-/* 详情页 tag 可点，跳到 /blog/?tags=<key> 继续筛选；常态无下划线，hover/聚焦才显下划线 */
+/* 详情页 tag 可点，跳到 /blog/?tags=<key> 继续筛选；常态无下划线，悬停/聚焦才显下划线 */
 a.tag {
   text-decoration: none;
 }
 
-a.tag:hover,
 a.tag:focus-visible {
   text-decoration: underline;
   text-underline-offset: 2px;
-}
-
-a.tag:focus-visible {
   outline: var(--focus-ring);
   outline-offset: var(--focus-ring-offset);
   border-radius: 3px;
+}
+
+@media (hover: hover) {
+  :root:not([data-input="touch"]) a.tag:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
 }
 
 /* 分页：列表最后一条下方留白，整组右对齐，只保留文字与页数。 */
@@ -524,9 +683,15 @@ a.tag:focus-visible {
   font-family: inherit;
 }
 
-.pagination__link:hover,
+/* 取消旧胶囊底色；触屏点按后 :hover 会粘住，悬停声明只在非触屏输入下生效。 */
 .pagination__link:focus-visible {
   background: transparent;
+}
+
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .pagination__link:hover {
+    background: transparent;
+  }
 }
 
 .pagination__status {
@@ -546,7 +711,5 @@ a.tag:focus-visible {
     width: min(156px, 58vw);
   }
 
-  .entry-search-panel input {
-    font-size: 16px;
-  }
+  /* 字号与横屏统一用基础档（13px）；窄屏不再单独放大，避免横竖屏观感不一致。 */
 }

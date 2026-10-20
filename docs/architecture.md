@@ -63,11 +63,11 @@ Versicarium 的代码按内容边界、主题代码与构建管线分层：作�
 
 ## 壳层与布局几何
 
-样式入口为 `src/styles/global.css`。桌面壳层为三列：`--sidebar`（224px）、1px 分隔线、内容列。页面外缘间隙由 `site.pageGapPx` 控制，构建期以 `<html>` 内联自定义属性输出 `--page-gap-inline` 与 `--page-inline`；后者等于间隙减去 `--scrollbar-gutter-inline`（15px）。窄屏（≤ 900px）改为单列，间隙归零；触屏滚动条为浮层，由 `layout.css` 单独覆盖。
+样式入口为 `src/styles/global.css`。桌面壳层为三列：`--sidebar`（224px）、1px 分隔线、内容列。页面外缘间隙由 `site.pageGapPx` 控制，构建期以 `<html>` 内联自定义属性输出 `--page-gap-inline` 与 `--page-inline`；后者等于间隙减去 `--scrollbar-gutter-inline`（15px）。窄屏（≤ 900px）改为单列，间隙归零；触屏滚动条为浮层，由 `layout.css` 单独覆盖。窄屏浮动列到右缘的距离由 `site.railOffsetPx` 控制（0–32px，默认 6），构建期输出 `--rail-action-offset-narrow`；`layout.css` 只在 ≤900px 的公开页面用 `var(--rail-action-offset-narrow, 6px)` 覆盖 `--rail-action-offset`，桌面仍固定用 `:root` 的 6px。
 
 ![窄屏首页](images/home-mobile.png)
 
-首屏 critical CSS 是 `src/pages/index.astro` 内的手写快照，位于 `global.css` 之后。`check:home-critical-css` 比对快照与 `global.css`、`layout.css` 的壳层、窄屏顶栏与浮动列声明；`check:layout-geometry` 与 `check:touch-targets` 读取构建产物，断言间距不变量与触控尺寸。布局改动需同时通过这些检查，细节见 [development.md](development.md)。
+首屏 critical CSS 是 `src/pages/index.astro` 内的手写快照，位于 `global.css` 之后。`check:home-critical-css` 比对快照与 `global.css`、`layout.css` 的壳层、窄屏顶栏与浮动列声明；`check:layout-geometry`、`check:touch-targets` 与 `check:viewport-overflow` 读取构建产物，分别断言间距不变量、触控尺寸与横向溢出兜底。布局改动需同时通过这些检查，细节见 [development.md](development.md)。
 
 ## Markdown 管线
 

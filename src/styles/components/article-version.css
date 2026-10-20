@@ -12,8 +12,8 @@
 }
 
 /**
- * eyebrow 与 message 合并为一行：版本信息、提示与「查看最新版」共用一条基线。
- * 入口按钮固定在引用框最右端，窄屏换行时仍贴右。
+ * 宽屏：版本信息、提示与「查看最新版」共用一条基线，入口按钮贴在引用框最右端。
+ * 窄屏改由下方断点排成两行网格。
  */
 .article-version-notice__row {
   display: flex;
@@ -47,13 +47,9 @@
   color: var(--muted);
 }
 
-.article-version-notice__mark {
-  flex: none;
-  align-self: center;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
+/* 宽屏把说明行拍平：说明与链接仍是文本行的直接子项，间距沿用文本行规则。 */
+.article-version-notice__note-row {
+  display: contents;
 }
 
 .article-version-notice__latest {
@@ -72,9 +68,15 @@
   outline-offset: var(--focus-ring-offset);
 }
 
-.article-version-notice__latest:hover,
 .article-version-notice__latest:focus-visible {
   text-decoration: underline;
+}
+
+/* 触屏点按后 :hover 会粘住下划线，悬停视觉只在非触屏输入下生效。 */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .article-version-notice__latest:hover {
+    text-decoration: underline;
+  }
 }
 
 /**
@@ -112,11 +114,18 @@
   color: inherit;
 }
 
-.article-version-trigger:hover,
+/* 展开态与键盘聚焦保留底色；触屏点按后 :hover 会粘住，悬停底色只在非触屏输入下生效。 */
 .article-version-trigger:focus-visible,
 .article-version-trigger[data-version-open='true'] {
   color: var(--text);
   background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .article-version-trigger:hover {
+    color: var(--text);
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+  }
 }
 
 .article-version-trigger__icon {
@@ -135,6 +144,87 @@
 
   .article-version-trigger__icon--narrow {
     display: inline-flex;
+  }
+}
+
+/**
+ * 窄屏两行：第一行「版本元信息 + 入口按钮」，第二行「说明 + 查看最新版」。
+ * `display: contents` 让文本片段直接参与外层网格；说明行包一层，才能整行铺满、
+ * 不被入口按钮的宽度挤成窄列（否则说明会折出孤行）。
+ * 说明与链接降到 13px，与抽屉内的次级文案同号，也给 360 的两行留出余量。
+ */
+@media (max-width: 700px) {
+  .article-version-notice {
+    padding: 12px 10px;
+  }
+
+  .article-version-notice__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: 8px;
+    row-gap: 2px;
+  }
+
+  .article-version-notice__text {
+    display: contents;
+  }
+
+  .article-version-notice__meta {
+    grid-area: 1 / 1;
+    min-width: 0;
+  }
+
+  .article-version-notice__note-row {
+    grid-area: 2 / 1 / 3 / 3;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 8px;
+    row-gap: 2px;
+  }
+
+  .article-version-notice__note {
+    font-size: 13px;
+  }
+
+  /* 放不下时整条链接换到下一行并贴右，说明本身不再折出孤行。 */
+  .article-version-notice__latest {
+    margin-left: auto;
+    font-size: 13px;
+  }
+
+  /* 右侧不留内边距：图标右缘与下一行的「查看最新版」对齐同一条竖线。 */
+  .article-version-trigger {
+    grid-area: 1 / 2;
+    justify-self: end;
+    margin: 0;
+    padding: 0 0 0 6px;
+  }
+}
+
+/* 359 及以下第一行放不下「版本历史」文字：入口退化为纯图标，热区由 ::before 撑到 44px。 */
+@media (max-width: 359px) {
+  .article-version-trigger {
+    justify-content: center;
+    min-width: 32px;
+    padding: 0 8px;
+  }
+
+  .article-version-trigger__label {
+    display: none;
+  }
+}
+
+/**
+ * 340 起说明行用 13px 已能并排放下；339 及以下差几像素，降到 12px 才不会把
+ * 「查看最新版」挤到第三行。阈值取 339.98 而不是 339：缩放或系统字号缩放会让视口
+ * 落在 339–340 之间的分数宽度，整数阈值会漏掉这些情况；与 layout.css 的 1279.98 同法。
+ */
+@media (max-width: 339.98px) {
+  .article-version-notice__note,
+  .article-version-notice__latest {
+    font-size: 12px;
   }
 }
 
@@ -275,11 +365,18 @@
   text-underline-offset: 2px;
 }
 
-.version-item__main:hover,
 .version-item__main:focus-visible {
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
+}
+
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .version-item__main:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
 }
 
 .version-item__meta {

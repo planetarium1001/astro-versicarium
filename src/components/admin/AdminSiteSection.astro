@@ -10,6 +10,10 @@ import {
   ADMIN_SITE_PAGE_GAP_HINT,
   ADMIN_SITE_PAGE_GAP_MAX,
   ADMIN_SITE_PAGE_GAP_MIN,
+  ADMIN_SITE_RAIL_OFFSET_DEFAULT,
+  ADMIN_SITE_RAIL_OFFSET_HINT,
+  ADMIN_SITE_RAIL_OFFSET_MAX,
+  ADMIN_SITE_RAIL_OFFSET_MIN,
   ADMIN_SITE_TITLE_PERCENT_DEFAULT,
   ADMIN_SITE_TITLE_PERCENT_MAX,
   ADMIN_SITE_TITLE_PERCENT_MIN
@@ -107,8 +111,9 @@ const filingFields: FilingField[] = [
       <textarea class="admin-field__control admin-field__control--singleline-textarea" id="site-description" rows="1"></textarea>
     </label>
     {/*
-      页脚信息在上，新增的窄屏站点标题宽度与页面外缘间隙在下。四项都是 .admin-grid 的直接子项，
-      与上方的站点标题、站点语言共用同一套两列网格，列与列对齐；页脚预览跨两列。
+      页脚信息在上，窄屏站点标题宽度、页面外缘间隙与窄屏浮动列右侧距离在下。
+      这几项都是 .admin-grid 的直接子项，与上方的站点标题、站点语言共用同一套两列网格，
+      列与列对齐；页脚预览跨两列。
     */}
     <label class="admin-field">
       <span class="admin-label">
@@ -184,6 +189,22 @@ const filingFields: FilingField[] = [
         step="1"
         inputmode="numeric"
         placeholder={String(ADMIN_SITE_PAGE_GAP_DEFAULT)}
+      />
+    </label>
+    <label class="admin-field">
+      <span class="admin-label">
+        <span class="admin-label__main">窄屏浮动列右侧距离</span>
+        <span class="admin-label__hint">{ADMIN_SITE_RAIL_OFFSET_HINT}</span>
+      </span>
+      <input
+        class="admin-field__control admin-field__control--page-gap"
+        id="site-rail-offset-px"
+        type="number"
+        min={ADMIN_SITE_RAIL_OFFSET_MIN}
+        max={ADMIN_SITE_RAIL_OFFSET_MAX}
+        step="1"
+        inputmode="numeric"
+        placeholder={String(ADMIN_SITE_RAIL_OFFSET_DEFAULT)}
       />
     </label>
     <div class="admin-field admin-field--full">

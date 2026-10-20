@@ -223,10 +223,17 @@
   border-radius: 10px;
 }
 
-.bit-search-result__link:hover,
 .bit-search-result__link:focus-visible {
   background: color-mix(in srgb, var(--panel) 55%, var(--bg));
   outline: none;
+}
+
+/* 触屏点按后 :hover 会一直粘在结果卡上，悬停底色只在非触屏输入下生效。 */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .bit-search-result__link:hover {
+    background: color-mix(in srgb, var(--panel) 55%, var(--bg));
+    outline: none;
+  }
 }
 
 .bit-search-result__thumb {
@@ -399,8 +406,11 @@
     white-space: nowrap;
   }
 
+  /* 窄屏把日期与标签并排：用全站 meta 行同款 `·` 分隔。左侧 6px 来自 .bit-meta 行间距，
+     右侧的标签间距是 12px，收 0.4em 让点两侧都接近 .meta-line 的 0.6em。 */
   .bit-meta .bit-tags::before {
-    content: " - ";
+    content: "·";
+    margin-right: -0.4em;
     color: var(--faint);
   }
 

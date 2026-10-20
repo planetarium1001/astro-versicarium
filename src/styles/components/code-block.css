@@ -152,9 +152,12 @@ body[data-code-line-numbers="off"] :where(.prose, .bit-body--rich) pre:is(.astro
   opacity: 0.6;
 }
 
-:where(.prose, .bit-body--rich) .code-block .code-copy:hover:not(:disabled) {
-  color: var(--text);
-  background: var(--code-action-hover-bg);
+/* 触屏点按后 :hover 会粘在复制按钮上，悬停配色只在非触屏输入下生效。 */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) :where(.prose, .bit-body--rich) .code-block .code-copy:hover:not(:disabled) {
+    color: var(--text);
+    background: var(--code-action-hover-bg);
+  }
 }
 
 :where(.prose, .bit-body--rich) .code-block .code-copy:focus-visible {
@@ -198,15 +201,17 @@ body[data-code-line-numbers="off"] :where(.prose, .bit-body--rich) pre:is(.astro
   opacity: 0.65;
 }
 
-/* hover 触发范围：仅 toolbar（避免滑过长代码块时频繁变色） */
-:where(.prose, .bit-body--rich) .code-block .code-toolbar:hover .code-lang-icon:not(.is-colored) {
-  color: var(--code-text);
-  opacity: 1;
-}
+/* hover 触发范围：仅 toolbar（避免滑过长代码块时频繁变色）；触屏点按会粘住语言图标的高亮，故按输入模态门禁 */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) :where(.prose, .bit-body--rich) .code-block .code-toolbar:hover .code-lang-icon:not(.is-colored) {
+    color: var(--code-text);
+    opacity: 1;
+  }
 
-:where(.prose, .bit-body--rich) .code-block .code-toolbar:hover .code-lang-icon.is-colored {
-  filter: grayscale(0%);
-  opacity: 1;
+  :root:not([data-input="touch"]) :where(.prose, .bit-body--rich) .code-block .code-toolbar:hover .code-lang-icon.is-colored {
+    filter: grayscale(0%);
+    opacity: 1;
+  }
 }
 
 @media (max-width: 640px) {

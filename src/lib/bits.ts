@@ -1,8 +1,8 @@
 import type { CollectionEntry } from 'astro:content';
 import { getPublished, type GetPublishedOptions } from './content';
-import { createWithBase, formatDateTimeInTimeZone, formatISODateInTimeZone } from '../utils/format';
+import { createWithBase, formatISODateInTimeZone } from '../utils/format';
 import { getSiteTimezone } from '../utils/site-timezone';
-import { deriveBitsCardText } from './bits-card-view-model';
+import { deriveBitsCardText, formatBitsDateLabel } from './bits-card-view-model';
 import { getContentImageDimensions, resolveContentImageSrc } from './content-image';
 import {
   buildPublishedBitsHrefMap,
@@ -169,7 +169,12 @@ const buildBitsIndex = async () => {
       text: derivedText.text,
       excerpt: derivedText.excerpt,
       date: bit.data.date ? bit.data.date.toISOString() : null,
-      dateLabel: bit.data.date ? formatDateTimeInTimeZone(bit.data.date, getSiteTimezone()) : null,
+      dateLabel: bit.data.date
+        ? formatBitsDateLabel(bit.data.date, getSiteTimezone(), {
+            dateText: bit.data.dateText,
+            dateHasTime: bit.data.dateHasTime
+          })
+        : null,
       year: bit.data.date ? Number.parseInt((bit.data.dateText ?? formatISODateInTimeZone(bit.data.date, getSiteTimezone())).slice(0, 4), 10) : null,
       href: withBase(hrefPath),
       thumbnail: firstImage

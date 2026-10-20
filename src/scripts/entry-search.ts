@@ -84,9 +84,9 @@ if (!root) {
   const tagSwitchOrBtn = tagDialog?.querySelector<HTMLButtonElement>('[data-entry-tag-switch-or]') ?? null;
   const pageTitleRow = root.querySelector<HTMLElement>('.page-title-row');
   const pageSubtitle = document.querySelector<HTMLElement>('.page-subtitle');
-  const pageSubtitleTextEl = pageSubtitle?.querySelector<HTMLElement>('.page-subtitle__text') ?? null;
-  /** 服务端渲染的副标题原文（含「共 N 篇」），客户端筛选后只替换其中的计数片段。 */
-  const subtitleTemplate = pageSubtitleTextEl?.textContent ?? '';
+  const pageSubtitleCountEl = pageSubtitle?.querySelector<HTMLElement>('[data-page-subtitle-count]') ?? null;
+  /** 服务端渲染的计数原文（`共 N 篇`），客户端筛选后只替换这个计数元素。 */
+  const subtitleCountTemplate = pageSubtitleCountEl?.textContent?.trim() ?? '';
   const indexUrlRaw = (root.dataset.indexUrl ?? '').trim();
   const sectionSelector = (root.dataset.sectionSelector ?? '').trim();
 
@@ -655,11 +655,11 @@ if (!root) {
     );
   };
 
-  /** 实时刷新副标题里的「共 N 篇」计数。 */
+  /** 实时刷新副标题里的「共 N 篇」计数；保留站点自定义的计数后缀。 */
   const applySubtitleCount = (count: number | null) =>
-    syncSubtitleCount(pageSubtitleTextEl, subtitleTemplate, count, {
+    syncSubtitleCount(pageSubtitleCountEl, subtitleCountTemplate, count, {
       defaultUnit: '篇',
-      keep: '内容',
+      keep: ['内容', '动态'],
       ...(activeScope === 'devlog' ? { unit: '条' as const } : {})
     });
 

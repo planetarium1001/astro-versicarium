@@ -28,8 +28,11 @@
   transition: color 0.18s ease, border-color 0.18s ease;
 }
 
-.article-toc__link:hover {
-  color: var(--text);
+/* 触屏点按后 :hover 会粘住目录项颜色，悬停视觉只在非触屏输入下生效。 */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .article-toc__link:hover {
+    color: var(--text);
+  }
 }
 
 .article-toc__link.is-active {
@@ -227,9 +230,12 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
   transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
 
-.article-toc__toggle:hover {
-  color: var(--text);
-  border-color: var(--muted);
+/* 触屏点按后 :hover 会粘住边框色，悬停视觉只在非触屏输入下生效。 */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .article-toc__toggle:hover {
+    color: var(--text);
+    border-color: var(--muted);
+  }
 }
 
 /**

@@ -24,6 +24,7 @@ type ValidationContext = {
   inputSiteTimezone: HTMLInputElement;
   inputSiteTitleMaxPercent: HTMLInputElement;
   inputSitePageGapPx: HTMLInputElement;
+  inputSiteRailOffsetPx: HTMLInputElement;
   inputPageListRssEnabled: HTMLInputElement;
   inputPageListRssBlog: HTMLInputElement;
   inputPageListRssBits: HTMLInputElement;
@@ -120,6 +121,7 @@ export const createValidation = ({
   inputSiteTimezone,
   inputSiteTitleMaxPercent,
   inputSitePageGapPx,
+  inputSiteRailOffsetPx,
   inputPageListRssEnabled,
   inputPageListRssBlog,
   inputPageListRssBits,
@@ -271,6 +273,8 @@ export const createValidation = ({
         return () => inputSiteTitleMaxPercent;
       case 'site.pageGapPx':
         return () => inputSitePageGapPx;
+      case 'site.railOffsetPx':
+        return () => inputSiteRailOffsetPx;
       case 'site.footer.startYear':
         return () => inputSiteFooterStartYear;
       case 'site.footer.showCurrentYear':

@@ -5,6 +5,7 @@
   "timezone": "Asia/Shanghai",
   "titleMaxPercent": 50,
   "pageGapPx": 32,
+  "railOffsetPx": 6,
   "footer": {
     "startYear": 2026,
     "showCurrentYear": true,

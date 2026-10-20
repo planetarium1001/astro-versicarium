@@ -28,7 +28,8 @@ const showListRss = page.listRss.enabled !== false && page.listRss.blog !== fals
 const pagination = page.pagination?.blog ?? { enabled: true, pageSize: 12 };
 
 const pageTitleText = page.blog.title || '博客';
-const subtitleText = joinPageSubtitleText(page.blog.subtitle, `共 ${resultCount} 篇`);
+const subtitleText = joinPageSubtitleText(page.blog.subtitle);
+const countText = `共 ${resultCount} 篇`;
 const pageDescription = joinPageSubtitleText(
   `${pageTitleText}列表`,
   page.blog.subtitle,
@@ -47,6 +48,7 @@ const fallbackListId = 'blog-tag-list';
     <TagFilterHeader
       pageTitleText={pageTitleText}
       subtitleText={subtitleText}
+      countText={countText}
       rssHref={withBase('/blog/rss.xml')}
       pickerHref={`#${fallbackListId}`}
       fallbackListId={fallbackListId}

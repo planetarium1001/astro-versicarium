@@ -32,7 +32,6 @@ const statusLabel = (version: (typeof versions)[number]): string => {
   >
     <div class="article-version-notice__row">
       <p class="article-version-notice__text">
-        <span class="article-version-notice__mark" aria-hidden="true"></span>
         <span class="article-version-notice__meta">
           <span>{isLatest ? '当前版本' : '历史版本'}</span>
           <span aria-hidden="true">·</span>
@@ -40,14 +39,16 @@ const statusLabel = (version: (typeof versions)[number]): string => {
           <span aria-hidden="true">·</span>
           <span>{currentVersion.date}</span>
         </span>
-        <span class="article-version-notice__note">
-          {isLatest ? '这是本系列的最新内容。' : '该版本已归档，部分内容可能过时。'}
+        <span class="article-version-notice__note-row">
+          <span class="article-version-notice__note">
+            {isLatest ? '这是本系列的最新内容。' : '该版本已归档，部分内容可能过时。'}
+          </span>
+          {!isLatest ? (
+            <a class="article-version-notice__latest" href={withBase(latestVersion.href)}>
+              查看最新版
+            </a>
+          ) : null}
         </span>
-        {!isLatest ? (
-          <a class="article-version-notice__latest" href={withBase(latestVersion.href)}>
-            查看最新版
-          </a>
-        ) : null}
       </p>
       <button
         class="article-version-trigger"

@@ -30,7 +30,8 @@ const {
 
 const pageTitleText = page.devlog.title || '更新';
 const pagination = page.pagination?.devlog ?? { enabled: false, pageSize: 10 };
-const subtitleText = joinPageSubtitleText(page.devlog.subtitle, `共 ${items.length} 条更新`);
+const subtitleText = joinPageSubtitleText(page.devlog.subtitle);
+const countText = `共 ${items.length} 条更新`;
 const pageDescription = joinPageSubtitleText(
   `${pageTitleText}列表`,
   page.devlog.subtitle,
@@ -106,6 +107,7 @@ const katexStylesheetAttrs = { [MARKDOWN_MATH_STYLESHEET_DATA_ATTR]: 'true' };
     optionsAriaLabel={`按项目筛选${pageTitleText}`}
     pageTitleText={pageTitleText}
     subtitleText={subtitleText}
+    countText={countText}
     pickerHref={withBase('/devlog/?picker=project')}
     rssHref="/blog/rss.xml"
     searchAriaLabel={`搜索${pageTitleText}`}

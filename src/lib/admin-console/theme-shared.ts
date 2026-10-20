@@ -282,6 +282,18 @@ export const ADMIN_SITE_PAGE_GAP_MIN = 32;
 export const ADMIN_SITE_PAGE_GAP_MAX = 160;
 /** 「页面外缘间隙」的提示文案，与表单校验共用。 */
 export const ADMIN_SITE_PAGE_GAP_HINT = `（px，最小 ${ADMIN_SITE_PAGE_GAP_MIN}；仅 901px 以上生效）`;
+/**
+ * 窄屏浮动列到屏幕右侧的距离（px）。
+ * 默认 6（与桌面一致的视觉间距）；0–32 可调，让使用者绕开部分浏览器
+ * （华为 ArkWeb）把右侧滚动条判定区划走导致的点按不灵敏。
+ * 仅 ≤900px 的公开页面生效，桌面始终使用 :root 的 6px。
+ */
+export const ADMIN_SITE_RAIL_OFFSET_DEFAULT = 6;
+export const ADMIN_SITE_RAIL_OFFSET_MIN = 0;
+export const ADMIN_SITE_RAIL_OFFSET_MAX = 32;
+/** 「窄屏浮动列右侧距离」的提示文案，与表单校验共用。 */
+export const ADMIN_SITE_RAIL_OFFSET_HINT =
+  `（px，默认 ${ADMIN_SITE_RAIL_OFFSET_DEFAULT}，范围 0–${ADMIN_SITE_RAIL_OFFSET_MAX}；仅 900px 以下生效）`;
 export const ADMIN_OVERVIEW_HIDDEN_MESSAGE_DEFAULT = '作者暂未公开此页面。';
 export const ADMIN_OVERVIEW_HIDDEN_MESSAGE_MAX_LENGTH = 120;
 
@@ -490,6 +502,12 @@ const clampSitePageGap = (value: number | null): number => {
   return Math.min(Math.max(value, ADMIN_SITE_PAGE_GAP_MIN), ADMIN_SITE_PAGE_GAP_MAX);
 };
 
+/** 窄屏浮动列右侧距离：缺失 / 非法 → 默认 6，越界夹取到 0–32。 */
+const clampSiteRailOffset = (value: number | null): number => {
+  if (value === null) return ADMIN_SITE_RAIL_OFFSET_DEFAULT;
+  return Math.min(Math.max(value, ADMIN_SITE_RAIL_OFFSET_MIN), ADMIN_SITE_RAIL_OFFSET_MAX);
+};
+
 const defaultNormalizeCustomSocialLabel = (value: unknown): string => normalizeTrimmed(value);
 
 const cloneCustomItems = (
@@ -682,6 +700,12 @@ export const canonicalizeAdminThemeSettings = (
        * 页面外缘间隙。非法 / 缺失 / 越界都回落到默认 32，并夹取到 32–160。
        */
       pageGapPx: clampSitePageGap(parseInteger(site.pageGapPx as string | number | null | undefined)),
+      /**
+       * 窄屏浮动列右侧距离。非法 / 缺失 / 越界都回落到默认 6，并夹取到 0–32。
+       */
+      railOffsetPx: clampSiteRailOffset(
+        parseInteger(site.railOffsetPx as string | number | null | undefined)
+      ),
       adminOverview: {
         publicVisible: typeof adminOverview.publicVisible === 'boolean' ? adminOverview.publicVisible : true,
         hiddenMessage: normalizeSingleLine(
@@ -866,6 +890,7 @@ export const createAdminWritableThemeSettingsGroups = (
     timezone: settings.site.timezone,
     titleMaxPercent: settings.site.titleMaxPercent,
     pageGapPx: settings.site.pageGapPx,
+    railOffsetPx: settings.site.railOffsetPx,
     footer: {
       ...settings.site.footer
     },
@@ -1042,6 +1067,18 @@ export const validateAdminThemeSettings = (
     pushIssue(
       'site.pageGapPx',
       `页面外缘间隙必须在 ${ADMIN_SITE_PAGE_GAP_MIN}–${ADMIN_SITE_PAGE_GAP_MAX} 之间`
+    );
+  }
+
+  if (!Number.isInteger(settings.site.railOffsetPx)) {
+    pushIssue('site.railOffsetPx', '窄屏浮动列右侧距离必须是整数');
+  } else if (
+    settings.site.railOffsetPx < ADMIN_SITE_RAIL_OFFSET_MIN ||
+    settings.site.railOffsetPx > ADMIN_SITE_RAIL_OFFSET_MAX
+  ) {
+    pushIssue(
+      'site.railOffsetPx',
+      `窄屏浮动列右侧距离必须在 ${ADMIN_SITE_RAIL_OFFSET_MIN}–${ADMIN_SITE_RAIL_OFFSET_MAX} 之间`
     );
   }
 

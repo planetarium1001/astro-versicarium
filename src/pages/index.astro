@@ -186,14 +186,14 @@ body {
   font-size: 16px;
 }
 
-/* 同 global.css 的 html：首屏即固定滚动条槽位，避免样式表异步到位后再跳一次 */
+/* 同 global.css：根元素保持 clip；窄屏的 body 兜底放在快照末尾的窄屏档里 */
 html {
-  scrollbar-gutter: stable;
+  overflow-x: clip;
 }
 
-@supports not (scrollbar-gutter: stable) {
+@supports not (overflow: clip) {
   html {
-    overflow-y: scroll;
+    overflow-x: hidden;
   }
 }
 
@@ -670,6 +670,8 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
 
   .shell {
     grid-template-columns: 1fr;
+    /* 与 layout.css 的窄屏壳层一致：宽度上限取初始包含块，不取 100vw */
+    max-width: 100%;
   }
 
   .divider {
@@ -729,15 +731,8 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
     justify-content: center;
     padding: 6px 8px;
     min-height: var(--tap-min-h);
-    border-radius: 999px;
-    transform-origin: left center;
   }
 
-  .nav a[aria-current="page"] {
-    text-decoration: underline;
-    text-underline-offset: 6px;
-    text-decoration-thickness: 2px;
-  }
 
   .nav .dot,
   .nav .nav-ornament {
@@ -835,6 +830,39 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
     font-size: 14px;
   }
 }
+}
+
+/* 同 global.css：滚动条槽位只对桌面壳层生效，窄屏不预留（经典滚动条内核上会变成右侧空白）。
+   放在快照末尾，保持「桌面规则在前、窄屏档在后」的既有顺序。 */
+@media (min-width: 901px) {
+  html {
+    scrollbar-gutter: stable;
+  }
+}
+
+@supports not (scrollbar-gutter: stable) {
+  @media (min-width: 901px) {
+    html {
+      overflow-y: scroll;
+    }
+  }
+}
+
+/* 同 global.css：根元素的 overflow 不约束初始包含块，窄屏兜底必须落在 body。
+   窄屏没有 sticky 侧栏，桌面加在 body 上会破坏 sticky，故限定在窄屏断点。
+   首页永远不是后台页，这里用裸 body 即可（首屏产物守卫禁止出现后台样式选择器）。 */
+@media (max-width: 900px) {
+  body {
+    overflow-x: clip;
+  }
+}
+
+@supports not (overflow: clip) {
+  @media (max-width: 900px) {
+    body {
+      overflow-x: hidden;
+    }
+  }
 }
 `
 ].join('\n\n');

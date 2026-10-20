@@ -64,6 +64,11 @@ const footerCopyright = settings.site.footer.copyright;
 /** 窄屏顶栏站点标题宽度上限（后台可配，默认 35%），作为 CSS 变量写在 `<html>` 上。 */
 const siteTitleMaxPercent = settings.site.titleMaxPercent;
 /**
+ * 窄屏浮动列到屏幕右侧的距离（后台可配，默认 6px，仅 900px 以下生效）。
+ * 桌面固定用 :root 的 6px；窄屏由 layout.css 在 body 里读这个内联变量覆盖 --rail-action-offset。
+ */
+const siteRailOffsetPx = settings.site.railOffsetPx;
+/**
  * 页面外缘间隙（后台可配，默认 41px）：内容盒到浏览器边缘的距离。
  * 换算 --page-inline 时扣掉 html 的 scrollbar-gutter: stable 占住的滚动条槽。
  */
@@ -74,14 +79,17 @@ const sidebarDividerVariant = settings.ui.layout.sidebarDivider;
 // 非默认字体角色以 <html> 内联属性覆盖 global.css 的 :root tokens；默认态不输出，保持 global.css 为唯一默认来源。
 const typographyStyleOverride = getTypographyStyleOverride(settings.ui.typography);
 /**
- * `<html>` 内联声明：字体覆盖、窄屏站点标题宽度上限、页面外缘间隙与 --page-inline。
- * 内联属性优先于 :root 与首页 critical CSS；窄屏由 global.css 在 body 覆写 --page-inline。
+ * `<html>` 内联声明：字体覆盖、窄屏站点标题宽度上限、页面外缘间隙、--page-inline
+ * 与窄屏浮动列右侧距离。
+ * 内联属性优先于 :root 与首页 critical CSS；窄屏由 global.css 在 body 覆写 --page-inline，
+ * layout.css 在窄屏读 --rail-action-offset-narrow 覆盖 --rail-action-offset。
  */
 const htmlStyleOverride = [
   typographyStyleOverride,
   `--site-title-max-inline: ${siteTitleMaxPercent}%`,
   `--page-gap-inline: ${sitePageGapPx}px`,
-  `--page-inline: ${pageInlinePx}px`
+  `--page-inline: ${pageInlinePx}px`,
+  `--rail-action-offset-narrow: ${siteRailOffsetPx}px`
 ].filter(Boolean).join('; ');
 // 选中 astro-fonts-api 字体时渲染 <Font>（注入构建期生成的 @font-face 与 cssVariable）；默认态为空数组。
 // 只渲染 config 期实际注册的 cssVariable（快照来自 vite.define）：dev 下热改 ui.json 的未注册
@@ -315,6 +323,11 @@ const adminUiPrefsScriptHref = isDevAdminPage
     {showFloatStack && hasFloatButtons ? (
       <div class="float-stack" data-float-stack>
         {/*
+          按钮只保留 aria-label，不写 title：华为 ArkWeb 内核会把 title 当原生长按提示，
+          触摸时可能吞掉首次点按（Chrome / Via 不弹）。桌面悬停提示暂时取消，
+          若需要恢复，改用仓库的 [data-tooltip] 机制而不是 title。
+        */}
+        {/*
           目录按钮：排在最上端，其余按钮位置不随它的显隐变化（浮动列自下而上堆叠）。
           初始 hidden，只有 article-toc.ts 在窄屏且页面确有内联目录时才显示。
         */}
@@ -323,7 +336,6 @@ const adminUiPrefsScriptHref = isDevAdminPage
           class="float-stack__button"
           type="button"
           aria-label="查看目录"
-          title="查看目录"
           hidden
         >
           <UiIcon name="list" class="icon" />
@@ -335,7 +347,6 @@ const adminUiPrefsScriptHref = isDevAdminPage
             type="button"
             aria-label="阅读模式"
             aria-pressed="false"
-            title="阅读模式"
             hidden
           >
             <UiIcon name="book-open" class="icon icon-book-open" />
@@ -348,7 +359,6 @@ const adminUiPrefsScriptHref = isDevAdminPage
             class="float-stack__button"
             type="button"
             aria-label="回到上次阅读位置"
-            title="回到上次阅读位置"
             hidden
           >
             <UiIcon name="resume-reading" class="icon" />
@@ -360,7 +370,6 @@ const adminUiPrefsScriptHref = isDevAdminPage
             class="float-stack__button"
             type="button"
             aria-label="回到顶部"
-            title="回到顶部"
             aria-disabled="true"
           >
             <UiIcon name="chevron-up" class="icon" />
@@ -369,7 +378,9 @@ const adminUiPrefsScriptHref = isDevAdminPage
       </div>
     ) : null}
     <script>
+      import '../scripts/input-modality.ts';
       import '../scripts/article-dates.ts';
+      import '../scripts/page-subtitle.ts';
       import '../scripts/sidebar-theme.ts';
       import '../scripts/sidebar-rail-nav.ts';
       import '../scripts/sidebar-floating-actions.ts';

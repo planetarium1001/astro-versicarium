@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   canonicalizeAdminThemeSettings,
@@ -426,6 +428,54 @@ describe('admin-console/shared：页面外缘间隙', () => {
   });
 });
 
+/** 窄屏浮动列右侧距离是 px（默认 6，范围 0–32），只影响 ≤900px 的公开页面。 */
+describe('admin-console/shared：窄屏浮动列右侧距离', () => {
+  it('默认值 6，缺失时补齐', () => {
+    const payload = getEditableThemeSettingsPayload().settings;
+    expect(payload.site.railOffsetPx).toBe(6);
+
+    const raw = baseSettings() as Record<string, any>;
+    delete raw.site.railOffsetPx;
+    expect(canonicalizeAdminThemeSettings(raw).site.railOffsetPx).toBe(6);
+  });
+
+  it('字符串数字会被规范化，越界会被夹取到 0–32', () => {
+    const raw = baseSettings() as Record<string, any>;
+    raw.site.railOffsetPx = '18';
+    expect(canonicalizeAdminThemeSettings(raw).site.railOffsetPx).toBe(18);
+
+    raw.site.railOffsetPx = 0;
+    expect(canonicalizeAdminThemeSettings(raw).site.railOffsetPx).toBe(0);
+
+    raw.site.railOffsetPx = 32;
+    expect(canonicalizeAdminThemeSettings(raw).site.railOffsetPx).toBe(32);
+
+    raw.site.railOffsetPx = -4;
+    expect(canonicalizeAdminThemeSettings(raw).site.railOffsetPx).toBe(0);
+
+    raw.site.railOffsetPx = 64;
+    expect(canonicalizeAdminThemeSettings(raw).site.railOffsetPx).toBe(32);
+
+    raw.site.railOffsetPx = 'abc';
+    expect(canonicalizeAdminThemeSettings(raw).site.railOffsetPx).toBe(6);
+  });
+
+  it('校验会拦住非整数与越界值', () => {
+    const raw = baseSettings() as Record<string, any>;
+    const ok = canonicalizeAdminThemeSettings(raw);
+    expect(validateAdminThemeSettings(ok).map((issue) => issue.path)).not.toContain('site.railOffsetPx');
+
+    const tooSmall = { ...ok, site: { ...ok.site, railOffsetPx: -1 } };
+    expect(validateAdminThemeSettings(tooSmall).map((issue) => issue.path)).toContain('site.railOffsetPx');
+
+    const tooLarge = { ...ok, site: { ...ok.site, railOffsetPx: 33 } };
+    expect(validateAdminThemeSettings(tooLarge).map((issue) => issue.path)).toContain('site.railOffsetPx');
+
+    const notInteger = { ...ok, site: { ...ok.site, railOffsetPx: 6.5 } };
+    expect(validateAdminThemeSettings(notInteger).map((issue) => issue.path)).toContain('site.railOffsetPx');
+  });
+});
+
 /** RSS 订阅设置：总开关 `enabled` 加 `/blog/` `/bits/` `/archive/` 三个互不干扰的页面开关。 */
 describe('admin-console/shared：列表页 RSS 开关', () => {
   it('缺省时四个都是开（默认值），并可被输入覆盖', () => {
@@ -612,5 +662,56 @@ describe('条目版本名称设置', () => {
 
     const paths = validateAdminThemeSettings(invalid).map((issue) => issue.path);
     expect(paths).toContain('ui.entryVersionName');
+  });
+});
+
+/** 后台「主题 → 站点设置」的窄屏浮动列右侧距离：输入框、表单往返、校验映射与构建输出必须齐全。 */
+describe('admin-console/shared：窄屏浮动列右侧距离的后台接线', () => {
+  const SRC = process.cwd();
+  const read = (relative: string) => readFile(path.join(SRC, relative), 'utf8');
+
+  it('站点设置组件提供数字输入，控件与表单往返都接上', async () => {
+    const [section, controls, index, formCodec, validation] = await Promise.all([
+      read('src/components/admin/AdminSiteSection.astro'),
+      read('src/scripts/admin-console/controls.ts'),
+      read('src/scripts/admin-console/index.ts'),
+      read('src/scripts/admin-console/form-codec.ts'),
+      read('src/scripts/admin-console/validation.ts')
+    ]);
+
+    expect(section).toContain('id="site-rail-offset-px"');
+    expect(section).toContain('窄屏浮动列右侧距离');
+    expect(section).toContain('ADMIN_SITE_RAIL_OFFSET_HINT');
+    expect(section).toMatch(/min=\{ADMIN_SITE_RAIL_OFFSET_MIN\}/);
+    expect(section).toMatch(/max=\{ADMIN_SITE_RAIL_OFFSET_MAX\}/);
+    expect(controls).toContain(
+      "inputSiteRailOffsetPx: byId<HTMLInputElement>('site-rail-offset-px')"
+    );
+    // index 把同一个控件同时传给表单编解码与校验映射（两处），漏一处就会读/写不到
+    expect(index.match(/inputSiteRailOffsetPx: controls\.inputSiteRailOffsetPx/g)).toHaveLength(2);
+    expect(formCodec).toContain(
+      'railOffsetPx: parseInteger(inputSiteRailOffsetPx.value) ?? ADMIN_SITE_RAIL_OFFSET_DEFAULT'
+    );
+    expect(formCodec).toContain(
+      'inputSiteRailOffsetPx.value = String(settings.site.railOffsetPx ?? ADMIN_SITE_RAIL_OFFSET_DEFAULT)'
+    );
+    expect(validation).toContain("case 'site.railOffsetPx':");
+    expect(validation).toContain('return () => inputSiteRailOffsetPx;');
+  });
+
+  it('构建期把设置写成 <html> 内联变量，窄屏 CSS 只引用它', async () => {
+    const [layoutAstro, layoutCss, siteJsonRaw] = await Promise.all([
+      read('src/layouts/BaseLayout.astro'),
+      read('src/styles/components/layout.css'),
+      read('src/data/settings/site.json')
+    ]);
+
+    expect(layoutAstro).toContain('const siteRailOffsetPx = settings.site.railOffsetPx;');
+    expect(layoutAstro).toContain('--rail-action-offset-narrow: ${siteRailOffsetPx}px');
+    expect(layoutCss).toMatch(
+      /--rail-action-offset:\s*var\(--rail-action-offset-narrow,\s*6px\)/
+    );
+    const siteJson = JSON.parse(siteJsonRaw) as { railOffsetPx?: number };
+    expect(siteJson.railOffsetPx, '默认构建仍输出 6px').toBe(6);
   });
 });

@@ -60,19 +60,32 @@
   overflow-wrap: anywhere;
 }
 
-/* 悬停 / 键盘聚焦只高亮标题文字，与旧版 `.archive-timeline__title` 的反馈一致。 */
-.archive-timeline__entry:hover .entry-title__title,
+/* 键盘聚焦只高亮标题文字，与旧版 `.archive-timeline__title` 的反馈一致。 */
 .archive-timeline__entry:focus-visible .entry-title__title {
   color: var(--accent);
   text-decoration: underline;
 }
 
-/* 旧版「项目名: 」前缀属于同一个链接，悬停时与标题一起变色；版本胶囊保持弱化。 */
-.archive-timeline__entry:hover .entry-title__project,
+/* 旧版「项目名: 」前缀属于同一个链接，键盘聚焦时与标题一起变色；版本胶囊保持弱化。 */
 .archive-timeline__entry:focus-visible .entry-title__project,
-.archive-timeline__entry:hover .entry-title__colon,
 .archive-timeline__entry:focus-visible .entry-title__colon {
   color: var(--accent);
+}
+
+/*
+ * 触屏点按后 :hover 会一直粘在行上，标题会长期保持高亮；
+ * 悬停视觉只在非触屏输入下生效（见 scripts/input-modality.ts 的 <html data-input>）。
+ */
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .archive-timeline__entry:hover .entry-title__title {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
+  :root:not([data-input="touch"]) .archive-timeline__entry:hover .entry-title__project,
+  :root:not([data-input="touch"]) .archive-timeline__entry:hover .entry-title__colon {
+    color: var(--accent);
+  }
 }
 
 /* <=640px：日期列收窄（胶囊收窄见 scope-pills.css） */

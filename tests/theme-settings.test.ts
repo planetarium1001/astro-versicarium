@@ -585,6 +585,44 @@ describe('theme-settings revision semantics', () => {
     }
   });
 
+  /**
+   * 窄屏浮动列右侧距离 `site.railOffsetPx`：后台设定 px（默认 6，范围 0–32），
+   * 构建期写成 <html> 内联的 --rail-action-offset-narrow；非整数 / 越界视为未配。
+   */
+  it('reads the narrow rail offset with the default and drops non-integer / out-of-range values', async () => {
+    expect(getThemeSettings().settings.site.railOffsetPx).toBe(6);
+
+    const settingsDir = await createTempSettingsFixture();
+    const sitePath = path.join(settingsDir, 'site.json');
+    const writeSiteJson = async (value: unknown) => {
+      const siteJson = JSON.parse(await readFile(sitePath, 'utf8')) as Record<string, unknown>;
+      if (value === undefined) delete siteJson.railOffsetPx;
+      else siteJson.railOffsetPx = value;
+      await writeFile(sitePath, `${JSON.stringify(siteJson, null, 2)}\n`, 'utf8');
+      resetThemeSettingsCache();
+    };
+
+    await writeSiteJson(undefined);
+    const withoutField = getThemeSettings();
+    expect(withoutField.settings.site.railOffsetPx).toBe(6);
+
+    // 边界 0 / 32 是合法值
+    await writeSiteJson(0);
+    expect(getThemeSettings().settings.site.railOffsetPx).toBe(0);
+    await writeSiteJson(32);
+    expect(getThemeSettings().settings.site.railOffsetPx).toBe(32);
+
+    // 字段已接进可编辑快照，合法值不该被判成 schema-mismatch
+    const configured = getThemeSettings();
+    expect(getThemeSettingsReadDiagnostics(configured)).toEqual([]);
+    expect(getEditableThemeSettingsPayload(configured).settings.site.railOffsetPx).toBe(32);
+
+    for (const invalid of [-1, 33, 6.5, 'abc']) {
+      await writeSiteJson(invalid);
+      expect(getThemeSettings().settings.site.railOffsetPx).toBe(6);
+    }
+  });
+
   it('keeps the narrow title null when it is missing or blank', async () => {
     const settingsDir = await createTempSettingsFixture();
     const shellPath = path.join(settingsDir, 'shell.json');

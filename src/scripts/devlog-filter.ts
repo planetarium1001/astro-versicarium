@@ -28,11 +28,12 @@ if (dialog && listEl) {
   const triggers = Array.from(document.querySelectorAll<HTMLElement>('[data-entry-tag-trigger]'));
   const clearButton = dialog.querySelector<HTMLButtonElement>('[data-entry-tag-clear]');
   const countEl = dialog.querySelector<HTMLElement>('[data-entry-tag-count]');
-  const subtitleTextEl = document.querySelector<HTMLElement>('.page-subtitle__text');
   const subtitle = document.querySelector<HTMLElement>('.page-subtitle');
+  const subtitleCountEl = document.querySelector<HTMLElement>('[data-page-subtitle-count]');
   const titleRow = document.querySelector<HTMLElement>('.page-title-row');
   const pageHeading = titleRow?.parentElement ?? null;
-  const subtitleTemplate = subtitleTextEl?.textContent ?? '';
+  /** 服务端渲染的计数原文；客户端筛选后只替换这个计数元素。 */
+  const subtitleCountTemplate = subtitleCountEl?.textContent?.trim() ?? '';
 
   /** 页头搜索：结构与 `/blog/` 一致（`TagFilterHeader` 的 `showSearch`），交互自己接。 */
   const searchRoot = document.querySelector<HTMLElement>('[data-entry-search]');
@@ -79,7 +80,7 @@ if (dialog && listEl) {
 
   /** 副标题里的「共 N 条更新」跟着筛选结果走。 */
   const applySubtitleCount = (visible: number | null) =>
-    syncSubtitleCount(subtitleTextEl, subtitleTemplate, visible, {
+    syncSubtitleCount(subtitleCountEl, subtitleCountTemplate, visible, {
       defaultUnit: '条',
       keep: '更新'
     });
