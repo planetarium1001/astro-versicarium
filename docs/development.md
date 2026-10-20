@@ -42,6 +42,7 @@ npm run ci        # 等价于 verify
 5. `npm run check:prod-artifacts`
 6. `npm run check:layout-geometry`
 7. `npm run check:touch-targets`
+8. `npm run check:viewport-overflow`
 
 源码类守卫只读源文件或设置 JSON；产物类守卫读取 `dist/`，必须在构建后执行。`SITE_URL` 为空时 sitemap 不生成，`check:prod-artifacts` 会失败；本地只预览页面可以省略，执行 `verify` 与 CI 必须提供。
 
@@ -74,6 +75,7 @@ npm run ci        # 等价于 verify
 | `check:prod-artifacts` | 必需文件、后台只读壳、无后台导航与开发偏好资源、RSS / sitemap / robots 内容 |
 | `check:layout-geometry` | 解析产物 CSS 与 `<html>` 内联属性，断言侧栏、外缘间隙、浮动列与目录把手几何 |
 | `check:touch-targets` | 按规则顺序取最终生效尺寸，断言交互元素不小于 44px |
+| `check:viewport-overflow` | 读产物 CSS 与首页快照，断言滚动条槽位仅桌面生效、clip 回退、窄屏 body 兜底、壳层宽度上限与提示锚点 |
 
 后台只读壳的判定包括：产物中不出现后台写入根节点、bootstrap 数据、后台导航或开发专用 UI 偏好资源；`/admin/` 带 `noindex,nofollow`。改动后台页面或样式后应重新构建并执行这些检查。
 
@@ -114,6 +116,15 @@ Vitest 配置在 `vitest.config.ts`，用例位于 `tests/*.test.ts`，默认 No
 | 页面快照与 Markdown 夹具 | `tests/fixtures/`、`src/test-fixtures/` |
 
 写入类用例通过 `tests/admin-content-write-fixture.ts` 在系统临时目录搭建内容目录，并把设置目录与项目根指向临时位置，测试结束清理，不触碰仓库内容。
+
+## 浏览器基线
+
+- 样式层使用 `:has()`：项目卡与列表卡的键盘焦点背景依赖 `:has(:focus-visible)`；不支持的内核降级为没有整卡背景，但保留原生焦点提示。
+- 触屏悬停：公开页面的悬停视觉以 `<html data-input>`（`src/scripts/input-modality.ts`）记录的输入模态为准。媒体查询不足以区分把指针上报成 `hover: hover` 的触屏设备。
+- 主题切换涟漪使用 View Transitions，不支持或偏好减少动效时直接切换主题，不播放涟漪。
+- 默认文本链接的悬停下划线只在非触屏模态出现：触屏点按后 `:hover` 会粘住，导航链接会在 44px 盒底留下一条比文字更长、更远的下划线。
+- 指针/触屏点按产生的 `:focus`（非 `:focus-visible`）不绘制浏览器默认焦点描边；部分内核会把点按也判作 `:focus-visible`，因此触屏模态（`<html data-input="touch">` 且无键盘标记）下作者样式同样关闭 `:focus-visible` 描边。按一次 Tab / Shift+Tab，或发生真实鼠标移动、点按后，键盘标记解除，设计焦点环恢复；悬停门禁仍以 `data-input` 为准，不随键盘恢复。
+- 不支持 `:focus-visible` 的内核会整条丢弃相关规则，保持原有的原生焦点提示。
 
 ## 内容命名
 
