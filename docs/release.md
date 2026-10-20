@@ -10,7 +10,7 @@
 | 向后兼容的功能 | 次版本 | 新增设置项、版本字段、后台模块或页面能力 |
 | 向后兼容的修复 | 修订版本 | 修复渲染、布局、合并逻辑或文档错误 |
 
-当前版本为 `1.0.0-rc.1`，是首个预览候选，标签为 `v1.0.0-rc.1`。本次为预览版准备，仓库尚未创建 Release。
+当前版本为 `1.0.0-rc.2`，是第二个预览候选，标签为 `v1.0.0-rc.2`。本次为本地预览提交，仓库尚未创建 Release；`v1.0.0-rc.1` 作为首个预览候选的本地标签保留。
 
 预览候选用于补全文档、示例与真实环境测试；验证完成后发布稳定版 `1.0.0`，再进入常规 SemVer 发布节奏。
 
@@ -29,7 +29,7 @@
 
 `.github/workflows/release-please.yml` 在推送到 `main` 时运行 `googleapis/release-please-action`，读取 `release-please-config.json` 与 `.release-please-manifest.json`，`release-type` 为 `node`，权限为 `contents: write` 与 `pull-requests: write`。
 
-Release Please 会持续更新一个 release PR：更新 `package.json` 的版本与 `CHANGELOG.md`。合并该 PR 后，工作流创建与版本一致的 `v*` 标签和 GitHub Release。首个 `1.0.0-rc.1` 由维护者写入 `package.json`、`CHANGELOG.md` 与 manifest，标签在预览确认后创建；之后的预览版本交给 Release Please。
+Release Please 会持续更新一个 release PR：更新 `package.json` 的版本与 `CHANGELOG.md`。合并该 PR 后，工作流创建与版本一致的 `v*` 标签和 GitHub Release。首个 `1.0.0-rc.1` 由维护者写入 `package.json`、`CHANGELOG.md` 与 manifest，标签在预览确认后创建；之后的预览版本交给 Release Please；Release Please PR 不可用时，由维护者按同格式手动写入 `package.json`、`CHANGELOG.md` 与 manifest。
 
 预览阶段在 `release-please-config.json` 中使用 `"versioning": "prerelease"`、`"prerelease": true` 与 `"prerelease-type": "rc"`，后续版本会递增为 `1.0.0-rc.2` 等。发布稳定版时改为默认版本策略并关闭预发布标记，再以 `1.0.0` 发布。
 
@@ -58,7 +58,7 @@ release PR 合并前检查三处一致：`package.json` 的版本、`CHANGELOG.m
 
 ## 发布清单
 
-正式发布时按以下顺序执行。本次 `1.0.0-rc.1` 预览只做本地提交，`v1.0.0-rc.1` 标签保留在本地，不创建 Release、不推送。
+正式发布时按以下顺序执行。本次 `1.0.0-rc.2` 预览只做本地提交，`v1.0.0-rc.2` 标签保留在本地，不创建 Release、不推送。
 
 1. 在 `main` 上按 Conventional Commits 提交并推送，确认 CI 通过。
 2. 等 Release Please 打开或更新 release PR，检查版本号、CHANGELOG 与文档一致。
@@ -75,7 +75,7 @@ Release 页面：<https://github.com/planetarium1001/astro-versicarium/releases>
 Release 创建后按版本下载并校验：
 
 ```bash
-VERSION=1.0.0-rc.1
+VERSION=1.0.0-rc.2
 BASE="https://github.com/planetarium1001/astro-versicarium/releases/download/v${VERSION}"
 curl -LO "${BASE}/astro-versicarium-${VERSION}.zip"
 curl -LO "${BASE}/SHA256SUMS"

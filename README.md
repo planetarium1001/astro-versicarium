@@ -48,10 +48,10 @@ npm run preview   # 预览构建产物
 
 ### 1. 下载 Release 资产
 
-首个预览候选为 `1.0.0-rc.1`，标签 `v1.0.0-rc.1`。仓库当前尚未创建 Release；Release 创建后，`release` 工作流会附加 `astro-versicarium-1.0.0-rc.1.zip` 与 `SHA256SUMS`。
+当前预览候选为 `1.0.0-rc.2`，标签 `v1.0.0-rc.2`。仓库当前尚未创建 Release；Release 创建后，`release` 工作流会附加 `astro-versicarium-1.0.0-rc.2.zip` 与 `SHA256SUMS`。
 
 ```bash
-VERSION=1.0.0-rc.1
+VERSION=1.0.0-rc.2
 BASE="https://github.com/planetarium1001/astro-versicarium/releases/download/v${VERSION}"
 curl -LO "${BASE}/astro-versicarium-${VERSION}.zip"
 curl -LO "${BASE}/SHA256SUMS"
@@ -183,7 +183,7 @@ npm run theme:update              # 合并并更新基准提交
 
 ## 版本与发布
 
-当前为 `1.0.0-rc.1` 预览候选，`v1.0.0-rc.1` 标签只保留在本地。仓库当前尚未创建 Release；预览验证与文档补全后发布正式版 `1.0.0`。
+当前为 `1.0.0-rc.2` 预览候选，`v1.0.0-rc.2` 标签只保留在本地。仓库当前尚未创建 Release；预览验证与文档补全后发布正式版 `1.0.0`。
 
 版本号与 `CHANGELOG.md` 由 Release Please 管理：提交遵循 Conventional Commits，Release Please 维护版本与变更记录，合并 release PR 时创建标签与 GitHub Release。Release 创建后，`.github/workflows/release.yml` 校验标签与版本号一致，并将模板 zip 与 `SHA256SUMS` 附加到该 Release。
 
@@ -209,7 +209,7 @@ GitHub Pages、自有域名与其他静态托管的配置见 [docs/deployment.md
 | [docs/writing.md](docs/writing.md) | 五个集合的 frontmatter、版本规则、图片路径与 Markdown 语法 |
 | [docs/admin-console.md](docs/admin-console.md) | 后台页面、主题字段、内容编辑器、资源与快照写入 |
 | [docs/deployment.md](docs/deployment.md) | 分支模型、工作流、环境变量、GitHub Pages 与静态托管 |
-| [docs/release.md](docs/release.md) | SemVer、Release Please、1.0.0-rc.1 预览、标签、模板打包与 `theme.json` 基线 |
+| [docs/release.md](docs/release.md) | SemVer、Release Please、1.0.0-rc.2 预览、标签、模板打包与 `theme.json` 基线 |
 | [docs/upstream.md](docs/upstream.md) | 与上游的关系、改造范围、同步方向与手工合并 |
 | [docs/favicon.md](docs/favicon.md) | 图标槽位、生成、回退、本地路径与反向代理放行 |
 
