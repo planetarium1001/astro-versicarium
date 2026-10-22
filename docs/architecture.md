@@ -1,102 +1,80 @@
-# 架构
+# 站点结构
 
-Versicarium 的代码按内容边界、主题代码与构建管线分层：作者内容位于 `content/`，可更新代码位于 `src/`，主题更新只覆盖主题负责的部分。
+> 本文档为使用文档，不涉及代码、开发等内容。代码分层、命令参数与实现细节见[开发者文档：架构](developers/architecture.md)。
 
-## 目录分层
+站点由「内容」和「主题」两部分组成。内容是你写的文章、项目、动态与页面，放在 `content/`；主题决定这些内容怎么显示，放在 `src/`。两部分分开，升级主题时不会动到你的内容。
 
-| 目录 | 职责 |
-| --- | --- |
-| `content/` | 作者内容，按集合分目录；条目包含 Markdown 主文件与 `images/`、`files/`、`assets/` |
-| `src/pages/` | 页面与 API 路由；`admin/` 与 `api/admin/` 的写入仅开发环境可用，`checks/` 为内部冒烟页 |
-| `src/layouts/` | `BaseLayout` 与 `ArticleLayout` |
-| `src/components/` | 展示组件；`admin/` 只被后台页面引用 |
-| `src/lib/` | 设置解析、内容读取、路由模型、归档与后台逻辑 |
-| `src/lib/admin-console/` | 后台专用契约、读写、媒体索引与设置校验 |
-| `src/scripts/` | 客户端脚本；`admin-*/` 只在开发环境加载 |
-| `src/styles/` | 样式入口与组件样式；`components/admin/` 为后台样式 |
-| `src/plugins/` | Markdown 管线、HTML 白名单与关于页指令 |
-| `src/utils/` | 日期、slug、路径、格式化与时区工具 |
-| `src/data/settings/` | 五个主题设置 JSON |
-| `public/` | 静态资源与运行时生成资源 |
-| `scripts/` | 校验、字体子集、`new:bit`、`theme:update` |
-| `tests/` | Vitest 用例与页面快照 |
-| `tools/` | 字符集基线、指纹与图标生成标记 |
+![窄屏首页](images/mobile-home.webp)
 
-## 内容集合与路由
+## 内容与主题
 
-集合定义在 `src/content.config.ts`，由 `src/lib/content-loader.ts` 的 `entryDirLoader` 加载。每个条目是一个目录，主文件按 `index.md`、唯一 `.md`、唯一 `entry: true` 的顺序确定；集合根目录下的 Markdown 文件会被拒绝。`about` 使用固定页面加载器，只读取 `content/about/index.md`。
-
-| 集合 | 内容根 | 公开路由 |
+| 部分 | 放什么 | 位置 |
 | --- | --- | --- |
-| `blog` | `content/blog/<entry>/` | `/blog/`、`/blog/<slug>/` |
-| `projects` | `content/projects/<entry>/` | `/projects/`，条目以 `#<anchor>` 打开弹窗 |
-| `bits` | `content/bits/<entry>/` | `/bits/`，条目以 `#bit-<entryId>` 定位 |
-| `devlog` | `content/devlog/<projectSlug>/<entry>/` | `/devlog/`，条目以压平后的 `#<entryId>` 定位 |
-| `about` | `content/about/index.md` | `/about/` |
+| 内容 | 文章、项目、动态、开发日志、关于页 | `content/` |
+| 主题 | 页面、样式、交互与后台 | `src/` |
+| 资源 | 字体、图标、头像与图片 | `public/` |
 
-`/archive/` 聚合博客、项目版本与开发日志，按年月分组，不含动态；`archive.versionMode` 决定项目显示全部版本还是仅最新版。`/blog/index.json`、`/bits/index.json`、`/archive/index.json` 为客户端筛选与计数提供数据；`/blog/rss.xml` 与 `/rss.xml` 输出博客订阅源，每个系列只发最新版。
+只改内容不需要碰 `src/`；改外观也不需要动 `content/`。
 
-路由前缀由 `astro.config.mjs` 的 `base` 决定，环境变量为 `ASTRO_WHONO_BASE_PATH`；站内链接经 `createWithBase()` 拼接，`trailingSlash` 固定为 `always`。sitemap 只在 `SITE_URL` 非空时生成，构建后按 `/blog/index.json` 的 canonical 列表移除历史版本与 latest dated alias，并排除 `/admin/` 与 `/checks/`。
+## 五个内容区
 
-## 服务端与客户端边界
+内容分成五个区，每个区在 `content/` 下有独立的目录：
 
-开发环境 `output` 为 `server`，允许后台与 `/api/admin/*` 读写；生产构建切换为 `static`，后台页面输出只读壳，写入接口返回 404。页面在构建时渲染完整列表与正文，无 JavaScript 时仍可阅读与导航。
-
-筛选、搜索、分页与标签表达式只操作已渲染的 DOM，不从 JSON 重建列表；`index.json` 用于补充计数与筛选数据。客户端入口在 `src/scripts/`，由布局或页面以模块脚本引入：
-
-| 脚本组 | 职责 |
+| 区 | 放什么 |
 | --- | --- |
-| `article-toc.ts` | 目录展开、滚动高亮、跳转高亮与状态持久化 |
-| `sidebar-*.ts` | 侧栏导航、主题切换、阅读模式、浮动操作列、阅读位置记忆 |
-| `entry-search.ts`、`tag-expression.ts`、`*-filter*` | 列表搜索、标签表达式、年份与项目筛选 |
-| `dialog-controller.ts` | 卡片详情弹窗的通用交互 |
-| `view-stats.ts` | 浏览数据取数接入点，默认空实现 |
-| `admin-*/` | 后台行为，仅开发环境加载 |
+| 文章 | 有标题、日期、标签的长文；同一主题可以写多个版本，组成系列 |
+| 项目 | 项目介绍与各版本的记录 |
+| 动态 | 短记录，可以带图片和标签 |
+| 开发日志 | 按项目归档的开发进展 |
+| 关于页 | 固定的单页介绍 |
 
-浏览数据是真实存在的可选槽位，不是第三方统计集成。布局渲染 `[data-view-stats]`，带 `data-view-scope`、`-path`、`-route`、`-title`；每个指标是 `[data-view-stat="pv|uv"]` 内的 `[data-view-stat-value]`，未填值时保持 `hidden`。`src/lib/view-stats.ts` 提供 `resolveViewStats()`、`setViewStatValue()` 与 `VIEW_STATS_READY_EVENT`，站点在 `src/scripts/view-stats.ts` 中自行取数。
+文章和项目都可以有多个版本。新版本发布后，旧版本保留为历史记录，读者仍能打开，但默认看到的是最新版。
 
-## 设置解析
+动态是短记录，不进归档。
 
-主题设置以 JSON 存放在 `src/data/settings/`，分为 `site.json`、`shell.json`、`home.json`、`page.json`、`ui.json`。`src/lib/theme-settings.ts` 逐字段校验类型、范围与路径，缺失或非法值回落到内置默认值，同时记录每个字段来自文件、兼容旧值还是默认值。
+## 归档
 
-可编辑快照带 `revision`，由规范化后的设置计算；后台保存时以此校验并发修改。读取阶段的 JSON 语法错误、根节点类型错误或需要静默修补的字段会进入只读诊断状态，渲染仍使用兜底值。生产构建缓存解析结果，开发环境每次读取；`ui.json` 的字体选择在 Astro 配置期读取，修改后需重启开发服务器。
+归档把文章的各个版本、项目的各个版本与开发日志按时间放在一起，按年月分组。它只有一页，在一页里按时间列出全部记录，并支持筛选。
 
-## 壳层与布局几何
+归档默认显示所有版本。只想看到每个系列或项目的最新版时，在后台的页面设置里切换即可。
 
-样式入口为 `src/styles/global.css`。桌面壳层为三列：`--sidebar`（224px）、1px 分隔线、内容列。页面外缘间隙由 `site.pageGapPx` 控制，构建期以 `<html>` 内联自定义属性输出 `--page-gap-inline` 与 `--page-inline`；后者等于间隙减去 `--scrollbar-gutter-inline`（15px）。窄屏（≤ 900px）改为单列，间隙归零；触屏滚动条为浮层，由 `layout.css` 单独覆盖。窄屏浮动列到右缘的距离由 `site.railOffsetPx` 控制（0–32px，默认 6），构建期输出 `--rail-action-offset-narrow`；`layout.css` 只在 ≤900px 的公开页面用 `var(--rail-action-offset-narrow, 6px)` 覆盖 `--rail-action-offset`，桌面仍固定用 `:root` 的 6px。
+## 一个条目就是一个目录
 
-![窄屏首页](images/home-mobile.png)
+每个条目是一个目录，主文件通常叫 `index.md`。写一篇文章时，在 `content/` 下为它新建一个能看出内容的目录，放入 `index.md` 和所需图片，正文里用相对路径引用同一目录的图片。
 
-首屏 critical CSS 是 `src/pages/index.astro` 内的手写快照，位于 `global.css` 之后。`check:home-critical-css` 比对快照与 `global.css`、`layout.css` 的壳层、窄屏顶栏与浮动列声明；`check:layout-geometry`、`check:touch-targets` 与 `check:viewport-overflow` 读取构建产物，分别断言间距不变量、触控尺寸与横向溢出兜底。布局改动需同时通过这些检查，细节见 [development.md](development.md)。
+目录里只有一个 Markdown 文件时，可以省略 `index.md` 直接使用。有 `index.md` 时以它为主文件；没有 `index.md` 又有多个 Markdown 文件时，要给主文件标 `entry: true`，否则构建会报错。
 
-## Markdown 管线
+图片、附件和主文件放在同一个条目目录里。想给多个条目共用图片时，可以放到公共位置再引用，具体写法见[内容与写作](writing.md)。
 
-公开页面使用 `src/plugins/markdown-pipeline.mjs` 组装的 unified 处理器，由 `astro.config.mjs` 的 `markdown.processor` 接入。Astro 内建的 GFM 与 smartypants 先执行，项目插件随后处理：
+## 后台与线上
 
-- remark：`remark-math`、`remark-directive`、关于页指令与提示块；
-- rehype：数学边界保护、原始 HTML 放行、统一白名单清洗、KaTeX 渲染与代码块工具栏；
-- 代码高亮：Shiki，浅色 `github-light`、深色 `github-dark`。
+后台只在本地开发时可用。运行 `npm run dev` 后访问 `/admin/`，可以改设置、写内容、管理图片和附件。
 
-单个 `$` 不作为公式定界符。后台预览使用显式 unified 处理器，与公开管线共享同一份插件与白名单；差异仅在标题 id 与预览专用属性。`projects` 与 `devlog` 的末尾链接组由 `src/lib/trailing-links.ts` 解析，正文渲染与摘要派生都先剥离链接行再附加统一标记。写法见 [writing.md](writing.md)。
+线上发布的是构建结果，后台只能查看，修改入口都不可用。内容与设置的改动请在本地完成，再重新构建发布。
 
-内容附件（PDF、压缩包等非图片文件）从条目目录引用时，构建期由 `src/integrations/content-assets.mjs` 复制到 `dist/content-assets/`，只复制被 Markdown 或 HTML 链接引用的文件。正文图片仍按普通图片路径解析。
+## 五组设置
 
-## 后台 API 边界
+设置分成五组文件，都在 `src/` 里：
 
-后台页面路由为 `/admin/`、`/admin/theme/`、`/admin/content/`、`/admin/resources/`、`/admin/data/`；内容编辑页为 `/admin/content/[collection]/_edit/[...entryId]/`。`/admin/images/` 在 `astro.config.mjs` 中重定向到 `/admin/resources/`。页面结构与字段见 [admin-console.md](admin-console.md)。
+| 组 | 管什么 |
+| --- | --- |
+| 站点 | 标题、描述、语言、时区、页边距、页脚、备案信息、站点图标、社交链接 |
+| 侧栏 | 品牌字、引语与导航顺序 |
+| 首页 | 导语、首图与「继续浏览」链接 |
+| 页面 | 各列表页的标题、订阅源、分页与归档版本显示 |
+| 界面 | 代码块、阅读模式、浮动按钮、字体与统计位置 |
 
-API 位于 `src/pages/api/admin/`，分为内容、媒体与图片、主题设置、数据快照、预览五组。所有处理函数先检查 `import.meta.env.DEV`，非开发环境返回 404；写入还要求同源 `Origin`/`Referer` 与正确的 `Content-Type`，设置与内容请求另需 `revision`。设置、内容与站点资源分别使用写队列，落盘通过临时文件与重命名完成，失败时回滚；检测到外部更新时返回 409 并带回最新快照。
+在后台保存后刷新页面生效；直接改文件也一样。字体选择是例外，改完要重启本地开发服务。
 
-## 构建流水线
+## 字体、图标与资源
 
-`npm run build` 先由 `prebuild` 执行 `scripts/favicon.mjs`，再进入 `astro build`。配置期根据 `SITE_URL` 决定是否注册 sitemap，根据 `ui.json` 注册 Astro Fonts API 字体，并把部署 `base` 传给 Markdown 与内容资源插件。
+字体文件、站点图标和头像都在 `public/` 里，构建时随站点一起发布，页面不向外部字体或图标服务请求。
 
-构建阶段主要步骤：
+站点自带默认图标，可以替换。替换后本地打开页面并强制刷新就能看到。
 
-1. `entryDirLoader` 读取五个集合，解析 frontmatter 并渲染 Markdown；
-2. `contentAssets` 复制被引用的内容附件；
-3. Astro 生成静态页面、RSS、robots 与 sitemap；
-4. sitemap 插件移除非 canonical 的博客 URL；
-5. `verify` 在产物上执行 fixture、测试与产物类守卫。
+## 主题更新
 
-完整命令与守卫清单见 [development.md](development.md)，部署变量见 [deployment.md](deployment.md)。
+主题更新使用 `npm run theme:update`。它按文件合并主题的新版本，不会覆盖 `content/`、五组设置，也不会覆盖站点自己的图片、头像与字体。
+
+更新前先提交本地改动。遇到冲突时手工解决，再重新运行。
+

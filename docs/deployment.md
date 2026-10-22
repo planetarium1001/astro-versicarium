@@ -1,73 +1,74 @@
-# 部署
+# 部署上线
 
-## 分支模型
+> 本文档为使用文档，不涉及代码、开发等内容。代码分层、命令参数与实现细节见[开发者文档：部署](developers/deployment.md)。
 
-| 分支 | 内容 | 用途 |
-| --- | --- | --- |
-| `main` | 主题代码、模板设置与文档，不含示例站内容 | 模板与主题更新来源 |
-| `demo` | 完整示例内容、示例设置与页面截图 | 部署到 GitHub Pages |
+线上站点是一组静态文件，不需要数据库。构建时把内容和设置生成到 `dist/`，把 `dist/` 交给托管服务即可。
 
-主题改动先在 `main` 完成，再在 `demo` 检出上执行 `npm run theme:update` 同步。方向固定为 `main` 到 `demo`；反向合并会把示例内容、设置与测试快照带回模板分支。
+线上后台只读，改内容或设置要在本地改好、重新构建再发布。
 
-## 工作流
+## 线上是什么
 
-| 工作流 | 触发 | 作用 | 权限 |
-| --- | --- | --- | --- |
-| `ci.yml` | push / PR 到 `main`、`demo` | `npm ci` 后以固定 `SITE_URL` 执行 `npm run ci` | `contents: read` |
-| `pages.yml` | push 到 `demo`、手动触发 | 构建并发布到 GitHub Pages | `contents: read`、`pages: write`、`id-token: write` |
-| `release-please.yml` | push 到 `main` | 维护 release PR、版本号、CHANGELOG、标签与 GitHub Release | `contents: write`、`pull-requests: write` |
-| `release.yml` | GitHub Release 发布 | 校验标签与版本号，生成模板 zip 与 `SHA256SUMS` 并附加到 Release | `contents: write` |
+- 构建命令是 `npm run build`，产物在 `dist/`。
+- 产物是网页、样式、脚本、图片与字体，任何静态托管都能放。
+- 构建读取内容与设置；构建完成后不需要 Node.js 服务。
 
-`ci.yml` 从 `.nvmrc` 读取 Node 版本，`SITE_URL` 为 `https://planetarium1001.github.io`。`pages.yml` 固定在 `demo` 分支检出并构建；工作流文件本身留在默认分支，因此仍可从 Actions 页面手动触发。`release-please.yml` 只负责版本与 Release；`release.yml` 在 Release 发布后打包附件，不自行创建 Release。发布流程见 [release.md](release.md)。
+## 两个分支
 
-## 构建期环境变量
+仓库用两个分支分工：`main` 是模板，包含主题代码、默认设置和模板示例；`demo` 是示例站，放完整示例内容并自动发布到 GitHub Pages。改模板在 `main`，发布示例站看 `demo`。
 
-| 变量 | 作用 |
-| --- | --- |
-| `SITE_URL` | 站点 origin，例如 `https://planetarium1001.github.io`。用于 RSS、canonical、分享图绝对地址与 sitemap |
-| `ASTRO_WHONO_BASE_PATH` | 部署子路径，例如 `/astro-versicarium/`；默认 `/` |
-| `SITE_TIMEZONE` | IANA 时区，覆盖 `site.json` 的 `timezone`；未设置时使用 `site.json`，再回退 `Asia/Shanghai` |
+## 用 GitHub Pages 发布
 
-`SITE_URL` 应只包含 origin，不要写部署子路径，子路径交给 `ASTRO_WHONO_BASE_PATH`。为空时 RSS 回退 `https://example.invalid`，canonical 与分享图不输出，sitemap 不生成，`robots.txt` 不写 Sitemap 行；`check:prod-artifacts` 会失败。
+1. 在仓库 Settings → Pages 把 Source 设为 GitHub Actions。不要选 Deploy from a branch，那是 GitHub 自带的另一套构建方式，不认 Astro 的产物。
+2. 如果 `github-pages` 环境设置了部署分支限制，允许 `demo`。
+3. 向 `demo` 推送，或在 Actions 页面手动运行 `pages` 工作流。
+4. 等部署完成，打开 Pages 给出的地址；项目页地址通常带仓库名，例如 `https://<用户名>.github.io/<仓库名>/`。
 
-`ASTRO_WHONO_BASE_PATH` 必须是 URL 路径。Git Bash 的 MSYS 路径转换可能把 `/blog` 改写成 Windows 文件路径，配置期会直接报错；此时在命令前加 `MSYS_NO_PATHCONV=1`。
+自动发布只在 `demo` 有推送时触发；向 `main` 推送不会更新示例站。手动运行可以在 Actions 页面发起。
 
-## GitHub Pages
+工作流会自己完成安装依赖、构建和上传，不需要手动把 `dist/` 传到服务器。第一次部署或改了 Pages 设置后，等 Actions 里的运行结束再刷新页面。
 
-1. 仓库启用 GitHub Pages；私有仓库是否可用取决于账户计划。
-2. Settings → Pages → Source 选择 **GitHub Actions**。不要选择 “Deploy from a branch”，该路径使用 Jekyll 构建，无法处理 Astro 产物。
-3. Settings → Environments → `github-pages` → Deployment branches and tags，加入 `demo`。该策略默认只放行默认分支；未放行时 `deploy` 作业会立即失败，而 `build` 仍成功。
-4. 向 `demo` 推送，或在 Actions 中手动运行 `pages`。
+发布后打开站点首页，确认样式、图片和字体都已加载；再点开一篇文章，确认正文与分享图正常。发现资源 404 时，先检查子目录设置。
 
-部署地址由工作流推导：
+## 用其他静态托管
 
-- 仓库名为 `<owner>.github.io` 时，`SITE_URL=https://<owner>.github.io`，base 为 `/`；
-- 其他仓库名时，`SITE_URL=https://<owner>.github.io`，base 为 `/<repo>/`。
+- 构建命令填 `npm run build`，发布目录填 `dist`。
+- 仓库自带 Netlify 的配置文件，Netlify 会直接读取；Cloudflare Pages 这类平台手动填上面两项。
+- 自己的服务器把站点根目录指向 `dist` 即可。
+- 构建环境要设置站点地址；放在子目录时再设置子目录。仓库里还带了一份安全响应头配置，只有部分平台会读取。
 
-示例站仓库为 `planetarium1001/astro-versicarium`，因此 `SITE_URL=https://planetarium1001.github.io`、base 为 `/astro-versicarium/`，站点地址为 <https://planetarium1001.github.io/astro-versicarium/>。
+## 站点地址与子目录
 
-## 部署自己的站点
+`SITE_URL` 是站点的完整地址，例如 `https://example.com`。它用于生成订阅地址、分享图和页面里的绝对链接；不设置会退回占位域名，并被发布检查拦下。
 
-工作流默认只部署 `demo`。内容放在 `main` 时，需要同时修改两处，否则部署的仍是 `demo`：
-
-- `pages.yml` 的 `on.push.branches` 改为自己的部署分支；
-- 构建作业的 `actions/checkout` 去掉 `ref: demo`，检出触发运行的提交。
-
-修改后仍需在 `github-pages` 环境放行新的部署分支。使用自定义域名时，把工作流中的 `SITE_URL` 改为 `https://你的域名`、`ASTRO_WHONO_BASE_PATH` 改为 `/`，并在 `public/CNAME` 写入域名。否则页面与资源会继续带仓库子路径。
-
-也可以本地构建后直接上传 `dist/`：
+`ASTRO_WHONO_BASE_PATH` 用于站点放在子目录的情况。部署到 `https://example.com/blog/` 时设为 `/blog/`，不设置就是根路径 `/`。
 
 ```bash
-SITE_URL=https://example.com ASTRO_WHONO_BASE_PATH=/ npm run build
+SITE_URL=https://example.com npm run build
+SITE_URL=https://example.com ASTRO_WHONO_BASE_PATH=/blog/ npm run build
 ```
 
-## 其他静态托管
+GitHub Pages 的项目页会自动推导这两个值，一般不用手动填；绑定自定义域名后，按工作流注释改成固定域名和 `/`。
 
-构建产物 `dist/` 是纯静态文件，可发布到 Nginx、对象存储或静态托管平台。仓库自带 `netlify.toml`，构建命令为 `npm run build`，发布目录为 `dist/`。
+在 Git Bash 里设置子目录时，路径可能被自动改写，命令前加 `MSYS_NO_PATHCONV=1`。
 
-- 站点使用 `trailingSlash: 'always'`，托管方需把 `/path/` 映射到 `/path/index.html`；不要配置成单页应用回退。
-- `public/_headers` 提供安全响应头，仅对支持该约定的托管方生效；其他平台需在服务端配置同等头部。
-- 子路径部署时，`SITE_URL` 与 `ASTRO_WHONO_BASE_PATH` 必须同时正确，否则 RSS、canonical、站内链接与静态资源路径会不一致。
-- 修改部署根路径后，重新执行 `npm run verify`；产物类守卫会按 `ASTRO_WHONO_BASE_PATH` 检查链接前缀。
+地址填错时通常表现为页面能打开、样式或链接失效：`SITE_URL` 写错会影响订阅、分享图和页面里的绝对链接，子目录漏填会让站内链接指到站点根目录。
 
-版本发布与模板下载见 [release.md](release.md)。
+## 发布前检查
+
+发布前在本地跑一次完整检查，并带上站点地址：
+
+```bash
+SITE_URL=https://example.com npm run verify
+```
+
+`verify` 会检查代码、构建、测试、产物与布局。站点地址为空时构建仍能完成，但发布检查会失败。想在本地预览构建结果，先构建再运行 `npm run preview`。
+
+检查全部通过再发布。只跑 `npm run build` 只能说明构建成功，不能代替测试与产物检查。
+
+## 常见问题
+
+- GitHub Pages 没有更新：确认推送的是 `demo` 分支，并确认 Pages 的 Source 是 GitHub Actions。
+- 子目录部署后站内链接打不开：确认 `ASTRO_WHONO_BASE_PATH` 与托管实际路径一致，修改后重新构建。
+- 构建通过但发布检查失败：先确认命令里带了完整的 `SITE_URL`，例如 `SITE_URL=https://example.com npm run verify`。
+- 本地预览资源缺失：`npm run preview` 预览的是 `dist/`，需要先构建；子目录部署时预览命令也要带同样的子目录设置。
+

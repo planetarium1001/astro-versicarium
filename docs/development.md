@@ -1,144 +1,91 @@
-# 开发
+# 本地运行与检查
 
-## 环境
+> 本文档为使用文档，不涉及代码、开发等内容。代码分层、命令参数与实现细节见[开发者文档：开发](developers/development.md)。
 
-需要 Node.js 22.12.0 或更高版本与 npm。`.nvmrc` 固定当前基线 22.22.0，`package.json` 的 `engines` 给出最低版本；CI 优先读取 `.nvmrc`。依赖锁定在 `package-lock.json`，安装使用 `npm ci`。
+在自己的电脑上启动站点只需要安装依赖、运行开发服务器两步。改完内容后，再跑一次完整检查即可。
 
-## 命令
+## 需要什么
 
-| 命令 | 作用 |
-| --- | --- |
-| `npm run dev` | 启动开发服务器，后台与 `/api/admin/*` 可用 |
-| `npm run dev:clean` | 删除 `node_modules/.vite` 后启动 |
-| `npm run build` | 构建静态产物到 `dist/` |
-| `npm run preview` | 预览构建产物 |
-| `npm run check` | `astro check`、Svelte 编译与源码类守卫 |
-| `npm test` | Vitest 用例 |
-| `npm run verify` | check、build、刷新 fixture、test 与产物类守卫 |
-| `npm run ci` | 等价于 `verify`，CI 使用 |
-| `npm run new:bit` | 生成一条动态草稿 |
-| `npm run theme:update` | 同步主题更新；`-- --check` 只报告 |
-| `npm run font:charset` | 重算字符集 |
-| `npm run font:subset` | 依据字符集重建 WOFF2 子集 |
-| `npm run font:build` | 依次执行字符集与子集 |
-| `npm run check:markdown-smoke` | 在 `dist/` 上检查 Markdown 渲染契约 |
-| `npm run smoke:cloud-images` | 云端图片冒烟，需显式开启与凭据 |
+- Node.js 22.12.0 或更高版本。版本太低时安装依赖会失败。
+- npm，随 Node.js 一起安装，不需要单独准备。
 
-## 验证流水线
+第一次运行需要联网安装依赖，之后日常开发可以离线。
 
-```bash
-npm run check     # 源码与类型
-npm test          # Vitest
-npm run verify    # check → build → test:fixtures → test → 产物守卫
-npm run ci        # 等价于 verify
-```
+## 第一次运行
 
-`verify` 的实际顺序是：
+1. 安装依赖：
 
-1. `npm run check`
-2. `npm run build`
-3. `npm run test:fixtures`
-4. `npm run test`
-5. `npm run check:prod-artifacts`
-6. `npm run check:layout-geometry`
-7. `npm run check:touch-targets`
-8. `npm run check:viewport-overflow`
+   ```bash
+   npm ci
+   ```
 
-源码类守卫只读源文件或设置 JSON；产物类守卫读取 `dist/`，必须在构建后执行。`SITE_URL` 为空时 sitemap 不生成，`check:prod-artifacts` 会失败；本地只预览页面可以省略，执行 `verify` 与 CI 必须提供。
+   `npm ci` 会按仓库锁定的版本安装，不会顺带升级依赖。
 
-## 源码守卫
+2. 启动开发服务器：
 
-`npm run check` 依次包含：
+   ```bash
+   npm run dev
+   ```
 
-| 检查 | 内容 |
-| --- | --- |
-| `astro check` | Astro 页面、TypeScript 与模板诊断 |
-| `check:svelte` | 编译全部 `.svelte`；后台编辑器岛只在开发环境挂载，构建不会覆盖 |
-| `check:admin-content-source-boundary` | 后台内容模块不越界引用公开内容模块或服务端专用索引 |
-| `check:home-critical-css` | 首页 critical CSS 快照与 `global.css`、`layout.css` 未漂移 |
-| `check:image-references` | Markdown、HTML `src`/`srcset`、frontmatter 与设置中的本地图片可解析 |
-| `check:font-charset` | `tools/charset-common.txt` 与实际文本一致，且字体子集指纹未过期 |
+3. 打开 `http://localhost:4321`。后台在 `http://localhost:4321/admin/`。
 
-另有按需执行的检查：
+后台只在本地开发时能写入，线上构建出的页面只读。第一次启动会顺便生成站点图标，多等几秒即可。
 
-| 检查 | 用途 |
-| --- | --- |
-| `check:markdown-smoke` | 渲染 `src/test-fixtures/markdown-smoke.md`，断言代码工具栏、公式与样式表输出；需要已构建的 `dist/` |
-| `check:admin-editor-emoji-boundary` | 编辑器工具栏与 emoji 选择器的引用边界 |
-| `smoke:cloud-images` | 对象存储上传与列举；未设置 `ASTRO_WHONO_CLOUD_SMOKE=1` 时跳过 |
-| `audit:prod` | 生产依赖的已知漏洞扫描 |
+## 构建与预览
 
-## 构建产物守卫
-
-| 检查 | 内容 |
-| --- | --- |
-| `check:prod-artifacts` | 必需文件、后台只读壳、无后台导航与开发偏好资源、RSS / sitemap / robots 内容 |
-| `check:layout-geometry` | 解析产物 CSS 与 `<html>` 内联属性，断言侧栏、外缘间隙、浮动列与目录把手几何 |
-| `check:touch-targets` | 按规则顺序取最终生效尺寸，断言交互元素不小于 44px |
-| `check:viewport-overflow` | 读产物 CSS 与首页快照，断言滚动条槽位仅桌面生效、clip 回退、窄屏 body 兜底、壳层宽度上限与提示锚点 |
-
-后台只读壳的判定包括：产物中不出现后台写入根节点、bootstrap 数据、后台导航或开发专用 UI 偏好资源；`/admin/` 带 `noindex,nofollow`。改动后台页面或样式后应重新构建并执行这些检查。
-
-## fixture
-
-`tests/fixtures/` 是从 `dist/` 复制出的页面快照，包含：
-
-- `/bits/`、`/blog/`、`/archive/`、`/devlog/`、`/projects/` 的 HTML；
-- `/bits/index.json`、`/blog/index.json`、`/archive/index.json`；
-- 构建产物中字典序第一篇文章的详情页 HTML。
-
-客户端用例依赖真实渲染后的 `data-*` 属性、内联 JSON 与脚本加载顺序，这些只在构建产物中完整。`npm run test:fixtures` 负责刷新，已包含在 `verify` 中；改动列表页或文章页的服务端输出结构后，需要重新生成并提交快照。
-
-## 字体
-
-未使用 Astro Fonts API 的字体由 `public/fonts/` 提供自托管 WOFF2 子集，`global.css` 以 `@font-face` 与 `unicode-range` 分段声明。
-
-字符集由 `content/`、`src/pages/`、`src/components/`、`src/layouts/`、`src/data/settings/` 的文本、`site.config.mjs` 与 `tools/charset-base.txt` 汇总，写入 `tools/charset-common.txt`；不要手改该文件。`font:subset` 依赖 `pyftsubset`：
+构建把页面输出到 `dist/`：
 
 ```bash
-python -m pip install fonttools brotli zopfli
-# 源字体放入 tools/fonts-src/，该目录不入库
-npm run font:build
+SITE_URL=https://example.com npm run build
 ```
 
-子集按 latin / cjk-common / cjk-ext 切分到 `public/fonts/`，成功后写入指纹 `tools/charset-common.sha256`。缺字时补充 `tools/charset-base.txt` 后重新生成。选择 `src/lib/fonts/registry.ts` 中的 Astro Fonts API 字体时，构建期只注册被选中的条目并下载自托管，不需要本地源字体；修改 `ui.json` 的字体选择后需重启开发服务器。
+`SITE_URL` 告诉构建你的站点最终地址，分享卡片、订阅源和站点地图都用它。只写站点地址，不带路径；还没定域名时可以先填一个占位地址。
 
-## 测试组织
+站点部署在子目录时（例如 `https://example.com/blog/`），再加一项子目录设置：
 
-Vitest 配置在 `vitest.config.ts`，用例位于 `tests/*.test.ts`，默认 Node 环境；需要 DOM 的文件在首行声明 `// @vitest-environment jsdom`。
+```bash
+SITE_URL=https://example.com ASTRO_WHONO_BASE_PATH=/blog/ npm run build
+```
 
-| 范围 | 文件 |
-| --- | --- |
-| 后台内容、图片、媒体与编辑器 | `tests/admin-content-*.test.ts`、`tests/admin-images-*.test.ts`、`tests/admin-editor-*.test.ts` |
-| 前台列表、目录、筛选与弹窗 | `tests/*-client.test.ts`、`tests/projects-dialog-*.test.ts`、`tests/devlog-*.test.ts` |
-| Markdown 与关于页指令 | `tests/markdown-*.test.ts`、`tests/about-directives.test.ts`、`tests/trailing-links.test.ts` |
-| 设置、日期、路由与版本 | `tests/theme-settings.test.ts`、`tests/filings.test.ts`、`tests/view-stats.test.ts`、`tests/project-routing.test.ts`、`tests/blog-routing.test.ts` |
-| 页面快照与 Markdown 夹具 | `tests/fixtures/`、`src/test-fixtures/` |
+构建产物可以放到任意静态托管。想在本地确认产物的效果，运行：
 
-写入类用例通过 `tests/admin-content-write-fixture.ts` 在系统临时目录搭建内容目录，并把设置目录与项目根指向临时位置，测试结束清理，不触碰仓库内容。
+```bash
+npm run preview
+```
 
-## 浏览器基线
+预览同样在 `http://localhost:4321`，读的是上一次构建的结果。
 
-- 样式层使用 `:has()`：项目卡与列表卡的键盘焦点背景依赖 `:has(:focus-visible)`；不支持的内核降级为没有整卡背景，但保留原生焦点提示。
-- 触屏悬停：公开页面的悬停视觉以 `<html data-input>`（`src/scripts/input-modality.ts`）记录的输入模态为准。媒体查询不足以区分把指针上报成 `hover: hover` 的触屏设备。
-- 主题切换涟漪使用 View Transitions，不支持或偏好减少动效时直接切换主题，不播放涟漪。
-- 默认文本链接的悬停下划线只在非触屏模态出现：触屏点按后 `:hover` 会粘住，导航链接会在 44px 盒底留下一条比文字更长、更远的下划线。
-- 指针/触屏点按产生的 `:focus`（非 `:focus-visible`）不绘制浏览器默认焦点描边；部分内核会把点按也判作 `:focus-visible`，因此触屏模态（`<html data-input="touch">` 且无键盘标记）下作者样式同样关闭 `:focus-visible` 描边。按一次 Tab / Shift+Tab，或发生真实鼠标移动、点按后，键盘标记解除，设计焦点环恢复；悬停门禁仍以 `data-input` 为准，不随键盘恢复。
-- 不支持 `:focus-visible` 的内核会整条丢弃相关规则，保持原有的原生焦点提示。
+## 提交前检查
 
-## 内容命名
+完整检查用 `SITE_URL=... npm run verify`，它会依次做这些事：
 
-内容条目的目录名即条目 ID，规范为 `YYYY-MM-DD-title`。构造入口是 `src/utils/slug-rules.ts` 的 `buildContentEntryId()`：
+- 检查代码与内容有没有明显问题；
+- 构建一遍站点；
+- 检查页面用字是否都有字体可用；
+- 更新测试用的页面记录，再运行全部测试；
+- 检查构建结果，包括后台是否只读、订阅与搜索收录地址、页面布局与按钮大小。
 
-- 日期取站点时区的日历日期，与 frontmatter 的 `date` 对齐；
-- 标题经 NFKC 归一化、转小写，空白与符号折叠为单个连字符，允许中文；
-- 超过 120 个字符时截断并追加稳定短哈希；
-- 标题段为空时回退 `untitled`，命中 Windows 保留设备名时追加 `-entry`。
+改了页面或样式后建议跑完整检查，不要只看构建是否通过。`verify` 会更新测试用的页面记录，记录有变化时一起提交。
 
-博客默认公开路径使用完整条目 ID，例如 `/blog/2026-10-20-theme-quick-start/`；frontmatter 的 `slug` 可覆盖为更短的稳定路径。`npm run new:bit` 按 `bits-YYYY-MM-DD-HHMM` 生成动态草稿，日期时间带站点时区偏移。
+只想跑测试时用 `npm test`。它不构建，速度更快；测试用的页面记录不是最新时可能失败。
 
-## CI 与发布
+## 常见问题
 
-`.github/workflows/ci.yml` 在推送到 `main`、`demo` 或向两者提交 PR 时运行：按 `.nvmrc` 安装 Node，执行 `npm ci`，再以 `SITE_URL=https://planetarium1001.github.io` 运行 `npm run ci`。
+**端口被占用。** 默认端口是 4321。启动时提示端口被占用或已有开发服务器在运行，先关掉之前的终端，或者换一个端口：
 
-Release Please 在推送到 `main` 时运行，维护版本号、CHANGELOG、标签与 Release；GitHub Release 发布后再由 `release.yml` 校验标签与版本一致，并打包模板附件。工作流细节见 [deployment.md](deployment.md)，版本与发布流程见 [release.md](release.md)。
+```bash
+npm run dev -- --port 4322
+```
+
+**改了没生效。** 先确认文件已保存并刷新页面。主题设置里换字体的改动要重启 `npm run dev` 才生效。内容或缓存太旧时，清掉本地缓存再启动。
+
+**没填 `SITE_URL`。** 构建仍会完成，但订阅源会使用示例域名，分享卡片与搜索引擎用的正式地址缺失，站点地图不生成；`npm run verify` 会直接报错。本地构建也建议随便给一个地址。
+
+**Git Bash 把路径改写了。** 在 Windows 的 Git Bash 里设置子目录时，`/blog/` 会被改写成 Windows 路径，构建报错。在命令前加 `MSYS_NO_PATHCONV=1`：
+
+```bash
+MSYS_NO_PATHCONV=1 SITE_URL=https://example.com ASTRO_WHONO_BASE_PATH=/blog/ npm run build
+```
+
+**重新生成字体需要额外工具。** 只有改动内容或字体后重新生成字体（`npm run font:build`）才需要在本机安装 Python 与字体处理工具；日常开发和构建不需要，具体步骤见开发者版。
+
