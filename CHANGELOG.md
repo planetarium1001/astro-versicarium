@@ -2,6 +2,19 @@
 
 本文件记录面向模板使用者的公共变更。版本号遵循 Semantic Versioning，日期使用 `YYYY-MM-DD`。
 
+## [1.0.0-rc.3](https://github.com/planetarium1001/astro-versicarium/compare/v1.0.0-rc.2...v1.0.0-rc.3) (2026-10-22)
+
+
+### Features
+
+* **template:** 收敛默认内容并增加主题介绍系列 ([4c705a6](https://github.com/planetarium1001/astro-versicarium/commit/4c705a69b8f78ad860038a9e9addcb15f3b8e3e6))
+* **theme:** 完善字体分层、Markdown 与测试基线 ([5f5e6c9](https://github.com/planetarium1001/astro-versicarium/commit/5f5e6c9480365680d6968c7cff83af2387554fa5))
+
+
+### Bug Fixes
+
+* **admin+seo:** 修复后台版本分组与分享图地址 ([e58374e](https://github.com/planetarium1001/astro-versicarium/commit/e58374e0886854b6e52a7695c8a39395686c9394))
+
 ## [1.0.0-rc.2] - 2026-10-21
 
 第二个预览候选：修复 rc.1 真机验收发现的移动端回归，新增窄屏浮动列右侧距离设置，并加入自托管字体的角色分层与生僻字 DLC。
