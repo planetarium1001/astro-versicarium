@@ -33,7 +33,9 @@ import {
   CONTENT_LIST_DELETE_FEEDBACK_VALUE
 } from '../shared/content-list-feedback';
 import {
+  applyPreviewHtmlPreservingScroll,
   buildContentExportHref,
+  captureEditorScrollSnapshot,
   clearStoredWriteFeedback,
   EDITOR_OUTLINE_TARGET_SCROLL_OFFSET_RATIO,
   EDITOR_SCROLLBAR_VISIBILITY_TIMEOUT_MS,
@@ -42,6 +44,7 @@ import {
   getPreviewDebounceMs,
   normalizeEditorBodyValue,
   readStoredWriteFeedback,
+  restoreEditorScrollSnapshot,
   storeWriteFeedback,
   type EditorScrollSource,
   type StatusState
@@ -305,6 +308,27 @@ const waitForAnimationFrame = (): Promise<void> =>
     window.requestAnimationFrame(() => resolve());
   });
 
+const applyPreviewHtmlRefresh = async (html: string) => {
+  await applyPreviewHtmlPreservingScroll({
+    captureScrollPosition: () => captureEditorScrollSnapshot(previewScrollElement),
+    applyHtml: () => {
+      previewHtml = html;
+    },
+    waitForRender: () => tick(),
+    restoreScrollPosition: (snapshot) => {
+      restoreEditorScrollSnapshot(snapshot, previewScrollElement);
+    },
+    waitForLayoutSettle: () => waitForAnimationFrame(),
+    cancelQueuedScrollSync: () => scrollSyncController.cancelQueued(),
+    setScrollSyncGuarded: (guarded) => {
+      scrollSyncController.setGuarded(guarded);
+    },
+    releaseScrollSyncGuard: (frameDelay) => scrollSyncController.releaseGuard(frameDelay),
+    isScrollSyncActive: () => syncScrollEnabled && scrollSyncAvailable,
+    realignScrollSync: () => scrollSyncController.queueLastSource()
+  });
+};
+
 const scrollPreviewToOutlineTarget = (outlineKey: string): boolean => {
   const previewElement = previewScrollElement;
   const scrolled = scrollPreviewElementToOutlineKey(
@@ -533,7 +557,7 @@ const requestPreview = async () => {
       return;
     }
 
-    previewHtml = previewResult.html;
+    await applyPreviewHtmlRefresh(previewResult.html);
     previewWarnings = previewResult.warnings;
   } catch {
     if (previewRequest.signal.aborted || !previewRequest.isCurrent()) return;

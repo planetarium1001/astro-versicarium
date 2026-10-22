@@ -63,6 +63,7 @@ describe('admin-console/content-source-index', () => {
     await Promise.all([
       mkdir(path.join(tempRoot, 'content/blog'), { recursive: true }),
       mkdir(path.join(tempRoot, 'content/bits'), { recursive: true }),
+      mkdir(path.join(tempRoot, 'content/projects'), { recursive: true }),
       mkdir(path.join(tempRoot, 'content/about'), { recursive: true })
     ]);
   });
@@ -74,7 +75,7 @@ describe('admin-console/content-source-index', () => {
     }
   });
 
-  const writeContent = async (collection: 'blog' | 'bits' | 'about', entryPath: string, sourceText: string) => {
+  const writeContent = async (collection: 'blog' | 'bits' | 'projects' | 'about', entryPath: string, sourceText: string) => {
     const filePath = path.join(tempRoot, 'content', collection, ...entryPath.split('/'));
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, sourceText, 'utf8');
@@ -247,6 +248,67 @@ describe('admin-console/content-source-index', () => {
     });
     expect(byId.get('post-v2')?.searchHaystack).toContain('post');
     expect(byId.get('post-v2')?.searchHaystack).toContain('v2.0.0');
+    expect(byId.get('post-v2')?.projectSlug).toBeNull();
+  });
+
+  it('reads projects stable frontmatter slug and marks latest project versions', async () => {
+    await writeContent('projects', '2026-01-01-demo/index.md', markdown(`
+      title: Demo
+      subtitle: First cut
+      date: 2026-01-01
+      slug: demo
+      versionLabel: v1.0.0
+      versionName: 初版
+      versionOrder: 1
+    `));
+    await writeContent('projects', 'demo/index.md', markdown(`
+      title: Demo
+      subtitle: Current
+      date: 2026-03-01
+      slug: demo
+      versionLabel: v2.0.0
+      versionName: 新版
+      versionOrder: 2
+    `));
+    await writeContent('projects', 'single/index.md', markdown(`
+      title: Single Project
+      date: 2026-02-01
+    `));
+
+    const manifest = await loadAdminContentSourceManifest();
+    const items = await loadAdminContentSourceIndex(manifest, 'projects');
+    const byId = new Map(items.map((item) => [item.id, item]));
+
+    // 公开项目路由排序：date 倒序，版本组最新版在前。
+    expect(items.map((item) => item.id)).toEqual(['demo', 'single', '2026-01-01-demo']);
+
+    expect(byId.get('demo')).toMatchObject({
+      projectSlug: 'demo',
+      versionLabel: 'v2.0.0',
+      versionName: '新版',
+      versionOrder: 2,
+      versionGroupSize: 2,
+      isLatestVersion: true
+    });
+    expect(byId.get('2026-01-01-demo')).toMatchObject({
+      projectSlug: 'demo',
+      versionLabel: 'v1.0.0',
+      versionName: '初版',
+      versionOrder: 1,
+      versionGroupSize: 2,
+      isLatestVersion: false
+    });
+    // 没有 frontmatter.slug 的项目回退 publicEntryId 作为稳定键，仍是单版本组。
+    expect(byId.get('single')).toMatchObject({
+      projectSlug: 'single',
+      versionLabel: null,
+      versionName: null,
+      versionOrder: null,
+      versionGroupSize: 1,
+      isLatestVersion: true
+    });
+    expect(byId.get('demo')?.searchHaystack).toContain('demo');
+    expect(byId.get('demo')?.searchHaystack).toContain('v2.0.0');
   });
 
   it('uses the published bits routing helper for draft exclusion and page boundaries', async () => {

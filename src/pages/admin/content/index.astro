@@ -20,7 +20,8 @@ import type {
 } from '../../../lib/admin-console/content';
 import type { AdminContentCreatableCollectionKey } from '../../../lib/admin-console/content-collections';
 import {
-  buildAdminContentListSections
+  buildAdminContentListSections,
+  buildAdminContentListProjectSections
 } from '../../../lib/admin-console/content-series';
 import {
   ADMIN_CONTENT_CREATE_API_PATH,
@@ -440,7 +441,16 @@ const getContentCreateAction = (
                   : null;
                 const shouldShowSectionCreateAction = Boolean(createAction);
                 const isSectionTitleLinked = pageData.mode === 'overview';
-                const sectionContentSections = buildAdminContentListSections(section.items);
+                // projects 用项目稳定 slug 归并版本；其余 collection 仍按 blog series 分组。
+                const isProjectSection = section.collection === 'projects';
+                const sectionContentSections = isProjectSection
+                  ? []
+                  : buildAdminContentListSections(section.items);
+                const projectGroups = isProjectSection
+                  ? buildAdminContentListProjectSections(section.items).flatMap(
+                    (projectSection) => projectSection.groups
+                  )
+                  : [];
                 const sectionHasSeries = sectionContentSections.some(
                   (contentSection) => contentSection.kind === 'series'
                 );
@@ -495,55 +505,93 @@ const getContentCreateAction = (
                       section.items.length > 0 ? (
                         <ol class="admin-content-list" aria-label={`${section.collectionLabel}内容条目`}>
                           {
-                            sectionContentSections.map((contentSection) => (
-                              <>
-                                {contentSection.kind === 'standalone' ? (
-                                  <>
-                                    {sectionHasSeries ? (
-                                      <li class="admin-content-list-subhead" data-admin-content-subhead="standalone">
-                                        <span class="admin-content-list-subhead__label">{contentSection.label}</span>
-                                        <span class="admin-content-list-subhead__count">{contentSection.count} 篇</span>
-                                      </li>
-                                    ) : null}
-                                    {contentSection.items.map((item) => <ContentRow item={item} />)}
-                                  </>
-                                ) : (
-                                  <>
-                                    <li class="admin-content-list-subhead" data-admin-content-subhead="series">
-                                      <span class="admin-content-list-subhead__label">{contentSection.label}</span>
-                                      <span class="admin-content-list-subhead__count">{contentSection.count} 个系列</span>
+                            isProjectSection ? (
+                              projectGroups.length > 0 ? (
+                                <>
+                                  <li class="admin-content-list-subhead" data-admin-content-subhead="project">
+                                    <span class="admin-content-list-subhead__label">项目</span>
+                                    <span class="admin-content-list-subhead__count">{projectGroups.length} 个项目</span>
+                                  </li>
+                                  {projectGroups.map((group) => (
+                                    <li
+                                      class="admin-content-series"
+                                      data-admin-content-project-group={group.projectSlug}
+                                    >
+                                      <details class="admin-content-series-details">
+                                        <summary class="admin-content-series-head">
+                                          <span class="admin-content-series-head__title">
+                                            <strong class="admin-content-series-head__name">{group.displayTitle}</strong>
+                                            <code class="admin-content-series-head__series">{group.projectSlug}</code>
+                                          </span>
+                                          <span class="admin-content-series-head__meta">
+                                            <span class="admin-content-series-head__count">{group.versionCount} 个版本</span>
+                                            <span class="admin-content-series-head__chevron" aria-hidden="true">
+                                              <AdminIcon name="chevron-down" size={14} />
+                                            </span>
+                                          </span>
+                                        </summary>
+                                        <ol
+                                          class="admin-content-series-versions"
+                                          aria-label={`${group.displayTitle}版本`}
+                                        >
+                                          {group.items.map((item) => <ContentRow item={item} />)}
+                                        </ol>
+                                      </details>
                                     </li>
-                                    {contentSection.groups.map((group) => (
-                                      <li
-                                        class="admin-content-series"
-                                        data-admin-content-series-group={group.series}
-                                      >
-                                        <details class="admin-content-series-details">
-                                          <summary class="admin-content-series-head">
-                                            <span class="admin-content-series-head__title">
-                                              <strong class="admin-content-series-head__name">{group.displayTitle}</strong>
-                                              <code class="admin-content-series-head__series">{group.series}</code>
-                                            </span>
-                                            <span class="admin-content-series-head__meta">
-                                              <span class="admin-content-series-head__count">{group.versionCount} 个版本</span>
-                                              <span class="admin-content-series-head__chevron" aria-hidden="true">
-                                                <AdminIcon name="chevron-down" size={14} />
-                                              </span>
-                                            </span>
-                                          </summary>
-                                          <ol
-                                            class="admin-content-series-versions"
-                                            aria-label={`${group.displayTitle}版本`}
-                                          >
-                                            {group.items.map((item) => <ContentRow item={item} />)}
-                                          </ol>
-                                        </details>
+                                  ))}
+                                </>
+                              ) : null
+                            ) : (
+                              sectionContentSections.map((contentSection) => (
+                                <>
+                                  {contentSection.kind === 'standalone' ? (
+                                    <>
+                                      {sectionHasSeries ? (
+                                        <li class="admin-content-list-subhead" data-admin-content-subhead="standalone">
+                                          <span class="admin-content-list-subhead__label">{contentSection.label}</span>
+                                          <span class="admin-content-list-subhead__count">{contentSection.count} 篇</span>
+                                        </li>
+                                      ) : null}
+                                      {contentSection.items.map((item) => <ContentRow item={item} />)}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <li class="admin-content-list-subhead" data-admin-content-subhead="series">
+                                        <span class="admin-content-list-subhead__label">{contentSection.label}</span>
+                                        <span class="admin-content-list-subhead__count">{contentSection.count} 个系列</span>
                                       </li>
-                                    ))}
-                                  </>
-                                )}
-                              </>
-                            ))
+                                      {contentSection.groups.map((group) => (
+                                        <li
+                                          class="admin-content-series"
+                                          data-admin-content-series-group={group.series}
+                                        >
+                                          <details class="admin-content-series-details">
+                                            <summary class="admin-content-series-head">
+                                              <span class="admin-content-series-head__title">
+                                                <strong class="admin-content-series-head__name">{group.displayTitle}</strong>
+                                                <code class="admin-content-series-head__series">{group.series}</code>
+                                              </span>
+                                              <span class="admin-content-series-head__meta">
+                                                <span class="admin-content-series-head__count">{group.versionCount} 个版本</span>
+                                                <span class="admin-content-series-head__chevron" aria-hidden="true">
+                                                  <AdminIcon name="chevron-down" size={14} />
+                                                </span>
+                                              </span>
+                                            </summary>
+                                            <ol
+                                              class="admin-content-series-versions"
+                                              aria-label={`${group.displayTitle}版本`}
+                                            >
+                                              {group.items.map((item) => <ContentRow item={item} />)}
+                                            </ol>
+                                          </details>
+                                        </li>
+                                      ))}
+                                    </>
+                                  )}
+                                </>
+                              ))
+                            )
                           }
                         </ol>
                       ) : (

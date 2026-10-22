@@ -3,11 +3,19 @@
  * 不依赖 astro:content，也不读文件：只处理已经加载好的列表项，便于测试与复用。
  */
 
-export type AdminContentSeriesVersionLike = {
+export type AdminContentVersionSortable = {
   id: string;
-  series: string | null;
   date: Date | null;
   versionOrder: number | null;
+};
+
+export type AdminContentSeriesVersionLike = AdminContentVersionSortable & {
+  series: string | null;
+};
+
+/** projects 的版本排序只看 date/versionOrder/id，稳定分组键是 projectSlug。 */
+export type AdminContentProjectVersionLike = AdminContentVersionSortable & {
+  projectSlug: string | null;
 };
 
 export type AdminContentSeriesListEntry = AdminContentSeriesVersionLike & {
@@ -20,6 +28,14 @@ export type AdminContentSeriesListEntry = AdminContentSeriesVersionLike & {
 export type AdminContentSeriesVersionState = {
   isLatestVersion: boolean;
   versionGroupSize: number;
+};
+
+export type AdminContentProjectListEntry = AdminContentProjectVersionLike & {
+  title: string;
+  versionLabel?: string | null;
+  versionName?: string | null;
+  isLatestVersion?: boolean;
+  versionGroupSize?: number;
 };
 
 export type AdminContentListEntryGroup<T extends AdminContentSeriesListEntry> = {
@@ -63,6 +79,26 @@ export type AdminContentListSection<T extends AdminContentSeriesListEntry> =
   | AdminContentListStandaloneSection<T>
   | AdminContentListSeriesSection<T>;
 
+export type AdminContentListProjectGroup<T extends AdminContentProjectListEntry> = {
+  kind: 'project';
+  key: string;
+  /** 项目稳定 slug：frontmatter.slug；缺失或日期形式时由 source index 回退到 publicEntryId。 */
+  projectSlug: string;
+  title: string;
+  /** 去掉尾部版本名后的项目名，与系列头取值规则一致。 */
+  displayTitle: string;
+  versionCount: number;
+  items: T[];
+};
+
+export type AdminContentListProjectSection<T extends AdminContentProjectListEntry> = {
+  kind: 'project';
+  key: 'project';
+  label: '项目';
+  count: number;
+  groups: AdminContentListProjectGroup<T>[];
+};
+
 const compareNullableDateDesc = (left: Date | null, right: Date | null): number => {
   if (left && right) return right.valueOf() - left.valueOf();
   if (left) return -1;
@@ -98,8 +134,8 @@ export const getAdminContentSeriesDisplayTitle = (
  * versionOrder 缺失按 0 处理，与公开路由的版本判定保持一致。
  */
 export const compareAdminContentSeriesVersions = (
-  left: AdminContentSeriesVersionLike,
-  right: AdminContentSeriesVersionLike
+  left: AdminContentVersionSortable,
+  right: AdminContentVersionSortable
 ): number => {
   const dateOrder = compareNullableDateDesc(left.date, right.date);
   if (dateOrder !== 0) return dateOrder;
@@ -145,6 +181,100 @@ export const resolveAdminContentSeriesVersionStates = (
   }
 
   return states;
+};
+
+/**
+ * 项目版本状态：按 projectSlug 归并，组内排序与公开项目路由一致（date → versionOrder → id）。
+ * projectSlug 缺失的条目视为自身唯一版本，避免把无稳定键的项目误并成一组。
+ */
+export const resolveAdminContentProjectVersionStates = (
+  items: readonly AdminContentProjectVersionLike[]
+): Map<string, AdminContentSeriesVersionState> => {
+  const membersByProject = new Map<string, AdminContentProjectVersionLike[]>();
+
+  for (const item of items) {
+    const key = item.projectSlug ?? `entry:${item.id}`;
+    const members = membersByProject.get(key) ?? [];
+    members.push(item);
+    membersByProject.set(key, members);
+  }
+
+  const states = new Map<string, AdminContentSeriesVersionState>();
+
+  for (const members of membersByProject.values()) {
+    const ordered = members.slice().sort(compareAdminContentSeriesVersions);
+    ordered.forEach((member, index) => {
+      states.set(member.id, {
+        isLatestVersion: index === 0,
+        versionGroupSize: ordered.length
+      });
+    });
+  }
+
+  return states;
+};
+
+/**
+ * 项目列表分组：同一 projectSlug 的多份版本文档归入一组，单版本项目也成组（版本数 1）。
+ * 组位置取该组首条出现的位置，组内版本按公开项目路由排序。
+ */
+export const buildAdminContentListProjectGroups = <T extends AdminContentProjectListEntry>(
+  items: readonly T[]
+): AdminContentListProjectGroup<T>[] => {
+  const membersByProject = new Map<string, T[]>();
+
+  for (const item of items) {
+    const key = item.projectSlug ?? `entry:${item.id}`;
+    const members = membersByProject.get(key) ?? [];
+    members.push(item);
+    membersByProject.set(key, members);
+  }
+
+  const emittedProjects = new Set<string>();
+  const groups: AdminContentListProjectGroup<T>[] = [];
+
+  for (const item of items) {
+    const projectKey = item.projectSlug ?? `entry:${item.id}`;
+    if (emittedProjects.has(projectKey)) continue;
+    emittedProjects.add(projectKey);
+
+    const members = (membersByProject.get(projectKey) ?? [item])
+      .slice()
+      .sort(compareAdminContentSeriesVersions);
+    const latest = members.find((member) => member.isLatestVersion === true) ?? members[0]!;
+    const projectSlug = item.projectSlug ?? item.id;
+
+    groups.push({
+      kind: 'project',
+      key: `project:${projectSlug}`,
+      projectSlug,
+      title: latest.title,
+      displayTitle: getAdminContentSeriesDisplayTitle(latest.title, projectSlug, latest.versionName),
+      versionCount: Math.max(
+        ...members.map((member) => member.versionGroupSize ?? members.length),
+        members.length
+      ),
+      items: members
+    });
+  }
+
+  return groups;
+};
+
+/** 项目 segment：所有项目都成组，空列表不产出 section。 */
+export const buildAdminContentListProjectSections = <T extends AdminContentProjectListEntry>(
+  items: readonly T[]
+): AdminContentListProjectSection<T>[] => {
+  const groups = buildAdminContentListProjectGroups(items);
+  if (groups.length === 0) return [];
+
+  return [{
+    kind: 'project',
+    key: 'project',
+    label: '项目',
+    count: groups.length,
+    groups
+  }];
 };
 
 /**

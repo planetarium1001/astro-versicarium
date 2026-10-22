@@ -23,6 +23,12 @@ describe('theme-settings revision semantics', () => {
     const tempRoot = await mkdtemp(path.join(tmpdir(), 'astro-whono-theme-settings-test-'));
     const settingsDir = path.join(tempRoot, 'settings');
     await cp(path.resolve('src/data/settings'), settingsDir, { recursive: true });
+    // 站点可以合法改这两个可编辑设置；语义测试从已知默认值出发，避免被站点自有配置影响。
+    const uiPath = path.join(settingsDir, 'ui.json');
+    const uiJson = JSON.parse(await readFile(uiPath, 'utf8')) as Record<string, unknown>;
+    uiJson.entryVersionName = DEFAULT_ENTRY_VERSION_NAME_MODE;
+    uiJson.fontCoverage = 'full';
+    await writeFile(uiPath, `${JSON.stringify(uiJson, null, 2)}\n`, 'utf8');
     tempDirs.push(tempRoot);
     process.env.ASTRO_WHONO_INTERNAL_TEST_SETTINGS = '1';
     process.env.ASTRO_WHONO_INTERNAL_TEST_SETTINGS_DIR = settingsDir;
@@ -176,7 +182,8 @@ describe('theme-settings revision semantics', () => {
     }
   });
 
-  it('changes revision when the version-name mode changes', () => {
+  it('changes revision when the version-name mode changes', async () => {
+    await createTempSettingsFixture();
     const resolved = getThemeSettings();
     const mutated = structuredClone(resolved);
     mutated.settings.ui.entryVersionName = 'after-label';
@@ -231,7 +238,8 @@ describe('theme-settings revision semantics', () => {
     }
   });
 
-  it('changes revision when the font coverage mode changes', () => {
+  it('changes revision when the font coverage mode changes', async () => {
+    await createTempSettingsFixture();
     const resolved = getThemeSettings();
     const mutated = structuredClone(resolved);
     mutated.settings.ui.fontCoverage = 'common';

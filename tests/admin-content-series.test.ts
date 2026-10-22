@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildAdminContentListGroups,
+  buildAdminContentListProjectGroups,
+  buildAdminContentListProjectSections,
   buildAdminContentListSections,
   compareAdminContentSeriesVersions,
   getAdminContentSeriesDisplayTitle,
+  resolveAdminContentProjectVersionStates,
   resolveAdminContentSeriesVersionStates
 } from '../src/lib/admin-console/content-series';
 
@@ -34,6 +37,42 @@ const version = ({
 
 const withStates = (items: ReturnType<typeof version>[]) => {
   const states = resolveAdminContentSeriesVersionStates(items);
+  return items.map((item) => ({
+    ...item,
+    ...(states.get(item.id) ?? { isLatestVersion: true, versionGroupSize: 1 })
+  }));
+};
+
+type ProjectVersionInput = {
+  id: string;
+  projectSlug: string | null;
+  dateText?: string | null;
+  versionOrder?: number | null;
+  title?: string;
+  versionLabel?: string | null;
+  versionName?: string | null;
+};
+
+const projectVersion = ({
+  id,
+  projectSlug,
+  dateText = '2026-01-01',
+  versionOrder = null,
+  title = id,
+  versionLabel = null,
+  versionName = null
+}: ProjectVersionInput) => ({
+  id,
+  projectSlug,
+  title,
+  versionLabel,
+  versionName,
+  date: dateText ? new Date(`${dateText}T00:00:00+08:00`) : null,
+  versionOrder
+});
+
+const withProjectStates = (items: ReturnType<typeof projectVersion>[]) => {
+  const states = resolveAdminContentProjectVersionStates(items);
   return items.map((item) => ({
     ...item,
     ...(states.get(item.id) ?? { isLatestVersion: true, versionGroupSize: 1 })
@@ -196,6 +235,120 @@ describe('admin-console/content-series', () => {
     expect(items.slice().sort(compareAdminContentSeriesVersions).map((item) => item.id))
       .toEqual(['post-dated', 'post-undated']);
     expect(resolveAdminContentSeriesVersionStates(items).get('post-dated')?.isLatestVersion).toBe(true);
+  });
+});
+
+describe('admin-console/content-series projects', () => {
+  it('marks the latest version per project stable slug and counts the group', () => {
+    const items = [
+      projectVersion({ id: 'demo-v1', projectSlug: 'demo', dateText: '2026-01-01', versionOrder: 1 }),
+      projectVersion({ id: 'demo-v2', projectSlug: 'demo', dateText: '2026-03-01', versionOrder: 2 }),
+      projectVersion({ id: 'single', projectSlug: 'single', dateText: '2026-02-01' })
+    ];
+
+    const states = resolveAdminContentProjectVersionStates(items);
+
+    expect(states.get('demo-v2')).toEqual({ isLatestVersion: true, versionGroupSize: 2 });
+    expect(states.get('demo-v1')).toEqual({ isLatestVersion: false, versionGroupSize: 2 });
+    expect(states.get('single')).toEqual({ isLatestVersion: true, versionGroupSize: 1 });
+  });
+
+  it('uses versionOrder when project versions share a date', () => {
+    const items = [
+      projectVersion({ id: 'demo-v1', projectSlug: 'demo', dateText: '2026-01-01', versionOrder: 1 }),
+      projectVersion({ id: 'demo-v2', projectSlug: 'demo', dateText: '2026-01-01', versionOrder: 2 })
+    ];
+
+    const states = resolveAdminContentProjectVersionStates(items);
+
+    expect(states.get('demo-v2')?.isLatestVersion).toBe(true);
+    expect(states.get('demo-v1')?.isLatestVersion).toBe(false);
+  });
+
+  it('groups project versions by stable slug and keeps single-version projects grouped', () => {
+    const items = withProjectStates([
+      projectVersion({
+        id: 'demo-v1',
+        projectSlug: 'demo',
+        dateText: '2026-01-01',
+        versionOrder: 1,
+        title: 'Demo',
+        versionLabel: 'v1.0.0',
+        versionName: '初版'
+      }),
+      projectVersion({
+        id: 'single',
+        projectSlug: 'single',
+        dateText: '2026-02-01',
+        title: 'Single Project'
+      }),
+      projectVersion({
+        id: 'demo-v2',
+        projectSlug: 'demo',
+        dateText: '2026-03-01',
+        versionOrder: 2,
+        title: 'Demo',
+        versionLabel: 'v2.0.0',
+        versionName: '新版'
+      })
+    ]);
+
+    const groups = buildAdminContentListProjectGroups(items);
+
+    expect(groups.map((group) => group.projectSlug)).toEqual(['demo', 'single']);
+
+    const demoGroup = groups[0];
+    expect(demoGroup).toMatchObject({
+      kind: 'project',
+      key: 'project:demo',
+      projectSlug: 'demo',
+      title: 'Demo',
+      displayTitle: 'Demo',
+      versionCount: 2
+    });
+    expect(demoGroup?.items.map((item) => item.id)).toEqual(['demo-v2', 'demo-v1']);
+    expect(demoGroup?.items.map((item) => item.isLatestVersion)).toEqual([true, false]);
+
+    const singleGroup = groups[1];
+    expect(singleGroup).toMatchObject({
+      kind: 'project',
+      key: 'project:single',
+      projectSlug: 'single',
+      displayTitle: 'Single Project',
+      versionCount: 1
+    });
+    expect(singleGroup?.items.map((item) => item.id)).toEqual(['single']);
+  });
+
+  it('keeps entries without a project slug as separate single-version groups', () => {
+    const items = withProjectStates([
+      projectVersion({ id: 'loose-a', projectSlug: null }),
+      projectVersion({ id: 'loose-b', projectSlug: null })
+    ]);
+
+    const groups = buildAdminContentListProjectGroups(items);
+
+    expect(groups.map((group) => group.projectSlug)).toEqual(['loose-a', 'loose-b']);
+    expect(groups.map((group) => group.versionCount)).toEqual([1, 1]);
+  });
+
+  it('builds one project section whose count is the number of projects', () => {
+    const items = withProjectStates([
+      projectVersion({ id: 'demo-v1', projectSlug: 'demo', dateText: '2026-01-01' }),
+      projectVersion({ id: 'demo-v2', projectSlug: 'demo', dateText: '2026-02-01' }),
+      projectVersion({ id: 'single', projectSlug: 'single' })
+    ]);
+
+    const sections = buildAdminContentListProjectSections(items);
+
+    expect(sections).toHaveLength(1);
+    expect(sections[0]).toMatchObject({
+      kind: 'project',
+      key: 'project',
+      label: '项目',
+      count: 2
+    });
+    expect(buildAdminContentListProjectSections([])).toEqual([]);
   });
 });
 

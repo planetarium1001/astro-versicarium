@@ -133,6 +133,111 @@ export const getScrollRatio = (element: HTMLElement): number => {
   return Math.min(1, Math.max(0, element.scrollTop / scrollableDistance));
 };
 
+export type EditorScrollSnapshot = {
+  scrollTop: number;
+  scrollHeight: number;
+  clientHeight: number;
+  scrollRatio: number;
+};
+
+const getScrollMetric = (value: number): number =>
+  Number.isFinite(value) ? Math.max(0, value) : 0;
+
+export const captureEditorScrollSnapshot = (element: HTMLElement | null): EditorScrollSnapshot | null => {
+  if (!element) return null;
+
+  const scrollHeight = getScrollMetric(element.scrollHeight);
+  const clientHeight = getScrollMetric(element.clientHeight);
+  const maxScrollTop = Math.max(0, scrollHeight - clientHeight);
+  const scrollTop = Math.min(maxScrollTop, getScrollMetric(element.scrollTop));
+
+  return {
+    scrollTop,
+    scrollHeight,
+    clientHeight,
+    scrollRatio: maxScrollTop === 0 ? 0 : scrollTop / maxScrollTop
+  };
+};
+
+export const getEditorScrollRestoreTop = (
+  snapshot: EditorScrollSnapshot | null,
+  element: HTMLElement | null
+): number | null => {
+  if (!snapshot || !element) return null;
+
+  const maxScrollTop = Math.max(
+    0,
+    getScrollMetric(element.scrollHeight) - getScrollMetric(element.clientHeight)
+  );
+  if (maxScrollTop === 0) return 0;
+
+  const snapshotMaxScrollTop = Math.max(0, snapshot.scrollHeight - snapshot.clientHeight);
+  // 内容高度未变化时按绝对值恢复，避免比例换算带来的亚像素漂移。
+  if (maxScrollTop === snapshotMaxScrollTop) {
+    return Math.min(maxScrollTop, snapshot.scrollTop);
+  }
+
+  return Math.min(maxScrollTop, Math.round(maxScrollTop * snapshot.scrollRatio));
+};
+
+export const restoreEditorScrollSnapshot = (
+  snapshot: EditorScrollSnapshot | null,
+  element: HTMLElement | null
+): boolean => {
+  const restoreTop = getEditorScrollRestoreTop(snapshot, element);
+  if (restoreTop === null || !element) return false;
+
+  element.scrollTop = restoreTop;
+  return true;
+};
+
+export type EditorPreviewScrollRefreshHooks = {
+  captureScrollPosition: () => EditorScrollSnapshot | null;
+  applyHtml: () => void;
+  waitForRender: () => Promise<void>;
+  restoreScrollPosition: (snapshot: EditorScrollSnapshot | null) => void;
+  waitForLayoutSettle: () => Promise<void>;
+  cancelQueuedScrollSync: () => void;
+  setScrollSyncGuarded: (guarded: boolean) => void;
+  releaseScrollSyncGuard: (frameDelay?: number) => void;
+  isScrollSyncActive: () => boolean;
+  realignScrollSync: () => void;
+};
+
+// 恢复后仍要渡过一个渲染帧，等预览重置产生的 scroll 事件被 guard 吞掉后再放开同步。
+export const EDITOR_PREVIEW_SCROLL_GUARD_RELEASE_FRAMES = 2;
+
+export const applyPreviewHtmlPreservingScroll = async (
+  hooks: EditorPreviewScrollRefreshHooks
+): Promise<EditorScrollSnapshot | null> => {
+  const snapshot = hooks.captureScrollPosition();
+
+  hooks.cancelQueuedScrollSync();
+  hooks.setScrollSyncGuarded(true);
+
+  try {
+    hooks.applyHtml();
+
+    // {@html} 换内容时先移除旧节点，滚动容器会把 scrollTop 夹到 0；
+    // 必须在 DOM 落定后、下一次绘制前按比例写回阅读位置。
+    await hooks.waitForRender();
+    hooks.restoreScrollPosition(snapshot);
+
+    // 图片与字体可能让高度再变一次，补一帧后再校准。
+    await hooks.waitForLayoutSettle();
+    hooks.restoreScrollPosition(snapshot);
+
+    // 同步开启时以最后一侧为基准重新对齐；关闭同步时只恢复预览，绝不动另一侧。
+    if (hooks.isScrollSyncActive()) {
+      hooks.realignScrollSync();
+    }
+
+    return snapshot;
+  } finally {
+    hooks.releaseScrollSyncGuard(EDITOR_PREVIEW_SCROLL_GUARD_RELEASE_FRAMES);
+  }
+};
+
 export const clearScrollbarVisibilityTimer = (
   scrollbarVisibilityTimers: Map<HTMLElement, number>,
   element: HTMLElement

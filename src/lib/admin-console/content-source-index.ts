@@ -34,7 +34,12 @@ import {
 import { getStringArray } from './content-editor-payload';
 import { isRecord, normalizeOptionalText } from './content-entry-utils';
 import { compareByNullableDateDesc } from './content-shared';
-import { resolveAdminContentSeriesVersionStates } from './content-series';
+import {
+  compareAdminContentSeriesVersions,
+  resolveAdminContentProjectVersionStates,
+  resolveAdminContentSeriesVersionStates
+} from './content-series';
+import { isDateFormProjectSlug } from '../project-routing';
 
 // Admin Content 列表跟随 src/content.config.ts 当前 glob 边界：仅索引 .md。
 const ADMIN_CONTENT_SOURCE_INDEX_EXT_RE = /\.md$/i;
@@ -70,6 +75,8 @@ export type AdminContentSourceIndexItem = {
   tags: string[];
   // devlog 项目展示名：仅 devlog 从 frontmatter 读取，列表行用它生成 `项目名: 标题`。
   project: string | null;
+  // projects 的版本分组稳定键：frontmatter.slug（非日期形式）；缺失时回退 publicEntryId。
+  projectSlug: string | null;
   // series/version 元数据：仅 blog 从 frontmatter 读取，其余 collection 保持空值。
   series: string | null;
   versionLabel: string | null;
@@ -225,9 +232,9 @@ const getSourceRecordErrorMessage = (error: unknown): string => {
 const getBodyDerived = (record: SourceRecord): AdminContentSourceBodyDerived | null =>
   record.bodyDerived ?? null;
 
-type AdminContentSeriesFields = Pick<
+type AdminContentVersionFields = Pick<
   AdminContentSourceIndexItem,
-  'series' | 'versionLabel' | 'versionName' | 'versionOrder'
+  'series' | 'versionLabel' | 'versionName' | 'versionOrder' | 'projectSlug'
 >;
 
 const createBaseItem = (
@@ -239,21 +246,22 @@ const createBaseItem = (
     | 'publicEntryId'
     | 'relativePath'
     | 'readonlyReason'
-    | keyof AdminContentSeriesFields
+    | keyof AdminContentVersionFields
     | 'versionGroupSize'
     | 'isLatestVersion'
   >,
-  seriesFields: Partial<AdminContentSeriesFields> = {}
+  versionFields: Partial<AdminContentVersionFields> = {}
 ): AdminContentSourceIndexItem => ({
   collection: record.collection,
   id: record.entryId,
   publicEntryId: record.publicEntryId,
   relativePath: record.relativePath,
   readonlyReason: getAdminContentReadOnlyReason(record.collection),
-  series: seriesFields.series ?? null,
-  versionLabel: seriesFields.versionLabel ?? null,
-  versionName: seriesFields.versionName ?? null,
-  versionOrder: seriesFields.versionOrder ?? null,
+  series: versionFields.series ?? null,
+  projectSlug: versionFields.projectSlug ?? null,
+  versionLabel: versionFields.versionLabel ?? null,
+  versionName: versionFields.versionName ?? null,
+  versionOrder: versionFields.versionOrder ?? null,
   versionGroupSize: 1,
   isLatestVersion: true,
   ...values
@@ -404,6 +412,14 @@ const createProjectsSourceIndexItem: FrontmatterAdapter = (record) => {
   // projects 无 tags 字段：列表检索与标签筛选都不暴露项目标签。
   const tags: string[] = [];
   const bodyDerived = getBodyDerived(record);
+  // 同一项目的多个版本文档共享非日期形式的 frontmatter.slug；缺失或日期形式时按单版本处理。
+  const explicitProjectSlug = normalizeOptionalText(frontmatter.slug);
+  const projectSlug = explicitProjectSlug && !isDateFormProjectSlug(explicitProjectSlug)
+    ? explicitProjectSlug
+    : record.publicEntryId;
+  const versionLabel = normalizeOptionalText(frontmatter.versionLabel);
+  const versionName = normalizeOptionalText(frontmatter.versionName);
+  const versionOrder = parseVersionOrder(frontmatter.versionOrder);
   const sourceError = mergeSourceError(
     record.sourceError,
     !hasSourceError && !normalizeOptionalText(frontmatter.title) ? 'projects.title 缺失或不是字符串' : null,
@@ -426,6 +442,9 @@ const createProjectsSourceIndexItem: FrontmatterAdapter = (record) => {
       subtitle,
       description,
       type,
+      projectSlug,
+      versionLabel,
+      versionName,
       record.entryId,
       record.publicEntryId,
       tags,
@@ -433,6 +452,11 @@ const createProjectsSourceIndexItem: FrontmatterAdapter = (record) => {
       sourceError
     ]),
     sourceError
+  }, {
+    projectSlug,
+    versionLabel: versionLabel || null,
+    versionName: versionName || null,
+    versionOrder
   });
 };
 
@@ -606,6 +630,23 @@ const applySeriesVersionStates = (
   });
 };
 
+/** projects 按 projectSlug 归并计算最新/历史，单版本项目仍是自身最新版。 */
+const applyProjectVersionStates = (
+  items: readonly AdminContentSourceIndexItem[]
+): AdminContentSourceIndexItem[] => {
+  const states = resolveAdminContentProjectVersionStates(items);
+  return items.map((item) => {
+    const state = states.get(item.id);
+    return state ? { ...item, ...state } : item;
+  });
+};
+
+/** 项目列表排序与公开项目路由一致：date 倒序 → versionOrder 倒序 → entryId。 */
+const orderProjectSourceIndexItems = (
+  items: readonly AdminContentSourceIndexItem[]
+): AdminContentSourceIndexItem[] =>
+  items.slice().sort(compareAdminContentSeriesVersions);
+
 const createSourceIndexItems = (
   collection: AdminContentCollectionKey,
   records: readonly SourceRecord[]
@@ -616,6 +657,11 @@ const createSourceIndexItems = (
       publicHrefByBitsId
     })
   );
+
+  if (collection === 'projects') {
+    return orderProjectSourceIndexItems(applyProjectVersionStates(items));
+  }
+
   return orderSourceIndexItemsByRecent(applySeriesVersionStates(items));
 };
 

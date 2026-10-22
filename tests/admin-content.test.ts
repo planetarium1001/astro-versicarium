@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  buildAdminContentListProjectSections,
+  buildAdminContentListSections
+} from '../src/lib/admin-console/content-series';
 
 vi.mock('../src/lib/admin-console/content-source-index', () => ({
   getAdminContentSourceCounts: vi.fn(),
@@ -67,6 +71,7 @@ const createItem = (overrides: Partial<AdminContentIndexItem> = {}): AdminConten
     year: 2026,
     tags: ['admin'],
     project: null,
+    projectSlug: null,
     series: null,
     versionLabel: null,
     versionName: null,
@@ -90,6 +95,7 @@ const createDefaultItems = (): Record<AdminContentCollectionKey, AdminContentInd
       publicEntryId: 'project-a',
       title: 'Project A',
       slug: 'project-a',
+      projectSlug: 'project-a',
       relativePath: 'content/projects/project-a/index.md',
       publicHref: '/projects/#project-a',
       archive: null,
@@ -579,7 +585,7 @@ describe('admin-console/content', () => {
     expect(overBoundPage.pagination?.page).toBe(2);
   });
 
-  it('limits overview sections without paginating in the template layer', async () => {
+  it('lists every overview entry without truncating a section', async () => {
     const entries = Array.from({ length: 10 }, (_, index) => createItem({
       id: `overview-${index + 1}`,
       publicEntryId: `overview-${index + 1}`
@@ -593,7 +599,251 @@ describe('admin-console/content', () => {
     expect(pageData.mode).toBe('overview');
     expect(pageData.pagination).toBeNull();
     expect(BlogSection?.filteredCount).toBe(10);
-    expect(BlogSection?.items).toHaveLength(8);
+    expect(BlogSection?.items).toHaveLength(10);
+  });
+
+  it('renders all 14 overview blog entries: 9 standalone posts and 2 series with 5 versions', async () => {
+    const standalone = Array.from({ length: 9 }, (_, index) => createItem({
+      id: `standalone-${index + 1}`,
+      publicEntryId: `standalone-${index + 1}`,
+      title: `Standalone ${index + 1}`,
+      date: new Date(`2026-07-0${9 - index}T00:00:00.000Z`)
+    }));
+    const seriesA = [1, 2, 3].map((versionOrder) => createItem({
+      id: `series-a-v${versionOrder}`,
+      publicEntryId: `series-a-v${versionOrder}`,
+      title: `Series A: v${versionOrder}`,
+      series: 'series-a',
+      versionName: `v${versionOrder}`,
+      versionOrder,
+      versionGroupSize: 3,
+      isLatestVersion: versionOrder === 3,
+      date: new Date(`2026-06-0${versionOrder}T00:00:00.000Z`)
+    }));
+    const seriesB = [1, 2].map((versionOrder) => createItem({
+      id: `series-b-v${versionOrder}`,
+      publicEntryId: `series-b-v${versionOrder}`,
+      title: `Series B: v${versionOrder}`,
+      series: 'series-b',
+      versionName: `v${versionOrder}`,
+      versionOrder,
+      versionGroupSize: 2,
+      isLatestVersion: versionOrder === 2,
+      date: new Date(`2026-05-0${versionOrder}T00:00:00.000Z`)
+    }));
+    setSourceItems({ blog: [...standalone, ...seriesA, ...seriesB], bits: [], about: [] });
+    setSourceCounts({ blog: 14, bits: 0, about: 0 });
+
+    const pageData = await getAdminContentConsolePageData(new URLSearchParams());
+    const BlogSection = pageData.sections.find((section) => section.collection === 'blog');
+
+    expect(pageData.mode).toBe('overview');
+    expect(BlogSection?.filteredCount).toBe(14);
+    expect(BlogSection?.items).toHaveLength(14);
+    expect(BlogSection?.items.map((item) => item.id)).toEqual([
+      'standalone-1',
+      'standalone-2',
+      'standalone-3',
+      'standalone-4',
+      'standalone-5',
+      'standalone-6',
+      'standalone-7',
+      'standalone-8',
+      'standalone-9',
+      'series-a-v3',
+      'series-a-v2',
+      'series-a-v1',
+      'series-b-v2',
+      'series-b-v1'
+    ]);
+
+    const listSections = buildAdminContentListSections(BlogSection?.items ?? []);
+    const standaloneSection = listSections.find((section) => section.kind === 'standalone');
+    if (standaloneSection?.kind !== 'standalone') throw new Error('expected a standalone section');
+    expect(standaloneSection.items).toHaveLength(9);
+    const seriesSection = listSections.find((section) => section.kind === 'series');
+    if (seriesSection?.kind !== 'series') throw new Error('expected a series section');
+    expect(seriesSection.count).toBe(2);
+    expect(seriesSection.groups.map((group) => [group.series, group.versionCount, group.items.map((item) => item.id)]))
+      .toEqual([
+        ['series-a', 3, ['series-a-v3', 'series-a-v2', 'series-a-v1']],
+        ['series-b', 2, ['series-b-v2', 'series-b-v1']]
+      ]);
+  });
+
+  it('renders all 10 devlog overview entries', async () => {
+    const entries = Array.from({ length: 10 }, (_, index) => createItem({
+      collection: 'devlog',
+      collectionLabel: '更新',
+      id: `devlog-${String(index + 1).padStart(2, '0')}`,
+      publicEntryId: `devlog-${String(index + 1).padStart(2, '0')}`,
+      title: `Devlog ${index + 1}`,
+      relativePath: `content/devlog/devlog-${index + 1}/index.md`,
+      publicHref: `/devlog/#devlog-${index + 1}`,
+      date: new Date(`2026-03-${String(10 - index).padStart(2, '0')}T00:00:00.000Z`)
+    }));
+    setSourceItems({ devlog: entries, bits: [], about: [] });
+    setSourceCounts({ blog: 0, devlog: 10, bits: 0, about: 0 });
+
+    const pageData = await getAdminContentConsolePageData(new URLSearchParams());
+    const DevlogSection = pageData.sections.find((section) => section.collection === 'devlog');
+
+    expect(pageData.mode).toBe('overview');
+    expect(DevlogSection?.filteredCount).toBe(10);
+    expect(DevlogSection?.items).toHaveLength(10);
+    expect(DevlogSection?.items.map((item) => item.id)).toEqual(entries.map((item) => item.id));
+  });
+
+  it('keeps a series inside the same pagination window instead of splitting it across pages', async () => {
+    const olderStandalone = Array.from({ length: 4 }, (_, index) => createItem({
+      id: `older-${index + 1}`,
+      publicEntryId: `older-${index + 1}`,
+      title: `Older ${index + 1}`,
+      date: new Date(`2026-04-${28 - index}T00:00:00.000Z`)
+    }));
+    const newerStandalone = Array.from({ length: 19 }, (_, index) => createItem({
+      id: `newer-${String(index + 1).padStart(2, '0')}`,
+      publicEntryId: `newer-${String(index + 1).padStart(2, '0')}`,
+      title: `Newer ${index + 1}`,
+      date: new Date(`2026-05-${String(19 - index).padStart(2, '0')}T00:00:00.000Z`)
+    }));
+    const seriesEntries = [
+      createItem({
+        id: 'page-series-v2',
+        publicEntryId: 'page-series-v2',
+        title: 'Page Series: 当前版本',
+        series: 'page-series',
+        versionName: '当前版本',
+        versionOrder: 2,
+        versionGroupSize: 2,
+        isLatestVersion: true,
+        date: new Date('2026-04-30T00:00:00.000Z')
+      }),
+      createItem({
+        id: 'page-series-v1',
+        publicEntryId: 'page-series-v1',
+        title: 'Page Series: 初版',
+        series: 'page-series',
+        versionName: '初版',
+        versionOrder: 1,
+        versionGroupSize: 2,
+        isLatestVersion: false,
+        date: new Date('2026-04-29T00:00:00.000Z')
+      })
+    ];
+    setSourceItems({ blog: [...newerStandalone, ...seriesEntries, ...olderStandalone] });
+    setSourceCounts({ blog: 25, bits: 0, about: 0 });
+
+    const firstPage = await getAdminContentConsolePageData(new URLSearchParams([
+      ['collection', 'blog']
+    ]));
+    const secondPage = await getAdminContentConsolePageData(new URLSearchParams([
+      ['collection', 'blog'],
+      ['page', '2']
+    ]));
+    const firstPageItems = firstPage.sections[0]?.items ?? [];
+    const secondPageItems = secondPage.sections[0]?.items ?? [];
+
+    // 分页元信息保持不变；窗口内出现的 series 把跨页的另一个版本带回本页。
+    expect(firstPage.pagination).toMatchObject({ page: 1, totalItems: 25, totalPages: 2 });
+    expect(firstPageItems).toHaveLength(21);
+    expect(firstPageItems.filter((item) => item.series === 'page-series').map((item) => item.id))
+      .toEqual(['page-series-v2', 'page-series-v1']);
+
+    const secondPageGroup = buildAdminContentListSections(secondPageItems)
+      .find((section) => section.kind === 'series');
+    if (secondPageGroup?.kind !== 'series') throw new Error('expected a series section');
+    expect(secondPageGroup.groups[0]?.items.map((item) => item.id))
+      .toEqual(['page-series-v2', 'page-series-v1']);
+  });
+
+  it('lists every project version in the overview without truncating the projects section', async () => {
+    const singleProjects = Array.from({ length: 6 }, (_, index) => createItem({
+      collection: 'projects',
+      collectionLabel: '项目',
+      id: `single-project-${index + 1}`,
+      publicEntryId: `single-project-${index + 1}`,
+      title: `Single Project ${index + 1}`,
+      slug: `single-project-${index + 1}`,
+      projectSlug: `single-project-${index + 1}`,
+      relativePath: `content/projects/single-project-${index + 1}/index.md`,
+      publicHref: `/projects/#single-project-${index + 1}`,
+      date: new Date(`2026-07-0${index + 1}T00:00:00.000Z`)
+    }));
+    const projectVersions = [
+      createItem({
+        collection: 'projects',
+        collectionLabel: '项目',
+        id: 'demo-v1',
+        publicEntryId: 'demo-v1',
+        title: 'Demo',
+        slug: 'demo-v1',
+        projectSlug: 'demo',
+        relativePath: 'content/projects/demo-v1/index.md',
+        publicHref: '/projects/#demo-v1',
+        versionLabel: 'v1.0.0',
+        versionOrder: 1,
+        versionGroupSize: 2,
+        isLatestVersion: false,
+        date: new Date('2026-06-28T00:00:00.000Z')
+      }),
+      createItem({
+        collection: 'projects',
+        collectionLabel: '项目',
+        id: 'demo',
+        publicEntryId: 'demo',
+        title: 'Demo',
+        slug: 'demo',
+        projectSlug: 'demo',
+        relativePath: 'content/projects/demo/index.md',
+        publicHref: '/projects/#demo',
+        versionLabel: 'v2.0.0',
+        versionOrder: 2,
+        versionGroupSize: 2,
+        isLatestVersion: true,
+        date: new Date('2026-06-30T00:00:00.000Z')
+      })
+    ];
+    const tail = [
+      createItem({
+        collection: 'projects',
+        collectionLabel: '项目',
+        id: 'between-project',
+        publicEntryId: 'between-project',
+        title: 'Between Project',
+        slug: 'between-project',
+        projectSlug: 'between-project',
+        relativePath: 'content/projects/between-project/index.md',
+        publicHref: '/projects/#between-project',
+        date: new Date('2026-06-29T00:00:00.000Z')
+      }),
+      createItem({
+        collection: 'projects',
+        collectionLabel: '项目',
+        id: 'tail-project',
+        publicEntryId: 'tail-project',
+        title: 'Tail Project',
+        slug: 'tail-project',
+        projectSlug: 'tail-project',
+        relativePath: 'content/projects/tail-project/index.md',
+        publicHref: '/projects/#tail-project',
+        date: new Date('2026-06-27T00:00:00.000Z')
+      })
+    ];
+    setSourceItems({ projects: [...singleProjects, ...projectVersions, ...tail], bits: [], about: [] });
+    setSourceCounts({ blog: 0, projects: 10, bits: 0, about: 0 });
+
+    const pageData = await getAdminContentConsolePageData(new URLSearchParams());
+    const ProjectsSection = pageData.sections.find((section) => section.collection === 'projects');
+
+    // 总览不再截断：10 份项目文档全部渲染，并按项目稳定 slug 归并。
+    expect(ProjectsSection?.items).toHaveLength(10);
+    const projectGroups = buildAdminContentListProjectSections(ProjectsSection?.items ?? []);
+    expect(projectGroups).toHaveLength(1);
+    expect(projectGroups[0]?.groups).toHaveLength(9);
+    const demoGroup = projectGroups[0]?.groups.find((group) => group.projectSlug === 'demo');
+    expect(demoGroup?.versionCount).toBe(2);
+    expect(demoGroup?.items.map((item) => item.id)).toEqual(['demo', 'demo-v1']);
   });
 
   it('uses source-index public hrefs in the bits list without loading body index', async () => {
