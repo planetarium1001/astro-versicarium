@@ -1,6 +1,6 @@
 # 后台控制台
 
-> 本页面向开发者，包含实现细节与命令。使用说明见[使用者版](../admin-console.md)，全部开发者文档见[索引](README.md)。
+> 本页面向开发者，包含实现细节与命令。使用说明见[使用版](../admin-console.md)，全部开发文档见[索引](README.md)。
 
 后台在 `npm run dev` 下以 `output: 'server'` 提供页面与写入接口，生产构建以 `output: 'static'` 只保留只读壳。可写性由 `astro.config.mjs` 的 `isProductionBuild` 与各 API 内的 `import.meta.env.DEV` 判定；内容与设置写入仓库文件，图片在配置对象存储时写入云端。
 
@@ -73,6 +73,7 @@
 - `blog` 的「新建版本」在 `content-create-version.ts`：复制系列最新版条目目录，重写 `date`、`versionOrder`、`versionLabel`（默认 `vN`）、`versionName`，标记 `draft: true` 并删除 `publishedAt`、`updatedAt`。
 - 删除把条目目录移到 `.trash/content/<时间戳>/`（`content-delete.ts`）；批量删除最多 200 条（`content-bulk.ts`）；列表每页 20 条（`content-routes.ts`）。
 - 列表正文搜索只在选中单个集合时生效，全部内容范围只匹配元信息（`content.ts`）。
+- 列表分组在 `content-series.ts`：`blog` 按 `series`，`projects` 按稳定 `projectSlug`（`frontmatter.slug`，日期形式或缺失回退条目 ID）。总览截断与分页窗口会把同组版本完整并入，避免系列被拆散（`content.ts`）。
 - 保存 `blog` 正文时，`content-write-plan.ts` 用 `findMissingMarkdownBodyLocalImageReferences` 拒绝不存在的本地图片。
 - 编辑器插入项在 `src/components/admin/editor/markdown/markdown-tools.ts` 与 `insert-tools.ts`；预览接口是 `POST /api/admin/preview`（`src/pages/api/admin/preview/index.ts`）。
 

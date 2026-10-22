@@ -1,6 +1,6 @@
 # 版本与发布
 
-> 本页面向开发者，包含实现细节与命令。使用说明见[使用者版](../release.md)，全部开发者文档见[索引](README.md)。
+> 本页面向开发者，包含实现细节与命令。使用说明见[使用版](../release.md)，全部开发文档见[索引](README.md)。
 
 这一层负责主题版本从提交到 Release 附件的完整链路：版本号来源、Release Please 配置、发布工作流、附件命名与 `theme.json` 基准语义。部署工作流与 Pages 设置见 [deployment.md](deployment.md)，主题合并规则见 [upstream.md](upstream.md)。
 

@@ -1,6 +1,6 @@
 # 内容与写作
 
-> 本页面向开发者，包含实现细节与命令。使用说明见[使用者版](../writing.md)，全部开发者文档见[索引](README.md)。
+> 本页面向开发者，包含实现细节与命令。使用说明见[使用版](../writing.md)，全部开发文档见[索引](README.md)。
 
 五个集合定义在 `src/content.config.ts`，目录加载器在 `src/lib/content-loader.ts`，条目主文件解析在 `src/lib/content-entry-files.ts`。博客系列路由、项目多版本路由与日期显示分别由 `src/lib/blog-routing.ts`、`src/lib/project-routing.ts`、`src/lib/display-date.ts` 提供不依赖 `astro:content` 的纯函数模型，页面、归档与后台共用。Markdown 处理在 `src/plugins/markdown-pipeline.mjs`，HTML 白名单在 `src/plugins/sanitize-schema.mjs`。
 

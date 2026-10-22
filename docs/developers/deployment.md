@@ -1,6 +1,6 @@
 # 部署
 
-> 本页面向开发者，包含实现细节与命令。使用说明见[使用者版](../deployment.md)，全部开发者文档见[索引](README.md)。
+> 本页面向开发者，包含实现细节与命令。使用说明见[使用版](../deployment.md)，全部开发文档见[索引](README.md)。
 
 `dist/` 是静态产物，构建读取 `content/` 与 `src/data/settings/`，不需要数据库。后台写入只在 `npm run dev` 下可用，生产构建不包含写入接口；后台边界见 [admin-console.md](admin-console.md)。
 
@@ -26,6 +26,8 @@
 
 ## 四个工作流
 
+面向使用者的说明见[部署上线 · GitHub Actions 工作流](../deployment.md#github-actions-工作流)。
+
 | 工作流 | 触发 | 主要步骤 | 权限 |
 | --- | --- | --- | --- |
 | `ci.yml` | 向 `main`、`demo` 推送或提 PR | 解析 Node、`npm ci`、以固定 `SITE_URL` 运行 `npm run ci`（等价 `npm run verify`） | `contents: read` |
@@ -33,7 +35,12 @@
 | `release-please.yml` | 向 `main` 推送 | `googleapis/release-please-action@v4` 维护版本 PR、版本号与 `CHANGELOG.md` | `contents: write`、`pull-requests: write` |
 | `release.yml` | `release: published` | 校验标签与 `package.json` 版本、`git archive` 打包、生成 `SHA256SUMS`、上传 Release 附件 | `contents: write` |
 
-- `ci.yml` 的 `SITE_URL` 固定为 `https://planetarium1001.github.io`；只给 owner 的 origin，项目页子路径由构建期 base 决定。
+- 工作流文件都在 `.github/workflows/`：`ci.yml`、`pages.yml`、`release-please.yml`、`release.yml`。
+- 从模板复制出的站点必须修改 `pages.yml` 的触发分支与 `checkout` 的 `ref`（或删除 `ref` 使用触发提交），否则推送后不触发或检出 `demo` 失败；`ci.yml` 的分支列表与固定 `SITE_URL` 也要改成自己的值。
+- 变量来源：`pages.yml` 的 `SITE_URL` 由 `GITHUB_REPOSITORY_OWNER` 拼出，base 由 `GITHUB_REPOSITORY` 的仓库名推导，不使用仓库变量、Secrets 或 `actions/configure-pages`。
+- 变量来源：`ci.yml` 的 `SITE_URL` 是固定字面量 `https://planetarium1001.github.io`；`npm run ci` 包含构建，因此需要非空 `SITE_URL`。
+- 变量来源：`release.yml` 的 `RELEASE_TAG` 来自 `github.event.release.tag_name`，`VERSION` 取自 `package.json.version`，标签去掉 `v` 后必须与 `VERSION` 相同。
+- 变量来源：`release-please.yml` 读取 `release-please-config.json` 与 `.release-please-manifest.json`；Node 版本解析规则见下方「构建期环境变量」。
 - `pages.yml` 的 build 与 deploy 是两个 job；部署 job 使用 `github-pages` 环境与 `actions/deploy-pages@v4`，并发组 `pages`、`cancel-in-progress: true`。
 - `pages.yml` 的构建顺序：检出 `demo`、解析 Node、`npm ci`、写入 `SITE_URL` 与 `ASTRO_WHONO_BASE_PATH`、`npm run build`、`actions/upload-pages-artifact@v3` 上传 `dist`。它不跑 `verify`，校验由 `ci.yml` 负责。
 - `ci.yml` 在 `main`、`demo` 的 push 与 PR 上都会运行；页面部署不依赖它通过，但发布前应保证两者都绿。

@@ -1,6 +1,6 @@
 # 主题更新
 
-> 本文档为使用文档，不涉及代码、开发等内容。代码分层、命令参数与实现细节见[开发者文档：与上游的关系](developers/upstream.md)。
+> 本文档为使用文档，不涉及代码、开发等内容。代码分层、命令参数与实现细节见[开发文档：与上游的关系](developers/upstream.md)。
 
 主题还在继续改，站点需要定期把新版本合并进来。更新只改主题负责的文件，站点自己的内容、设置与素材保持不动。
 
@@ -8,7 +8,7 @@
 
 ## 主题的来源
 
-主题最初来自 [cxro/astro-whono](https://github.com/cxro/astro-whono)，保留 MIT 许可与版权声明。上游是起点，不是本项目的旧版本。
+主题最初来自 [cxro/astro-whono](https://github.com/cxro/astro-whono)，保留 MIT 许可与版权声明。
 
 本仓库在这套基础上做了几处调整：
 
@@ -59,9 +59,9 @@
 
 没有新内容时，命令会提示已是最新，什么也不做。
 
-## 手工合并上游
+## 维护主题仓库时：合并原始上游 Whono
 
-只有在维护主题仓库时才需要这一步：
+这里的“上游”是主题最初的来源 `cxro/astro-whono`，不是主题仓库 `planetarium1001/astro-versicarium`。普通站点跟踪主题仓库，用 `theme:update` 更新，不执行这一节；只有维护主题仓库时才需要手工合并 Whono。
 
 ```bash
 git remote add upstream https://github.com/cxro/astro-whono.git
@@ -70,7 +70,7 @@ git checkout main
 git merge upstream/main
 ```
 
-- 冲突时保留本站的内容、设置、图片与主题基准文件。
-- 上游的内容字段与页面结构与本站不同时，以本站为准。
+- 冲突时保留主题仓库的内容、设置、图片与主题基准文件。
+- Whono 的内容字段与页面结构与主题仓库不同时，以主题仓库为准。
 - 合并后在 `main` 提交，再到 `demo` 同步一次。
 

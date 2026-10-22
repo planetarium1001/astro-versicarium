@@ -1,6 +1,6 @@
 # 站点图标
 
-> 本页面向开发者，包含实现细节与命令。使用说明见[使用者版](../favicon.md)，全部开发者文档见[索引](README.md)。
+> 本页面向开发者，包含实现细节与命令。使用说明见[使用版](../favicon.md)，全部开发文档见[索引](README.md)。
 
 这一层负责图标从配置到输出的完整链路：`site.json` 的 `favicon` 字段解析、`scripts/favicon.mjs` 生成资产、`BaseLayout` 的链接回退，以及后台上传 PNG 的接口。设置字段的通用规则见 [admin-console.md](admin-console.md)，构建流程见 [architecture.md](architecture.md)。
 

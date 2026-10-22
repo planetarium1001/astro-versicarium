@@ -1,6 +1,6 @@
 # 与上游的关系
 
-> 本页面向开发者，包含实现细节与命令。使用说明见[使用者版](../upstream.md)，全部开发者文档见[索引](README.md)。
+> 本页面向开发者，包含实现细节与命令。使用说明见[使用版](../upstream.md)，全部开发文档见[索引](README.md)。
 
 这一层负责两件事：本仓库与上游的关系，以及 `theme:update` 的合并实现。内容包括 `theme.json` 字段、远端拉取、逐文件合并、冲突与失败行为、站点自有路径与手工合并上游。部署见 [deployment.md](deployment.md)，版本发布见 [release.md](release.md)。
 
