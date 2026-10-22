@@ -54,7 +54,7 @@ Source 选 GitHub Actions 时，构建环境与步骤都由仓库自己的工作
 
 ### 构建
 
-构建命令是 `npm run build`，运行时要带上站点地址；变量写法见[站点地址与子目录](#站点地址与子目录)，产物在 `dist/`。站点放在域名根目录时不用设 base；放在子目录时设置 `ASTRO_WHONO_BASE_PATH`，例如 `/blog/`。
+构建命令是 `npm run build`，运行时要带上站点地址；变量写法见[站点地址与子目录](#站点地址与子目录)，产物在 `dist/`。站点放在域名根目录时不用设 base；放在子目录时设置 `ASTRO_VERSICARIUM_BASE_PATH`，例如 `/blog/`。
 
 ### 上传
 
@@ -92,11 +92,11 @@ rsync -av --delete dist/ <用户>@<服务器>:<站点目录>/
 
 `SITE_URL` 是站点的完整地址，例如 `https://example.com`。它用于生成订阅地址、分享图和页面里的绝对链接；不设置会退回占位域名，并被发布检查拦下。
 
-`ASTRO_WHONO_BASE_PATH` 用于站点放在子目录的情况。部署到 `https://example.com/blog/` 时设为 `/blog/`，不设置就是根路径 `/`。
+`ASTRO_VERSICARIUM_BASE_PATH` 用于站点放在子目录的情况。部署到 `https://example.com/blog/` 时设为 `/blog/`，不设置就是根路径 `/`。
 
 ```bash
 SITE_URL=https://example.com npm run build
-SITE_URL=https://example.com ASTRO_WHONO_BASE_PATH=/blog/ npm run build
+SITE_URL=https://example.com ASTRO_VERSICARIUM_BASE_PATH=/blog/ npm run build
 ```
 
 GitHub Pages 的项目页会自动推导这两个值，一般不用手动填；绑定自定义域名后，按工作流注释改成固定域名和 `/`。在 Git Bash 里设置子目录时，路径可能被自动改写，命令前加 `MSYS_NO_PATHCONV=1`。
@@ -118,7 +118,7 @@ SITE_URL=https://example.com npm run verify
 ## 常见问题
 
 - GitHub Pages 没有更新：确认推送的是 `demo` 分支，并确认 Pages 的 Source 是 GitHub Actions。
-- 子目录部署后站内链接打不开：确认 `ASTRO_WHONO_BASE_PATH` 与托管实际路径一致，修改后重新构建。
+- 子目录部署后站内链接打不开：确认 `ASTRO_VERSICARIUM_BASE_PATH` 与托管实际路径一致，修改后重新构建。
 - 自建服务器打开是 404 或页面没有样式：确认 `dist/` 已完整上传、Nginx 的 `root` 指向站点目录，子目录部署时 base 与访问路径一致。
 - 启用 HTTPS 后仍有地址指向 http：重新构建，并确认 `SITE_URL` 已改成 `https://` 开头。
 - 构建通过但发布检查失败：先确认命令里带了完整的 `SITE_URL`。

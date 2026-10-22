@@ -58,13 +58,17 @@ jobs:
           owner_lc="$(printf '%s' "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
           repo_lc="$(printf '%s' "${repo}" | tr '[:upper:]' '[:lower:]')"
           if [ "${repo_lc}" = "${owner_lc}.github.io" ]; then
-            echo "ASTRO_WHONO_BASE_PATH=/" >> "$GITHUB_ENV"
+            echo "ASTRO_VERSICARIUM_BASE_PATH=/" >> "$GITHUB_ENV"
           else
-            echo "ASTRO_WHONO_BASE_PATH=/${repo}/" >> "$GITHUB_ENV"
+            echo "ASTRO_VERSICARIUM_BASE_PATH=/${repo}/" >> "$GITHUB_ENV"
           fi
 
       - name: Build
         run: npm run build
+
+      # 复用上面 Build 的 dist（不重复构建）：拦截重复 base 与无法解析的本地 URL。
+      - name: Verify deployment base
+        run: node ./scripts/check-deployment-base.mjs
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

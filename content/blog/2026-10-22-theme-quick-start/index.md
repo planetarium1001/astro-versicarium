@@ -70,10 +70,10 @@ git push -u origin main
 
 ```bash
 SITE_URL=https://example.com npm run build
-SITE_URL=https://example.com ASTRO_WHONO_BASE_PATH=/blog/ npm run build
+SITE_URL=https://example.com ASTRO_VERSICARIUM_BASE_PATH=/blog/ npm run build
 ```
 
-`SITE_URL` 只写站点地址，不带路径；部署到子目录时另设 `ASTRO_WHONO_BASE_PATH`，例如 `/blog/`。不填 `SITE_URL` 时页面里的正式地址与分享图不输出，站点地图不生成，`npm run verify` 会失败。
+`SITE_URL` 只写站点地址，不带路径；部署到子目录时另设 `ASTRO_VERSICARIUM_BASE_PATH`，例如 `/blog/`。不填 `SITE_URL` 时页面里的正式地址与分享图不输出，站点地图不生成，`npm run verify` 会失败。
 
 产物在 `dist/`，是纯静态文件，Netlify、Cloudflare Pages 与自己架设的静态服务器都能直接托管；构建命令是 `npm run build`，发布目录是 `dist/`。
 

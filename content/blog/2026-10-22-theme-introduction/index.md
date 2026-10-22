@@ -71,10 +71,10 @@ draft: false
 
 ```bash
 SITE_URL=https://example.com npm run build
-SITE_URL=https://example.com ASTRO_WHONO_BASE_PATH=/blog/ npm run build
+SITE_URL=https://example.com ASTRO_VERSICARIUM_BASE_PATH=/blog/ npm run build
 ```
 
-`SITE_URL` 只写 origin，子路径交给 `ASTRO_WHONO_BASE_PATH`。不填 `SITE_URL` 时页面里的正式地址与分享图不输出，站点地图不生成，`npm run verify` 会失败。本地提交前跑 `npm run verify`，它依次执行类型检查、构建、快照、测试与产物检查。
+`SITE_URL` 只写 origin，子路径交给 `ASTRO_VERSICARIUM_BASE_PATH`。不填 `SITE_URL` 时页面里的正式地址与分享图不输出，站点地图不生成，`npm run verify` 会失败。本地提交前跑 `npm run verify`，它依次执行类型检查、构建、快照、测试与产物检查。
 
 获取模板有三种方式：在仓库页面选择 Use this template，得到历史独立的仓库；浅克隆 `main` 分支；fork 后合并上游。站点跟踪 `main`，不要直接合并 `demo`。
 

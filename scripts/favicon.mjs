@@ -63,7 +63,7 @@ const createIco = async (source) => {
 };
 
 const basePath = (() => {
-  const raw = String(process.env.ASTRO_WHONO_BASE_PATH ?? '/').trim();
+  const raw = String(process.env.ASTRO_VERSICARIUM_BASE_PATH ?? '/').trim();
   const segment = raw.replace(/^\/+|\/+$/g, '');
   return segment ? `/${segment}/` : '/';
 })();
