@@ -19,6 +19,7 @@
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-22C55E?style=flat-square" alt="License: MIT"></a>
   <a href="./CHANGELOG.md"><img src="https://img.shields.io/badge/version-1.0.0--rc.2-F59E0B?style=flat-square" alt="Version 1.0.0-rc.2"></a>
 </p>
+
 ## 功能概览
 
 Versicarium 是一个基于 Astro 的静态站点主题。将技术文章、多版本项目文档、开发日志与短动态整合在同一套内容模型中，并自带一套本地内容管理后台。
