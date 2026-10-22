@@ -1,13 +1,13 @@
 {
-  "introLead": "Versicarium · 垄录是面向开发者的极简 Astro 写作主题：文章、项目版本、开发日志与动态共用同一套内容结构。",
-  "introMore": "按标签继续浏览",
+  "introLead": "Versicarium · 垄录 是一个面向开发者的内容与版本管理博客主题：文章、项目版本、开发日志与动态共用同一套内容结构。",
+  "introMore": "更多内容请访问",
   "introMoreLinks": [
-    "tag",
-    "blogTag"
+    "blogTag",
+    "tag"
   ],
   "showIntroLead": true,
   "showIntroMore": true,
   "heroPresetId": "default",
   "heroImageSrc": null,
-  "heroImageAlt": "Versicarium 品牌图形：浅色与深色斜切背景中央的活页记录图标"
+  "heroImageAlt": "Versicarium 品牌图形"
 }

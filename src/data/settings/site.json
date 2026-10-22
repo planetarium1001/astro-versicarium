@@ -1,6 +1,6 @@
 {
   "title": "Versicarium",
-  "description": "面向开发者的极简 Astro 写作主题：文章、项目版本、开发日志与动态共用同一套内容结构。",
+  "description": "Versicarium · 垄录 是一个面向开发者的内容与版本管理博客主题：文章、项目版本、开发日志与动态共用同一套内容结构。",
   "defaultLocale": "zh-CN",
   "timezone": "Asia/Shanghai",
   "titleMaxPercent": 50,
@@ -9,7 +9,7 @@
   "footer": {
     "startYear": 2026,
     "showCurrentYear": true,
-    "copyright": "Versicarium · 垄录 · Planetarium"
+    "copyright": "Versicarium · 垄录"
   },
   "filings": {
     "scope": "all",

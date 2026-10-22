@@ -1,25 +1,22 @@
 ---
 title: Versicarium
-subtitle: 1.0.0-rc.1 预览版
-description: 当前预览版本，收束内容模型、项目版本、资源管理与主题更新，并统一为 Versicarium · 垄录。
+subtitle: 内容与版本管理的博客主题
+description: 用目录式内容结构管理文章、项目、动态与开发日志。
 type: 主题
-date: 2026-10-20
+date: 2026-10-02
 slug: versicarium
-versionLabel: 1.0.0-rc.1
-versionName: 预览候选
-versionSummary: 首个预览候选的内容基线，尚未发布 GitHub Release。
-versionOrder: 3
+versionLabel: "1.0.0-rc.2"
+versionOrder: 2
+image: images/og-default.png
 draft: false
 ---
 
-1.0.0-rc.1 是当前预览版本，尚未发布 GitHub Release。它把 0.1.0 与 0.5.0 的结构收束为可公开的首次版本：统一品牌、重建示例内容、补齐媒体与分页，并把版本与 CHANGELOG 交给 Release Please 管理。
+Versicarium 是一个面向长文与项目记录的内容主题，基于 Astro 构建。内容与主题代码分开存放，升级主题时不会改动站点内容。
 
-内容侧维持五个集合与目录式条目。项目文档共享稳定 `slug`，最新版锚点为 `/projects/#versicarium`，历史版使用条目 ID 压平的日期锚点；博客系列支持版本字段；归档按年月组织，并可在全部版本与最新版之间切换。
+内容分成文章、项目、动态、开发日志与关于页五个集合。每个条目是一个目录，主文件与图片、附件放在一起；文章和项目可以保留多份版本，读者默认看到最新版。
 
-后台覆盖概览、主题、写作、资源与快照。资源页把图片与附件放在同一工作区，支持集合级共享资源、引用状态、批量操作与整条目导入导出；写作页管理五个集合，生产构建中的后台退化为只读静态壳。分页改为按页面配置，首页、博客、动态、开发日志与归档各有开关与条数。
+项目区用卡片展示，点开后可以切换历史版本；归档把文章版本、项目版本与日志放在同一条时间线上，按年月分组并支持筛选。动态适合短句与图片，开发日志按项目记录进展。
 
-主题更新通过 `theme.json` 的基准提交做三方合并，纯文本按行交给 `git merge-file`，二进制文件整文件取舍，`content/`、设置、图片、字体与 `theme.json` 等站点自有路径不被覆盖。`main` 保持模板与更新来源，`demo` 承载完整示例站并部署到 GitHub Pages。
+主题自带本地内容后台，开发环境可以编辑内容、管理图片与修改设置，生产构建只输出静态页面，不保留写入能力。字体、图标与头像随站点发布，页面不请求外部字体服务。
 
-本次预览包含改名与品牌重做：英文名 Versicarium，中文名垄录，仓库地址改为 `planetarium1001/astro-versicarium`，示例站部署在 `planetarium1001.github.io/astro-versicarium/`。预览候选版本号为 `1.0.0-rc.1`，标签 `v1.0.0-rc.1` 保留在本地；当前处于预览阶段，Release 尚未发布，验证完成后发布稳定版 `1.0.0`。
-
-[仓库](https://github.com/planetarium1001/astro-versicarium) · [示例站](https://planetarium1001.github.io/astro-versicarium/) · [开发日志](/devlog/#versicarium-2026-10-20-versicarium-rename)
+主题更新按文件合并，站点自己的内容、设置与图片不会被覆盖。构建后的静态文件可以交给任意静态托管，发布前在本地完成检查即可。

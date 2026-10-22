@@ -32,7 +32,7 @@
   },
   "about": {
     "title": "关于",
-    "subtitle": null
+    "subtitle": "一行一垄， 一版一录。"
   },
   "pagination": {
     "home": {
@@ -45,7 +45,7 @@
     },
     "bits": {
       "enabled": true,
-      "pageSize": 20
+      "pageSize": 10
     },
     "devlog": {
       "enabled": false,
