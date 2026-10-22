@@ -13,7 +13,7 @@ import {
 import { site, hasSiteUrl } from './site.config.mjs';
 
 const isProductionBuild = process.env.NODE_ENV === 'production';
-const SITEMAP_ROUTE_ROOTS = new Set(['about', 'admin', 'archive', 'bits', 'checks', 'blog', 'devlog', 'projects']);
+const SITEMAP_ROUTE_ROOTS = new Set(['about', 'admin', 'archive', 'bits', 'blog', 'devlog', 'projects']);
 const rawDeploymentBase = process.env.ASTRO_WHONO_BASE_PATH ?? '/';
 const trimmedDeploymentBase = String(rawDeploymentBase).trim();
 
@@ -57,8 +57,6 @@ const normalizeSitemapPathname = (page) => {
 const isExcludedSitemapPathname = (pathname) =>
   pathname === '/admin'
   || pathname.startsWith('/admin/')
-  || pathname === '/checks'
-  || pathname.startsWith('/checks/')
   || pathname === '/bits/draft-dialog';
 
 const isExcludedSitemapEntry = (page) => isExcludedSitemapPathname(normalizeSitemapPathname(page));

@@ -17,10 +17,9 @@ const IMAGE_EXTENSIONS: ReadonlySet<string> = new Set([
   '.svg'
 ]);
 
-/** 会被扫描并改写引用的源（与 `scripts/check-image-references.mjs` 的 SOURCE_DIRS 对齐）。 */
+/** 会被扫描并改写引用的源。 */
 const SOURCE_DIRS: readonly { dir: string; exts: readonly string[] }[] = [
   { dir: 'content', exts: ['.md'] },
-  { dir: 'src/test-fixtures', exts: ['.md'] },
   { dir: 'src/data/settings', exts: ['.json'] },
   { dir: 'src/pages', exts: ['.astro'] },
   { dir: 'src/components', exts: ['.astro'] },
