@@ -160,6 +160,7 @@ if (!root) {
       inputTypographyCopy: controls.inputTypographyCopy,
       inputTypographyMono: controls.inputTypographyMono,
       inputTypographyBrand: controls.inputTypographyBrand,
+      inputFontCoverage: controls.inputFontCoverage,
       inputEntryVersionName: controls.inputEntryVersionName
     });
 

@@ -15,6 +15,7 @@ import {
   getAdminRenderedImagePreviewSrc
 } from '../src/lib/admin-console/image-params';
 import {
+  ADMIN_FONT_COVERAGE_DEFAULT,
   ADMIN_PAGINATION_DEFAULTS,
   ADMIN_PAGINATION_PAGE_SIZE_MAX,
   ADMIN_SHELL_TITLE_NARROW_MAX_LENGTH
@@ -662,6 +663,57 @@ describe('条目版本名称设置', () => {
 
     const paths = validateAdminThemeSettings(invalid).map((issue) => issue.path);
     expect(paths).toContain('ui.entryVersionName');
+  });
+});
+
+describe('字体覆盖策略设置', () => {
+  it('缺省时补齐默认 full', () => {
+    const raw = baseSettings() as Record<string, any>;
+    delete raw.ui.fontCoverage;
+    expect(canonicalizeAdminThemeSettings(raw).ui.fontCoverage).toBe(ADMIN_FONT_COVERAGE_DEFAULT);
+    expect(ADMIN_FONT_COVERAGE_DEFAULT).toBe('full');
+  });
+
+  it('两种模式原样保留，writable ui 分组可往返', () => {
+    for (const coverage of ['full', 'common'] as const) {
+      const canonical = canonicalizeAdminThemeSettings({
+        ...baseSettings(),
+        ui: { ...baseSettings().ui, fontCoverage: coverage }
+      });
+      expect(canonical.ui.fontCoverage).toBe(coverage);
+
+      const groups = createAdminWritableThemeSettingsGroups(canonical);
+      expect(groups.ui.fontCoverage).toBe(coverage);
+
+      const roundTrip = canonicalizeAdminThemeSettings({
+        ...canonical,
+        ui: { ...canonical.ui, fontCoverage: groups.ui.fontCoverage }
+      });
+      expect(roundTrip.ui.fontCoverage).toBe(coverage);
+    }
+  });
+
+  it('未知取值归一化为 full 并触发 canonical mismatch', () => {
+    const raw = baseSettings() as Record<string, any>;
+    raw.ui.fontCoverage = 'minimal';
+
+    const canonical = canonicalizeAdminThemeSettings(raw);
+    expect(canonical.ui.fontCoverage).toBe(ADMIN_FONT_COVERAGE_DEFAULT);
+
+    const mismatchPaths = createAdminThemeSettingsCanonicalMismatchIssues(raw, canonical).map(
+      (issue) => issue.path
+    );
+    expect(mismatchPaths).toContain('ui.fontCoverage');
+  });
+
+  it('共享校验把错误定位到 ui.fontCoverage', () => {
+    const invalid = {
+      ...baseSettings(),
+      ui: { ...baseSettings().ui, fontCoverage: 'minimal' }
+    } as unknown as EditableThemeSettings;
+
+    const paths = validateAdminThemeSettings(invalid).map((issue) => issue.path);
+    expect(paths).toContain('ui.fontCoverage');
   });
 });
 

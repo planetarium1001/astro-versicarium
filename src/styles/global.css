@@ -6,86 +6,8 @@
 @import "./components/view-stats.css";
 @import "./components/trailing-links.css";
 
-@font-face {
-  font-family: "LXGW WenKai Lite";
-  src: url("/fonts/lxgw-wenkai-lite-latin.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+0000-00FF, U+2000-206F, U+3000-303F, U+FF00-FFEF;
-}
-
-@font-face {
-  font-family: "LXGW WenKai Lite";
-  src: url("/fonts/lxgw-wenkai-lite-cjk-common.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+4E00-9FFF;
-}
-
-@font-face {
-  font-family: "LXGW WenKai Lite";
-  src: url("/fonts/lxgw-wenkai-lite-cjk-ext.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+3400-4DBF, U+20000-2A6DF;
-}
-
-@font-face {
-  font-family: "Noto Serif SC";
-  src: url("/fonts/noto-serif-sc-400-latin.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+0000-00FF, U+2000-206F, U+3000-303F, U+FF00-FFEF;
-}
-
-@font-face {
-  font-family: "Noto Serif SC";
-  src: url("/fonts/noto-serif-sc-400-cjk-common.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+4E00-9FFF;
-}
-
-@font-face {
-  font-family: "Noto Serif SC";
-  src: url("/fonts/noto-serif-sc-400-cjk-ext.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+3400-4DBF, U+20000-2A6DF;
-}
-
-@font-face {
-  font-family: "Noto Serif SC";
-  src: url("/fonts/noto-serif-sc-600-latin.woff2") format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+0000-00FF, U+2000-206F, U+3000-303F, U+FF00-FFEF;
-}
-
-@font-face {
-  font-family: "Noto Serif SC";
-  src: url("/fonts/noto-serif-sc-600-cjk-common.woff2") format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+4E00-9FFF;
-}
-
-@font-face {
-  font-family: "Noto Serif SC";
-  src: url("/fonts/noto-serif-sc-600-cjk-ext.woff2") format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+3400-4DBF, U+20000-2A6DF;
-}
+/* 字体分层：base 分片始终加载；生僻字 DLC 分片由 BaseLayout 在 full 模式额外引入。 */
+@import "./fonts.generated.css";
 
 /* 主题变量 */
 :root {

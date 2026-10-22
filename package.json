@@ -23,9 +23,9 @@
     "build": "astro build",
     "prebuild": "node ./scripts/favicon.mjs",
     "preview": "astro preview",
-    "check": "astro check && npm run check:svelte && npm run check:admin-content-source-boundary && npm run check:home-critical-css && npm run check:image-references && npm run check:font-charset",
+    "check": "astro check && npm run check:svelte && npm run check:admin-content-source-boundary && npm run check:home-critical-css && npm run check:image-references && npm run check:font-charset && npm run font:check",
     "test": "vitest run --config ./vitest.config.ts",
-    "verify": "npm run check && npm run build && npm run test:fixtures && npm run test && npm run check:prod-artifacts && npm run check:layout-geometry && npm run check:touch-targets && npm run check:viewport-overflow",
+    "verify": "npm run check && npm run build && npm run font:coverage -- --strict && npm run test:fixtures && npm run test && npm run check:prod-artifacts && npm run check:layout-geometry && npm run check:touch-targets && npm run check:viewport-overflow",
     "ci": "npm run verify",
     "audit:prod": "npm audit --omit=dev --audit-level=high --registry=https://registry.npmjs.org",
     "check:markdown-smoke": "node ./scripts/check-markdown-smoke.mjs",
@@ -43,9 +43,14 @@
     "test:fixtures": "node ./scripts/refresh-client-test-fixtures.mjs",
     "font:charset": "node ./scripts/font-charset.mjs",
     "font:subset": "node ./scripts/font-subset.mjs",
-    "font:build": "npm run font:charset && npm run font:subset",
+    "font:build": "node ./scripts/font-build.mjs",
     "new:bit": "node ./scripts/new-bit.mjs",
-    "theme:update": "node ./scripts/theme-update.mjs"
+    "theme:update": "node ./scripts/theme-update.mjs",
+    "font:fetch": "node ./scripts/font-fetch.mjs",
+    "font:roles": "node ./scripts/font-roles.mjs",
+    "font:check": "node ./scripts/font-check.mjs",
+    "font:coverage": "node ./scripts/font-coverage.mjs",
+    "font:report": "node ./scripts/font-report.mjs"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.19",

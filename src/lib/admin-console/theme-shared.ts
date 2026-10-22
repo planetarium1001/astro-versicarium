@@ -1,5 +1,6 @@
 import type {
   EditableThemeSettings,
+  FontCoverage,
   HeroPresetId,
   HomeIntroLinkKey,
   SidebarDividerVariant,
@@ -176,6 +177,20 @@ export const ADMIN_SIDEBAR_DIVIDER_OPTIONS = [
 export const ADMIN_TYPOGRAPHY_DEFAULT: TypographySettings = THEME_TYPOGRAPHY_DEFAULT;
 export const getAdminTypographyFontOptions = getThemeFontOptionsForRole;
 export const isAdminTypographyFontId = isThemeFontIdForRole;
+
+/** 全局字体覆盖策略：默认完整覆盖；常用覆盖只加载 base 分片，生僻字回退系统字体。 */
+const ADMIN_FONT_COVERAGES = ['full', 'common'] as const satisfies readonly FontCoverage[];
+export const ADMIN_FONT_COVERAGE_DEFAULT: FontCoverage = 'full';
+const ADMIN_FONT_COVERAGE_SET: ReadonlySet<FontCoverage> = new Set(ADMIN_FONT_COVERAGES);
+export const isAdminFontCoverage = (value: unknown): value is FontCoverage =>
+  typeof value === 'string' && ADMIN_FONT_COVERAGE_SET.has(value as FontCoverage);
+export const ADMIN_FONT_COVERAGE_OPTIONS = [
+  { id: 'full', label: '完整覆盖（默认）' },
+  { id: 'common', label: '常用覆盖' }
+] as const satisfies readonly {
+  id: FontCoverage;
+  label: string;
+}[];
 
 const ADMIN_HOME_INTRO_LINK_KEYS = [
   'archive',
@@ -875,6 +890,7 @@ export const canonicalizeAdminThemeSettings = (
         mono: asThemeFontIdForRole('mono', rawTypographyMono) ?? ADMIN_TYPOGRAPHY_DEFAULT.mono,
         brand: asThemeFontIdForRole('brand', rawTypographyBrand) ?? ADMIN_TYPOGRAPHY_DEFAULT.brand
       },
+      fontCoverage: isAdminFontCoverage(ui.fontCoverage) ? ui.fontCoverage : ADMIN_FONT_COVERAGE_DEFAULT,
       entryVersionName: normalizeEntryVersionNameMode(ui.entryVersionName)
     }
   };
@@ -957,6 +973,7 @@ export const createAdminWritableThemeSettingsGroups = (
     cardDateDisplay: settings.ui.cardDateDisplay,
     layout: { ...settings.ui.layout },
     typography: { ...settings.ui.typography },
+    fontCoverage: settings.ui.fontCoverage,
     entryVersionName: settings.ui.entryVersionName
   }
 });
@@ -1509,6 +1526,10 @@ export const validateAdminThemeSettings = (
     pushIssue('ui.typography.brand', '品牌字体必须从注册表可选项中选择');
   }
 
+  if (!isAdminFontCoverage(settings.ui?.fontCoverage)) {
+    pushIssue('ui.fontCoverage', '字体覆盖策略只允许 完整覆盖 / 常用覆盖');
+  }
+
   if (!isEntryVersionNameMode(settings.ui?.entryVersionName ?? '')) {
     pushIssue('ui.entryVersionName', '版本名称只允许 不显示 / 标题后 / 版本号后');
   }
@@ -1832,6 +1853,11 @@ const fillAdminThemeSettingsUiCompatibilityDefaults = (
   // 条目版本名称是后加的顶层标量：旧 ui.json 缺该键时补默认，避免读取期被判定锁住后台。
   if (canonicalUi.entryVersionName !== undefined && next.entryVersionName === undefined) {
     next = { ...next, entryVersionName: canonicalUi.entryVersionName };
+  }
+
+  // 字体覆盖策略同样是后加的顶层标量：旧 ui.json 缺该键时按默认 full 补齐。
+  if (canonicalUi.fontCoverage !== undefined && next.fontCoverage === undefined) {
+    next = { ...next, fontCoverage: canonicalUi.fontCoverage };
   }
 
   // 旧的条目格式组合器已移除：保留该键会被误判为 schema-mismatch，读取时直接忽略，

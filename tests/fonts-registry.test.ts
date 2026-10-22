@@ -40,12 +40,15 @@ describe('fonts/registry', () => {
     expect(selected.map((entry) => entry.id)).toEqual(['jetbrains-mono']);
   });
 
-  it('keeps CJK api entries downloadable with explicit chinese subsets', () => {
-    const [cjk] = getSelectedAstroApiFonts({ ...THEME_TYPOGRAPHY_DEFAULT, copy: 'noto-sans-sc' });
-    expect(cjk?.id).toBe('noto-sans-sc');
-    // 缺少 chinese-simplified 会让构建只下载 latin，中文字形静默落到 fallback。
-    expect(cjk?.provider === 'fontsource' ? cjk.subsets : undefined).toContain('chinese-simplified');
-    expect(cjk?.weights).toEqual([400]);
+  it('routes Noto Sans SC through the subset pipeline instead of fontsource', () => {
+    // 中文不再走 astro-fonts-api / fontsource 的 chinese-simplified 整段文件：
+    // 改由 font:build 生成 base/DLC 分片，覆盖策略只管 subset-pipeline 字体。
+    const entry = THEME_FONT_REGISTRY.find((font) => font.id === 'noto-sans-sc');
+    expect(entry?.acquisition).toBe('subset-pipeline');
+    expect(entry?.provider).toBeNull();
+    expect(entry?.weights).toEqual([400]);
+    expect(entry && 'subsets' in entry ? entry.subsets : undefined).toBeUndefined();
+    expect(getSelectedAstroApiFonts({ ...THEME_TYPOGRAPHY_DEFAULT, copy: 'noto-sans-sc' })).toEqual([]);
   });
 
   it('accepts new catalog entries for their declared roles only', () => {

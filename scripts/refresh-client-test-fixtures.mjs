@@ -5,7 +5,7 @@
  * 用法：`SITE_URL=... npm run build && node ./scripts/refresh-client-test-fixtures.mjs`
  */
 
-import { copyFile, mkdir, readdir } from 'node:fs/promises';
+import { copyFile, mkdir, readdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -13,7 +13,11 @@ import process from 'node:process';
 const ROOT = process.cwd();
 const OUT = path.join(ROOT, 'tests', 'fixtures');
 
-/** 文章详情页快照来源：取构建产物里字典序第一篇文章。 */
+/**
+ * 文章详情页快照来源：优先选带目录标题、非历史版本（noindex）的长文，
+ * 保证目录、浮动操作列与阅读体验的客户端用例有可断言的结构。
+ * 找不到合适页面时回退到字典序第一篇。
+ */
 const resolveArticleFixtureSource = async () => {
   const blogDir = path.join(ROOT, 'dist', 'blog');
   if (!existsSync(blogDir)) return null;
@@ -25,7 +29,18 @@ const resolveArticleFixtureSource = async () => {
     .filter((relative) => existsSync(path.join(ROOT, relative)))
     .sort();
 
-  return candidates[0] ?? null;
+  let fallback = null;
+  for (const candidate of candidates) {
+    const html = await readFile(path.join(ROOT, candidate), 'utf8').catch(() => '');
+    if (!/<h2[^>]*\sid=/.test(html)) continue;
+    if (/name="robots"\s+content="noindex"/.test(html)) {
+      fallback ??= candidate;
+      continue;
+    }
+    return candidate;
+  }
+
+  return fallback ?? candidates[0] ?? null;
 };
 
 const SOURCES = [

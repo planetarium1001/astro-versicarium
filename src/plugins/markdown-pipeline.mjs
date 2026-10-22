@@ -10,6 +10,7 @@ import {
   rehypeRestoreMarkdownMathBoundary
 } from './rehype-markdown-math-boundary.mjs';
 import { rehypeAboutDirectives, remarkAboutDirectives } from './about-directives.mjs';
+import { remarkLiteralTextDirectives } from './remark-literal-text-directives.mjs';
 import remarkCallout from './remark-callout.mjs';
 import { sanitizeSchema } from './sanitize-schema.mjs';
 import shikiToolbar from './shiki-toolbar.mjs';
@@ -106,7 +107,7 @@ export const publicMarkdownRemarkSegments = Object.freeze([
   },
   {
     id: 'project-remark',
-    plugins: ['remark-math', 'remark-directive', 'remark-about-directives', 'remark-callout']
+    plugins: ['remark-math', 'remark-directive', 'remark-literal-text-directives', 'remark-about-directives', 'remark-callout']
   }
 ]);
 
@@ -122,7 +123,7 @@ export const previewMarkdownRemarkSegments = Object.freeze([
   },
   {
     id: 'project-remark',
-    plugins: ['remark-math', 'remark-directive', 'remark-about-directives', 'remark-callout']
+    plugins: ['remark-math', 'remark-directive', 'remark-literal-text-directives', 'remark-about-directives', 'remark-callout']
   }
 ]);
 
@@ -268,6 +269,7 @@ export const createMarkdownShikiConfig = () => ({
 export const createProjectMarkdownRemarkPlugins = ({ aboutEnabled } = {}) => [
   [remarkMath, markdownMathOptions],
   remarkDirective,
+  remarkLiteralTextDirectives,
   withOptions(remarkAboutDirectives, aboutEnabled === undefined ? undefined : { enabled: aboutEnabled }),
   remarkCallout
 ];

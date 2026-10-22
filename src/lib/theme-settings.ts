@@ -64,6 +64,7 @@ import {
   getAdminSocialOrderIssues,
   ADMIN_FILINGS_NUMBER_MAX_LENGTH,
   ADMIN_FILINGS_SCOPE_DEFAULT,
+  ADMIN_FONT_COVERAGE_DEFAULT,
   ADMIN_ICP_FILING_HOSTS,
   ADMIN_POLICE_FILING_HOSTS,
   ADMIN_SIDEBAR_DIVIDER_DEFAULT,
@@ -71,6 +72,7 @@ import {
   ADMIN_VIEW_STATS_PV_LABEL_DEFAULT,
   ADMIN_VIEW_STATS_UV_LABEL_DEFAULT,
   ADMIN_TYPOGRAPHY_DEFAULT,
+  isAdminFontCoverage,
   isAdminNavOrderValue,
   isAdminSocialOrderValue,
   isAdminSidebarDividerVariant,
@@ -90,6 +92,11 @@ export type ArticleDateGranularity = 'date' | 'datetime';
 export type ArchiveVersionMode = 'all' | 'latest';
 /** 备案信息显示范围：'all' 所有公开页面（默认），'root' 仅站点根目录。 */
 export type SiteFilingsScope = 'all' | 'root';
+/**
+ * 全局字体覆盖策略：'full' 加载基础分片 + DLC（默认），'common' 只加载基础分片，
+ * 生僻字回退系统字体且不声明 DLC。见 .trellis/tasks/10-21-font-layering-coverage/design.md 3.1。
+ */
+export type FontCoverage = 'full' | 'common';
 // ThemeFontId 从字体注册表条目 id 派生：添加字体只需在 registry.ts 增加条目，无需改这里。
 export type { ThemeFontId } from './fonts/registry';
 export type TypographyRole = 'readable' | 'copy' | 'mono' | 'brand';
@@ -368,6 +375,7 @@ interface UiSettings {
     sidebarDivider: SidebarDividerVariant;
   };
   typography: TypographySettings;
+  fontCoverage: FontCoverage;
   entryVersionName: EntryVersionNameMode;
 }
 
@@ -477,6 +485,7 @@ interface ThemeSettingsSources {
     typographyCopy: SettingSource;
     typographyMono: SettingSource;
     typographyBrand: SettingSource;
+    fontCoverage: SettingSource;
     entryVersionName: SettingSource;
   };
 }
@@ -783,6 +792,7 @@ const DEFAULT_UI: UiSettings = {
   typography: {
     ...ADMIN_TYPOGRAPHY_DEFAULT
   },
+  fontCoverage: ADMIN_FONT_COVERAGE_DEFAULT,
   entryVersionName: DEFAULT_ENTRY_VERSION_NAME_MODE
 };
 
@@ -992,6 +1002,10 @@ const asSidebarDividerVariant = (value: unknown): SidebarDividerVariant | undefi
   if (typeof value !== 'string') return undefined;
   return isAdminSidebarDividerVariant(value) ? value : undefined;
 };
+
+/** 全局字体覆盖策略：只接受 full / common，其余值视为「没配」，由默认 full 兜底。 */
+const asFontCoverage = (value: unknown): FontCoverage | undefined =>
+  isAdminFontCoverage(value) ? value : undefined;
 
 const asSiteFilingsScope = (value: unknown): SiteFilingsScope | undefined => {
   if (typeof value !== 'string') return undefined;
@@ -1775,6 +1789,11 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
   const uiArticleMeta = isRecord(uiJson?.articleMeta) ? uiJson.articleMeta : undefined;
   const uiLayout = isRecord(uiJson?.layout) ? uiJson.layout : undefined;
   const uiTypography = isRecord(uiJson?.typography) ? uiJson.typography : undefined;
+  const fontCoverage = resolveValue<FontCoverage>(
+    asFontCoverage(uiJson?.fontCoverage),
+    undefined,
+    DEFAULT_UI.fontCoverage
+  );
   const entryVersionName = resolveValue<EntryVersionNameMode>(
     uiJson?.entryVersionName === undefined ? undefined : normalizeEntryVersionNameMode(uiJson.entryVersionName),
     undefined,
@@ -2081,6 +2100,7 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
           mono: typographyMono.value,
           brand: typographyBrand.value
         },
+        fontCoverage: fontCoverage.value,
         entryVersionName: entryVersionName.value
       }
     },
@@ -2182,6 +2202,7 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         typographyCopy: typographyCopy.source,
         typographyMono: typographyMono.source,
         typographyBrand: typographyBrand.source,
+        fontCoverage: fontCoverage.source,
         entryVersionName: entryVersionName.source
       }
     }
@@ -2289,6 +2310,7 @@ const buildEditableThemeSettingsSnapshot = (
       cardDateDisplay: resolved.settings.ui.cardDateDisplay,
       layout: { ...resolved.settings.ui.layout },
       typography: { ...resolved.settings.ui.typography },
+      fontCoverage: resolved.settings.ui.fontCoverage,
       entryVersionName: resolved.settings.ui.entryVersionName
     }
   });

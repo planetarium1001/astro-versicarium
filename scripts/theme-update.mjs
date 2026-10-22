@@ -2,8 +2,9 @@
 /**
  * 从主题仓库同步更新：按 theme.json 的仓库与基准提交做三方合并，站点自有路径不覆盖。
  *
- *   npm run theme:update            合并并更新 theme.json 的基准提交
- *   npm run theme:update -- --check 只报告变更，不写入
+ *   npm run theme:update                        合并并更新 theme.json 的基准提交
+ *   npm run theme:update -- --check             只报告变更，不写入
+ *   npm run theme:update -- --include-fonts     同时合并主题生成的字体资产/清单（演示站用）
  */
 
 import { spawnSync } from 'node:child_process';
@@ -16,6 +17,8 @@ import { CONTENT_ROOT } from '../site.config.mjs';
 const ROOT = process.cwd();
 const THEME_MANIFEST = path.join(ROOT, 'theme.json');
 const CHECK_ONLY = process.argv.includes('--check');
+/** 主题演示站可显式把生成的字体资产/清单也纳入合并；普通站点仍保留站点自有字体。 */
+const INCLUDE_FONTS = process.argv.includes('--include-fonts');
 
 /** 站点自有路径：主题更新不覆盖这些文件，只在报告中列出。 */
 const SITE_OWNED_PREFIXES = [
@@ -27,13 +30,33 @@ const SITE_OWNED_PREFIXES = [
   'tools/',
   'tests/fixtures/'
 ];
+/** `--include-fonts` 时从站点自有路径中放行的主题字体文件。 */
+const THEME_FONT_PATHS = [
+  'public/fonts/',
+  'tools/font-sources.json',
+  'tools/font-manifest.json',
+  'tools/charset-base.txt',
+  'tools/charset-common.txt',
+  'tools/charset-common.sha256',
+  'tools/charset-roles.json',
+  'tools/charset-frequency.txt'
+];
 const SITE_OWNED_FILES = new Set(['README.md', 'theme.json', '.github/workflows/pages.yml']);
 
-const isSiteOwned = (filePath) =>
-  SITE_OWNED_FILES.has(filePath)
-  || SITE_OWNED_PREFIXES.some((prefix) => filePath.startsWith(prefix));
+const isThemeFontPath = (filePath) => THEME_FONT_PATHS.some((prefix) => filePath.startsWith(prefix));
 
-const runGit = (args, encoding = 'utf8') => spawnSync('git', args, { cwd: ROOT, encoding });
+const isSiteOwned = (filePath) =>
+  !(INCLUDE_FONTS && isThemeFontPath(filePath))
+  && (
+    SITE_OWNED_FILES.has(filePath)
+    || SITE_OWNED_PREFIXES.some((prefix) => filePath.startsWith(prefix))
+  );
+
+/** 字体清单等生成物可能超过 spawnSync 默认 1 MB 输出上限，超限会被当成文件删除。 */
+const GIT_MAX_BUFFER = 64 * 1024 * 1024;
+
+const runGit = (args, encoding = 'utf8') =>
+  spawnSync('git', args, { cwd: ROOT, encoding, maxBuffer: GIT_MAX_BUFFER });
 
 const git = (args, { allowFailure = false } = {}) => {
   const result = runGit(args);

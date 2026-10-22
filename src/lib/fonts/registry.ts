@@ -192,18 +192,17 @@ export const THEME_FONT_REGISTRY = [
     id: 'noto-sans-sc',
     label: '思源黑体（Noto Sans SC）',
     cardLabel: '思源黑体',
-    badge: '构建期下载 ~1.1MB',
+    badge: '自托管分层子集',
     roles: ['readable', 'copy'],
-    acquisition: 'astro-fonts-api',
-    provider: 'fontsource',
+    acquisition: 'subset-pipeline',
+    provider: null,
     familyName: 'Noto Sans SC',
     fallbacks: ['"PingFang SC"', '"Microsoft YaHei"', '"Heiti SC"', 'sans-serif'],
-    // 单字重封顶下载成本：fontsource 的 CJK 子集是整段单文件（实测 unifont 不走编号切片），
-    // 每加一档字重产物即 +1.1 MB。粗体由浏览器合成，与 lxgw-wenkai-lite 单字重策略一致。
+    // 单字重封顶下载成本：自托管分层子集，常用页只加载高频分片，生僻字走 DLC。
+    // 粗体由浏览器合成，与 lxgw-wenkai-lite 单字重策略一致。
     weights: [400],
     license: 'OFL-1.1',
-    sizeHint: '构建时下载自托管（中文整段约 1.1 MB + latin 13 KB，unicode-range 按需加载）',
-    subsets: ['chinese-simplified', 'latin']
+    sizeHint: '自托管分层子集（中文常用字约 0.3 MB + 生僻字 DLC）'
   },
   {
     id: 'fira-code',

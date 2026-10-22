@@ -21,12 +21,25 @@ export function cleanMarkdownToText(md: string): string {
   text = text.replace(/~~~[\s\S]*?~~~/g, ' ');
   text = text.replace(/!\[[^\]]*]\([^)]+\)/g, ' ');
   text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-  text = text.replace(/`[^`]*`/g, ' ');
+  // 内联代码保留文字：提交号、命令、路径常出现在摘要句首，直接删掉会留下断句。
+  text = text.replace(/`([^`]*)`/g, '$1');
+
+  // 表格整行丢弃：摘要里保留竖线与分隔行只会变成噪声。
+  text = text.replace(/^\s*\|.*$/gm, ' ');
+  text = text.replace(/^\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+$/gm, ' ');
+
+  // 容器指令（提示块、关于页指令）整行丢弃，正文另起。
+  text = text.replace(/^\s*:::{0,1}[\w-]*(?:\[[^\]]*\])?.*$/gm, ' ');
 
   text = text.replace(/^\s*#{1,6}\s+/gm, '');
   text = text.replace(/^\s*>\s?/gm, '');
   text = text.replace(/^\s*[-*+]\s+/gm, '');
   text = text.replace(/^\s*\d+[\.\)]\s+/gm, '');
+
+  // 强调标记去掉，保留文字。
+  text = text.replace(/\*\*([^*]+)\*\*/g, '$1');
+  text = text.replace(/__([^_]+)__/g, '$1');
+  text = text.replace(/(^|[^*\w])\*([^*\n]+)\*(?![*\w])/g, '$1$2');
 
   text = text.replace(/<[^>]+>/g, ' ');
   text = text.replace(/\r?\n+/g, ' ');

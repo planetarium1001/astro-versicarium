@@ -1,15 +1,18 @@
 import { describe, expect, it } from 'vitest';
+import type { PhrasingContent, Root } from 'mdast';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
 import remarkGfm from 'remark-gfm';
+import remarkDirective from 'remark-directive';
 import remarkMath from 'remark-math';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import remarkSmartypants from 'remark-smartypants';
 import { unified } from 'unified';
 import { rehypeAboutDirectives, remarkAboutDirectives } from '../src/plugins/about-directives.mjs';
+import { remarkLiteralTextDirectives } from '../src/plugins/remark-literal-text-directives.mjs';
 import {
   createMarkdownShikiConfig,
   createProjectMarkdownRehypePlugins,
@@ -81,7 +84,13 @@ describe('markdown pipeline contract', () => {
       },
       {
         id: 'project-remark',
-        plugins: ['remark-math', 'remark-directive', 'remark-about-directives', 'remark-callout']
+        plugins: [
+          'remark-math',
+          'remark-directive',
+          'remark-literal-text-directives',
+          'remark-about-directives',
+          'remark-callout'
+        ]
       }
     ]);
     expect(publicConfig.processor.name).toBe('unified');
@@ -136,8 +145,9 @@ describe('markdown pipeline contract', () => {
 
     expect(pluginOf(remarkPlugins[0])).toBe(remarkMath);
     expect(optionsOf(remarkPlugins[0])).toBe(markdownMathOptions);
-    expect(pluginOf(remarkPlugins[2])).toBe(remarkAboutDirectives);
-    expect(optionsOf(remarkPlugins[2])).toEqual({ enabled: true });
+    expect(pluginOf(remarkPlugins[2])).toBe(remarkLiteralTextDirectives);
+    expect(pluginOf(remarkPlugins[3])).toBe(remarkAboutDirectives);
+    expect(optionsOf(remarkPlugins[3])).toEqual({ enabled: true });
 
     expect(pluginOf(rehypePlugins[0])).toBe(rehypeProtectMarkdownMath);
     expect(pluginOf(rehypePlugins[1])).toBe(rehypeRaw);
@@ -311,5 +321,46 @@ describe('部署 base 链接', () => {
     expect(withDeploymentBase('/blog/a/', '/')).toBe('/blog/a/');
     expect(withDeploymentBase('//cdn.example.com/a', BASE)).toBe('//cdn.example.com/a');
     expect(withDeploymentBase('https://example.com/a', BASE)).toBe('https://example.com/a');
+  });
+});
+
+/**
+ * remark-directive 会把时间写法里的 `:MM` 当成文本指令，渲染成空元素并拆开段落。
+ * 主题不认识的文本指令必须还原成原文；about 页的已知指令保持原样。
+ */
+describe('文本指令与正文时间', () => {
+  const parseWithDirectives = (markdown: string): Root => {
+    const processor = unified().use(remarkParse).use(remarkDirective).use(remarkLiteralTextDirectives);
+    return processor.runSync(processor.parse(markdown)) as Root;
+  };
+
+  const firstParagraphChildren = (tree: Root): PhrasingContent[] => {
+    const paragraph = tree.children[0];
+    if (!paragraph || paragraph.type !== 'paragraph') throw new Error('expected paragraph');
+    return paragraph.children;
+  };
+
+  const textContent = (children: PhrasingContent[]) =>
+    children
+      .filter((node) => node.type === 'text')
+      .map((node) => (node as { value: string }).value)
+      .join('');
+
+  it('把时间写法里的冒号还原为正文', () => {
+    const children = firstParagraphChildren(parseWithDirectives('10-22 00:34 的 `185c2be` 只做一件事。'));
+    expect(textContent(children)).toContain('10-22 00:34 的');
+    expect(children.some((node) => node.type === 'textDirective')).toBe(false);
+  });
+
+  it('保留 about 页的已知文本指令', () => {
+    const children = firstParagraphChildren(
+      parseWithDirectives(':friend[示例站]{name="示例" url="https://example.com"}')
+    );
+    expect(children[0]).toMatchObject({ type: 'textDirective', name: 'friend' });
+  });
+
+  it('还原没有标签的文本指令写法', () => {
+    const children = firstParagraphChildren(parseWithDirectives('共 :30 分钟。'));
+    expect(textContent(children)).toBe('共 :30 分钟。');
   });
 });
