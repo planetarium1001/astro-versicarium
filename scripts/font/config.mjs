@@ -63,17 +63,23 @@ export const TARGETS = {
   mid: { targetBytes: 60_000 },
   meta: { targetBytes: 50_000 },
   display: { targetBytes: 40_000 },
-  // 每块还要带 GSUB/GPOS 等表开销（约 10-20KB），target 取 180KB 使产出文件落在 200KB 附近。
-  dlc: { targetBytes: 180_000 }
+  // 每块还要带 GSUB/GPOS 等表开销（约 10-20KB）。DLC target 从 180KB 提到 240KB：
+  // 用户同意「单文件略大」换取更少分片（当前内容 121 → 82 faces）与更少的逐字 miss；
+  // 实测单块 177-312KB（中位约 254KB），验收上限为单文件 ≤330KB。
+  // 单个 miss 的最坏字节上升是显式取舍，首屏 base 体积不受影响。
+  dlc: { targetBytes: 240_000 }
 };
 
 /* core 从频率排序后的 text 字符里单文件拟合；mid 只处理 core 之后剩余字符，
    所以 core 候选数要大于目标容量。按 Noto Serif 约 180 B/字估算，2500 字足够达到 200KB。 */
 export const CORE_CANDIDATE_CHARS = 2500;
 
-/* display/meta 在 dist 提取结果之外补 top-N 高频字作为安全余量（design.md 4.2：建议 200-300）。 */
+/* display/meta 在 dist 提取结果之外补 top-N 高频字作为安全余量（design.md 4.2：建议 200-300）。
+   display 取上限 300：标题用字随内容编辑漂移最敏感，余量从 100 提到 300 后新标题字更可能直接落在
+   display base（当前内容实测 35KB → 57KB），而不是每次 miss 都拉一个 177-312KB 的 DLC 分片；
+   这是「单文件略大、避免频繁下载」的显式取舍。meta 保持 100，首屏体积不变。 */
 export const SAFETY_PRIOR_CHARS = {
-  display: 100,
+  display: 300,
   meta: 100
 };
 

@@ -16,7 +16,7 @@ import {
 
 // 与 astro.config.mjs 的 normalizeDeploymentBase 同语义：根路径为空串，子路径形如 '/blog'。
 // dist 目录结构不随 base 嵌套，base 只影响产物内的 URL。
-const basePathSegment = String(process.env.ASTRO_WHONO_BASE_PATH ?? '').trim().replace(/^\/+|\/+$/g, '');
+const basePathSegment = String(process.env.ASTRO_VERSICARIUM_BASE_PATH ?? '').trim().replace(/^\/+|\/+$/g, '');
 const basePrefix = basePathSegment ? `/${basePathSegment}` : '';
 
 const stripBasePrefix = (pathname) =>
@@ -60,6 +60,46 @@ const findBuiltAstroAssets = () => {
   return readdirSync(root, { withFileTypes: true })
     .filter((entry) => entry.isFile() && /\.(css|js)$/i.test(entry.name))
     .map((entry) => path.join(root, entry.name));
+};
+
+// 静态构建把 API 路由预渲染成文件：GET 处理函数返回 9 字节的 "Not Found"，
+// 或 Astro redirect 生成的 "Redirecting to: ..." 壳。POST-only 路由缺少 GET 时
+// 会退化成约 4KB 的 HTML 404 fallback（<title>404: Not Found</title>），必须拦住。
+const findApiArtifacts = () => {
+  const root = 'dist/api';
+  if (!existsSync(root)) return [];
+
+  const files = [];
+  const walk = (dirPath) => {
+    for (const entry of readdirSync(dirPath, { withFileTypes: true })) {
+      const fullPath = path.join(dirPath, entry.name);
+      if (entry.isDirectory()) {
+        walk(fullPath);
+      } else if (entry.isFile()) {
+        files.push(fullPath);
+      }
+    }
+  };
+
+  walk(root);
+  return files;
+};
+
+const assertNoHtmlApiFallback = () => {
+  const artifacts = findApiArtifacts();
+  expect(artifacts.length > 0, 'Expected static API shells under dist/api, found none');
+
+  for (const filePath of artifacts) {
+    const content = readText(filePath);
+    expect(
+      !content.includes('<title>404: Not Found</title>') && !content.includes('class="statusCode"'),
+      `${filePath} is an HTML 404 fallback; POST-only API routes must export a GET static shell`
+    );
+    expect(
+      content.trim() === 'Not Found' || content.includes('Redirecting to: '),
+      `${filePath} is not a supported static API shell (expected "Not Found" or a redirect shell)`
+    );
+  }
 };
 
 const assertNoDevAdminUiPreferenceAssets = () => {
@@ -134,6 +174,10 @@ const runProductionArtifactCheck = async () => {
     'dist/api/admin/images/meta',
     'dist/api/admin/images/upload',
     'dist/api/admin/images/rename',
+    'dist/api/admin/content/files/upload',
+    'dist/api/admin/content/create-version',
+    'dist/api/admin/content/import',
+    'dist/api/admin/media/batch',
     'dist/api/admin/site-assets/upload'
   ];
 
@@ -144,6 +188,7 @@ const runProductionArtifactCheck = async () => {
     !existsSync('dist/api/admin/images/cloud/delete'),
     'Removed cloud image delete API artifact should not be generated'
   );
+  assertNoHtmlApiFallback();
 
   const robotsTxt = readText('dist/robots.txt');
   expect(

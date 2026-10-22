@@ -47,3 +47,8 @@ jobs:
         run: npm run ci
         env:
           SITE_URL: https://planetarium1001.github.io
+
+      # 根路径 verify 抓不到只在子路径部署出现的重复 base：再以
+      # ASTRO_VERSICARIUM_BASE_PATH=/astro-versicarium/ 真实构建一次并扫描 dist。
+      - name: Verify subpath build
+        run: npm run check:subpath

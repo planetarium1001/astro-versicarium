@@ -16,6 +16,10 @@ const JSON_HEADERS = ADMIN_JSON_HEADERS;
 const NOT_FOUND = new Response('Not Found', { status: 404 });
 const withLock = createAdminWriteQueue();
 
+// 静态构建按 GET 预渲染每个路由；补上与其它接口一致的 404 壳，
+// 避免 router 告警与 4KB HTML 404 fallback。POST 的 DEV/TEST 守卫不变。
+export const GET: APIRoute = async () => NOT_FOUND.clone();
+
 const json = (status: number, payload: unknown): Response =>
   new Response(JSON.stringify(payload, null, 2), { status, headers: JSON_HEADERS });
 

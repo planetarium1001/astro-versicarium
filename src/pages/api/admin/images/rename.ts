@@ -14,6 +14,10 @@ const JSON_HEADERS = {
 
 const DEV_ONLY_NOT_FOUND_RESPONSE = new Response('Not Found', { status: 404 });
 
+// 静态构建按 GET 预渲染每个路由；补上与其它接口一致的 404 壳，
+// 避免 router 告警与 4KB HTML 404 fallback。POST 的 DEV/TEST 守卫不变。
+export const GET: APIRoute = async () => DEV_ONLY_NOT_FOUND_RESPONSE.clone();
+
 export const POST: APIRoute = async ({ request }) => {
   if (!import.meta.env.DEV && !process.env.VITEST) {
     return DEV_ONLY_NOT_FOUND_RESPONSE.clone();

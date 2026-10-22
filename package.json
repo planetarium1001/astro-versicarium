@@ -33,6 +33,7 @@
     "check:home-critical-css": "node ./scripts/check-home-critical-css.mjs",
     "check:admin-editor-emoji-boundary": "node ./scripts/check-admin-editor-emoji-boundary.mjs",
     "check:prod-artifacts": "node ./scripts/check-production-artifacts.mjs",
+    "check:subpath": "node ./scripts/verify-subpath-build.mjs",
     "smoke:cloud-images": "node ./scripts/smoke-admin-image-cloud.mjs",
     "check:font-charset": "node ./scripts/font-charset.mjs --check",
     "check:svelte": "node ./scripts/check-svelte-components.mjs",

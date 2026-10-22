@@ -1,6 +1,7 @@
 import { CJK_RANGES, FONT_FAMILIES, LATIN_RANGES, PATHS } from './font/config.mjs';
 import { codePointInRanges } from './font/characters.mjs';
 import { readDistPages, mergePageRoleCharsets } from './font/dist-pages.mjs';
+import { diffRoleCharsets, formatRoleCharsetDiff } from './font/freshness.mjs';
 import { formatBytes, readJson } from './font/io.mjs';
 import { toCodePoints } from './font/unicode-ranges.mjs';
 
@@ -8,7 +9,9 @@ import { toCodePoints } from './font/unicode-ranges.mjs';
    扫描 dist 页面字符，判断 full / common 两种覆盖模式下的实际覆盖与系统回退：
    - common 模式缺字（需要 DLC 或源字体缺字）的页面统计；
    - full 模式仍缺字：区分「源字体本来没有」与「管线漏覆盖」（--strict 时后者失败）；
-   - 设计范围（CJK + 拉丁/符号）之外的字单独列出，不计入管线错误。 */
+   - 设计范围（CJK + 拉丁/符号）之外的字单独列出，不计入管线错误；
+   - --strict 时校验 tools/charset-roles.json 是否与当前 dist 的角色字符集一致：
+     内容改了却没重跑 font:build 时字体分片会过期，必须失败并提示重建。 */
 
 const STRICT = process.argv.includes('--strict');
 const IN_SCOPE_RANGES = [...CJK_RANGES, ...LATIN_RANGES];
@@ -67,6 +70,14 @@ const main = async () => {
     fail('dist 中没有 HTML', '覆盖率检查在构建之后运行：先 npm run build。');
   }
   const merged = mergePageRoleCharsets(pages);
+  // charset-roles.json 是 font:roles 从 dist 提取的快照；缺失时无法判断字体资产是否过期。
+  let roleSnapshot = null;
+  try {
+    const parsed = await readJson(PATHS.charsetRoles);
+    roleSnapshot = parsed?.charsets ? parsed : null;
+  } catch {
+    roleSnapshot = null;
+  }
 
   const reports = [];
   const pipelineGaps = [];
@@ -163,6 +174,26 @@ const main = async () => {
     console.log(`[font:coverage] 源字体缺字（完整模式也回退系统字体）: ${allFallback} 个，示例: ${sample}`);
   }
 
+  let strictFailure = false;
+  const staleDiffs = roleSnapshot ? diffRoleCharsets(roleSnapshot.charsets, merged) : null;
+  if (staleDiffs === null) {
+    console.warn(
+      '[font:coverage] 缺少 tools/charset-roles.json（或格式无效）：无法校验字体资产是否与当前 dist 一致'
+    );
+    if (STRICT) {
+      console.error('[font:coverage] --strict 失败：先运行 npm run font:build 生成角色字符集与字体分片。');
+      strictFailure = true;
+    }
+  } else if (staleDiffs.length > 0) {
+    console.error('[font:coverage] tools/charset-roles.json 已过期：当前 dist 角色字符集与快照不一致');
+    for (const diff of staleDiffs) console.error(`- ${formatRoleCharsetDiff(diff)}`);
+    console.error('- fix: 运行 npm run font:build 重新构建 dist、刷新角色字符集并重生成字体分片');
+    if (STRICT) {
+      console.error('[font:coverage] --strict 失败：字体资产过期，重跑 npm run font:build 后再提交。');
+      strictFailure = true;
+    }
+  }
+
   if (pipelineGaps.length > 0) {
     for (const gap of pipelineGaps) {
       console.error(
@@ -172,14 +203,12 @@ const main = async () => {
     }
     if (STRICT) {
       console.error('[font:coverage] --strict 失败：修复分片范围后重跑 npm run font:subset。');
-      process.exit(1);
+      strictFailure = true;
     }
   }
 
-  if (STRICT && pagesNeedingDlc > fileCount) {
-    process.exit(1);
-  }
-  console.log('[font:coverage] 完成（默认仅报告；加 --strict 将管线漏覆盖视为失败）');
+  if (strictFailure) process.exit(1);
+  console.log('[font:coverage] 完成（默认仅报告；--strict 将过期角色字符集与管线漏覆盖视为失败）');
   console.log(`[font:coverage] manifest base+dlc 总量: ${formatBytes(manifest.summary?.totalBytes ?? 0)}`);
 };
 

@@ -63,9 +63,13 @@ export function formatDateTimeInTimeZone(
 
 export function createWithBase(base: string) {
   const baseNormalized = base.endsWith('/') ? base : `${base}/`;
+  const baseWithoutSlash = baseNormalized.replace(/\/+$/, '');
   return (path: string) => {
     if (!path || path === '/') return baseNormalized;
     if (/^(?:[a-z]+:)?\/\//i.test(path) || path.startsWith('data:')) return path;
+    // 幂等：内容集合 image() 返回的 ImageMetadata.src 已带部署 base，
+    // 不再重复拼前缀（与 markdown-pipeline 的 withDeploymentBase 同语义）。
+    if (baseWithoutSlash && (path === baseWithoutSlash || path.startsWith(baseNormalized))) return path;
     const clean = path.startsWith('/') ? path.slice(1) : path;
     return `${baseNormalized}${clean}`;
   };
