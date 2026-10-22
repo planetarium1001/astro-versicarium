@@ -1,6 +1,6 @@
 # 站点图标
 
-仓库自带 Versicarium 的几何标记作为默认图标，可按站点需要替换。图标由 `site.json` 的三个槽位与生成脚本共同决定。
+仓库自带 Versicarium 的默认图标，可以按站点需要替换。图标由 `site.json` 的三个槽位与生成脚本共同决定。
 
 ## 槽位
 
@@ -8,9 +8,9 @@
 
 ```json
 "favicon": {
-  "svg": null,
-  "png": null,
-  "appleTouchIcon": null
+  "svg": "/favicon.svg",
+  "png": "/favicon-32x32.png",
+  "appleTouchIcon": "/apple-touch-icon.png"
 }
 ```
 
@@ -20,9 +20,9 @@
 | `png` | 标签页图标，主入口 | `.png` | 后台上传，或手动放入 `public/` |
 | `appleTouchIcon` | iOS 主屏图标，可选 | `.png` | 后台上传，或手动放入 `public/` |
 
-路径必须是 `public/` 下的文件，可以写 `/images/site/favicon-32x32.png`，也可以写 `public/images/site/favicon-32x32.png`。不接受远程 URL、`..`、`?`、`#`，扩展名必须与槽位匹配。渲染时链接会补上部署 `base`。
+路径必须指向 `public/` 下的文件，可以写 `/images/site/favicon-32x32.png`，也可以写 `public/images/site/favicon-32x32.png`。不接受远程 URL、`..`、`?`、`#`，扩展名必须与槽位匹配。渲染时链接会补上部署 `base`。
 
-后台只提供 PNG 上传。SVG 不提供上传，需要手动放到 `public/`，再在 `site.json` 中填写。完整主题字段见 [admin-console.md](admin-console.md)。
+后台只提供 PNG 上传。SVG 需要手动放到 `public/`，再在 `site.json` 中填写。完整主题字段见 [admin-console.md](admin-console.md)。
 
 ## 生成
 
@@ -43,9 +43,9 @@
 | `favicon.ico` | 旧浏览器与隐式 `/favicon.ico` 请求 |
 | `site.webmanifest` | 名称、起始路径、主题色与图标清单 |
 
-根目录的 `public/favicon.ico` 只在文件缺失、内容与本次生成一致，或确认仍是上次生成结果时写入；用户替换过的 ICO 不会被覆盖。生成标记写入 `tools/favicon-generated.json` 与 `public/images/site/generated/.favicon-generated.json`。
+根目录的 `public/favicon.ico` 只在缺失、内容与本次生成一致，或确认仍是上次生成结果时写入；用户替换过的 ICO 不会被覆盖。生成标记写入 `tools/favicon-generated.json` 与 `public/images/site/generated/.favicon-generated.json`。
 
-生成目录属于主题运行时资产，不要手改。需要更换图标时修改槽位或替换源图，再重新运行生成器。
+生成目录属于主题运行时资产，不要手改。更换图标时修改槽位或替换源图，再重新运行生成器。
 
 ## 回退顺序
 
@@ -63,7 +63,7 @@
 3. 再回退生成的 `apple-touch-icon.png`；
 4. 没有自定义标签页图标时，最后回退默认 `public/apple-touch-icon.png`。
 
-配置路径指向的文件不存在时，渲染层忽略该槽位并继续回退，不会输出裂图。只配置 SVG、没有 PNG 时，主屏图标不会直接复用 SVG；生成器会从 SVG 生成 `apple-touch-icon.png` 作为兜底，需要专用主屏图时再单独设置。
+配置路径指向的文件不存在时，渲染层忽略该槽位并继续回退，不会输出裂图。只配置 SVG、没有 PNG 时，主屏图标不会直接复用 SVG；生成器会从 SVG 生成 `apple-touch-icon.png` 作为兜底。需要专用主屏图时单独设置。
 
 ## 本地验证
 
@@ -86,10 +86,10 @@ curl -sSI http://localhost:4321/images/site/generated/favicon-32x32.png
 ^/apple-touch-icon[^/]*\.png$
 ```
 
-规则按第一条匹配生效。若自定义图标放在 `public/` 的其他目录，也要把对应前缀加入放行列表。放行后确认响应类型为 `image/png`、`image/svg+xml` 或 `image/x-icon`，而不是 `text/html`。
+规则按第一条匹配生效。自定义图标放在 `public/` 的其他目录时，也要把对应前缀加入放行列表。放行后确认响应类型为 `image/png`、`image/svg+xml` 或 `image/x-icon`，而不是 `text/html`。
 
 ```bash
 curl -sS -o /dev/null -D - https://example.com/images/site/generated/favicon-32x32.png
 ```
 
-缓存可能让修复后的图标仍不更新；用无痕窗口或清理 favicon 缓存后再验证。`/favicon.ico` 是页面没有 icon 链接时浏览器隐式请求的路径，不能替代显式链接的放行。
+缓存可能让修复后的图标仍不更新，用无痕窗口或清理 favicon 缓存后再验证。`/favicon.ico` 是页面没有 icon 链接时浏览器隐式请求的路径，不能替代显式链接的放行。

@@ -41,5 +41,6 @@
     "mono": "system-mono",
     "brand": "serif-georgia"
   },
+  "fontCoverage": "full",
   "entryVersionName": "hidden"
 }

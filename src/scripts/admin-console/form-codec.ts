@@ -1,5 +1,6 @@
 import type {
   ArticleDateGranularity,
+  FontCoverage,
   HomeIntroLinkKey,
   SidebarDividerVariant,
   SidebarNavId,
@@ -23,6 +24,7 @@ import {
   ADMIN_ARTICLE_DATE_GRANULARITY_DEFAULT,
   ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT,
   ADMIN_FILINGS_SCOPE_DEFAULT,
+  ADMIN_FONT_COVERAGE_DEFAULT,
   ADMIN_HERO_IMAGE_ALT_DEFAULT,
   ADMIN_HOME_INTRO_LINK_DEFAULT,
   ADMIN_HOME_INTRO_LINK_LIMIT,
@@ -44,6 +46,7 @@ import {
   canonicalizeAdminThemeSettings,
   isAdminFilingsScope,
   isAdminArticleDateGranularity,
+  isAdminFontCoverage,
   isAdminHomeIntroLinkKey,
   isAdminNavId,
   isAdminTypographyFontId,
@@ -168,6 +171,7 @@ type FormCodecContext = {
   inputTypographyCopy: HTMLElement;
   inputTypographyMono: HTMLElement;
   inputTypographyBrand: HTMLElement;
+  inputFontCoverage: HTMLSelectElement;
   inputEntryVersionName: HTMLSelectElement;
 };
 
@@ -349,6 +353,7 @@ export const createFormCodec = ({
   inputTypographyCopy,
   inputTypographyMono,
   inputTypographyBrand,
+  inputFontCoverage,
   inputEntryVersionName
 }: FormCodecContext) => {
   const defaultHomeIntroLinks = [...ADMIN_HOME_INTRO_LINK_DEFAULT] as HomeIntroLinkKey[];
@@ -611,6 +616,26 @@ export const createFormCodec = ({
       const nextValue = isAdminTypographyFontId(role, rawValue) ? rawValue : ADMIN_TYPOGRAPHY_DEFAULT[role];
       const radio = query<HTMLInputElement>(typographyGroups[role], `input[type="radio"][value="${nextValue}"]`);
       if (radio) radio.checked = true;
+    });
+  };
+
+  const getSelectedFontCoverage = (): FontCoverage => {
+    const rawValue = inputFontCoverage.value.trim();
+    return isAdminFontCoverage(rawValue) ? rawValue : ADMIN_FONT_COVERAGE_DEFAULT;
+  };
+
+  const applyFontCoverage = (value: unknown): void => {
+    inputFontCoverage.value = isAdminFontCoverage(value) ? value : ADMIN_FONT_COVERAGE_DEFAULT;
+  };
+
+  /** 覆盖策略切换时同步切换预算摘要的两种变体（保存前即可看到对应说明）。 */
+  const refreshFontCoveragePreview = (): void => {
+    const coverage = getSelectedFontCoverage();
+    document.querySelectorAll<HTMLElement>('[data-font-coverage-preview]').forEach((preview) => {
+      preview.dataset.coverage = coverage;
+      preview.querySelectorAll<HTMLElement>('[data-font-coverage-preview-variant]').forEach((variant) => {
+        variant.hidden = (variant.dataset.fontCoveragePreviewVariant ?? '') !== coverage;
+      });
     });
   };
 
@@ -880,6 +905,7 @@ export const createFormCodec = ({
           mono: getSelectedTypographyFontId('mono'),
           brand: getSelectedTypographyFontId('brand')
         },
+        fontCoverage: getSelectedFontCoverage(),
         entryVersionName: normalizeEntryVersionNameMode(inputEntryVersionName.value)
       }
     };
@@ -997,6 +1023,8 @@ export const createFormCodec = ({
     inputArticleMetaShowReadingTime.checked = settings.ui?.articleMeta?.showReadingTime !== false;
     applySidebarDividerVariant(settings.ui?.layout?.sidebarDivider || ADMIN_SIDEBAR_DIVIDER_DEFAULT);
     applyTypographySettings(settings.ui?.typography);
+    applyFontCoverage(settings.ui?.fontCoverage);
+    refreshFontCoveragePreview();
     inputEntryVersionName.value = normalizeEntryVersionNameMode(settings.ui?.entryVersionName);
     refreshEntryVersionPreview();
     refreshFooterPreview();
@@ -1041,6 +1069,7 @@ export const createFormCodec = ({
     refreshArticleMetaPreview,
     refreshViewStatsPreview,
     refreshEntryVersionPreview,
+    refreshFontCoveragePreview,
     refreshHomeIntroPreview,
     syncAdminOverviewControls,
     syncSidebarActionControls,

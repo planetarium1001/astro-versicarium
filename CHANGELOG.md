@@ -4,14 +4,24 @@
 
 ## [1.0.0-rc.2] - 2026-10-21
 
-第二个预览候选：修复 rc.1 真机验收发现的移动端回归，并新增窄屏浮动列右侧距离设置。
+第二个预览候选：修复 rc.1 真机验收发现的移动端回归，新增窄屏浮动列右侧距离设置，并加入自托管字体的角色分层与生僻字 DLC。
 
-本条目对应本地提交，尚未创建 GitHub Release。
+本条目对应 `v1.0.0-rc.2` 标签（锚点为版本提交 `89fc493`）。字体分层与随后的渲染修复在标签之后提交，标签已推送，GitHub Release 尚未创建；这些改动随下一次候选或稳定版发布时收录。
 
 ### Added
 
 - 后台「主题 → 站点设置」新增「窄屏浮动列右侧距离」（`site.railOffsetPx`，0–32px，默认 6），构建期输出 `--rail-action-offset-narrow`，窄屏浮动列按配置贴边。
 - 浮动列四个按钮增加触摸 pointer 兜底：部分内核吞掉 click 时，按住抬起仍能一次触发，并保留鼠标与键盘的原生 click 路径。
+- 自托管字体按用途与字符层分片：base 分片随页面加载，生僻字 DLC 按 `unicode-range` 按需下载；默认常用页首屏约 305 KB。
+- 后台「主题 → 排版字体」新增 `full` / `common` 覆盖策略与预算摘要；`full` 为默认，`common` 下生僻字回退系统字体。
+- 新增 `font:fetch`、`font:roles`、`font:check`、`font:coverage`、`font:report` 与 `font:build` 编排，字体资产由清单和字符集生成。
+- `noto-sans-sc` 从 fontsource 整段文件迁入自托管分层子集。
+
+### Changed
+
+- `public/fonts/` 从 9 个固定子集改为带内容哈希的 base/DLC 分片，共 155 个 WOFF2，约 22.69 MB。
+- 字体版本沿用上游 `astro-whono`：LXGW WenKai Lite v1.521、Noto Serif SC 2.003；生成的子集保留 OFL 版权与许可元数据。
+- `global.css` 不再手写 `@font-face`；`BaseLayout` 在 `full` 模式异步引入 DLC CSS，避免阻塞首屏。
 
 ### Fixed
 

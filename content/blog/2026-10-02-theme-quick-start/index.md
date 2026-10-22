@@ -1,35 +1,48 @@
 ---
 title: 主题快速开始
-description: 0.1.0 时期的安装与运行说明，已被 1.0.0-rc.1 预览版取代。
+description: 0.1.0 时期的做法：内容放在 src/content/ 的单文件里，集合还叫 essay、bits、memo。
 date: 2026-10-02
 publishedAt: 2026-10-02
-tags: [历史版本, 快速开始]
+tags: [快速开始, 版本]
 series: theme-quick-start
 versionLabel: "0.1.0"
-versionName: 首个版本
-versionSummary: 只覆盖 fork 后的克隆、安装与开发命令。
+versionName: 单文件内容根（旧版）
+versionSummary: 内容在 src/content/，集合为 essay / bits / memo / about，一篇文章就是一个 Markdown 文件。
 versionOrder: 1
 draft: false
 ---
 
-0.1.0 是 Versicarium · 垄录 的历史版本，对应 fork 后的第一次提交 `5b0914d`，内容只覆盖当时的克隆、安装与开发命令。内容结构、后台入口与主题更新方式在此后都发生过变化，历史版本不作为新站点的操作依据。
+这是旧版做法，对应 2026-10-02 的仓库状态。现在的代码已经读不了 `src/content/` 下的 `essay` 和 `memo`，这份步骤只作为版本对照保留。当前做法见[目录式内容根](/blog/2026-10-19-theme-quick-start/)。
 
-## 安装与运行
-
-当时的安装流程只有三步：
+## 取一份主题
 
 ```bash
-git clone --depth 1 --branch main \
-  https://github.com/planetarium1001/astro-versicarium.git my-site
+git clone --depth 1 --branch main <主题仓库地址> my-site
 cd my-site
 npm install
 npm run dev
 ```
 
-这一步只确认站点可以启动，没有环境基线、构建校验与目录结构清单。
+当时包名还是 `astro-whono`，`package.json` 版本为 0.5.0。开发服务器起来后前台在 `/`，后台在 `/admin/`，且只有开发环境能写。
 
-## 与当前版本的差异
+## 写第一篇文章
 
-1.0.0-rc.1 预览版补齐了环境要求、构建校验、目录结构与第一次检查，并加入主题更新与发布流程。当前说明见[主题快速开始](/blog/2026-10-20-theme-quick-start/)，其中包含 `npm run verify`、`SITE_URL` 与后台入口的完整步骤。
+文章放在 `src/content/essay/`，一个条目就是一份 Markdown 文件，文件名是英文 slug：
 
-[仓库](https://github.com/planetarium1001/astro-versicarium) · [示例站](https://planetarium1001.github.io/astro-versicarium/)
+```text
+src/content/essay/my-first-post.md
+```
+
+frontmatter 用 `title`、`date`、`tags`、`draft`，可选 `description`、`badge`、`updatedAt`。公开地址是 `/archive/<slug>/`，`/archive/` 同时是文章列表。
+
+图片放在集合目录下的子目录，正文用相对路径引用：
+
+```markdown
+![截图](./my-first-post/cover.webp)
+```
+
+对应文件 `src/content/essay/my-first-post/cover.webp`。动态用 `npm run new:bit` 生成，写出 `src/content/bits/bits-YYYY-MM-DD-HHMM.md` 这样一个文件。
+
+## 当时的检查
+
+`npm run verify` 只有三步：`check` → `test` → `build`。没有图片引用检查，也没有主题更新命令，主题更新靠 git 合并。

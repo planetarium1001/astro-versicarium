@@ -1,9 +1,16 @@
 ---
 import AdminIcon from './AdminIcon.astro';
 import {
+  ADMIN_FONT_COVERAGE_OPTIONS,
   ADMIN_TYPOGRAPHY_DEFAULT,
   getAdminTypographyFontOptions
 } from '../../lib/admin-console/theme-shared';
+import {
+  getFontBudgetSummary,
+  getFontCardBudget,
+  getFontCoverageCopy,
+  readFontManifest
+} from '../../lib/fonts/budget';
 import { ENTRY_VERSION_NAME_MODE_OPTIONS } from '../../lib/entry-display';
 import { getThemeSettings } from '../../lib/theme-settings';
 import EntryTitleLine from '../EntryTitleLine.astro';
@@ -12,6 +19,14 @@ const {
   settings: { ui }
 } = getThemeSettings();
 const entryVersionMode = ui.entryVersionName;
+const fontCoverage = ui.fontCoverage;
+// 清单可能尚未生成（还没跑 font:build）：budget helper 内部回退静态估算，后台不因此报错。
+const fontManifest = readFontManifest();
+const fontCoverageVariants = (['full', 'common'] as const).map((coverage) => {
+  const summary = getFontBudgetSummary(ui.typography, coverage, fontManifest);
+  return { coverage, summary, copy: getFontCoverageCopy(summary) };
+});
+const fontBudgetSource = fontCoverageVariants[0]?.summary.source ?? 'static-fallback';
 
 const typographyFields = [
   { role: 'readable', label: '正文字体', hint: '（文章正文与标题）' },
@@ -150,7 +165,12 @@ const typographyFields = [
                       永 Aa
                     </span>
                     <span class="admin-font-card__name">{option.cardLabel}</span>
-                    <span class="admin-font-card__badge">{option.badge}</span>
+                    <span
+                      class="admin-font-card__badge"
+                      title="该字体在此用途下所有基础分片之和；页面实际只下载 unicode-range 命中的分片"
+                    >
+                      {getFontCardBudget(field.role, option.id, fontManifest).label || option.badge}
+                    </span>
                   </span>
                 </label>
               ))}
@@ -159,5 +179,35 @@ const typographyFields = [
         );
       })
     }
+  </div>
+
+  <div class="admin-stack admin-font-coverage">
+    <label class="admin-field" for="ui-font-coverage">
+      <span class="admin-label">
+        <span class="admin-label__main">覆盖策略</span>
+        <span class="admin-label__hint">（全局；只影响自托管 CJK 字体）</span>
+      </span>
+      <select class="admin-field__control admin-font-coverage__select" id="ui-font-coverage">
+        {ADMIN_FONT_COVERAGE_OPTIONS.map((option) => (
+          <option value={option.id} selected={option.id === fontCoverage}>{option.label}</option>
+        ))}
+      </select>
+    </label>
+
+    <div
+      class="admin-help admin-font-coverage-summary"
+      data-font-coverage-preview
+      data-coverage={fontCoverage}
+      data-budget-source={fontBudgetSource}
+    >
+      {fontCoverageVariants.map(({ coverage, copy }) => (
+        <div data-font-coverage-preview-variant={coverage} hidden={coverage !== fontCoverage}>
+          <p class="admin-font-coverage-summary__budget">{copy.budgetLine}</p>
+          <p class="admin-font-coverage-summary__detail">{copy.detailLine}</p>
+          <p class="admin-font-coverage-summary__build">{copy.buildLine}</p>
+          {copy.sourceNote ? <p class="admin-font-coverage-summary__source">{copy.sourceNote}</p> : null}
+        </div>
+      ))}
+    </div>
   </div>
 </fieldset>

@@ -1,6 +1,6 @@
 # 架构
 
-Versicarium 的代码按内容边界、主题代码与构建管线分层：作者内容位于 `content/`，可更新代码位于 `src/`，主题更新只覆盖主题负责的部分。
+主题的代码按三条边界分层：作者内容在 `content/`，主题代码在 `src/`，构建与校验脚本在 `scripts/`、`tools/`。主题更新只覆盖主题负责的部分，站点自有路径不参与合并。
 
 ## 目录分层
 
@@ -11,7 +11,7 @@ Versicarium 的代码按内容边界、主题代码与构建管线分层：作�
 | `src/layouts/` | `BaseLayout` 与 `ArticleLayout` |
 | `src/components/` | 展示组件；`admin/` 只被后台页面引用 |
 | `src/lib/` | 设置解析、内容读取、路由模型、归档与后台逻辑 |
-| `src/lib/admin-console/` | 后台专用契约、读写、媒体索引与设置校验 |
+| `src/lib/admin-console/` | 后台契约、读写、媒体索引与设置校验 |
 | `src/scripts/` | 客户端脚本；`admin-*/` 只在开发环境加载 |
 | `src/styles/` | 样式入口与组件样式；`components/admin/` 为后台样式 |
 | `src/plugins/` | Markdown 管线、HTML 白名单与关于页指令 |
@@ -19,8 +19,8 @@ Versicarium 的代码按内容边界、主题代码与构建管线分层：作�
 | `src/data/settings/` | 五个主题设置 JSON |
 | `public/` | 静态资源与运行时生成资源 |
 | `scripts/` | 校验、字体子集、`new:bit`、`theme:update` |
+| `tools/` | 字符集基线、字体清单、指纹与图标生成标记 |
 | `tests/` | Vitest 用例与页面快照 |
-| `tools/` | 字符集基线、指纹与图标生成标记 |
 
 ## 内容集合与路由
 
@@ -34,15 +34,15 @@ Versicarium 的代码按内容边界、主题代码与构建管线分层：作�
 | `devlog` | `content/devlog/<projectSlug>/<entry>/` | `/devlog/`，条目以压平后的 `#<entryId>` 定位 |
 | `about` | `content/about/index.md` | `/about/` |
 
-`/archive/` 聚合博客、项目版本与开发日志，按年月分组，不含动态；`archive.versionMode` 决定项目显示全部版本还是仅最新版。`/blog/index.json`、`/bits/index.json`、`/archive/index.json` 为客户端筛选与计数提供数据；`/blog/rss.xml` 与 `/rss.xml` 输出博客订阅源，每个系列只发最新版。
+`/archive/` 聚合博客、项目版本与开发日志，按年月分组，不含动态；`archive.versionMode` 决定项目显示全部版本还是仅最新版。`/blog/index.json`、`/bits/index.json`、`/archive/index.json` 为客户端筛选与计数提供数据。`/blog/rss.xml` 与 `/rss.xml` 输出博客订阅源，每个系列只发最新版。
 
-路由前缀由 `astro.config.mjs` 的 `base` 决定，环境变量为 `ASTRO_WHONO_BASE_PATH`；站内链接经 `createWithBase()` 拼接，`trailingSlash` 固定为 `always`。sitemap 只在 `SITE_URL` 非空时生成，构建后按 `/blog/index.json` 的 canonical 列表移除历史版本与 latest dated alias，并排除 `/admin/` 与 `/checks/`。
+路由前缀由 `astro.config.mjs` 的 `base` 决定，环境变量为 `ASTRO_WHONO_BASE_PATH`。站内链接经 `createWithBase()` 拼接，`trailingSlash` 固定为 `always`。sitemap 只在 `SITE_URL` 非空时生成，构建后按 `/blog/index.json` 的 canonical 列表移除历史版本与 latest dated alias，并排除 `/admin/` 与 `/checks/`。
 
 ## 服务端与客户端边界
 
-开发环境 `output` 为 `server`，允许后台与 `/api/admin/*` 读写；生产构建切换为 `static`，后台页面输出只读壳，写入接口返回 404。页面在构建时渲染完整列表与正文，无 JavaScript 时仍可阅读与导航。
+开发环境 `output` 为 `server`，允许后台与 `/api/admin/*` 读写；生产构建切换为 `static`，后台页面输出只读壳，写入接口返回 404。页面在构建时渲染完整列表与正文，没有 JavaScript 时仍可阅读与导航。
 
-筛选、搜索、分页与标签表达式只操作已渲染的 DOM，不从 JSON 重建列表；`index.json` 用于补充计数与筛选数据。客户端入口在 `src/scripts/`，由布局或页面以模块脚本引入：
+筛选、搜索、分页与标签表达式只操作已渲染的 DOM，不从 JSON 重建列表；`index.json` 用于补充计数与筛选数据。客户端入口在 `src/scripts/`，由布局或页面以模块脚本引入。
 
 | 脚本组 | 职责 |
 | --- | --- |
@@ -53,31 +53,33 @@ Versicarium 的代码按内容边界、主题代码与构建管线分层：作�
 | `view-stats.ts` | 浏览数据取数接入点，默认空实现 |
 | `admin-*/` | 后台行为，仅开发环境加载 |
 
-浏览数据是真实存在的可选槽位，不是第三方统计集成。布局渲染 `[data-view-stats]`，带 `data-view-scope`、`-path`、`-route`、`-title`；每个指标是 `[data-view-stat="pv|uv"]` 内的 `[data-view-stat-value]`，未填值时保持 `hidden`。`src/lib/view-stats.ts` 提供 `resolveViewStats()`、`setViewStatValue()` 与 `VIEW_STATS_READY_EVENT`，站点在 `src/scripts/view-stats.ts` 中自行取数。
+浏览数据是可选槽位，不是第三方统计集成。布局渲染 `[data-view-stats]`，带 `data-view-scope`、`-path`、`-route`、`-title`；每个指标是 `[data-view-stat="pv|uv"]` 内的 `[data-view-stat-value]`，未填值时保持 `hidden`。`src/lib/view-stats.ts` 提供 `resolveViewStats()`、`setViewStatValue()` 与 `VIEW_STATS_READY_EVENT`，站点在 `src/scripts/view-stats.ts` 中自行取数。
 
 ## 设置解析
 
-主题设置以 JSON 存放在 `src/data/settings/`，分为 `site.json`、`shell.json`、`home.json`、`page.json`、`ui.json`。`src/lib/theme-settings.ts` 逐字段校验类型、范围与路径，缺失或非法值回落到内置默认值，同时记录每个字段来自文件、兼容旧值还是默认值。
+主题设置以 JSON 存放在 `src/data/settings/`，分为 `site.json`、`shell.json`、`home.json`、`page.json`、`ui.json`。`src/lib/theme-settings.ts` 逐字段校验类型、范围与路径，缺失或非法值回落到内置默认值，并记录每个字段来自文件、兼容旧值还是默认值。
 
-可编辑快照带 `revision`，由规范化后的设置计算；后台保存时以此校验并发修改。读取阶段的 JSON 语法错误、根节点类型错误或需要静默修补的字段会进入只读诊断状态，渲染仍使用兜底值。生产构建缓存解析结果，开发环境每次读取；`ui.json` 的字体选择在 Astro 配置期读取，修改后需重启开发服务器。
+可编辑快照带 `revision`，由规范化后的设置计算；后台保存时以此校验并发修改。读取阶段的 JSON 语法错误、根节点类型错误或需要静默修补的字段会进入只读诊断状态，渲染仍用兜底值。生产构建缓存解析结果，开发环境每次读取。`ui.json` 的字体选择在 Astro 配置期读取，修改后需重启开发服务器。
 
 ## 壳层与布局几何
 
-样式入口为 `src/styles/global.css`。桌面壳层为三列：`--sidebar`（224px）、1px 分隔线、内容列。页面外缘间隙由 `site.pageGapPx` 控制，构建期以 `<html>` 内联自定义属性输出 `--page-gap-inline` 与 `--page-inline`；后者等于间隙减去 `--scrollbar-gutter-inline`（15px）。窄屏（≤ 900px）改为单列，间隙归零；触屏滚动条为浮层，由 `layout.css` 单独覆盖。窄屏浮动列到右缘的距离由 `site.railOffsetPx` 控制（0–32px，默认 6），构建期输出 `--rail-action-offset-narrow`；`layout.css` 只在 ≤900px 的公开页面用 `var(--rail-action-offset-narrow, 6px)` 覆盖 `--rail-action-offset`，桌面仍固定用 `:root` 的 6px。
+样式入口为 `src/styles/global.css`。桌面壳层为三列：224px 侧栏、1px 分隔线、内容列。页面外缘间隙由 `site.pageGapPx` 控制，构建期以 `<html>` 内联自定义属性输出 `--page-gap-inline` 与 `--page-inline`；后者等于间隙减去 `--scrollbar-gutter-inline`（15px）。900px 及以下改为单列，间隙归零；触屏滚动条为浮层，由 `layout.css` 单独覆盖。
 
-![窄屏首页](images/home-mobile.png)
+窄屏浮动列到右缘的距离由 `site.railOffsetPx` 控制（0–32px，默认 6），构建期输出 `--rail-action-offset-narrow`。`layout.css` 只在 900px 及以下的公开页面用该变量覆盖 `--rail-action-offset`，桌面仍固定为 6px。
 
-首屏 critical CSS 是 `src/pages/index.astro` 内的手写快照，位于 `global.css` 之后。`check:home-critical-css` 比对快照与 `global.css`、`layout.css` 的壳层、窄屏顶栏与浮动列声明；`check:layout-geometry`、`check:touch-targets` 与 `check:viewport-overflow` 读取构建产物，分别断言间距不变量、触控尺寸与横向溢出兜底。布局改动需同时通过这些检查，细节见 [development.md](development.md)。
+![窄屏首页](images/mobile-home.webp)
+
+首屏 critical CSS 是 `src/pages/index.astro` 内的手写快照，位于 `global.css` 之后。`check:home-critical-css` 比对快照与 `global.css`、`layout.css` 的壳层、窄屏顶栏与浮动列声明；`check:layout-geometry`、`check:touch-targets` 与 `check:viewport-overflow` 读取构建产物，分别断言间距不变量、触控尺寸与横向溢出兜底。布局改动需要同时通过这些检查，细节见 [development.md](development.md)。
 
 ## Markdown 管线
 
 公开页面使用 `src/plugins/markdown-pipeline.mjs` 组装的 unified 处理器，由 `astro.config.mjs` 的 `markdown.processor` 接入。Astro 内建的 GFM 与 smartypants 先执行，项目插件随后处理：
 
-- remark：`remark-math`、`remark-directive`、关于页指令与提示块；
+- remark：`remark-math`、`remark-directive`、未知文本指令还原（正文里的 `00:34` 不会被当成指令）、关于页指令与提示块；
 - rehype：数学边界保护、原始 HTML 放行、统一白名单清洗、KaTeX 渲染与代码块工具栏；
 - 代码高亮：Shiki，浅色 `github-light`、深色 `github-dark`。
 
-单个 `$` 不作为公式定界符。后台预览使用显式 unified 处理器，与公开管线共享同一份插件与白名单；差异仅在标题 id 与预览专用属性。`projects` 与 `devlog` 的末尾链接组由 `src/lib/trailing-links.ts` 解析，正文渲染与摘要派生都先剥离链接行再附加统一标记。写法见 [writing.md](writing.md)。
+单个 `$` 不作为公式定界符。后台预览使用显式 unified 处理器，与公开管线共享同一份插件与白名单，差异只在标题 id 与预览专用属性。`projects` 与 `devlog` 的末尾链接组由 `src/lib/trailing-links.ts` 解析，正文渲染与摘要派生都先剥离链接行，再附加统一标记。写法见 [writing.md](writing.md)。
 
 内容附件（PDF、压缩包等非图片文件）从条目目录引用时，构建期由 `src/integrations/content-assets.mjs` 复制到 `dist/content-assets/`，只复制被 Markdown 或 HTML 链接引用的文件。正文图片仍按普通图片路径解析。
 
@@ -89,14 +91,14 @@ API 位于 `src/pages/api/admin/`，分为内容、媒体与图片、主题设�
 
 ## 构建流水线
 
-`npm run build` 先由 `prebuild` 执行 `scripts/favicon.mjs`，再进入 `astro build`。配置期根据 `SITE_URL` 决定是否注册 sitemap，根据 `ui.json` 注册 Astro Fonts API 字体，并把部署 `base` 传给 Markdown 与内容资源插件。
+`npm run build` 先由 `prebuild` 执行 `scripts/favicon.mjs`，再进入 `astro build`。配置期根据 `SITE_URL` 决定是否注册 sitemap，根据 `ui.json` 注册选中的 Astro Fonts API 字体。默认配置用系统等宽字体，不注册；可选 JetBrains Mono、Fira Code。CJK 字体走 `public/fonts/` 分层子集。部署 `base` 会传给 Markdown 与内容资源插件。
 
-构建阶段主要步骤：
+构建阶段的主要步骤：
 
 1. `entryDirLoader` 读取五个集合，解析 frontmatter 并渲染 Markdown；
 2. `contentAssets` 复制被引用的内容附件；
 3. Astro 生成静态页面、RSS、robots 与 sitemap；
 4. sitemap 插件移除非 canonical 的博客 URL；
-5. `verify` 在产物上执行 fixture、测试与产物类守卫。
+5. `verify` 在产物上执行 fixture、测试与产物守卫。
 
 完整命令与守卫清单见 [development.md](development.md)，部署变量见 [deployment.md](deployment.md)。

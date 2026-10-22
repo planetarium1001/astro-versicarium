@@ -4,6 +4,7 @@ import SiteFilings from '../components/SiteFilings.astro';
 import ViewStats from '../components/ViewStats.astro';
 import UiIcon from '../components/UiIcon.astro';
 import globalStylesHref from '../styles/global.css?url';
+import fontsDlcHref from '../styles/fonts.dlc.generated.css?url';
 import { hasSiteUrl } from '../../site.config.mjs';
 import { createWithBase } from '../utils/format';
 import {
@@ -51,6 +52,7 @@ const {
 };
 
 const { settings } = getThemeSettings();
+const fontCoverage = settings.ui.fontCoverage;
 const siteTitle = settings.site.title;
 const brandTitle = settings.shell.brandTitle ?? siteTitle;
 /** 窄屏顶栏标题：未单独设置（shell.titleNarrow 为空）时与侧栏站点名一致。 */
@@ -274,6 +276,20 @@ const adminUiPrefsScriptHref = isDevAdminPage
       ) : (
         <link rel="stylesheet" href={globalStylesHref} />
       )
+    }
+    {
+      fontCoverage === 'full' ? (
+        <>
+          <link rel="preload" href={fontsDlcHref} as="style" />
+          <link
+            rel="stylesheet"
+            href={fontsDlcHref}
+            media="print"
+            onload="this.onload=null;this.media='all'"
+          />
+          <noscript><link rel="stylesheet" href={fontsDlcHref} /></noscript>
+        </>
+      ) : null
     }
     {devUiPrefsStylesHref ? <link rel="stylesheet" href={devUiPrefsStylesHref} /> : null}
     {typographyApiFonts.map((font) => <Font cssVariable={`--font-${font.id}`} />)}

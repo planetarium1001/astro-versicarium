@@ -391,24 +391,30 @@ describe('项目弹窗样式契约', () => {
     expect(css).toMatch(/\.project-version-notice[\s\S]*?font-size:\s*12px/);
   });
 
-  it('demo 项目使用稳定 slug 与非日期最新版目录，历史版回退到日期目录', async () => {
-    const files = [
-      'content/projects/versicarium/index.md',
-      'content/projects/2026-10-14-versicarium/index.md',
-      'content/projects/2026-10-02-versicarium/index.md'
-    ];
+  it('项目最新版使用稳定 slug 与非日期最新版目录，历史版回退到日期目录', async () => {
+    const { readdir } = await import('node:fs/promises');
+    const path = await import('node:path');
+    const projectDirs = (await readdir(path.join(process.cwd(), 'content/projects'), { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory() && entry.name.endsWith('versicarium'))
+      .map((entry) => entry.name);
 
-    for (const [index, file] of files.entries()) {
-      const source = await readSource(file);
+    expect(projectDirs).toContain('versicarium');
+    const datedDirs = projectDirs.filter((name) => /^\d{4}-\d{2}-\d{2}-versicarium$/.test(name));
+    expect(datedDirs.length).toBeGreaterThanOrEqual(1);
+
+    const assertProjectSource = (source: string, file: string) => {
       expect(source, file).toMatch(/^slug: versicarium$/m);
-      expect(source, file).toMatch(/^versionLabel: "?(1\.0\.0-rc\.1|0\.5\.0|0\.1\.0)"?$/m);
-      expect(source, file).toMatch(/^versionOrder: [123]$/m);
-      if (index === 0) {
-        expect(file, '最新版目录使用稳定 slug，不带日期前缀').not.toMatch(/\d{4}-\d{2}-\d{2}/);
-        expect(source, file).toMatch(/^versionLabel: "?1\.0\.0-rc\.1"?$/m);
-      } else {
-        expect(file).toMatch(/\/\d{4}-\d{2}-\d{2}-versicarium\//);
-      }
+      expect(source, file).toMatch(/^versionLabel: "?\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?"?$/m);
+      expect(source, file).toMatch(/^versionOrder: \d+$/m);
+    };
+
+    const latestFile = 'content/projects/versicarium/index.md';
+    expect(latestFile, '最新版目录使用稳定 slug，不带日期前缀').not.toMatch(/\d{4}-\d{2}-\d{2}/);
+    assertProjectSource(await readSource(latestFile), latestFile);
+
+    for (const dir of datedDirs) {
+      const file = `content/projects/${dir}/index.md`;
+      assertProjectSource(await readSource(file), file);
     }
   });
 });

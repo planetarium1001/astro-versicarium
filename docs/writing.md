@@ -2,23 +2,23 @@
 
 ## 集合与入口
 
-| 集合 | 源文件 | 公开路由 |
-| --- | --- | --- |
-| `blog` | `content/blog/<entry>/index.md` | `/blog/`、`/blog/<slug>/` |
-| `projects` | `content/projects/<entry>/index.md` | `/projects/`、`/projects/#<anchor>` |
-| `bits` | `content/bits/<entry>/index.md` | `/bits/` 页内锚点 |
-| `devlog` | `content/devlog/<projectSlug>/<entry>/index.md` | `/devlog/` 页内锚点 |
-| `about` | `content/about/index.md` | `/about/` |
+| 集合 | 源文件 |
+| --- | --- |
+| `blog` | `content/blog/<entry>/index.md` |
+| `projects` | `content/projects/<entry>/index.md` |
+| `bits` | `content/bits/<entry>/index.md` |
+| `devlog` | `content/devlog/<projectSlug>/<entry>/index.md` |
+| `about` | `content/about/index.md` |
 
-三种写作入口：
+公开路由、聚合页与订阅源见 [architecture.md](architecture.md#内容集合与路由)。写作入口有三种：
 
 - 后台写作页 `/admin/content/`：新建与编辑，按标题生成条目 ID；仅开发环境可写；
 - 在对应集合目录新增条目目录与 `index.md`，目录名遵循 [development.md](development.md) 的 `YYYY-MM-DD-title` 规范；
 - `npm run new:bit`：在 `content/bits/` 生成一条草稿。
 
-条目必须放在目录中，集合根目录下的 Markdown 文件会被拒绝。目录内主文件按以下顺序确定：`index.md`、唯一的 `.md`、唯一标记 `entry: true` 的文件。`about` 是固定单页，不使用条目目录。
+条目必须放在目录中，集合根目录下的 Markdown 文件会被拒绝。目录内主文件按 `index.md`、唯一 `.md`、唯一标记 `entry: true` 的文件依次确定。`about` 是固定单页，不使用条目目录。
 
-`draft: true` 只在开发环境可见；生产构建、公开列表与 RSS 会过滤。
+`draft: true` 只在开发环境可见，生产构建、公开列表与 RSS 会过滤。
 
 ## frontmatter
 
@@ -81,7 +81,7 @@
 | `versionName` | 否 | 当前版本名称 |
 | `versionSummary` | 否 | 当前版本摘要 |
 | `versionOrder` | 否 | 非负整数，同日期排序 |
-| `versions` | 否 | 旧版内联历史，仅保留元数据；使用独立版本文档时不必填 |
+| `versions` | 否 | 旧版内联历史，只保留元数据；使用独立版本文档时不必填 |
 | `draft` | 否 | 默认 `false` |
 
 `versions[]` 每项包含必填 `label` 与 `date`，以及可选 `name`、`summary`、`order`。填写 `versions` 时，当前文档必须有 `versionLabel`；历史版本日期不得晚于项目 `date`。
@@ -102,25 +102,25 @@
 
 `devlog` 没有 `links` 字段，外链写在正文末尾链接组。`devlog` 按项目分目录存放：`content/devlog/<projectSlug>/<entry>/index.md`。页面锚点会把目录分隔压成 `-`，例如 `#versicarium-2026-10-14-content-model-and-navigation`。
 
-`projectSlug` 依次按项目稳定 slug、任一版本文档的条目 ID、版本锚点解析；未命中时回退到 `project` 显示名，且仅在显示名唯一匹配时生效。非空但未解析的值会在构建期告警。
+`projectSlug` 依次按项目稳定 slug、任一版本文档的条目 ID、版本锚点解析；未命中时回退到 `project` 显示名，且只在显示名唯一匹配时生效。非空但未解析的值会在构建期告警。
 
 ### about
 
-`about` 的 schema 不约束字段，正文写在 `content/about/index.md`。关于页专用的指令只在在解析该文件时启用。
+`about` 的 schema 不约束字段，正文写在 `content/about/index.md`。关于页专用的指令只在解析该文件时启用。
 
 ## 博客系列与版本
 
 同一 `series` 的多篇博客视为不同版本，按日期降序、`versionOrder` 降序、条目 ID 升序确定最新版。
 
 - 不写 `slug` 时，最新版与其他版本都使用带日期的条目 ID 路径，最新版路径即 canonical。
-- 写 `slug` 时，系列内所有版本必须使用同一个值；最新版获得 `/blog/<slug>/`；若稳定路径与最新版日期路径不同，另保留一条指向同一内容的日期别名，canonical 指向稳定路径。
-- 历史版本始终保留 `/blog/<条目ID>/` 路径，并以 `noindex` 标记；RSS 与 sitemap 只包含每个系列的最新版。
+- 写 `slug` 时，系列内所有版本必须使用同一个值；最新版获得 `/blog/<slug>/`。若稳定路径与最新版日期路径不同，另保留一条指向同一内容的日期别名，canonical 指向稳定路径。
+- 历史版本保留 `/blog/<条目ID>/` 路径，并标 `noindex`；RSS 与 sitemap 只包含每个系列的最新版。
 - `slug` 不能是 `page` 或 `rss.xml`；与静态路由冲突会在构建期失败。
-- 修改已发布系列的 `slug` 会改变 canonical 路径，应视为破坏性改动。
+- 修改已发布系列的 `slug` 会改变 canonical 路径，视为破坏性改动。
 
-后台写作页的“新建版本”只适用于 `blog`：它以系列最新版为模板复制草稿，并重新生成条目 ID。
+后台写作页的「新建版本」只适用于 `blog`：它以系列最新版为模板复制草稿，并重新生成条目 ID。
 
-![文章版本历史抽屉](images/article-version.png)
+![文章页，右侧目录、浮动操作列与版本信息](images/article-light.webp)
 
 ## 项目多版本文档
 
@@ -140,7 +140,7 @@ content/projects/2025-10-01-your-project/index.md      # 历史版
 - 不同项目产生相同锚点时构建失败；修改已发布项目的 `slug` 会改变公开锚点，并可能断开开发日志关联。
 - 旧的内联 `versions[]` 只在版本历史中显示元数据，不生成可打开的弹窗。
 
-![项目版本弹窗](images/projects-dialog.png)
+![项目版本弹窗](images/projects-dialog-light.webp)
 
 ## 图片与附件
 
@@ -232,7 +232,7 @@ $$
 
 ## 代码块
 
-使用围栏代码块并标注语言。渲染时套上工具栏，显示语言、行数与复制按钮；行号由后台“代码显示 → 代码块行号”控制。
+使用围栏代码块并标注语言。渲染时套上工具栏，显示语言、行数与复制按钮；行号由后台「代码显示 → 代码块行号」控制。
 
 ````markdown
 ```ts

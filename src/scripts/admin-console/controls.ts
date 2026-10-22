@@ -138,6 +138,7 @@ export type AdminThemeControls = RequiredElements<{
   inputTypographyCopy: HTMLElement | null;
   inputTypographyMono: HTMLElement | null;
   inputTypographyBrand: HTMLElement | null;
+  inputFontCoverage: HTMLSelectElement | null;
   inputEntryVersionName: HTMLSelectElement | null;
 }> & {
   statusEl: HTMLElement | null;
@@ -262,6 +263,7 @@ export const queryAdminThemeControls = (): AdminThemeControls | null => {
     inputTypographyCopy: byId<HTMLElement>('ui-typography-copy'),
     inputTypographyMono: byId<HTMLElement>('ui-typography-mono'),
     inputTypographyBrand: byId<HTMLElement>('ui-typography-brand'),
+    inputFontCoverage: byId<HTMLSelectElement>('ui-font-coverage'),
     inputEntryVersionName: byId<HTMLSelectElement>('ui-entry-version-name')
   });
 

@@ -4,7 +4,7 @@ date: 2026-10-20
 project: Versicarium
 projectSlug: versicarium
 kind: release
-description: 统一品牌为 Versicarium · 垄录，重做品牌资源与示例内容，确定首个预览候选 1.0.0-rc.1。
+description: 统一品牌为 Versicarium · 垄录，重做品牌资源与示例内容，版本推进到首个预览候选 1.0.0-rc.1。
 draft: false
 ---
 
@@ -14,6 +14,8 @@ draft: false
 
 内容层围绕真实提交重建。项目区提供 0.1.0、0.5.0 与 1.0.0-rc.1 三份版本文档，开发日志按真实提交记录，博客与动态同步新名字与新链接；README 与文档改为按当前代码描述。示例站内容不再包含虚构时间线。
 
-版本号统一为 `1.0.0-rc.1`，CHANGELOG 合并为单一 `[1.0.0-rc.1] - 2026-10-20` 条目，Release Please 接管后续版本与 CHANGELOG。本次是预览准备，只做本地提交，尚未发布 GitHub Release。
+`4d2fb3b`（05:38）把包版本推进到 `1.0.0-rc.1`，`release-please-config.json` 设成 `versioning: prerelease`、`prerelease: true`、`prerelease-type: rc`，manifest 的 `initial-version` 记 1.0.0-rc.1，CHANGELOG 合并为单一 `[1.0.0-rc.1] - 2026-10-20` 条目。带注释标签 `v1.0.0-rc.1` 落在 05:47 修动态日期时区用例的 `f887527` 上。
 
-[项目 1.0.0-rc.1](/projects/#versicarium) · [仓库](https://github.com/planetarium1001/astro-versicarium) · [示例站](https://planetarium1001.github.io/astro-versicarium/)
+当天的版本号改过两次：02:04 的 `8ca2839` 先把 `main` 作为 1.1.0 最小模板发过一版，更名后首个公开版本定为 1.0.0，旧的 1.1.0 记录并进 1.0.0 预览。当时只落在本地，没有 push、没有创建 Release；后来 `main` 与 `v1.0.0-rc.1` 标签都推到了远端，GitHub Release 仍未创建。
+
+[项目 1.0.0-rc.1](/projects/#2026-10-20-versicarium) · [仓库](https://github.com/planetarium1001/astro-versicarium) · [示例站](https://planetarium1001.github.io/astro-versicarium/)

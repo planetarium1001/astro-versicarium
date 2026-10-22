@@ -21,7 +21,8 @@ export function cleanMarkdownToText(md: string): string {
   text = text.replace(/~~~[\s\S]*?~~~/g, ' ');
   text = text.replace(/!\[[^\]]*]\([^)]+\)/g, ' ');
   text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-  text = text.replace(/`[^`]*`/g, ' ');
+  // 内联代码保留文字：提交号、命令、路径常出现在摘要句首，直接删掉会留下断句。
+  text = text.replace(/`([^`]*)`/g, '$1');
 
   text = text.replace(/^\s*#{1,6}\s+/gm, '');
   text = text.replace(/^\s*>\s?/gm, '');

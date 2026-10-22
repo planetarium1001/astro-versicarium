@@ -388,6 +388,10 @@ export const createValidation = ({
       return () => form.querySelector<HTMLElement>('#ui-entry-version-name');
     }
 
+    if (path === 'ui.fontCoverage') {
+      return () => form.querySelector<HTMLElement>('#ui-font-coverage');
+    }
+
     if (path.startsWith('site.socialLinks.presetOrder.')) {
       const presetId = path.slice('site.socialLinks.presetOrder.'.length) as SiteSocialPresetId;
       return getPresetFieldTarget(presetId, 'order');

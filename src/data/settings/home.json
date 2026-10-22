@@ -1,5 +1,5 @@
 {
-  "introLead": "Versicarium · 垄录是面向开发者的极简 Astro 写作主题：文章、项目版本、开发日志与动态共用同一套内容结构。",
+  "introLead": "Versicarium · 垄录是面向工程记录的 Astro 主题：文章、项目版本、开发日志与动态共用同一套条目结构。当前预览候选 1.0.0-rc.2，字体按角色分层，生僻字按需加载。",
   "introMore": "按标签继续浏览",
   "introMoreLinks": [
     "tag",

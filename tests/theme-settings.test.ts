@@ -184,6 +184,61 @@ describe('theme-settings revision semantics', () => {
     expect(getThemeSettingsRevision(mutated)).not.toBe(getThemeSettingsRevision(resolved));
   });
 
+  it('defaults ui.fontCoverage to full without locking the console when ui.json lacks it', async () => {
+    const settingsDir = await createTempSettingsFixture();
+    const uiPath = path.join(settingsDir, 'ui.json');
+    const uiJson = JSON.parse(await readFile(uiPath, 'utf8')) as Record<string, unknown>;
+    delete uiJson.fontCoverage;
+    await writeFile(uiPath, `${JSON.stringify(uiJson, null, 2)}\n`, 'utf8');
+
+    const resolved = getThemeSettings();
+    const state = getEditableThemeSettingsState(resolved);
+
+    expect(resolved.settings.ui.fontCoverage).toBe('full');
+    expect(resolved.sources.ui.fontCoverage).toBe('default');
+    expect(getThemeSettingsReadDiagnostics(resolved)).toEqual([]);
+    expect(state.ok).toBe(true);
+    expect(getEditableThemeSettingsPayload(resolved).settings.ui.fontCoverage).toBe('full');
+  });
+
+  it('normalizes an unknown ui.fontCoverage to full and reports a schema mismatch', async () => {
+    const settingsDir = await createTempSettingsFixture();
+    const uiPath = path.join(settingsDir, 'ui.json');
+    const uiJson = JSON.parse(await readFile(uiPath, 'utf8')) as Record<string, unknown>;
+    uiJson.fontCoverage = 'minimal';
+    await writeFile(uiPath, `${JSON.stringify(uiJson, null, 2)}\n`, 'utf8');
+
+    const resolved = getThemeSettings();
+
+    expect(resolved.settings.ui.fontCoverage).toBe('full');
+    expect(getEditableThemeSettingsState(resolved).ok).toBe(false);
+    expect(getThemeSettingsReadDiagnostics(resolved)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ group: 'ui', code: 'schema-mismatch' })])
+    );
+  });
+
+  it('accepts both font coverage modes', async () => {
+    const settingsDir = await createTempSettingsFixture();
+    const uiPath = path.join(settingsDir, 'ui.json');
+    const uiJson = JSON.parse(await readFile(uiPath, 'utf8')) as Record<string, unknown>;
+
+    for (const coverage of ['common', 'full'] as const) {
+      uiJson.fontCoverage = coverage;
+      await writeFile(uiPath, `${JSON.stringify(uiJson, null, 2)}\n`, 'utf8');
+      const resolved = getThemeSettings();
+      expect(resolved.settings.ui.fontCoverage).toBe(coverage);
+      expect(resolved.sources.ui.fontCoverage).toBe('new');
+    }
+  });
+
+  it('changes revision when the font coverage mode changes', () => {
+    const resolved = getThemeSettings();
+    const mutated = structuredClone(resolved);
+    mutated.settings.ui.fontCoverage = 'common';
+
+    expect(getThemeSettingsRevision(mutated)).not.toBe(getThemeSettingsRevision(resolved));
+  });
+
   it('ignores a removed ui.entryFormat key without locking the console', async () => {
     const settingsDir = await createTempSettingsFixture();
     const uiPath = path.join(settingsDir, 'ui.json');

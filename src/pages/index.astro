@@ -8,7 +8,7 @@ import {
   getAdminHomeIntroLinkOption
 } from '../lib/admin-console/theme-shared';
 import { getBlogDerivedText, getVisibleBlogListItems } from '../lib/content';
-import { getThemeFontRegistryEntry, getThemeFontStack } from '../lib/fonts/registry';
+import { getThemeFontStack } from '../lib/fonts/registry';
 import { getThemeSettings, getVisibleArticleMetaTags } from '../lib/theme-settings';
 import { createWithBase } from '../utils/format';
 
@@ -38,86 +38,15 @@ const resolvedIntroMoreLinks = (introMoreLinks.length ? introMoreLinks : [...ADM
 const allItems = await getVisibleBlogListItems();
 const pagination = paginationSettings?.home ?? { enabled: true, pageSize: 12 };
 
-type HomeHeadCriticalFontFace = {
-  family: 'LXGW WenKai Lite' | 'Noto Serif SC';
-  fileName: string;
-  weight: 400 | 600;
-  unicodeRange: string;
-};
-
-// 只保留首页首屏实际用到的字面（family / weight / unicodeRange 子集）。
-const HOME_HEAD_CRITICAL_FONT_FACES = [
-  {
-    family: 'LXGW WenKai Lite',
-    fileName: 'lxgw-wenkai-lite-latin.woff2',
-    weight: 400,
-    unicodeRange: 'U+0000-00FF, U+2000-206F, U+3000-303F, U+FF00-FFEF'
-  },
-  {
-    family: 'LXGW WenKai Lite',
-    fileName: 'lxgw-wenkai-lite-cjk-common.woff2',
-    weight: 400,
-    unicodeRange: 'U+4E00-9FFF'
-  },
-  {
-    family: 'Noto Serif SC',
-    fileName: 'noto-serif-sc-400-latin.woff2',
-    weight: 400,
-    unicodeRange: 'U+0000-00FF, U+2000-206F, U+3000-303F, U+FF00-FFEF'
-  },
-  {
-    family: 'Noto Serif SC',
-    fileName: 'noto-serif-sc-400-cjk-common.woff2',
-    weight: 400,
-    unicodeRange: 'U+4E00-9FFF'
-  },
-  {
-    family: 'Noto Serif SC',
-    fileName: 'noto-serif-sc-600-latin.woff2',
-    weight: 600,
-    unicodeRange: 'U+0000-00FF, U+2000-206F, U+3000-303F, U+FF00-FFEF'
-  },
-  {
-    family: 'Noto Serif SC',
-    fileName: 'noto-serif-sc-600-cjk-common.woff2',
-    weight: 600,
-    unicodeRange: 'U+4E00-9FFF'
-  }
-] as const satisfies readonly HomeHeadCriticalFontFace[];
-
 /* 首屏 critical CSS 只消费 readable/copy/brand 三个 role token（mono 首屏未用），
-   值经 getThemeFontStack 与全局解析一致；默认 @font-face 只为被当前选择引用的 family 声明。 */
+   值经 getThemeFontStack 与全局解析一致。字体 @font-face 已由 fonts.generated.css 提供，
+   这里不再重复声明，避免旧字体文件名/范围漂移。 */
 const homeCriticalFontStacks = {
   readable: getThemeFontStack(typography.readable),
   copy: getThemeFontStack(typography.copy),
   brand: getThemeFontStack(typography.brand)
 };
-// 按注册表 familyName 精确匹配（而非在 CSS 栈字符串里找带引号子串），不依赖 getThemeFontStack 的引号格式。
-const homeCriticalFontFamilies = new Set(
-  (['readable', 'copy', 'brand'] as const)
-    .map((role) => getThemeFontRegistryEntry(typography[role])?.familyName)
-    .filter(Boolean)
-);
-const homeCriticalFontFaces = HOME_HEAD_CRITICAL_FONT_FACES.filter((face) =>
-  homeCriticalFontFamilies.has(face.family)
-);
-
-const renderHomeHeadCriticalFontFace = ({
-  family,
-  fileName,
-  weight,
-  unicodeRange
-}: HomeHeadCriticalFontFace): string => String.raw`@font-face {
-  font-family: "${family}";
-  src: url("${withBase(`/fonts/${fileName}`)}") format("woff2");
-  font-weight: ${weight};
-  font-style: normal;
-  font-display: swap;
-  unicode-range: ${unicodeRange};
-}`;
-
 const homeHeadCriticalCss = [
-  homeCriticalFontFaces.map(renderHomeHeadCriticalFontFace).join('\n\n'),
   String.raw`
 
 :root {

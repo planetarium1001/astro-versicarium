@@ -661,6 +661,32 @@
   }
 }
 
+/* 覆盖策略与上方字体卡片保持一个字段间距；下拉框不需要占满整行。 */
+.admin-font-coverage {
+  margin-block-start: 8px;
+}
+
+.admin-font-coverage__select {
+  width: min(100%, 12rem);
+}
+
+.admin-font-coverage-summary [data-font-coverage-preview-variant] {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-font-coverage-summary [data-font-coverage-preview-variant][hidden] {
+  display: none;
+}
+
+.admin-font-coverage-summary p {
+  margin: 0;
+}
+
+.admin-font-coverage-summary__budget {
+  color: var(--muted);
+}
+
 .admin-label__main code {
   font-size: 12px;
 }
