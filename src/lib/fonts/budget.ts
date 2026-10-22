@@ -497,7 +497,7 @@ export const getFontCoverageCopy = (summary: FontBudgetSummary): FontCoverageCop
   const sourceNote =
     summary.source === 'manifest'
       ? null
-      : `预算为静态估算；运行 npm run font:build 生成 ${FONT_MANIFEST_RELATIVE_PATH} 后自动更新。`;
+      : `预算为静态估算；生成 ${FONT_MANIFEST_RELATIVE_PATH} 后自动更新。`;
 
   if (summary.coverage === 'common') {
     return {

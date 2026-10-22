@@ -1,7 +1,7 @@
 {
   "brandTitle": "<div class=\"whono-left\">Versicarium</div>\n<div class=\"whono-right\">垄录</div>",
   "titleNarrow": "垄录",
-  "quote": "<div class=\"whono-left\">一行一垄，</div>\n<div class=\"whono-left\">一版一录。</div>\n以短行收存\n每一次转向。",
+  "quote": "<div class=\"whono-left\">一行一垄，</div>\n<div class=\"whono-left\">一版一录。</div>\n\n以短行收存每一次转向。",
   "nav": [
     {
       "id": "blog",

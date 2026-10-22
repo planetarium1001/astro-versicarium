@@ -19,7 +19,6 @@ export const ADMIN_CONTENT_SCOPE_OPTIONS = [
   }))
 ] as const satisfies readonly { value: AdminContentScopeKey; label: string }[];
 
-export const ADMIN_CONTENT_OVERVIEW_SECTION_LIMIT = 8;
 export const ADMIN_CONTENT_COLLECTION_PAGE_SIZE = 20;
 
 export const isAdminContentScopeKey = (value: string): value is AdminContentScopeKey =>

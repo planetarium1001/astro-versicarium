@@ -1,24 +1,30 @@
 ---
 title: Versicarium
-subtitle: 移动端回归与字体分层
-description: 当前预览版本，修复 rc.1 真机验收的移动端问题，并把自托管字体按角色分层。
+subtitle: 当前预览版
+description: 改名后的预览候选，补上后台资源管理与字体分层。
 type: 主题
-date: 2026-10-21
+date: 2026-10-22T00:00:00.000Z
 slug: versicarium
-versionLabel: 1.0.0-rc.2
-versionName: 回归修复与字体分层
-versionSummary: 修 rc.1 真机回归，新增窄屏浮动列贴边设置与字体覆盖策略，字体资产改为 base + DLC。
-versionOrder: 4
+versionLabel: "1.0.0-rc.2"
+versionName: 目录式内容与字体分层
+versionSummary: 中英文名改为 Versicarium · 垄录，后台可管理资源，中文字体按角色分层加载。
+versionOrder: 3
 image: images/preview.webp
 draft: false
 ---
 
-1.0.0-rc.2 是当前预览版本，对应 10-21 01:58 的 `89fc493`。它收掉 rc.1 真机验收发现的问题，并把字体换成按角色分层加载。10-22 00:34 的字体提交 `185c2be` 仍记在这个包版本名下。
+这一版是当前预览版，Demo 运行的就是它。`1.0.0-rc.2` 是第二个预览候选，版本号在 10-21 与真机修复一起更新。仓库、包名与站点名在 10-20 一起改为 Versicarium · 垄录，连同项目图标一起更换。`1.0.0-rc.1` 经过真机验收后集中修了一轮窄屏问题：浮动按钮的点击被吞、热区过密、涟漪圆心偏移、搜索蒙层过实，浮动列到右缘的距离也改成可配置项。这次移动端修复涉及 78 个文件，集中在窄屏布局、触屏交互、涟漪、搜索浮层与描述行。
 
-移动端修复来自 `8e63498`。窄屏只在桌面启用滚动条槽，横向裁剪交给 body；触屏的悬停与点按描边按输入模态关闭，浮动列四个按钮加 pointer 兜底，44px 热区向内收并留净空；涟漪用命名快照探针校正圆心，搜索浮层换成半透明模糊蒙版。后台新增 `site.railOffsetPx`，窄屏浮动列到右缘的距离可配，0–32px，默认 6。构建侧新增 `check:viewport-overflow`，`f027d5a` 同步了文档。
+## 后台与资源
 
-字体改动把 base 与 DLC 分开：按 text、display、meta 角色生成基础分片，生僻字按 180 KB 切片，靠 `unicode-range` 按需下载；`font:build` 串起下载、字符集、子集和两遍构建，资产带内容哈希。常用页首屏从约 2.25 MB 降到约 305.6 KB（p50）、319.6 KB（p90）。`public/fonts/` 从 5.2 MB 涨到 22.69 MB，示例站同步主题要加 `--include-fonts`。后台「排版字体」新增 `ui.fontCoverage`，`full` 默认，`common` 只加载基础分片。
+后台补上资源管理，支持上传、批量重命名、移动与删除，并显示每张图片的引用状态。写作页覆盖五个集合，主题设置按七组字段管理，保存前先校验。资源可以整条目导入导出 ZIP，也能接入对象存储。生产构建仍只输出静态页面，不保留写入能力。
 
-发布状态：`v1.0.0-rc.1` 是带注释标签，`v1.0.0-rc.2` 是轻量标签，两个标签都已推到远端；GitHub Release 仍未创建。`4d2fb3b`、`89fc493` 的提交说明当时写的是预览阶段不推送标签、不创建 Release，后来两个标签才推上去。远端 `main` 停在 `89fc493`，10-22 的字体提交 `185c2be` 还在本地，没有进标签。标签要不要重打、字体算进哪个版本，等发布收口时再定。10-21 `blog` 站点迁到 rc.2，备案、Forgejo 部署与 Umami 统计保留，随后由维护者手动部署到 planetarium1001.com。
+## 字体分层
 
-[仓库](https://github.com/planetarium1001/astro-versicarium) · [示例站](https://planetarium1001.github.io/astro-versicarium/) · [开发日志](/devlog/#versicarium-2026-10-21-mobile-regression-and-rc2) · [字体分层](/devlog/#versicarium-2026-10-22-font-layering)
+中文字体按用途分成 text、display 与 meta 三类角色，常用页首屏字体从约 2.25 MB 降到约 305 KB，生僻字按 180 KB 目标切成独立分片，用到时再下载。字体资产目录增至 22.69 MB，这次改动涉及 236 个文件，约增加 12.9 万行。后台可在常用与完整覆盖之间切换，默认完整。后台的首屏预算摘要会显示当前字体体积，切换覆盖范围后可以直接比较。
+
+## 文档与标签
+
+README 与八份主题文档在 10-22 重写，截图换成亮暗成对的 webp。README 同时说明 `main` 与 `demo` 两个分支的分工：`main` 是模板，`demo` 是示例站。`v1.0.0-rc.2` 标签停在 10-21 的提交上，字体与文档改动在标签之后。是否重打标签，留到正式版发布时再定。
+
+[仓库](https://github.com/planetarium1001/astro-versicarium)

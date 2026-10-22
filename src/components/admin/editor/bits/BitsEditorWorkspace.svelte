@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount } from 'svelte';
+import { onMount, tick } from 'svelte';
 import type { AdminBitsEditorValues } from '../../../../lib/admin-console/content-editor-payload';
 import {
   buildBitsCardViewModel,
@@ -30,13 +30,16 @@ import {
   isBitsEditorValues
 } from '../shared/content-editor-adapters';
 import {
+  applyPreviewHtmlPreservingScroll,
   buildContentExportHref,
+  captureEditorScrollSnapshot,
   EDITOR_OUTLINE_TARGET_SCROLL_OFFSET_RATIO,
   EDITOR_SCROLLBAR_VISIBILITY_TIMEOUT_MS,
   getEditorBodyCharCount,
   getEditorScrollSyncToggleLabel,
   getPreviewDebounceMs,
   normalizeEditorBodyValue,
+  restoreEditorScrollSnapshot,
   type EditorScrollSource,
   type StatusState
 } from '../shared/editor-shell-helpers';
@@ -319,6 +322,32 @@ const scrollEditorPanesToTop = () => {
   scrollSyncController.scrollToTop(shell.effectiveViewMode);
 };
 
+const waitForAnimationFrame = (): Promise<void> =>
+  new Promise((resolve) => {
+    window.requestAnimationFrame(() => resolve());
+  });
+
+const applyPreviewHtmlRefresh = async (html: string) => {
+  await applyPreviewHtmlPreservingScroll({
+    captureScrollPosition: () => captureEditorScrollSnapshot(previewScrollElement),
+    applyHtml: () => {
+      previewHtml = html;
+    },
+    waitForRender: () => tick(),
+    restoreScrollPosition: (snapshot) => {
+      restoreEditorScrollSnapshot(snapshot, previewScrollElement);
+    },
+    waitForLayoutSettle: () => waitForAnimationFrame(),
+    cancelQueuedScrollSync: () => scrollSyncController.cancelQueued(),
+    setScrollSyncGuarded: (guarded) => {
+      scrollSyncController.setGuarded(guarded);
+    },
+    releaseScrollSyncGuard: (frameDelay) => scrollSyncController.releaseGuard(frameDelay),
+    isScrollSyncActive: () => syncScrollEnabled && scrollSyncAvailable,
+    realignScrollSync: () => scrollSyncController.queueLastSource()
+  });
+};
+
 const scrollBodyToOutlineTarget = (item: MarkdownOutlineItem): boolean => {
   if (!bodyScrollElement) return false;
 
@@ -502,7 +531,7 @@ const requestPreview = async (sourceSnapshot: string) => {
       return;
     }
 
-    previewHtml = previewResult.html;
+    await applyPreviewHtmlRefresh(previewResult.html);
     previewWarnings = previewResult.warnings;
   } catch {
     if (previewRequest.signal.aborted || !previewRequest.isCurrent()) return;

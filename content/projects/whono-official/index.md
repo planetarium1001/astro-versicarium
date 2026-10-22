@@ -1,18 +1,18 @@
 ---
-title: Whono 官方主题
-subtitle: 上游项目与设计起点
-description: cxro/astro-whono 是 Versicarium 的上游主题，MIT 许可，提供双栏壳层、内容集合与本地后台的初始结构。
+title: Whono
+subtitle: 本站主题设计的上游与起点
+description: 一个极简双栏的 Astro 博客主题，用于个人写作与轻量内容发布，本站的双栏布局与本地后台从这里来。
 type: 参考
-date: 2026-01-17
+date: 2026-08-13T00:00:00.000Z
 slug: whono-official
-image: images/preview.webp
+image: https://raw.githubusercontent.com/cxro/astro-whono/main/public/preview-light.png
 draft: false
 ---
 
-Whono 官方主题（`cxro/astro-whono`）是 Versicarium 的上游项目，也是本仓库的起点。上游首次提交 `66ded04`（2026-01-17），MIT 许可。现在用的双栏壳层、内容集合、本地后台控制台、Markdown 渲染管线、字体子集流程和动态草稿生成器，都是从它那里继承的结构。
+Whono 是本站的上游与设计起点，一个极简双栏的 Astro 博客主题，用于个人写作与轻量内容发布。侧栏导航配内容区，桌面与移动端各自成版。内容分为随笔、絮语、小记与关于，归档按目录视图展开。
 
-本仓库保留了上游的提交历史与许可声明：LICENSE 里 cxro 与 Planetarium（modifications）并列。之后的改造都建立在这套结构上——项目多版本文档、资源工作区、分页设置、主题更新通道，以及把集合重组为 blog / projects / bits / devlog / about。
+内置本地 Admin Console，开发环境在 `/admin/` 管理站点配置、内容与图片资源。絮语页可以一键生成 Markdown，支持多图并自动读取尺寸。此外还有归档与分栏 RSS、浅色与深色模式、阅读模式。
 
-上游没有接收我们后来的改名与内容模型改造。它不是本站的版本，也不参与版本序列。把这张卡片放在项目页，是记下起点。
+本站的双栏布局、本地后台、Markdown 扩展与字体子集流程设计都从上游来。上游以 MIT 许可发布。
 
-[上游仓库](https://github.com/cxro/astro-whono) · [上游演示](https://astro.whono.me) · [本仓库](https://github.com/planetarium1001/astro-versicarium) · [示例站](https://planetarium1001.github.io/astro-versicarium/)
+[上游仓库](https://github.com/cxro/astro-whono) · [上游演示](https://astro.whono.me)

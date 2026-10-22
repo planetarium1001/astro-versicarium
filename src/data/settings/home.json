@@ -1,13 +1,13 @@
 {
-  "introLead": "Versicarium · 垄录是面向工程记录的 Astro 主题：文章、项目版本、开发日志与动态共用同一套条目结构。当前预览候选 1.0.0-rc.2，字体按角色分层，生僻字按需加载。",
-  "introMore": "按标签继续浏览",
+  "introLead": "Astro-Versicarium 主题演示 Demo：上手指南、内容结构、部署与后台说明，以及每次方向性改动。",
+  "introMore": "更多内容请访问",
   "introMoreLinks": [
-    "tag",
-    "blogTag"
+    "blogTag",
+    "tag"
   ],
   "showIntroLead": true,
   "showIntroMore": true,
   "heroPresetId": "default",
   "heroImageSrc": null,
-  "heroImageAlt": "Versicarium 品牌图形：浅色与深色斜切背景中央的活页记录图标"
+  "heroImageAlt": "Astro Versicarium Icon & Avatar"
 }

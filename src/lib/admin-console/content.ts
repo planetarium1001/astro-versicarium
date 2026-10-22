@@ -1,7 +1,6 @@
 import {
   ADMIN_CONTENT_COLLECTION_PAGE_SIZE,
   ADMIN_CONTENT_COLLECTIONS,
-  ADMIN_CONTENT_OVERVIEW_SECTION_LIMIT,
   ADMIN_CONTENT_SCOPE_OPTIONS,
   isAdminContentScopeKey,
   type AdminContentCollectionKey,
@@ -96,7 +95,6 @@ type AdminContentConsolePageData = {
 export {
   ADMIN_CONTENT_COLLECTION_PAGE_SIZE,
   ADMIN_CONTENT_COLLECTIONS,
-  ADMIN_CONTENT_OVERVIEW_SECTION_LIMIT,
   ADMIN_CONTENT_SCOPE_OPTIONS,
   getAdminContentEntryEditHref,
   getAdminContentEntryListHref,
@@ -360,21 +358,60 @@ export const getAdminContentFilterHref = (
   return queryString ? `${contentHref}?${queryString}` : contentHref;
 };
 
+/**
+ * 版本分组的窗口完整性键：blog 用 series，projects 用 projectSlug。
+ * 其余 collection 没有版本分组，返回 null。
+ */
+const getAdminContentVersionGroupKey = (item: AdminContentIndexItem): string | null => {
+  if (item.series) return `series:${item.series}`;
+  if (item.collection === 'projects' && item.projectSlug) return `project:${item.projectSlug}`;
+  return null;
+};
+
+/**
+ * 集合页分页窗口不能拆散版本组：窗口内出现任一版本时，
+ * 把同组其余版本也纳入同一批 items，顺序仍保持集合原有排序。
+ */
+const expandSectionItemsWithVersionGroups = (
+  sectionItems: readonly AdminContentIndexItem[],
+  startIndex: number,
+  endIndex: number
+): AdminContentIndexItem[] => {
+  const windowEnd = Math.min(Math.max(endIndex, startIndex), sectionItems.length);
+  const windowItems = sectionItems.slice(startIndex, windowEnd);
+  const windowGroupKeys = new Set<string>();
+  const windowItemIds = new Set<string>();
+
+  for (const item of windowItems) {
+    windowItemIds.add(item.id);
+    const groupKey = getAdminContentVersionGroupKey(item);
+    if (groupKey) windowGroupKeys.add(groupKey);
+  }
+
+  if (windowGroupKeys.size === 0) return windowItems;
+
+  return sectionItems.filter((item) => {
+    if (windowItemIds.has(item.id)) return true;
+    const groupKey = getAdminContentVersionGroupKey(item);
+    return groupKey !== null && windowGroupKeys.has(groupKey);
+  });
+};
+
 const buildAdminContentCollectionSections = (
   collectionCounts: AdminContentSourceCountMap,
   filteredItems: readonly AdminContentIndexItem[],
   collection: AdminContentScopeKey,
-  options: { limit?: number; startIndex?: number; endIndex?: number } = {}
+  options: { startIndex?: number; endIndex?: number } = {}
 ): AdminContentCollectionSection[] => {
   const visibleCollections = getAdminContentVisibleCollections(collection);
 
   return visibleCollections.map((sectionCollection) => {
     const sectionItems = filteredItems.filter((item) => item.collection === sectionCollection);
-    const visibleItems = options.startIndex !== undefined && options.endIndex !== undefined
-      ? sectionItems.slice(options.startIndex, options.endIndex)
-      : options.limit !== undefined
-        ? sectionItems.slice(0, options.limit)
-        : sectionItems;
+    const { startIndex, endIndex } = options;
+    // 总览渲染每个集合的全部条目，只有集合页分页才传窗口；窗口内仍补齐版本组。
+    const visibleItems = startIndex !== undefined && endIndex !== undefined
+      ? expandSectionItemsWithVersionGroups(sectionItems, startIndex, endIndex)
+      : sectionItems;
     const totalCount = collectionCounts[sectionCollection];
 
     return {
@@ -433,7 +470,7 @@ export const getAdminContentConsolePageData = async (
   const collectionCounts = getAdminContentSourceCounts(manifest);
   const items = await loadContentIndexItems(manifest, visibleCollections, { includeSearchText });
   const filteredItems = filterAdminContentItems(items, filterState);
-  // 分页在数据层完成，页面模板只渲染已经截断后的 sections，避免再出现视图层 slice。
+  // 分页只属于具体 collection scope；总览不截断任何集合，避免静默隐藏条目。
   const shouldPaginate = filterState.collection !== 'all'
     && getAdminContentCollectionCapability(filterState.collection).pagination;
   const pageWindow = mode === 'collection' && shouldPaginate
@@ -443,11 +480,9 @@ export const getAdminContentConsolePageData = async (
     collectionCounts,
     filteredItems,
     filterState.collection,
-    mode === 'overview'
-      ? { limit: ADMIN_CONTENT_OVERVIEW_SECTION_LIMIT }
-      : pageWindow
-        ? { startIndex: pageWindow.startIndex, endIndex: pageWindow.endIndex }
-        : {}
+    pageWindow
+      ? { startIndex: pageWindow.startIndex, endIndex: pageWindow.endIndex }
+      : {}
   );
 
   return {

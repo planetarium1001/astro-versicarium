@@ -51,6 +51,11 @@ const bulkCheckboxLabel = hasBulkIdentity
 const rowDateLabel = item.collection === 'bits' && item.date
   ? formatISODate(item.date)
   : item.dateLabel;
+// 版本标记只属于有版本分组的内容：blog 看 series，projects 看多版本项目。
+// 单版本项目不显示版本号与最新/历史，避免把普通项目伪装成版本组。
+const showVersionMeta = item.collection === 'blog'
+  ? Boolean(item.series)
+  : item.collection === 'projects' && Boolean(item.projectSlug) && item.versionGroupSize > 1;
 
 const getContentPublicLinkLabel = (): string => {
   if (capability.fixedPage) return `转到${capability.label}`;
@@ -91,7 +96,7 @@ const getContentInfoActionLabel = (): string => {
   <div class="admin-content-item__title-row">
     <a class="admin-content-row-title" href={entryTitleHref} data-admin-content-row-title>{item.collection === 'devlog' && item.project ? <span class="admin-content-row-project">{`${item.project}: `}</span> : null}{item.title}</a>
     {
-      item.collection === 'blog' && item.series ? (
+      showVersionMeta ? (
         <>
           {item.versionLabel ? (
             <span
