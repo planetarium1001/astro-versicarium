@@ -18,7 +18,6 @@ import {
   getPayloadErrors,
   getStringArray,
   isPayloadOk,
-  isRecord,
   parseResponseBody
 } from '../../../../scripts/admin-content/entry-transport';
 import { initAdminDetailsMenus } from '../../../../scripts/admin-content/details-menu';
@@ -33,6 +32,7 @@ import {
 } from './content-bulk-result-feedback';
 import { dispatchAdminContentStatus } from './content-action-status-events';
 import type { AdminStatusFeedbackOptions, StatusState } from './content-action-feedback';
+import { isRecord } from '../../../../lib/is-record';
 
 // 该组件仅用于 DEV 内容控制台；生产构建不会加载批量管理 UI。
 

@@ -3,12 +3,10 @@ import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { ADMIN_JSON_HEADERS } from '../../../../../lib/admin-console/admin-api';
 import { getMimeTypeFromFileName } from '../../../../../lib/admin-console/image-cloud-storage';
+import { getProjectRoot } from '../../../../../lib/project-root';
 
 const JSON_HEADERS = ADMIN_JSON_HEADERS;
 const NOT_FOUND = new Response('Not Found', { status: 404 });
-const getProjectRoot = () =>
-  process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
-
 type FileItem = {
   path: string;
   value: string;

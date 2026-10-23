@@ -1,4 +1,5 @@
 import type { AdminSettingsExportBundle } from '../../lib/admin-console/settings-data';
+import { isRecord } from '../../lib/is-record';
 
 type AdminDataBootstrap = {
   revision: string;
@@ -59,9 +60,6 @@ export const PREVIEW_BADGE_LABELS: Record<PreviewState, string> = {
   error: 'ERROR',
   warn: 'REVISION_CONFLICT'
 };
-
-export const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const getStringArray = (value: unknown): string[] =>
   Array.isArray(value)
@@ -151,17 +149,6 @@ export const getWriteResultChangedFieldCount = (result: WriteResult | null | und
 
 export const hasWriteResultChanges = (result: WriteResult | null | undefined): result is WriteResult =>
   result?.changed === true && getWriteResultChangedFieldCount(result) > 0;
-
-export const parseResponseBody = async (response: Response): Promise<unknown> => {
-  const text = await response.text();
-  if (!text.trim()) return null;
-
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return text;
-  }
-};
 
 export const getDownloadFileName = (response: Response): string => {
   const contentDisposition = response.headers.get('content-disposition') ?? '';

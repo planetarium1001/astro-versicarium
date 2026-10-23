@@ -1,4 +1,5 @@
 import { bindTouchActivate } from './touch-activate';
+import { prefersReducedMotion } from './input-modality';
 
 const body = document.body;
 
@@ -15,10 +16,6 @@ const MOBILE_MQ = '(max-width: 900px)';
 
 let readingAnimTimer: number | undefined;
 let mobileSidebarHeight = 0;
-
-const prefersReducedMotion = () =>
-  typeof window.matchMedia === 'function'
-  && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const isMobileLayout = () =>
   typeof window.matchMedia === 'function' && window.matchMedia(MOBILE_MQ).matches;

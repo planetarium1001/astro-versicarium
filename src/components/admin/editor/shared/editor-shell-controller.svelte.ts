@@ -355,5 +355,3 @@ export const createEditorShellController = ({
     }
   };
 };
-
-export type EditorShellController = ReturnType<typeof createEditorShellController>;

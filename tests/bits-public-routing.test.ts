@@ -20,10 +20,8 @@ const item = (
 describe('bits public routing', () => {
   it('builds stable in-site page paths and anchors', () => {
     expect(getBitAnchorId('bits-2026-05-05-1200')).toBe('bit-bits-2026-05-05-1200');
-    // 所有页码都解析到唯一的 /bits/ 列表页。
-    expect(getBitsPagePath(1)).toBe('/bits/');
-    expect(getBitsPagePath(0)).toBe('/bits/');
-    expect(getBitsPagePath(2)).toBe('/bits/');
+    // 唯一的 /bits/ 列表页，路径不带页码。
+    expect(getBitsPagePath()).toBe('/bits/');
   });
 
   it('orders published bits by date desc and id asc', () => {

@@ -31,6 +31,7 @@ import {
   validateAdminThemeSettings,
   type AdminThemeSettingsChangePreview
 } from '../../../lib/admin-console/theme-shared';
+import { isRecord } from '../../../lib/is-record';
 
 const WRITABLE_GROUPS = ['site', 'shell', 'home', 'page', 'ui'] as const satisfies readonly ThemeSettingsFileGroup[];
 type WritableGroup = (typeof WRITABLE_GROUPS)[number];
@@ -54,9 +55,6 @@ const FOOTER_START_YEAR_MAX = getAdminFooterStartYearMax();
 const JSON_HEADERS = ADMIN_JSON_HEADERS;
 
 const DEV_ONLY_NOT_FOUND_RESPONSE = new Response('Not Found', { status: 404 });
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const createJsonBody = (data: unknown): string => `${JSON.stringify(data, null, 2)}\n`;
 

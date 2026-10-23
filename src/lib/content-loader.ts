@@ -5,6 +5,7 @@ import type { Loader, LoaderContext } from 'astro/loaders';
 import { CONTENT_ROOT } from '../../site.config.mjs';
 import { splitMarkdownFrontmatter } from './frontmatter';
 import { readRawFrontmatter, resolveCollectionEntryFiles } from './content-entry-files';
+import { getProjectRoot } from './project-root';
 
 type EntryDirLoaderOptions = {
   collection: string;
@@ -15,9 +16,6 @@ type EntryDirLoaderOptions = {
 };
 
 const WATCH_DEBOUNCE_MS = 120;
-
-const getProjectRoot = (): string =>
-  process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
 
 const toProjectRelativePath = (filePath: string): string =>
   path.relative(getProjectRoot(), filePath).replace(/\\/g, '/');

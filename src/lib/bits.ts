@@ -12,14 +12,6 @@ import {
   type BitPublicOrderItem
 } from './bits-public-routing';
 
-export {
-  buildPublishedBitsHrefMap,
-  getBitAnchorId,
-  getBitsPagePath,
-  orderPublishedBitsForRouting,
-  type BitPublicOrderItem
-} from './bits-public-routing';
-
 export type BitsEntry = CollectionEntry<'bits'>;
 export type BitsYearOption = {
   value: number;

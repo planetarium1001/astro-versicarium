@@ -3,15 +3,12 @@ import {
   ADMIN_SOCIAL_CUSTOM_LIMIT,
   ADMIN_SOCIAL_PRESET_ORDER_DEFAULT,
   normalizeAdminSocialIconKey,
-  isAdminSocialPresetId
-} from '@/lib/admin-console/theme-shared';
-import {
   normalizeTrimmed,
   parseInteger,
   parseOrder,
-  type EditableCustomSocialItem,
-  type SocialPresetOrder
-} from './form-codec';
+  isAdminSocialPresetId
+} from '@/lib/admin-console/theme-shared';
+import type { EditableCustomSocialItem, SocialPresetOrder } from './form-codec';
 import { sortSocialOrderItems, type SocialOrderItem } from './social-order';
 
 type Query = <T extends Element>(parent: ParentNode, selector: string) => T | null;

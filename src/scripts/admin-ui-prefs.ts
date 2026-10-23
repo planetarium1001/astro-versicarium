@@ -28,13 +28,17 @@ const readLocalStorage = (key: string): string | null => {
 const writeLocalStorage = (key: string, value: string) => {
   try {
     localStorage.setItem(key, value);
-  } catch (_) {}
+  } catch (_) {
+    // 隐私模式/禁用存储：偏好只在本次访问生效，不阻断后台操作。
+  }
 };
 
 const removeLocalStorage = (key: string) => {
   try {
     localStorage.removeItem(key);
-  } catch (_) {}
+  } catch (_) {
+    // 隐私模式/禁用存储：删不掉也继续，界面已按默认值重置。
+  }
 };
 
 const readStoredShowTopNav = (): boolean => {

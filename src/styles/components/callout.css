@@ -41,10 +41,6 @@
   line-height: 1.2;
 }
 
-.prose .callout .callout-icon {
-  display: none;
-}
-
 .prose .callout .callout-title::before {
   content: "";
   display: inline-flex;

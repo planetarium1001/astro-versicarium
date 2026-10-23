@@ -1035,12 +1035,6 @@
   white-space: nowrap;
 }
 
-.resources-row__actions {
-  display: flex;
-  gap: 4px;
-  justify-content: flex-end;
-}
-
 .resources-empty {
   display: flex;
   flex-direction: column;

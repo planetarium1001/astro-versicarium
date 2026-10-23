@@ -1,5 +1,6 @@
 import { DEFAULT_SITE_TIMEZONE } from '../../site.config.mjs';
 import { isValidIanaTimeZone } from './timezone';
+import { getProjectRoot } from '../lib/project-root';
 
 /** 站点时区：SITE_TIMEZONE > site.json timezone > 默认值。 */
 
@@ -7,9 +8,6 @@ type NodeFs = typeof import('node:fs');
 type NodePath = typeof import('node:path');
 
 let cachedProductionTimezone: string | null = null;
-
-const getProjectRoot = (): string =>
-  process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
 
 /**
  * 该模块被编辑器等 Svelte 岛间接引入，不能静态 import node:fs / node:path：
@@ -78,8 +76,4 @@ export const getSiteTimezone = (): string => {
     cachedProductionTimezone = timezone;
   }
   return timezone;
-};
-
-export const resetSiteTimezoneCache = (): void => {
-  cachedProductionTimezone = null;
 };

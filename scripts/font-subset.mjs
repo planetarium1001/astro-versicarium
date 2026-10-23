@@ -270,7 +270,7 @@ const main = async () => {
   console.log(`- CSS: ${path.relative(process.cwd(), PATHS.baseCss)} / ${path.relative(process.cwd(), PATHS.dlcCss)}`);
   console.log(`- manifest: ${path.relative(process.cwd(), PATHS.fontManifest)}`);
 
-  // 旧扁平 woff2 仍被当前 global.css 引用，默认保留；Lead 完成页面接线后用 --clean-legacy 删除。
+  // --clean-legacy 只清理 public/fonts 顶层的历史扁平 woff2 残留，默认保留；当前仓库已无此类文件。
   if (args.has('--clean-legacy')) {
     const legacy = (await listFiles(PATHS.publicFonts, ['.woff2'])).filter((filePath) => {
       const relative = path.relative(PATHS.publicFonts, filePath);

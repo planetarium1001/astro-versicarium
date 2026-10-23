@@ -3,11 +3,7 @@ import type {
   ThemeSettingsEditablePayload
 } from '@/lib/theme-settings';
 import type { EditableSettings } from './form-codec';
-
-export type LooseRecord = Record<string, unknown>;
-
-export const isRecord = (value: unknown): value is LooseRecord =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
+import { isRecord } from '../../lib/is-record';
 
 export const extractSettingsPayload = (payload: unknown): ThemeSettingsEditablePayload | null => {
   if (!isRecord(payload)) return null;

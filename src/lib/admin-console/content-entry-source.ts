@@ -18,7 +18,8 @@ import {
   getAdminContentFixedPageCapability,
   type AdminContentCollectionKey
 } from './content-collections';
-import { isRecord } from './content-entry-utils';
+import { isRecord } from '../is-record';
+import { getProjectRoot } from '../project-root';
 
 export type AdminContentEntryResolutionErrorCode = 'invalid-entry-id' | 'source-not-found';
 
@@ -51,7 +52,6 @@ export type AdminContentSourceState = {
   rawFrontmatter: Record<string, unknown>;
 };
 
-const getProjectRoot = (): string => process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
 const getContentRoot = (): string => path.join(getProjectRoot(), CONTENT_ROOT);
 const getCollectionRoot = (collection: AdminContentCollectionKey): string => path.join(getContentRoot(), collection);
 

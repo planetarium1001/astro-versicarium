@@ -5,6 +5,7 @@ import {
   createWithBase,
   tokenizeSearchQuery
 } from '../utils/format';
+import { escapeHtmlQuoted } from './editor-html-escape';
 
 const form = document.querySelector<HTMLFormElement>('[data-bits-search-form]');
 const input = document.getElementById('bits-search') as HTMLInputElement | null;
@@ -62,14 +63,6 @@ let activeYear: number | null = null;
 const filterRunner = createDebouncedAsyncRunner(() => applyFilter(), FILTER_DEBOUNCE_MS);
 
 const getTrimmedQuery = () => (input?.value || '').trim();
-
-const escapeHtml = (value: string) =>
-  value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const includesAnyTerm = (value: string, terms: string[]) => {
@@ -135,13 +128,13 @@ const getDisplaySnippet = (item: IndexItem, terms: string[]) => {
 
 const highlightText = (value: string, terms: string[]) => {
   if (!value) return '';
-  if (!terms.length) return escapeHtml(value);
+  if (!terms.length) return escapeHtmlQuoted(value);
 
   const validTerms = terms
     .map((term) => term.trim())
     .filter(Boolean)
     .sort((a, b) => b.length - a.length);
-  if (!validTerms.length) return escapeHtml(value);
+  if (!validTerms.length) return escapeHtmlQuoted(value);
 
   const regex = new RegExp(`(${validTerms.map(escapeRegExp).join('|')})`, 'gi');
   const parts = value.split(regex);
@@ -150,7 +143,7 @@ const highlightText = (value: string, terms: string[]) => {
     .map((part) => {
       if (!part) return '';
       const matched = validTerms.some((term) => part.toLowerCase() === term.toLowerCase());
-      const escaped = escapeHtml(part);
+      const escaped = escapeHtmlQuoted(part);
       return matched ? `<mark class="bit-search-result__mark">${escaped}</mark>` : escaped;
     })
     .join('');
@@ -257,19 +250,19 @@ const renderResults = (matchedItems: IndexItem[]) => {
         .join('');
       const metaTrail = [
         dateLabel
-          ? `<time class="bit-search-result__date" datetime="${escapeHtml(item.date ?? '')}">${escapeHtml(dateLabel)}</time>`
+          ? `<time class="bit-search-result__date" datetime="${escapeHtmlQuoted(item.date ?? '')}">${escapeHtmlQuoted(dateLabel)}</time>`
           : '',
-        pageHint ? `<span class="bit-search-result__page">${escapeHtml(pageHint)}</span>` : ''
+        pageHint ? `<span class="bit-search-result__page">${escapeHtmlQuoted(pageHint)}</span>` : ''
       ]
         .filter(Boolean)
         .join('<span class="bit-search-result__sep" aria-hidden="true">·</span>');
-      const href = item.href ? escapeHtml(item.href) : withBase('bits/');
+      const href = item.href ? escapeHtmlQuoted(item.href) : withBase('bits/');
       const thumbnail = item.thumbnail
         ? `
           <div class="bit-search-result__thumb">
             <img
-              src="${escapeHtml(item.thumbnail.src)}"
-              alt="${escapeHtml(item.thumbnail.alt || snippet || '絮语配图')}"
+              src="${escapeHtmlQuoted(item.thumbnail.src)}"
+              alt="${escapeHtmlQuoted(item.thumbnail.alt || snippet || '絮语配图')}"
               ${item.thumbnail.width ? `width="${item.thumbnail.width}"` : ''}
               ${item.thumbnail.height ? `height="${item.thumbnail.height}"` : ''}
               loading="lazy"
@@ -400,7 +393,7 @@ const applyFilter = async () => {
       if (resultsSummaryEl) {
         resultsSummaryEl.textContent = '无匹配结果';
       }
-      resultsListEl.innerHTML = `<p class="bits-search-results__empty">${escapeHtml(EMPTY_RESULTS_TEXT)}</p>`;
+      resultsListEl.innerHTML = `<p class="bits-search-results__empty">${escapeHtmlQuoted(EMPTY_RESULTS_TEXT)}</p>`;
       browseRoot?.setAttribute('hidden', 'true');
       resultsRoot.removeAttribute('hidden');
     }

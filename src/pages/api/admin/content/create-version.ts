@@ -6,6 +6,7 @@ import {
 } from '../../../../lib/admin-console/admin-api';
 import { createAdminBlogVersion } from '../../../../lib/admin-console/content-create-version';
 import { withAdminContentWriteLock } from '../../../../lib/admin-console/content-write-lock';
+import { isRecord } from '../../../../lib/is-record';
 
 const JSON_HEADERS = ADMIN_JSON_HEADERS;
 const DEV_ONLY_NOT_FOUND_RESPONSE = new Response('Not Found', { status: 404 });
@@ -13,9 +14,6 @@ const DEV_ONLY_NOT_FOUND_RESPONSE = new Response('Not Found', { status: 404 });
 // 静态构建按 GET 预渲染每个路由；补上与其它接口一致的 404 壳，
 // 避免 router 告警与 4KB HTML 404 fallback。POST 的 DEV/TEST 守卫不变。
 export const GET: APIRoute = async () => DEV_ONLY_NOT_FOUND_RESPONSE.clone();
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const errorResponse = (status: number, message: string): Response =>
   new Response(JSON.stringify({ ok: false, errors: [message] }, null, 2), {

@@ -36,6 +36,7 @@ import {
   normalizeSiteFilingIconPath as normalizeAdminSiteFilingIconPath,
   type SiteFaviconSlot
 } from '../../utils/format';
+import { isRecord, type LooseRecord } from '../is-record';
 
 export {
   getAdminBitsAvatarLocalFilePath,
@@ -111,9 +112,6 @@ export const ADMIN_ARTICLE_META_DATE_LABEL_MAX_LENGTH = 20;
 
 export const ADMIN_PAGINATION_SCOPES = ['home', 'blog', 'bits', 'devlog', 'archive'] as const;
 export type AdminPaginationScope = (typeof ADMIN_PAGINATION_SCOPES)[number];
-const ADMIN_PAGINATION_SCOPE_SET: ReadonlySet<string> = new Set(ADMIN_PAGINATION_SCOPES);
-export const isAdminPaginationScope = (value: unknown): value is AdminPaginationScope =>
-  typeof value === 'string' && ADMIN_PAGINATION_SCOPE_SET.has(value);
 export const ADMIN_PAGINATION_PAGE_SIZE_MIN = 1;
 export const ADMIN_PAGINATION_PAGE_SIZE_MAX = 100;
 export const ADMIN_PAGINATION_DEFAULTS = {
@@ -456,8 +454,6 @@ type AdminWritableThemeSettingsGroups = {
   ui: EditableThemeSettings['ui'];
 };
 
-type LooseRecord = Record<string, unknown>;
-
 type AdminThemeSettingsCanonicalizeOptions = {
   footerStartYearMax?: number;
   defaultCustomSocialIconKey?: SiteSocialIconKey;
@@ -469,20 +465,34 @@ type AdminThemeSettingsValidateOptions = {
   localFileExists?: (relativePath: string) => boolean;
 };
 
-const isRecord = (value: unknown): value is LooseRecord =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
+/**
+ * 归一化函数组：`theme-shared.ts`（服务端规范化）与
+ * `src/scripts/admin-console/form-codec.ts`（浏览器端表单编码）共用这一份实现。
+ *
+ * 两端对同一段文本必须得到相同结果，否则「客户端提交 → 服务端规范化」会漂移；
+ * 因此这里全部导出，`form-codec.ts` 只 import、不再复制。
+ */
 
-const normalizeMultiline = (value: string): string => value.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+export const normalizeMultiline = (value: string): string => value.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-const normalizeTrimmed = (value: unknown): string => String(value ?? '').trim();
+export const normalizeTrimmed = (value: unknown): string => String(value ?? '').trim();
 
-const normalizeOptionalSingleLine = (value: string): string | null => {
+export const normalizeOptionalSingleLine = (value: string): string | null => {
   const normalized = normalizeMultiline(value).trim();
   return normalized ? normalized : null;
 };
 
-const normalizeSingleLine = (value: unknown, fallback = ''): string => {
+/**
+ * 单行文本归一化。`rejectMultiline` 是两端唯一的差异点：
+ * 服务端规范化保留换行（后续校验再判定），后台表单读取单行输入框时含换行即视为无效、回退默认值。
+ */
+export const normalizeSingleLine = (
+  value: unknown,
+  fallback = '',
+  options: { rejectMultiline?: boolean } = {}
+): string => {
   const normalized = normalizeMultiline(String(value ?? '')).trim();
+  if (options.rejectMultiline === true && normalized.includes('\n')) return fallback;
   return normalized || fallback;
 };
 
@@ -493,14 +503,14 @@ const normalizeNavOrnament = (value: unknown): string | null => {
   return normalized || null;
 };
 
-const normalizeEmail = (value: string): string => value.replace(/^mailto:/i, '').trim();
+export const normalizeEmail = (value: string): string => value.replace(/^mailto:/i, '').trim();
 
-const parseOrder = (value: string | number | null | undefined, fallback: number): number => {
+export const parseOrder = (value: string | number | null | undefined, fallback: number): number => {
   const next = Number.parseInt(String(value ?? '').trim(), 10);
   return Number.isFinite(next) ? next : fallback;
 };
 
-const parseInteger = (value: string | number | null | undefined): number | null => {
+export const parseInteger = (value: string | number | null | undefined): number | null => {
   const next = Number.parseInt(String(value ?? '').trim(), 10);
   return Number.isFinite(next) ? next : null;
 };
@@ -535,7 +545,7 @@ const cloneNavItems = (
 ): EditableThemeSettings['shell']['nav'] =>
   items.map((item) => ({ ...item }));
 
-const normalizeHomeIntroLinks = (value: unknown): HomeIntroLinkKey[] => {
+export const normalizeHomeIntroLinks = (value: unknown): HomeIntroLinkKey[] => {
   const defaultHomeIntroLinks = [...ADMIN_HOME_INTRO_LINK_DEFAULT] as HomeIntroLinkKey[];
   if (!Array.isArray(value)) return defaultHomeIntroLinks;
 

@@ -8,6 +8,7 @@ import {
   resolveContentAssetReference,
   stripBasePath
 } from '../lib/content-asset-paths.mjs';
+import { getProjectRoot } from '../lib/project-root.ts';
 
 const ASSET_DIR_NAMES = new Set(['images', 'files', 'assets']);
 const MARKDOWN_EXT_RE = /\.md$/i;
@@ -27,9 +28,6 @@ const MIME_TYPES = {
   '.mp4': 'video/mp4',
   '.webm': 'video/webm'
 };
-
-const getProjectRoot = () =>
-  process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
 
 const getContentRoot = () => path.join(getProjectRoot(), CONTENT_ROOT);
 

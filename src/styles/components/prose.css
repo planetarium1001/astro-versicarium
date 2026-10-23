@@ -62,66 +62,11 @@
 
 }
 
-.prose blockquote.pullquote {
-  position: relative;
-  border-left: 0;
-  border-right: 0;
-  overflow: visible;
-  background-color: var(--code-content-bg);
-  color: var(--text);
-  font-size: 1.1em;
-  font-weight: 500;
-  font-style: normal;
-  padding: 1.0rem 1.6rem 0.5rem 1.8rem;
-  box-shadow: 0 1px 2px var(--border);
-}
-
 @media (max-width: 900px) {
   .prose blockquote {
     padding: 0.65rem var(--quote-pad);
   }
-
-  .prose blockquote.pullquote {
-    padding: 0.9rem 1.35rem 0.5rem 1.55rem;
-  }
 }
-
-@supports (background: color-mix(in oklab, black, white)) {
-  .prose blockquote.pullquote {
-    background-color: color-mix(in oklab, var(--code-content-bg) 88%, var(--border));
-    box-shadow: 0 2px 6px color-mix(in oklab, var(--border) 70%, transparent);
-  }
-}
-
-.prose blockquote.pullquote::before {
-  content: "“";
-  position: absolute;
-  left: 0;
-  top: -1.1rem;
-  font-family: Georgia, "Times New Roman", "Noto Serif SC", serif;
-  font-size: 6.6rem;
-  line-height: 1;
-  color: var(--border);
-  opacity: 0.35;
-  pointer-events: none;
-  z-index: 0;
-  transform: translateX(-0.6rem);
-}
-
-.prose blockquote.pullquote > * {
-  position: relative;
-  z-index: 1;
-}
-
-.prose blockquote.pullquote cite {
-  display: block;
-  margin-top: 0.1rem;
-  font-size: 0.9em;
-  font-style: normal;
-  color: var(--muted);
-  text-align: right;
-}
-
 
 .prose code {
   font-size: 0.9em;

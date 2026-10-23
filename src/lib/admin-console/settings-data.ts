@@ -1,4 +1,5 @@
 import type { EditableThemeSettings, ThemeSettingsEditablePayload } from '../theme-settings';
+import { isRecord } from '../is-record';
 
 export const ADMIN_SETTINGS_EXPORT_SCHEMA_VERSION = 1;
 export const ADMIN_SETTINGS_EXPORT_SCOPE = 'settings';
@@ -32,9 +33,6 @@ type ParseAdminSettingsExportBundleResult =
       ok: false;
       errors: string[];
     };
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const normalizeLocale = (value: unknown): string | null => {
   if (typeof value !== 'string') return null;

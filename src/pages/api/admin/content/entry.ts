@@ -27,6 +27,7 @@ import {
   buildAdminContentWritePlanFromState
 } from '../../../../lib/admin-console/content-write-plan';
 import { withAdminContentWriteLock } from '../../../../lib/admin-console/content-write-lock';
+import { isRecord } from '../../../../lib/is-record';
 
 type WriteInput = {
   collection?: AdminContentEntryWriteCollectionKey;
@@ -62,9 +63,6 @@ const createJsonErrorResponse = (
   );
 
 const DEV_ONLY_NOT_FOUND_RESPONSE = new Response('Not Found', { status: 404 });
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const hasOwn = (value: Record<string, unknown>, key: string): boolean =>
   Object.prototype.hasOwnProperty.call(value, key);

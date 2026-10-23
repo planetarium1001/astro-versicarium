@@ -7,6 +7,7 @@ import type {
   TypographySettings
 } from '../theme-settings';
 import { THEME_TYPOGRAPHY_DEFAULT, getThemeFontRegistryEntry } from './registry';
+import { isRecord } from '../is-record';
 
 /**
  * 字体预算 helper（后台排版字体区域与服务端组件共用）。
@@ -139,9 +140,6 @@ const MANIFEST_ROLES_BY_UI_ROLE: Record<TypographyRole, readonly string[]> = {
   mono: [],
   brand: ['text', 'latin']
 };
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const asFiniteBytes = (value: unknown): number | null =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
@@ -504,7 +502,7 @@ export const getFontCoverageCopy = (summary: FontBudgetSummary): FontCoverageCop
       coverage: 'common',
       budgetLine: `常用页首屏预算约 ${commonPage}；所选字体的基础分片合计 ${baseBytes}，页面只下载命中分片。`,
       detailLine: '生僻字回退系统字体，不加载 DLC，也不会产生 404。',
-      buildLine: `主题字体资产共约 ${buildTotal}，构建产物全量，页面按需下载；系统字体与拉丁等宽字体不受影响。开发模式即时预览，生产需重新构建。`,
+      buildLine: `主题字体共约 ${buildTotal}，构建产物全量，页面按需下载；系统字体与拉丁等宽字体不受影响。开发模式即时预览，生产需重新构建。`,
       sourceNote
     };
   }
@@ -516,7 +514,7 @@ export const getFontCoverageCopy = (summary: FontBudgetSummary): FontCoverageCop
       summary.rarePageIncrementBytes > 0
         ? `生僻字页按需加载命中的 DLC 分片（单块约 ${rareIncrement}）；无生僻字不请求 DLC。完整覆盖在出现生僻字时下载，常用覆盖回退系统字体。`
         : '当前没有选中自托管 CJK 字体，不会请求任何 DLC 分片。',
-    buildLine: `主题字体资产共约 ${buildTotal}（当前选择 DLC 约 ${dlcBytes}），构建产物全量，页面按需下载；系统字体与拉丁等宽字体不受影响。开发模式即时预览，生产需重新构建。`,
+    buildLine: `主题字体共约 ${buildTotal}（当前选择 DLC 约 ${dlcBytes}），构建产物全量，页面按需下载；系统字体与拉丁等宽字体不受影响。开发模式即时预览，生产需重新构建。`,
     sourceNote
   };
 };

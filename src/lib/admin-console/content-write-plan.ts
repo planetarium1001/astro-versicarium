@@ -34,9 +34,9 @@ import {
 import {
   createAdminContentValidationIssue as createIssue,
   hasOwn,
-  isRecord,
   normalizeOptionalText
 } from './content-entry-utils';
+import { isRecord } from '../is-record';
 
 type AdminBitsImage = {
   src: string;

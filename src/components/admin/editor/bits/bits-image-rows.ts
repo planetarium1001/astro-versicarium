@@ -1,14 +1,11 @@
+import { isRecord } from '../../../../lib/is-record';
+
 export type BitsImageRowDraft = {
   src: string;
   width: string;
   height: string;
   alt: string;
 };
-
-type BitsImageRowRecord = Record<string, unknown>;
-
-const isRecord = (value: unknown): value is BitsImageRowRecord =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const toText = (value: unknown): string =>
   typeof value === 'string' || typeof value === 'number' ? String(value) : '';

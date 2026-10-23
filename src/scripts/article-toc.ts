@@ -3,6 +3,7 @@
 // 窄屏浮动列的「查看目录」按钮也在这里接管：展开内联目录并滚过去。
 
 import { bindTouchActivate } from './touch-activate';
+import { prefersReducedMotion } from './input-modality';
 
 const SPY_OFFSET_PX = 96;
 const ACTIVE_CLASS = 'is-active';
@@ -17,10 +18,6 @@ const INLINE_TOC_ANIM_MS = 320;
 // 过渡高度变量与状态属性，见 article-toc.css 同名选择器。
 const INLINE_TOC_HEIGHT_VAR = '--article-toc-inline-height';
 const INLINE_TOC_ANIM_ATTR = 'data-toc-anim';
-
-const prefersReducedMotion = () =>
-  typeof window.matchMedia === 'function'
-  && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const initArticleToc = () => {
   const tocRoots = Array.from(document.querySelectorAll<HTMLElement>('[data-article-toc]'));
@@ -256,7 +253,9 @@ const initArticleToc = () => {
       window.dispatchEvent(new CustomEvent('astro-whono:reading-jump'));
       try {
         window.history.pushState(null, '', `#${id}`);
-      } catch (_) {}
+      } catch (_) {
+        // file:// 或沙箱环境禁止改 history：跳转照常进行，只是地址栏不更新。
+      }
 
       const scrollToHeading = () => {
         window.requestAnimationFrame(() => {
@@ -298,7 +297,9 @@ const initArticleToc = () => {
     if (persist) {
       try {
         window.localStorage.setItem(TOC_COLLAPSED_KEY, collapsed ? '1' : '0');
-      } catch (_) {}
+      } catch (_) {
+        // 隐私模式禁用存储：本次折叠状态仍然生效，只是不跨页面记忆。
+      }
     }
   };
 
@@ -368,7 +369,9 @@ const initArticleToc = () => {
     let id = window.location.hash.slice(1);
     try {
       id = decodeURIComponent(id);
-    } catch (_) {}
+    } catch (_) {
+      // hash 里是非法百分号转义：沿用原字符串查标题，查不到就不高亮。
+    }
     const heading = document.getElementById(id);
     if (heading instanceof HTMLElement && heading.matches('h2[id], h3[id]')) {
       flashSection(heading);

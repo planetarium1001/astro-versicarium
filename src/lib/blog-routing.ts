@@ -370,19 +370,6 @@ export const getBlogVersionInfo = <TEntry extends BlogRoutingEntry>(
   };
 };
 
-export const getStableSlugUsage = <TEntry extends BlogRoutingEntry>(
-  entries: readonly TEntry[]
-): Map<string, string[]> => {
-  const usage = new Map<string, string[]>();
-  for (const group of buildBlogGroups(entries)) {
-    if (!group.stableSlug) continue;
-    const entryIds = usage.get(group.stableSlug) ?? [];
-    entryIds.push(...group.versions.map((entry) => entry.id));
-    usage.set(group.stableSlug, entryIds);
-  }
-  return usage;
-};
-
 const withDatePrefix = (slug: string, dateText: string): string =>
   slug.startsWith(`${dateText}-`) ? slug : `${dateText}-${slug}`;
 

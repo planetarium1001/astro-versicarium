@@ -1,3 +1,5 @@
+import { prefersReducedMotion } from './input-modality';
+
 /**
  * 卡片弹窗的通用交互：点卡片主体打开 `<dialog>`，关闭按钮 / Esc / 点遮罩关闭，打开后焦点进入弹窗。
  * `/projects/` 与 `/bits/` 共用，差异只有标记前缀、是否支持 `#<id>` 锚点自动展开，
@@ -71,10 +73,6 @@ export const initCardDialogs = (wiring: CardDialogWiring) => {
     if (readHashAnchor() !== anchor) return;
     window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
   };
-
-  const prefersReducedMotion = (): boolean =>
-    typeof window.matchMedia === 'function'
-    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /** jsdom 与旧浏览器没有 WAAPI；此时保持同步开合，测试与无动画环境行为不变。 */
   const canAnimatePanel = (): boolean =>

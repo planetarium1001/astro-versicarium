@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { APIRoute } from 'astro';
 import { ADMIN_JSON_HEADERS } from '../../../../lib/admin-console/admin-api';
 import { CONTENT_ROOT } from '../../../../../site.config.mjs';
+import { getProjectRoot } from '../../../../lib/project-root';
 
 const DEV_ONLY_NOT_FOUND_RESPONSE = new Response('Not Found', { status: 404 });
 const MAX_PREVIEW_BYTES = 256 * 1024;
@@ -26,9 +27,6 @@ const TEXT_EXTENSIONS = new Set([
   '.ts',
   '.sh'
 ]);
-
-const getProjectRoot = (): string =>
-  process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
 
 const json = (payload: unknown, status = 200): Response =>
   new Response(JSON.stringify(payload, null, 2), {

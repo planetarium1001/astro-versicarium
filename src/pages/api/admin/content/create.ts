@@ -23,6 +23,7 @@ import {
   AdminContentEntryResolutionError
 } from '../../../../lib/admin-console/content-entry-source';
 import { withAdminContentWriteLock } from '../../../../lib/admin-console/content-write-lock';
+import { isRecord } from '../../../../lib/is-record';
 
 type CreateInput = {
   collection?: AdminContentCreatableCollectionKey;
@@ -41,9 +42,6 @@ const METHOD_NOT_ALLOWED_RESPONSE = new Response('Method Not Allowed', {
     'cache-control': 'no-store'
   }
 });
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const hasOwn = (value: Record<string, unknown>, key: string): boolean =>
   Object.prototype.hasOwnProperty.call(value, key);

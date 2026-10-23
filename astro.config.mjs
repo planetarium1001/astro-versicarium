@@ -191,7 +191,7 @@ const fonts = selectedApiFonts.flatMap((entry) => {
 });
 
 export default defineConfig({
-  // Required for RSS generation. Prefer SITE_URL; fallback keeps build passing.
+  // RSS 生成需要 site；优先取 SITE_URL，未设置时回退 example.invalid，保证构建不中断。
   site: site.url,
   base: deploymentBase,
   // DEV 使用 server output 允许 Theme Console 的 /api/admin/settings/ 处理读写；

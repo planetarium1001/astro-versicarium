@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { SiteFaviconUploadSlot } from '../../utils/format';
+import { getProjectRoot } from '../project-root';
 
 export type AdminSiteFaviconUploadSlot = SiteFaviconUploadSlot;
 
@@ -43,8 +44,6 @@ const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0
 
 export const isAdminSiteFaviconUploadSlot = (value: string): value is AdminSiteFaviconUploadSlot =>
   (ADMIN_SITE_FAVICON_UPLOAD_SLOTS as readonly string[]).includes(value);
-
-const getProjectRoot = (): string => process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
 
 const readPngDimensions = (buffer: Buffer): { width: number; height: number } | null => {
   // 只解析签名 + IHDR 定长头（宽高在第 16-23 字节），不做完整解码。

@@ -5,13 +5,6 @@ export function formatISODate(d: Date): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-export function formatISODateUtc(d: Date): string {
-  const yyyy = d.getUTCFullYear();
-  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const dd = String(d.getUTCDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
 export type DatePartsInTimeZone = {
   year: number;
   month: number;
@@ -350,13 +343,6 @@ export function createDebouncedAsyncRunner(
     schedule,
     cancel
   };
-}
-
-export function formatDateTime(d: Date): string {
-  const yyyyMmDd = formatISODate(d);
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  return `${yyyyMmDd} ${hh}:${mm}`;
 }
 
 export function joinPageSubtitleText(...parts: Array<string | null | undefined>): string | null {

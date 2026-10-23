@@ -2,7 +2,7 @@ import {
   isAdminContentBulkSummary,
   type AdminContentBulkSummary
 } from '../../../../lib/admin-console/content-bulk';
-import { isRecord } from '../../../../scripts/admin-content/entry-transport';
+import { isRecord } from '../../../../lib/is-record';
 
 // 批量写入成功后，结果提示会在内容列表刷新后恢复显示。
 // 用户关闭提示前保留快照，避免连续刷新导致结果丢失；过期快照会自动忽略。

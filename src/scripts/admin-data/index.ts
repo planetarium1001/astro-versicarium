@@ -14,12 +14,12 @@ import {
   getPayloadRevision,
   GROUP_ORDER,
   hasWriteResultChanges,
-  isRecord,
   parseBootstrap,
-  parseResponseBody,
   type WriteResultsMap
 } from './shared';
+import { parseResponseBody } from '../admin-content/entry-transport';
 import { createAdminDataUi } from './ui';
+import { isRecord } from '../../lib/is-record';
 
 const root = document.querySelector<HTMLElement>('[data-admin-data-root]');
 type ImportAction = 'dry-run' | 'apply';
@@ -34,7 +34,7 @@ type ImportFailureOptions = {
 };
 
 if (!root) {
-  // Current page does not use admin data console.
+  // 当前页没有后台数据控制台，跳过初始化。
 } else {
   const controlState = queryAdminDataControls();
   if (!controlState.ok) {

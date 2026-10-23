@@ -1,10 +1,10 @@
 import {
   getPayloadErrors,
   isPayloadOk,
-  isRecord,
   parseResponseBody
 } from '../../../../scripts/admin-content/entry-transport';
 import type { AdminContentImageUploadCollectionKey } from '../../../../lib/admin-console/content-collections';
+import { isRecord } from '../../../../lib/is-record';
 
 export type EditorImageUploadResult = {
   src: string;

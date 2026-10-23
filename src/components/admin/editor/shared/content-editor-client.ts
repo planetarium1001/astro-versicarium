@@ -18,7 +18,6 @@ import {
   getPayloadPreviewResult,
   getPayloadResult,
   getPayloadRevision,
-  isRecord,
   isPayloadOk,
   parseResponseBody,
   type AdminContentDeleteResult,
@@ -26,6 +25,7 @@ import {
   type AdminContentPreviewResult,
   type AdminContentWriteResult
 } from '../../../../scripts/admin-content/entry-transport';
+import { isRecord } from '../../../../lib/is-record';
 
 export type {
   AdminContentDeleteResult,

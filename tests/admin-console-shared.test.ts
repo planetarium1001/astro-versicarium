@@ -9,7 +9,7 @@ import {
   getAdminNavOrderIssues,
   getAdminSocialOrderIssues,
   validateAdminThemeSettings
-} from '../src/lib/admin-console/shared';
+} from '../src/lib/admin-console/theme-shared';
 import {
   getAdminImageFieldPreviewSrc,
   getAdminRenderedImagePreviewSrc
@@ -37,7 +37,7 @@ import {
 /** 可编辑设置载荷的深拷贝，供各用例在副本上做规范化与校验断言。 */
 const baseSettings = () => structuredClone(getEditableThemeSettingsPayload().settings);
 
-describe('admin-console/shared', () => {
+describe('admin-console/theme-shared', () => {
   it('reports duplicate and range issues for social orders', () => {
     expect(
       getAdminSocialOrderIssues(
@@ -354,7 +354,7 @@ describe('admin-console/shared', () => {
 });
 
 /** 窄屏站点标题宽度是页面宽度百分比（默认 35%，范围 10–100），最终写到 `<html>` 的 `--site-title-max-inline`。 */
-describe('admin-console/shared：窄屏站点标题宽度百分比', () => {
+describe('admin-console/theme-shared：窄屏站点标题宽度百分比', () => {
   it('默认值 35%，缺失时补齐', () => {
     // 只断言默认值：站点设置文件里带不带该键、取值多少都不该影响结论
     const raw = baseSettings() as Record<string, any>;
@@ -388,7 +388,7 @@ describe('admin-console/shared：窄屏站点标题宽度百分比', () => {
 });
 
 /** 页面外缘间隙是内容盒到浏览器边缘的视觉距离（px，默认与下限 32，上限 160），最终决定 `<html>` 的内边距。 */
-describe('admin-console/shared：页面外缘间隙', () => {
+describe('admin-console/theme-shared：页面外缘间隙', () => {
   it('默认值 32，缺失时补齐', () => {
     const payload = getEditableThemeSettingsPayload().settings;
     expect(payload.site.pageGapPx).toBe(32);
@@ -430,7 +430,7 @@ describe('admin-console/shared：页面外缘间隙', () => {
 });
 
 /** 窄屏浮动列右侧距离是 px（默认 6，范围 0–32），只影响 ≤900px 的公开页面。 */
-describe('admin-console/shared：窄屏浮动列右侧距离', () => {
+describe('admin-console/theme-shared：窄屏浮动列右侧距离', () => {
   it('默认值 6，缺失时补齐', () => {
     const payload = getEditableThemeSettingsPayload().settings;
     expect(payload.site.railOffsetPx).toBe(6);
@@ -478,7 +478,7 @@ describe('admin-console/shared：窄屏浮动列右侧距离', () => {
 });
 
 /** RSS 订阅设置：总开关 `enabled` 加 `/blog/` `/bits/` `/archive/` 三个互不干扰的页面开关。 */
-describe('admin-console/shared：列表页 RSS 开关', () => {
+describe('admin-console/theme-shared：列表页 RSS 开关', () => {
   it('缺省时四个都是开（默认值），并可被输入覆盖', () => {
     // 不断言磁盘上的当前值（可能已被用户改过），只钉默认值与规范化。
     const raw = baseSettings() as Record<string, any>;
@@ -540,7 +540,7 @@ describe('admin-console/shared：列表页 RSS 开关', () => {
 });
 
 /** 备案信息显示范围：`all` 渲染所有公开页面（默认），`root` 只在站点根目录渲染。 */
-describe('admin-console/shared：备案信息显示范围', () => {
+describe('admin-console/theme-shared：备案信息显示范围', () => {
   it('默认值为 all，缺失时补齐', () => {
     const raw = baseSettings() as Record<string, any>;
     delete raw.site.filings.scope;
@@ -718,7 +718,7 @@ describe('字体覆盖策略设置', () => {
 });
 
 /** 后台「主题 → 站点设置」的窄屏浮动列右侧距离：输入框、表单往返、校验映射与构建输出必须齐全。 */
-describe('admin-console/shared：窄屏浮动列右侧距离的后台接线', () => {
+describe('admin-console/theme-shared：窄屏浮动列右侧距离的后台接线', () => {
   const SRC = process.cwd();
   const read = (relative: string) => readFile(path.join(SRC, relative), 'utf8');
 
@@ -765,5 +765,27 @@ describe('admin-console/shared：窄屏浮动列右侧距离的后台接线', ()
     );
     const siteJson = JSON.parse(siteJsonRaw) as { railOffsetPx?: number };
     expect(siteJson.railOffsetPx, '默认构建仍输出 6px').toBe(6);
+  });
+});
+
+/**
+ * 表单编解码与共享设置层必须用同一套换行归一化：只处理 CRLF 会漏掉孤立回车符，
+ * 粘贴自其他系统的多行文本会带着 \r 写进设置，与共享层读回的值不一致。
+ */
+describe('admin-console/form-codec：多行文本换行归一化', () => {
+  const read = (relative: string) => readFile(path.join(process.cwd(), relative), 'utf8');
+
+  it('孤立回车符与 CRLF 都归一化为换行，与 theme-shared 保持一致', async () => {
+    const [formCodec, themeShared] = await Promise.all([
+      read('src/scripts/admin-console/form-codec.ts'),
+      read('src/lib/admin-console/theme-shared.ts')
+    ]);
+    const normalizeChain = "value.replace(/\\r\\n/g, '\\n').replace(/\\r/g, '\\n')";
+
+    // 唯一实现在 theme-shared；form-codec 只 import，不再保留第二份替换链。
+    expect(themeShared).toContain(normalizeChain);
+    expect(formCodec).not.toContain(normalizeChain);
+    expect(formCodec).toContain('normalizeMultiline');
+    expect(formCodec).toMatch(/from '@\/lib\/admin-console\/theme-shared'/);
   });
 });

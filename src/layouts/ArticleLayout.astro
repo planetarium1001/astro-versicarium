@@ -175,7 +175,9 @@ const shouldShowMetaLine = articleMetaSettings.showDate
             const reduceMotion = typeof window.matchMedia === 'function'
               && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
             if (!reduceMotion) root.dataset.tocIntro = 'true';
-          } catch (_) {}
+          } catch (_) {
+            // 隐私模式禁用 localStorage：读不到折叠偏好就按展开态渲染，首屏不报错。
+          }
         })();
       </script>
     ) : null}

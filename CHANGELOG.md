@@ -19,7 +19,7 @@
 
 ### Changed
 
-- `public/fonts/` 从 9 个固定子集改为带内容哈希的 base/DLC 分片，共 155 个 WOFF2，约 22.69 MB。
+- `public/fonts/` 从 9 个固定子集改为带内容哈希的 base/DLC 分片，共 115 个 WOFF2（base 33 + DLC 82），合计 23,431,664 字节，约 22.3 MB。
 - 字体版本沿用上游 `astro-whono`：LXGW WenKai Lite v1.521、Noto Serif SC 2.003；生成的子集保留 OFL 版权与许可元数据。
 - `global.css` 不再手写 `@font-face`；`BaseLayout` 在 `full` 模式异步引入 DLC CSS，避免阻塞首屏。
 

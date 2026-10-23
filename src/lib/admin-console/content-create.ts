@@ -28,8 +28,7 @@ import {
   toAdminContentRelativeProjectPath
 } from './content-entry-source';
 import {
-  createAdminContentValidationIssue as createIssue,
-  isRecord
+  createAdminContentValidationIssue as createIssue
 } from './content-entry-utils';
 import { getAdminContentEntryEditHref } from './content-routes';
 import {
@@ -38,6 +37,7 @@ import {
   parseAdminProjectsEditorInput
 } from './content-write-plan';
 import { patchMarkdownFrontmatter } from '../frontmatter';
+import { isRecord } from '../is-record';
 
 type AdminContentCreateBaseInput = {
   frontmatter: unknown;

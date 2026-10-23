@@ -10,6 +10,7 @@ import {
 } from './content-collections';
 import {
   resolveAdminContentEntrySourcePath,
+  toAdminContentAbsoluteProjectPath,
   toAdminContentRelativeProjectPath
 } from './content-entry-source';
 import { getAdminContentEntryEditHref } from './content-routes';
@@ -49,12 +50,6 @@ export class AdminContentArchiveError extends Error {
 }
 
 const IGNORED_FILE_NAMES = new Set(['.DS_Store', 'Thumbs.db']);
-const getProjectRoot = (): string =>
-  process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
-
-const toAbsolutePath = (relativePath: string): string =>
-  path.join(getProjectRoot(), ...relativePath.split('/'));
-
 const toAsciiFileName = (value: string): string => {
   const normalized = value.replace(/["\\]/g, '_').replace(/[^\x20-\x7E]/g, '_').trim();
   return normalized || 'entry.zip';
@@ -240,7 +235,7 @@ export const importAdminContentEntryArchive = async (
 
   const parsed = parseArchive(new Uint8Array(await file.arrayBuffer()));
   const entryDirectoryRelative = `${CONTENT_ROOT}/${parsed.collection}/${parsed.entryId}`;
-  const entryDirectoryAbsolute = toAbsolutePath(entryDirectoryRelative);
+  const entryDirectoryAbsolute = toAdminContentAbsoluteProjectPath(entryDirectoryRelative);
   if (existsSync(entryDirectoryAbsolute)) {
     throw new AdminContentArchiveError(
       'entry-exists',
@@ -249,7 +244,7 @@ export const importAdminContentEntryArchive = async (
     );
   }
 
-  const collectionDirectory = toAbsolutePath(`${CONTENT_ROOT}/${parsed.collection}`);
+  const collectionDirectory = toAdminContentAbsoluteProjectPath(`${CONTENT_ROOT}/${parsed.collection}`);
   await mkdir(collectionDirectory, { recursive: true });
   const stagingPath = path.join(collectionDirectory, `.import-${randomUUID()}`);
 

@@ -32,7 +32,9 @@ const readStoredMode = (): AdminSidebarNavMode | null => {
 const writeStoredMode = (mode: AdminSidebarNavMode) => {
   try {
     sessionStorage.setItem(ADMIN_SIDEBAR_NAV_MODE_STORAGE_KEY, mode);
-  } catch (_) {}
+  } catch (_) {
+    // sessionStorage 不可用：导航模式只在本次页面内生效。
+  }
 };
 
 const getSidebarNavElements = (): SidebarNavElements[] =>

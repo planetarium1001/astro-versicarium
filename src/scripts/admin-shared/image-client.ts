@@ -2,6 +2,7 @@ import {
   isAdminImageOrigin,
   type AdminImageOrigin
 } from '../../lib/admin-console/image-contract';
+import { isRecord } from '../../lib/is-record';
 
 export type AdminImageClientItem = {
   path: string;
@@ -33,9 +34,6 @@ type AdminImageListPage<TItem> = {
   totalPages: number;
   totalCount: number;
 };
-
-export const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 export const isNullableString = (value: unknown): value is string | null => value === null || typeof value === 'string';
 export const isNullableNumber = (value: unknown): value is number | null => value === null || typeof value === 'number';

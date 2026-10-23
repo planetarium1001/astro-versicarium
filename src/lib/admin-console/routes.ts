@@ -68,9 +68,6 @@ export const ADMIN_ROUTES: readonly AdminRouteDefinition[] = [
   }
 ] as const;
 
-export const isAdminRouteId = (value: string): value is AdminRouteId =>
-  ADMIN_ROUTES.some((route) => route.id === value);
-
 export const getAdminRoute = (id: AdminRouteId): AdminRouteDefinition =>
   ADMIN_ROUTES.find((route) => route.id === id) ?? ADMIN_ROUTES[0]!;
 

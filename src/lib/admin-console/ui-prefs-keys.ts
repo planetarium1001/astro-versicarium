@@ -1,3 +1,4 @@
+import { isRecord } from '../is-record';
 export const ADMIN_SIDEBAR_NAV_MODE_STORAGE_KEY = 'astro-whono:admin-sidebar:nav-mode';
 export const ADMIN_SHOW_TOP_NAV_STORAGE_KEY = 'astro-whono:admin:show-top-nav';
 export const ADMIN_DEFAULT_SIDEBAR_NAV_MODE_STORAGE_KEY = 'astro-whono:admin-sidebar:default-nav-mode';
@@ -23,9 +24,6 @@ export const DEFAULT_ADMIN_EDITOR_DEFAULTS: AdminEditorDefaults = {
   outlineOpen: false,
   syntaxOpen: false
 };
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 export const isAdminSidebarNavMode = (value: string | undefined): value is AdminSidebarNavMode =>
   value === ADMIN_SIDEBAR_NAV_PUBLIC || value === ADMIN_SIDEBAR_NAV_ADMIN;

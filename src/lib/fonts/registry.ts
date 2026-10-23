@@ -1,4 +1,5 @@
 import type { TypographyRole, TypographySettings } from '../theme-settings';
+import { isRecord } from '../is-record';
 
 /* 字体注册表：ui.typography 设置的唯一可选值来源（受控枚举，不接受自由 font-family 字符串）。
    添加自定义字体 = 在 THEME_FONT_REGISTRY 增加一个条目（ThemeFontId 类型自动派生自条目 id）：
@@ -62,9 +63,6 @@ export type ThemeFontRegistryEntry =
          仍由 Astro Fonts API 生成 @font-face 与度量对齐 fallback——大陆网络/离线构建的首选。 */
       localVariants: readonly ThemeFontLocalVariant[];
     });
-
-export type ThemeFontAcquisition = ThemeFontRegistryEntry['acquisition'];
-export type ThemeFontProvider = ThemeFontRegistryEntry['provider'];
 
 export const THEME_FONT_REGISTRY = [
   {
@@ -315,8 +313,6 @@ export const getSelectedAstroApiFonts = (typography: TypographySettings): ThemeF
 /* 供 astro.config 在 config 期直接消费手读的 ui.json（不经 theme-settings 完整管线）：
    非法/缺失值一律回退默认，与 canonicalize 的容错语义一致。 */
 export const resolveTypographyFromRawUiSettings = (raw: unknown): TypographySettings => {
-  const isRecord = (value: unknown): value is Record<string, unknown> =>
-    typeof value === 'object' && value !== null && !Array.isArray(value);
   const typography = isRecord(raw) && isRecord(raw.typography) ? raw.typography : {};
   const pick = (role: TypographyRole): ThemeFontId =>
     asThemeFontIdForRole(role, typography[role]) ?? THEME_TYPOGRAPHY_DEFAULT[role];

@@ -3,6 +3,7 @@
 // 每条记「最近标题 + 段内偏移」与「滚动比例」，锚点优先、比例兜底。
 
 import { bindTouchActivate } from './touch-activate';
+import { prefersReducedMotion } from './input-modality';
 
 const STACK_SIZE = 12;
 const STORAGE_KEY = 'astro-whono:reading-position';
@@ -21,10 +22,6 @@ type SavedPosition = {
 
 const stackButton = document.getElementById('scroll-top');
 const resumeButton = document.getElementById('resume-reading');
-
-const prefersReducedMotion = () =>
-  typeof window.matchMedia === 'function'
-  && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const scrollToY = (y: number) => {
   window.scrollTo({
@@ -47,7 +44,8 @@ const readStore = (): Record<string, SavedPosition> => {
 const writeStore = (store: Record<string, SavedPosition>) => {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-  } catch (_) {
+  } catch {
+    // 隐私模式或存储已满时写入失败；阅读位置只是增强功能，静默跳过。
   }
 };
 

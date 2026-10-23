@@ -167,7 +167,7 @@ describe('admin images api', () => {
       const imageShared = await import('../src/lib/admin-console/image-shared');
       imageShared.invalidateAdminImageCaches();
     } catch {
-      // Ignore cache cleanup failures during teardown.
+      // 清理阶段忽略缓存失效失败，避免掩盖真实断言错误。
     }
     if (tempRoot) {
       await rm(tempRoot, { recursive: true, force: true });

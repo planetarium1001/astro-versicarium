@@ -21,6 +21,7 @@ import {
   resolveContentAssetReference,
   toContentAssetUrl
 } from '../lib/content-asset-paths.mjs';
+import { getProjectRoot } from '../lib/project-root.ts';
 
 export const markdownMathOptions = Object.freeze({
   singleDollarTextMath: false
@@ -273,9 +274,6 @@ export const createProjectMarkdownRemarkPlugins = ({ aboutEnabled } = {}) => [
   withOptions(remarkAboutDirectives, aboutEnabled === undefined ? undefined : { enabled: aboutEnabled }),
   remarkCallout
 ];
-
-const getProjectRoot = () =>
-  process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
 
 const rehypeContentAssetLinks = ({ base = '/' } = {}) => (tree, file) => {
   const rawPath = file?.path;

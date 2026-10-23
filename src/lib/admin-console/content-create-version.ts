@@ -12,6 +12,7 @@ import {
 import { resolveCollectionEntryFiles } from '../content-entry-files';
 import { patchMarkdownFrontmatter } from '../frontmatter';
 import { normalizeOptionalText } from './content-entry-utils';
+import { getProjectRoot } from '../project-root';
 
 export type AdminCreateVersionInput = {
   entryId: string;
@@ -26,9 +27,6 @@ export type AdminCreateVersionResult = {
   editHref: string;
   versionOrder: number;
 };
-
-const getProjectRoot = (): string =>
-  process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
 
 const getBlogRoot = (): string => path.join(getProjectRoot(), CONTENT_ROOT, 'blog');
 

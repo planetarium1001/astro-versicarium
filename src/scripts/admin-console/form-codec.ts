@@ -27,7 +27,6 @@ import {
   ADMIN_FONT_COVERAGE_DEFAULT,
   ADMIN_HERO_IMAGE_ALT_DEFAULT,
   ADMIN_HOME_INTRO_LINK_DEFAULT,
-  ADMIN_HOME_INTRO_LINK_LIMIT,
   ADMIN_HOME_INTRO_LINK_OPTIONS,
   ADMIN_NAV_IDS,
   ADMIN_NAV_ORNAMENT_DEFAULT,
@@ -50,7 +49,15 @@ import {
   isAdminHomeIntroLinkKey,
   isAdminNavId,
   isAdminTypographyFontId,
-  normalizeAdminSocialIconKey
+  normalizeAdminSocialIconKey,
+  normalizeEmail,
+  normalizeHomeIntroLinks,
+  normalizeMultiline,
+  normalizeOptionalSingleLine,
+  normalizeSingleLine as normalizeSingleLineValue,
+  normalizeTrimmed,
+  parseInteger,
+  parseOrder
 } from '@/lib/admin-console/theme-shared';
 
 export type EditableSettings = ThemeSettingsEditablePayload['settings'];
@@ -175,32 +182,15 @@ type FormCodecContext = {
   inputEntryVersionName: HTMLSelectElement;
 };
 
-const normalizeMultiline = (value: string): string => value.replace(/\r\n/g, '\n');
-
-const normalizeOptionalSingleLine = (value: string): string | null => {
-  const normalized = normalizeMultiline(value).trim();
-  return normalized || null;
-};
-
-const normalizeSingleLine = (value: unknown, fallback = ''): string => {
-  if (typeof value !== 'string') return fallback;
-  const normalized = normalizeMultiline(value).trim();
-  return normalized.includes('\n') ? fallback : normalized;
-};
-
-export const normalizeEmail = (value: string): string => value.replace(/^mailto:/i, '').trim();
-
-export const parseOrder = (value: string | number | null | undefined, fallback: number): number => {
-  const next = Number.parseInt(String(value ?? '').trim(), 10);
-  return Number.isFinite(next) ? next : fallback;
-};
-
-export const parseInteger = (value: string | number | null | undefined): number | null => {
-  const next = Number.parseInt(String(value ?? '').trim(), 10);
-  return Number.isFinite(next) ? next : null;
-};
-
-export const normalizeTrimmed = (value: unknown): string => String(value ?? '').trim();
+/**
+ * 归一化函数全部来自 `src/lib/admin-console/theme-shared.ts`：服务端规范化与这里必须同源，
+ * 各自复制一份会让「客户端提交 → 服务端规范化」对同一段文本得出不同结果。
+ *
+ * `normalizeSingleLine` 在这里额外拒绝换行：表单读的是单行输入框，含换行的值按无效处理并回退默认值；
+ * 服务端则保留换行，交给后续校验判定。
+ */
+const normalizeSingleLine = (value: unknown, fallback = ''): string =>
+  normalizeSingleLineValue(value, fallback, { rejectMultiline: true });
 
 const paginationInput = (
   scope: (typeof ADMIN_PAGINATION_SCOPES)[number],
@@ -365,24 +355,6 @@ export const createFormCodec = ({
     || ADMIN_HOME_INTRO_LINK_OPTIONS.find((option) => option.id !== primary)?.id
     || defaultSecondaryHomeIntroLink
     || primary;
-
-  const normalizeHomeIntroLinks = (value: unknown): HomeIntroLinkKey[] => {
-    if (!Array.isArray(value)) return [...defaultHomeIntroLinks];
-
-    const normalized: HomeIntroLinkKey[] = [];
-    const seen = new Set<HomeIntroLinkKey>();
-
-    value.forEach((item) => {
-      const rawValue = normalizeTrimmed(item);
-      if (!rawValue || !isAdminHomeIntroLinkKey(rawValue)) return;
-      const linkKey = rawValue as HomeIntroLinkKey;
-      if (seen.has(linkKey) || normalized.length >= ADMIN_HOME_INTRO_LINK_LIMIT) return;
-      normalized.push(linkKey);
-      seen.add(linkKey);
-    });
-
-    return normalized.length ? normalized : [...defaultHomeIntroLinks];
-  };
 
   const getSelectedHomeIntroLink = (
     selectEl: HTMLSelectElement,

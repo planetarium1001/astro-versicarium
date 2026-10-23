@@ -389,4 +389,41 @@ describe('admin preview api', () => {
     expect(result.html).toContain('<a href="https://example.com/repo">仓库</a>');
   });
 
+  it('distinguishes why a preview image is not inlined', async () => {
+    const { resolvePreviewLocalImage } = await import('../src/lib/admin-console/preview');
+    const path = await import('node:path');
+    const sourceFilePath = path.join(process.cwd(), 'content', 'blog', 'demo', 'index.md');
+    const reasonOf = (value: string) => {
+      const resolution = resolvePreviewLocalImage(sourceFilePath, value);
+      return resolution.ok ? 'ok' : resolution.reason;
+    };
+
+    expect(reasonOf('')).toBe('empty');
+    expect(reasonOf('   ')).toBe('empty');
+    expect(reasonOf('/images/example.webp')).toBe('site-absolute');
+    expect(reasonOf('//cdn.example.com/a.webp')).toBe('protocol-relative');
+    expect(reasonOf('#figure-1')).toBe('anchor');
+    expect(reasonOf('./a.webp?v=2')).toBe('decorated');
+    expect(reasonOf('./a.webp#frag')).toBe('decorated');
+    expect(reasonOf('https://example.com/a.webp')).toBe('remote');
+    expect(reasonOf('data:image/png;base64,AAAA')).toBe('remote');
+    expect(reasonOf('../../../../etc/passwd.png')).toBe('outside-project');
+    expect(reasonOf('./notes.txt')).toBe('unsupported-extension');
+    // 扩展名与范围都合法，但磁盘上没有这个文件：与「本来就不是本地图片」区分开
+    expect(reasonOf('./definitely-missing.webp')).toBe('missing');
+  });
+
+  it('inlines an existing project-local image as a vite fs url', async () => {
+    const { resolvePreviewLocalImage } = await import('../src/lib/admin-console/preview');
+    const path = await import('node:path');
+    const sourceFilePath = path.join(process.cwd(), 'content', 'blog', 'demo', 'index.md');
+
+    const resolution = resolvePreviewLocalImage(sourceFilePath, '../../../public/apple-touch-icon.png');
+
+    expect(resolution.ok).toBe(true);
+    if (!resolution.ok) throw new Error('expected ok resolution');
+    expect(resolution.src.startsWith('/@fs/')).toBe(true);
+    expect(resolution.src.endsWith('/public/apple-touch-icon.png')).toBe(true);
+  });
+
 });

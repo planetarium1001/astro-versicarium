@@ -17,10 +17,10 @@ import {
 } from './content-entry-source';
 import {
   createAdminContentValidationIssue as createIssue,
-  isRecord,
   normalizeOptionalText
 } from './content-entry-utils';
 import type { AdminContentValidationIssue } from './content-entry-contract';
+import { isRecord } from '../is-record';
 
 export type AdminBlogEditorValues = {
   title: string;
