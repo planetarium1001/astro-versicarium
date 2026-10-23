@@ -62,15 +62,15 @@ Windows 的 Git Bash 会把 `/blog/` 当成磁盘路径改写，构建出的链�
 
 - `on.push.branches` 换成自己的发布分支，一般是 `main`。
 - `env.SITE_URL` 换成站点地址，只写协议与域名，不带路径。
-- `env.BASE_PATH` 部署在子目录时写 `/<REPO>/`，部署在根目录时写 `/`。
+- `env.ASTRO_VERSICARIUM_BASE_PATH` 部署在子目录时写 `/<REPO>/`，部署在根目录时写 `/`。
 
 改完推送，或在 Actions 页面手动运行 `pages` 工作流，等运行结束打开 Pages 给出的地址。
 
 站点地址规则：
 
-- 项目页带仓库名：`https://<USERNAME>.github.io/<REPO>/`，对应 `BASE_PATH: /<REPO>/`。
-- 仓库名是 `<USERNAME>.github.io`（用户主页仓库）时部署在根路径，对应 `BASE_PATH: /`。
-- 绑定自定义域名后，`SITE_URL` 写域名，`BASE_PATH` 写 `/`。
+- 项目页带仓库名：`https://<USERNAME>.github.io/<REPO>/`，对应 `ASTRO_VERSICARIUM_BASE_PATH: /<REPO>/`。
+- 仓库名是 `<USERNAME>.github.io`（用户主页仓库）时部署在根路径，对应 `ASTRO_VERSICARIUM_BASE_PATH: /`。
+- 绑定自定义域名后，`SITE_URL` 写域名，`ASTRO_VERSICARIUM_BASE_PATH` 写 `/`。
 
 工作流分两段：`build` 检出代码、装依赖、构建、检查产物，再把 `dist/` 上传成 Pages 产物；`deploy` 只负责把产物发布到 Pages，不重复构建。
 
@@ -88,9 +88,9 @@ Windows 的 Git Bash 会把 `/blog/` 当成磁盘路径改写，构建出的链�
 - 子目录变量漏设：项目页的站内链接指向站点根目录。
 - 权限不足：缺 `pages: write` 或 `id-token: write`，部署步骤失败。
 - Pages 未启用：部署步骤直接失败，先在 Settings → Pages 开启再重跑。
-- 自定义域名后子目录仍带仓库名：把 `BASE_PATH` 改成 `/`。
+- 自定义域名后子目录仍带仓库名：把 `ASTRO_VERSICARIUM_BASE_PATH` 改成 `/`。
 
-示例站仓库用两个分支：`main` 是模板，`demo` 是示例站，`pages.yml` 在 `demo` 上构建并发布。本仓库的两个值是 `SITE_URL: https://planetarium1001.github.io` 与 `BASE_PATH: /astro-versicarium/`。自己的站点可以沿用，也可以只用一个分支。
+示例站仓库用两个分支：`main` 是模板，`demo` 是示例站，`pages.yml` 在 `demo` 上构建并发布。本仓库的两个值是 `SITE_URL: https://planetarium1001.github.io` 与 `ASTRO_VERSICARIUM_BASE_PATH: /astro-versicarium/`。自己的站点可以沿用，也可以只用一个分支。
 
 ## 其他静态托管
 

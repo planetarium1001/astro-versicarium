@@ -40,7 +40,7 @@ npm run dev
 工作流里写死了两处配置：
 
 - `env.SITE_URL`：`https://planetarium1001.github.io`
-- `env.BASE_PATH`：`/astro-versicarium/`
+- `env.ASTRO_VERSICARIUM_BASE_PATH`：`/astro-versicarium/`
 
 也可以在 Actions 页面手动运行 `pages` 工作流。
 
