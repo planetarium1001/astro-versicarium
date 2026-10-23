@@ -1,4 +1,5 @@
 import { toSafeHttpUrl } from '../utils/format';
+import { lockScrollFor, unlockScrollFor } from './modal-scroll-lock';
 
 type LightboxImage = {
   src: string;
@@ -109,21 +110,11 @@ const createLightboxController = (options: LightboxOptions): LightboxController 
   let panBaseX = 0;
   let panBaseY = 0;
   let gestureMode: 'swipe' | 'pan' | 'pinch' | null = null;
-  let scrollLocked = false;
   let baseWidth = 0;
   let baseHeight = 0;
   let containerWidth = 0;
   let containerHeight = 0;
   let openerEl: HTMLElement | null = null;
-  const scrollState = {
-    top: 0,
-    bodyOverflow: '',
-    bodyPosition: '',
-    bodyTop: '',
-    bodyWidth: '',
-    bodyPaddingRight: '',
-    docOverflow: ''
-  };
 
   const showDialog = () => {
     dialog.removeAttribute('hidden');
@@ -255,45 +246,9 @@ const createLightboxController = (options: LightboxOptions): LightboxController 
     dialog.style.removeProperty('--lb-backdrop');
   };
 
-  const lockScroll = () => {
-    if (scrollLocked) return;
-    const body = document.body;
-    const doc = document.documentElement;
-    scrollState.top = window.scrollY || doc.scrollTop || 0;
-    scrollState.bodyOverflow = body.style.overflow;
-    scrollState.bodyPosition = body.style.position;
-    scrollState.bodyTop = body.style.top;
-    scrollState.bodyWidth = body.style.width;
-    scrollState.bodyPaddingRight = body.style.paddingRight;
-    scrollState.docOverflow = doc.style.overflow;
-    // 只有锁定后真的变宽才补 padding：scrollbar-gutter 保留槽位时差值为 0，
-    // 部分引擎在 overflow: hidden 下撤销槽位，差值即滚动条宽度。
-    const widthBeforeLock = doc.clientWidth;
-    body.style.overflow = 'hidden';
-    body.style.position = 'fixed';
-    body.style.top = `-${scrollState.top}px`;
-    body.style.width = '100%';
-    doc.style.overflow = 'hidden';
-    const scrollbarWidth = doc.clientWidth - widthBeforeLock;
-    if (scrollbarWidth > 0) {
-      body.style.paddingRight = `${scrollbarWidth}px`;
-    }
-    scrollLocked = true;
-  };
-
-  const unlockScroll = () => {
-    if (!scrollLocked) return;
-    const body = document.body;
-    const doc = document.documentElement;
-    body.style.overflow = scrollState.bodyOverflow;
-    body.style.position = scrollState.bodyPosition;
-    body.style.top = scrollState.bodyTop;
-    body.style.width = scrollState.bodyWidth;
-    body.style.paddingRight = scrollState.bodyPaddingRight;
-    doc.style.overflow = scrollState.docOverflow;
-    window.scrollTo(0, scrollState.top);
-    scrollLocked = false;
-  };
+  // 页面锁定按 dialog 元素配对，重复打开或重复关闭都不会让计数失衡。
+  const lockScroll = () => lockScrollFor(dialog);
+  const unlockScroll = () => unlockScrollFor(dialog);
 
   const focusDialogTarget = () => {
     // 焦点落在 dialog 自身（tabindex=-1），不自动选中关闭按钮。
@@ -345,6 +300,8 @@ const createLightboxController = (options: LightboxOptions): LightboxController 
   };
 
   const init = () => {
+    // 非 closeDialog 路径（原生 Esc、脚本直接 close）关闭时也要解锁，避免锁悬挂把页面钉住。
+    dialog.addEventListener('close', () => unlockScroll());
     window.addEventListener('resize', () => {
       if (!dialog.open) return;
       syncMetrics();

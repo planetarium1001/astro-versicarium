@@ -452,6 +452,8 @@ a.bit-tag.tag--link:focus-visible {
   background: var(--bg);
   color: var(--text);
   overflow: hidden;
+  /* 弹窗本体若出现滚动，不把滚动传给正文。 */
+  overscroll-behavior: contain;
 }
 
 .bit-dialog::backdrop {

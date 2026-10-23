@@ -6,6 +6,7 @@ import {
   resolveMediaFileVisual,
   type MediaFileIcon
 } from '../../lib/admin-console/media-file-visual';
+import { lockScrollFor, unlockScrollFor } from '../modal-scroll-lock';
 import { isRecord } from '../../lib/is-record';
 
 type ResourceKind = 'image' | 'file';
@@ -353,6 +354,13 @@ const init = () => {
   const importDialog = root.querySelector<HTMLDialogElement>('[data-resources-import-dialog]')!;
   const importForm = root.querySelector<HTMLFormElement>('[data-resources-import-form]')!;
   const detailDialog = root.querySelector<HTMLDialogElement>('[data-resources-detail]')!;
+
+  /** 后台弹窗统一入口：打开时锁住页面，关闭事件里解锁。 */
+  const openAdminDialog = (dialog: HTMLDialogElement) => {
+    if (dialog.open) return;
+    dialog.showModal();
+    lockScrollFor(dialog);
+  };
   const layoutEl = root.querySelector<HTMLElement>('[data-resources-layout]')!;
   const treeToggleEl = root.querySelector<HTMLButtonElement>('[data-resources-tree-toggle]')!;
   const treeToggleLabelEl = root.querySelector<HTMLElement>('[data-resources-tree-toggle-label]')!;
@@ -805,7 +813,7 @@ const init = () => {
       dd.textContent = value;
       meta.append(dt, dd);
     }
-    if (!detailDialog.open) detailDialog.showModal();
+    openAdminDialog(detailDialog);
   };
 
   const renderItems = (result: ListResult) => {
@@ -1128,11 +1136,11 @@ const init = () => {
       }
       const entryLabel = state.entry === SHARED_ENTRY_ID ? SHARED_LABEL : state.entry;
       uploadTarget.textContent = `上传到 ${getCollectionLabel(state.collection)} / ${entryLabel}`;
-      uploadDialog.showModal();
+      openAdminDialog(uploadDialog);
     });
   });
   root.querySelectorAll<HTMLElement>('[data-resources-import-open]').forEach((button) => {
-    button.addEventListener('click', () => importDialog.showModal());
+    button.addEventListener('click', () => openAdminDialog(importDialog));
   });
   root.querySelectorAll<HTMLElement>('[data-resources-close]').forEach((button) => {
     button.addEventListener('click', () => button.closest('dialog')?.close());
@@ -1141,6 +1149,8 @@ const init = () => {
     dialog.addEventListener('click', (event) => {
       if (event.target === dialog) dialog.close();
     });
+    // 所有关闭路径（按钮、遮罩、Esc、脚本）都会触发 close，统一在这里解锁。
+    dialog.addEventListener('close', () => unlockScrollFor(dialog));
   });
 
   uploadForm.addEventListener('submit', (event) => {

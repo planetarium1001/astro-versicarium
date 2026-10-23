@@ -7,6 +7,7 @@ import {
   unmountSelectedChipBar,
   type SelectedChipHost
 } from './selected-chip-bar';
+import { lockScrollFor, unlockScrollFor } from './modal-scroll-lock';
 import { runVisibilityFade } from './visibility-fade';
 import {
   buildSearchHaystack,
@@ -261,6 +262,7 @@ if (dialog && listEl) {
     } catch {
       dialog.setAttribute('open', '');
     }
+    lockScrollFor(dialog);
     for (const trigger of triggers) trigger.setAttribute('aria-expanded', 'true');
   };
 
@@ -274,6 +276,7 @@ if (dialog && listEl) {
     } catch {
       dialog.removeAttribute('open');
     }
+    unlockScrollFor(dialog);
     for (const trigger of triggers) trigger.setAttribute('aria-expanded', 'false');
   };
 
@@ -310,6 +313,9 @@ if (dialog && listEl) {
   dialog.addEventListener('click', (event) => {
     if (event.target === dialog) closeDialog();
   });
+
+  // 原生 Esc 关闭不经过 closeDialog，这里兜底解锁；WeakSet 保证不会重复减计数。
+  dialog.addEventListener('close', () => unlockScrollFor(dialog));
 
   OPTIONS.forEach((option) => {
     option.addEventListener('click', () => {

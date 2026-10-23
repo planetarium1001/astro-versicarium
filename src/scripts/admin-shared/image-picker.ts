@@ -1,4 +1,5 @@
 import type { AdminImageOrigin } from '../../lib/admin-console/image-contract';
+import { lockScrollFor, unlockScrollFor } from '../modal-scroll-lock';
 import {
   getAdminImageFieldAllowedOrigins,
   getAdminRenderedImagePreviewSrc
@@ -185,25 +186,9 @@ export const createAdminImagePicker = (root: ParentNode = document): AdminImageP
   let requestToken = 0;
   let searchTimer = 0;
   let focusTimer = 0;
-  let scrollLocked = false;
-  let bodyOverflow = '';
-  let docOverflow = '';
-
-  const lockPageScroll = () => {
-    if (scrollLocked) return;
-    bodyOverflow = document.body.style.overflow;
-    docOverflow = document.documentElement.style.overflow;
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
-    scrollLocked = true;
-  };
-
-  const unlockPageScroll = () => {
-    if (!scrollLocked) return;
-    document.body.style.overflow = bodyOverflow;
-    document.documentElement.style.overflow = docOverflow;
-    scrollLocked = false;
-  };
+  // 页面锁定按 dialog 元素配对，重复关闭不会让计数失衡。
+  const lockPageScroll = () => lockScrollFor(dialog);
+  const unlockPageScroll = () => unlockScrollFor(dialog);
 
   const cancelPendingWork = () => {
     window.clearTimeout(searchTimer);
@@ -538,8 +523,9 @@ export const createAdminImagePicker = (root: ParentNode = document): AdminImageP
     syncPager();
     syncConfirmAction();
     if (!dialog.open) {
-      lockPageScroll();
       dialog.showModal();
+      // showModal 成功后再加锁：抛异常时不会留下没人释放的锁。
+      lockPageScroll();
     }
     void loadList();
     focusTimer = window.setTimeout(() => {

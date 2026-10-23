@@ -1,4 +1,5 @@
 import { prefersReducedMotion } from './input-modality';
+import { lockScrollFor, unlockScrollFor } from './modal-scroll-lock';
 
 type VersionDrawerRoot = HTMLElement;
 
@@ -102,6 +103,7 @@ for (const root of roots) {
     // jsdom / 旧浏览器没有 dialog.close()：先隐藏面板，再清标记并手动收尾。
     dialog.removeAttribute('open');
     delete dialog.dataset.closing;
+    unlockScrollFor(dialog);
     setExpanded(false);
     restoreTriggerFocus();
   };
@@ -124,6 +126,8 @@ for (const root of roots) {
     } else {
       dialog.setAttribute('open', '');
     }
+    // 抽屉打开期间锁住页面，避免在抽屉里滚动带动正文。
+    lockScrollFor(dialog);
     setExpanded(true);
     // 打开时把焦点放到标题，不落在关闭按钮上；关闭按钮仍可 Tab 到。
     window.requestAnimationFrame(() => {
@@ -173,6 +177,8 @@ for (const root of roots) {
 
   dialog.addEventListener('close', () => {
     clearClosingState();
+    // 原生 Esc 关闭也走这里；WeakSet 保证与 commitClose 的解锁不会重复减计数。
+    unlockScrollFor(dialog);
     setExpanded(false);
     if (!restoreFocus) return;
     restoreTriggerFocus();
