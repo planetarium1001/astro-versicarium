@@ -8,7 +8,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
@@ -200,7 +200,10 @@ const main = async () => {
       }
 
       if (!CHECK_ONLY && content !== null) {
-        writeFileSync(path.join(ROOT, filePath), content);
+        const target = path.join(ROOT, filePath);
+        // 站点可能删过整个目录（例如只保留内容的示例站），写入前补齐父目录。
+        mkdirSync(path.dirname(target), { recursive: true });
+        writeFileSync(target, content);
       }
     }
   } finally {
