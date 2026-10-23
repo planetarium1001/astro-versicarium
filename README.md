@@ -21,6 +21,29 @@ Versicarium 是基于 Astro 的静态站点主题，把技术文章、多版本�
 - **运行形态**：开发环境提供完整后台；生产环境只输出静态页面，不保留写入能力。
 - **目录分工**：内容写在 `content/`，页面与样式在 `src/`，两者分开存放。
 
+## 预览
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/home-light.webp" alt="首页，亮色，左侧导航与首屏导语"></td>
+    <td width="50%"><img src="docs/images/article-light.webp" alt="文章页，右侧目录与浮动按钮"></td>
+  </tr>
+  <tr>
+    <td align="center">首页</td>
+    <td align="center">文章</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/projects-dialog-light.webp" alt="项目版本弹窗，列出同一项目的全部版本"></td>
+    <td width="50%"><img src="docs/images/admin-light.webp" alt="后台主题设置，亮色"></td>
+  </tr>
+  <tr>
+    <td align="center">项目版本</td>
+    <td align="center">后台设置</td>
+  </tr>
+</table>
+
+更多截图在 `docs/images/`。
+
 ## 特性
 
 - **布局**：桌面端固定侧栏加内容区；内容区带目录树与浮动操作列，滚动时高亮当前段落并记住阅读位置。
@@ -36,7 +59,7 @@ Versicarium 是基于 Astro 的静态站点主题，把技术文章、多版本�
 
 ## 开始使用
 
-需要 Node.js 22.12.0+。
+需要 Node.js 22.12.0 或更高版本；`.nvmrc` 里的 24.22.1 是建议版本，用 nvm 时直接 `nvm use`。
 
 ### 获取主题
 
@@ -108,87 +131,21 @@ npm run dev
 
 ### 部署到 GitHub Pages
 
-模板内包含了 `.github/workflows/{ci.yml, pages.yml}`，可直接修改为自己的配置，并在 GitHub 的仓库启用并配置 Pages。
-需要给予 GitHub Action 推送部署 Pages 的权限，否则 Action 构建完无法推送到 Pages。
+仓库自带 `.github/workflows/pages.yml`，改三处就能用：
+
+- `on.push.branches` 换成自己的发布分支，一般是 `main`。
+- `env.SITE_URL` 换成站点地址，只写协议与域名，不带路径。
+- `env.BASE_PATH` 部署在子目录时写 `/<REPO>/`，部署在根目录时写 `/`。
+
+然后在仓库 Settings → Pages 把 Source 设为 **GitHub Actions**，并向发布分支推送，或在 Actions 页面手动运行 `pages` 工作流。
 
 <details>
-  <summary>完整的 ci.yml 和 pages.yml 配置</summary>
+<summary>pages.yml 的核心结构</summary>
 
-- 如果仓库名称为 `<USERNAME>.github.io`，则部署在 `https://<USERNAME>.github.io`。
-- 如果仓库名称不为 `<USERNAME>.github.io`，则部署在子路径 `https://<USERNAME>.github.io/<REPO>`
-- 将 `ci.yml` 内 `<branch>`（两处）替换为自己的分支名称，一般默认为 `<main>`；并把固定的 `<URL>` 换成自己的部署的站点地址。
-- 将 `pages.yml` 内 `<branch>`（两处）替换为自己的分支名称，一般默认为 `<main>`。
-
-<details>
-  <summary>ci.yml</summary>
-
-```yml
-name: ci
-
+```yaml
 on:
   push:
-    branches: [<branch>]
-  pull_request:
-    branches: [<branch>]
-
-permissions:
-  contents: read
-
-jobs:
-  ci:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Resolve Node version
-        id: node
-        shell: bash
-        run: |
-          if [ -f .nvmrc ]; then
-            version="$(cat .nvmrc)"
-          else
-            version="$(grep -E '"node"\s*:' package.json | head -n 1 | sed -E 's/.*"node"\s*:\s*"([^"]+)".*/\1/')"
-          fi
-          if [ -z "$version" ]; then
-            version="22"
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ steps.node.outputs.version }}
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      # npm run ci 等价于 npm run verify，已包含构建、测试与全部产物守卫。
-      # astro.config.mjs 只在 SITE_URL 非空时注册 sitemap 集成，而产物守卫会断言
-      # dist/sitemap-*.xml 存在，因此 CI 必须提供它。
-      # SITE_URL 只给仓库 owner 的 github.io origin；项目页子路径由构建时的 base 决定。
-      - name: Run verification
-        run: npm run ci
-        env:
-          SITE_URL: https://planetarium1001.github.io
-
-      # 根路径 verify 抓不到只在子路径部署出现的重复 base：再以
-      # ASTRO_VERSICARIUM_BASE_PATH=/astro-versicarium/ 真实构建一次并扫描 dist。
-      - name: Verify subpath build
-        run: npm run check:subpath
-```
-  
-</details>
-<details>
-  <summary>pages.yml</summary>
-
-```yml
-name: pages
-
-on:
-  push:
-    branches: [<branch>]
+    branches: [<BRANCH>]
   workflow_dispatch:
 
 permissions:
@@ -200,57 +157,24 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+env:
+  SITE_URL: <SITE-URL>
+  BASE_PATH: /<REPO>/
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          ref: <branch>
-
-      - name: Resolve Node version
-        id: node
-        shell: bash
-        run: |
-          if [ -f .nvmrc ]; then
-            version="$(cat .nvmrc)"
-          else
-            version="22"
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ steps.node.outputs.version }}
+          node-version: 24
           cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      # 项目页部署在 /<repo>/ 子路径下：站点域名给 owner 的 github.io，子路径交给 base。
-      # 示例站仓库是 astro-versicarium，base 动态推导为 /astro-versicarium/。
-      # 仓库名若是 <owner>.github.io（用户主页仓库），则部署在根路径。
-      # 绑定自定义域名后，把这两项改成固定的域名与 `/`。
-      - name: Resolve site URL and base path
-        shell: bash
-        run: |
-          echo "SITE_URL=https://${GITHUB_REPOSITORY_OWNER}.github.io" >> "$GITHUB_ENV"
-          repo="${GITHUB_REPOSITORY#*/}"
-          owner_lc="$(printf '%s' "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
-          repo_lc="$(printf '%s' "${repo}" | tr '[:upper:]' '[:lower:]')"
-          if [ "${repo_lc}" = "${owner_lc}.github.io" ]; then
-            echo "ASTRO_VERSICARIUM_BASE_PATH=/" >> "$GITHUB_ENV"
-          else
-            echo "ASTRO_VERSICARIUM_BASE_PATH=/${repo}/" >> "$GITHUB_ENV"
-          fi
-
-      - name: Build
-        run: npm run build
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - run: npm ci
+      - run: npm run build
+        env:
+          ASTRO_VERSICARIUM_BASE_PATH: ${{ env.BASE_PATH }}
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
@@ -261,26 +185,86 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy
-        id: deployment
+      - id: deployment
         uses: actions/deploy-pages@v4
 ```
+
+`${{ ... }}` 是工作流语法，原样保留。
+
 </details>
-</details>
+
+完整模板、地址规则、注意事项与常见失败见[部署上线 · GitHub Pages](docs/deploy.md#github-pages)。
+
+`ci.yml` 不用改结构，只把顶部的 `SITE_URL` 换成自己的站点地址。它负责推送与 PR 的完整校验，不部署。
+
+`release-please.yml` 与 `release.yml` 只服务主题发版，都是手动触发，自己的站点不需要保留。
 
 ### 部署到自己的服务器
 
-使用 `SITE_URL=<YOUR-WEBSITE-URL> npm run build` 构建后将 `dict/` 推送到指定目录后通过配置反向代理完成部署。
+站点是纯静态文件，服务器只需要按目录提供网页，不需要 Node.js、数据库或后台进程。
+
+1. 构建：`SITE_URL=<SITE-URL> npm run build`，产物在 `dist/`。
+2. 上传：把 `dist/` 里的内容放到服务器站点目录，源码、`node_modules/` 与本地缓存不要上传。
+3. 配置：Nginx 的 `root` 指向站点目录，`index` 设为 `index.html`。站点按目录生成页面，文章地址对应目录里的 `index.html`，不需要额外重写规则。
+4. 启用 HTTPS：把 `SITE_URL` 改成 `https://` 开头并重新构建，页面里的绝对链接、订阅地址与分享图才会用新地址。
 
 <details>
-  <summary>示例流程</summary>
+<summary>rsync 上传</summary>
 
 ```bash
-SITE_URL=<YOUR-WEBSITE-URL> npm run build
-rsync -rlptD --delete --chmod=D755,F644 dist/ <SERVER-UERNAME>@<SERVER-IP>:<YOUR-SERVER-DIR>
+SITE_URL=<SITE-URL> npm run build
+rsync -rlptD --delete --chmod=D755,F644 dist/ <SERVER-USER>@<SERVER-HOST>:<SERVER-DIR>/
 ```
 
+- `<SITE-URL>` 换成站点地址，只写协议与域名。
+- `<SERVER-USER>`、`<SERVER-HOST>`、`<SERVER-DIR>` 换成服务器账号、地址与站点目录。
+- `--delete` 会删除目标目录里多余的文件；第一次上传前确认目标目录只放站点文件。
+
 </details>
+
+<details>
+<summary>Nginx 站点配置</summary>
+
+```nginx
+server {
+  listen 80;
+  server_name <HOST-NAME>;
+  root <SERVER-DIR>;
+  index index.html;
+
+  location /_astro/ {
+    add_header Cache-Control "public, max-age=31536000, immutable";
+  }
+
+  location /fonts/ {
+    add_header Cache-Control "public, max-age=31536000, immutable";
+  }
+}
+```
+
+- `<HOST-NAME>` 换成域名，`<SERVER-DIR>` 换成站点目录的绝对路径。
+- `/_astro/` 与 `/fonts/` 下的文件名带内容哈希，可以长期缓存；这两个 location 只加缓存头，不改路由。
+- 改完先跑 `nginx -t` 检查，再重新加载 Nginx。
+- 站点放在子目录时，把 `root` 指向子目录，或单独加一个 `location /<SUBDIR>/`。
+
+</details>
+
+发布后复查：
+
+- 打开首页，确认样式、图片与字体都正常加载。
+- 打开一篇文章，确认正文与分享图正常；分享图地址来自 `SITE_URL`。
+- 抽查站内链接、分页与归档，确认没有指向旧域名或站点根目录。
+- 子目录部署时，确认访问地址带子目录前缀。
+
+遇到问题时：
+
+- 图标不显示：反向代理或人机验证可能拦住了图标请求，见[反向代理拦截图标](docs/faq.md#反向代理拦截图标)。
+- 页面能打开但样式丢失：多半是子目录前缀没设对，见[页面能打开但样式丢失](docs/faq.md#页面能打开但样式丢失)。
+- 改了内容但线上没变：浏览器或 CDN 缓存，见[浏览器缓存](docs/faq.md#浏览器缓存)。
+- 换了字体没生效：见[换了字体没生效](docs/faq.md#换了字体没生效)。
+- 构建或检查失败：见[构建失败](docs/faq.md#构建失败)与 [verify 失败](docs/faq.md#verify-失败)。
+
+完整步骤、缓存配置与复查清单见[部署上线 · 自建服务器](docs/deploy.md#自建服务器)。
 
 ## 主题命名由来
 
@@ -300,22 +284,29 @@ rsync -rlptD --delete --chmod=D755,F644 dist/ <SERVER-UERNAME>@<SERVER-IP>:<YOUR
 
 ## 文档
 
-常见问题：
-- GitHub Pages 与 GitHub Actions 工作流的分支模型、变量推导与常见失败[部署上线 · GitHub Actions 工作流](docs/deployment.md#github-actions-工作流)。
-- PV / UV 浏览数据的配置与接入[后台使用 · 浏览数据](docs/admin-console.md#浏览数据)与[站点结构 · 浏览数据](docs/architecture.md#浏览数据)。
+使用文档，按阅读顺序：
 
-更多细节与命令可参考详细文档：
-- [站点结构](docs/architecture.md)
-- [本地运行与检查](docs/development.md)
-- [内容与写作](docs/writing.md)
-- [后台使用](docs/admin-console.md)
-- [部署上线](docs/deployment.md)
-- [版本与发布](docs/release.md)
-- [主题更新](docs/upstream.md)
-- [站点图标](docs/favicon.md)
+- [安装与运行](docs/install.md)
+- [内容与写作](docs/content.md)
+- [主题设置](docs/settings.md)
+- [后台使用](docs/admin.md)
+- [部署上线](docs/deploy.md)
+- [主题更新](docs/update.md)
+- [常见问题](docs/faq.md)
+
+其他：
+
+- [使用文档索引](docs/README.md)
+- [开发文档](docs/developers/)：改主题代码、维护仓库、发布版本
+- [Agent 文档](docs/agents/)：本地 LLM 与 Agent 的仓库地图、事实台账与改动入口，用于辅助站点的快速搭建。
+
+常见问题直达：
+
+- GitHub Pages 与 GitHub Actions 的分支改法与常见失败：[部署上线](docs/deploy.md)
+- PV / UV 浏览数据的配置与接入：[主题设置](docs/settings.md)
+- 图标不生效、反向代理拦截图标：[常见问题](docs/faq.md)
 
 ## 致谢与许可
 
 - 主题设计起点：[cxro/astro-whono](https://github.com/cxro/astro-whono)。页面布局、后台框架、Markdown 扩展与字体子集等流程与框架均来自该项目。
 - 许可：[MIT](LICENSE)。
-
