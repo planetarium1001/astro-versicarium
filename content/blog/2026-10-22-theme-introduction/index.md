@@ -14,8 +14,17 @@ ogImage: images/share.webp
 ogImageAlt: 主题 Hero 图，深浅斜向分割与中央记录图标
 draft: false
 ---
+<h1 align="center">Versicarium · 垄录</h1>
+<p align="center">面向开发者的内容与版本管理博客主题，基于 Astro 构建，修改自<a href="https://github.com/cxro/astro-whono">Whono</a>。</p>
+<div align="center">
+  <p><b>Versicarium</b> = <b><code>versiculus</code></b> + <b><code>arium</code></b></p>
+  <p>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&thinsp;&thinsp;&thinsp;&thinsp;&thinsp;&thinsp;&ensp;诗行短句&emsp;&thinsp;&thinsp;&thinsp;&ensp;收卷之匣</p>
+</div>
 
-当前版本是 `1.0.0-rc.2`，Demo 运行的就是这一版。主题名是 Versicarium · 垄录，面向需要保留多次改版的内容站点，基于 Astro 构建。
+<p align="center">
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-22C55E?style=flat-square" alt="License: MIT"></a>
+  <a href="./CHANGELOG.md"><img src="https://img.shields.io/badge/version-1.0.0--rc.2-F59E0B?style=flat-square" alt="Version 1.0.0-rc.2"></a>
+</p>
 
 ## 版本与名称
 
