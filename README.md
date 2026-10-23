@@ -135,7 +135,7 @@ npm run dev
 
 - `on.push.branches` 换成自己的发布分支，一般是 `main`。
 - `env.SITE_URL` 换成站点地址，只写协议与域名，不带路径。
-- `env.BASE_PATH` 部署在子目录时写 `/<REPO>/`，部署在根目录时写 `/`。
+- `env.ASTRO_VERSICARIUM_BASE_PATH` 部署在子目录时写 `/<REPO>/`，部署在根目录时写 `/`。
 
 然后在仓库 Settings → Pages 把 Source 设为 **GitHub Actions**，并向发布分支推送，或在 Actions 页面手动运行 `pages` 工作流。
 
@@ -159,7 +159,7 @@ concurrency:
 
 env:
   SITE_URL: <SITE-URL>
-  BASE_PATH: /<REPO>/
+  ASTRO_VERSICARIUM_BASE_PATH: /<REPO>/
 
 jobs:
   build:
@@ -172,8 +172,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-        env:
-          ASTRO_VERSICARIUM_BASE_PATH: ${{ env.BASE_PATH }}
+      - run: node ./scripts/check-deployment-base.mjs
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
