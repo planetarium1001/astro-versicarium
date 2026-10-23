@@ -1,4 +1,5 @@
 import { getTagKeys, toTagKey } from '../lib/tags';
+import { lockScrollFor, unlockScrollFor } from './modal-scroll-lock';
 import {
   createSelectedChipActions,
   createSelectedChipBar,
@@ -791,6 +792,8 @@ if (!root) {
 
   const finalizeTagDialogClose = () => {
     if (tagDialog?.open) return;
+    // 脚本关闭与原生 Esc 关闭都汇到这里；WeakSet 保证不会重复减计数。
+    if (tagDialog) unlockScrollFor(tagDialog);
     setTagDialogExpanded(false);
     removePickerParam();
   };
@@ -800,6 +803,8 @@ if (!root) {
     const focusTitle = options.focusTitle !== false;
     if (typeof tagDialog.showModal === 'function') {
       tagDialog.showModal();
+      // 标签弹窗打开期间锁住页面，避免在弹窗里滚动带动正文。
+      lockScrollFor(tagDialog);
       if (focusTitle && tagDialogTitle) {
         window.requestAnimationFrame(() => {
           tagDialogTitle.focus({ preventScroll: true });
@@ -809,6 +814,7 @@ if (!root) {
       return;
     }
     tagDialog.setAttribute('open', '');
+    lockScrollFor(tagDialog);
     if (focusTitle && tagDialogTitle) {
       window.requestAnimationFrame(() => {
         tagDialogTitle.focus({ preventScroll: true });

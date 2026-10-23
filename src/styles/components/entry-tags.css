@@ -316,6 +316,8 @@
   max-height: min(calc(100vh - var(--entry-tags-dialog-top) - 28px), 720px);
   padding: 0;
   overflow: hidden;
+  /* 弹窗本体若出现滚动，不把滚动传给正文。 */
+  overscroll-behavior: contain;
   border: 1px solid var(--border);
   border-radius: 18px;
   background: var(--bg);
@@ -335,6 +337,8 @@
   gap: 16px;
   padding: 18px 20px 20px;
   overflow-y: auto;
+  /* 弹窗内滚到底后不再把滚动传给正文。 */
+  overscroll-behavior: contain;
 }
 
 .entry-tags-dialog__handle {

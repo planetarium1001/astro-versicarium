@@ -1,4 +1,5 @@
 import { prefersReducedMotion } from './input-modality';
+import { lockScrollFor, unlockScrollFor } from './modal-scroll-lock';
 
 /**
  * 卡片弹窗的通用交互：点卡片主体打开 `<dialog>`，关闭按钮 / Esc / 点遮罩关闭，打开后焦点进入弹窗。
@@ -140,6 +141,8 @@ export const initCardDialogs = (wiring: CardDialogWiring) => {
     } else {
       dialog.setAttribute('open', '');
     }
+    // 弹窗打开期间锁住页面：遮罩上滚动、内容不足一屏时都不会带动后面的页面。
+    lockScrollFor(dialog);
   };
 
   const closeImmediately = (dialog: HTMLDialogElement) => {
@@ -152,6 +155,7 @@ export const initCardDialogs = (wiring: CardDialogWiring) => {
     } else {
       dialog.removeAttribute('open');
     }
+    unlockScrollFor(dialog);
     clearHashAnchor(anchor);
   };
 
@@ -232,6 +236,7 @@ export const initCardDialogs = (wiring: CardDialogWiring) => {
       } else {
         dialog.removeAttribute('open');
       }
+      unlockScrollFor(dialog);
       clearHashAnchor(anchor);
     };
 
@@ -308,6 +313,8 @@ export const initCardDialogs = (wiring: CardDialogWiring) => {
       // 关闭事件可能来自脚本或原生 fallback；统一在这里清掉退出标记，
       // 否则残留的 data-closing 会让下次打开的首帧直接处于淡出态。
       delete dialog.dataset.closing;
+      // 原生 Esc、脚本直接 close() 等路径也要解锁；WeakSet 保证不会重复减计数。
+      unlockScrollFor(dialog);
       dialog.scrollTop = 0;
       const content = dialog.querySelector<HTMLElement>(wiring.scrollResetSelector);
       if (content) content.scrollTop = 0;
