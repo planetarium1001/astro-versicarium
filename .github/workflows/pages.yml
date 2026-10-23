@@ -1,8 +1,17 @@
 name: pages
 
-# main 承载模板，demo 承载示例站点。部署固定在 demo 分支：
-# 示例站 astro-versicarium 发布到 https://planetarium1001.github.io/astro-versicarium/，
-# 工作流文件本身留在默认分支，因此仍可从 Actions 页面手动触发。
+# 构建站点并发布到 GitHub Pages。
+#
+# 模板使用者改三处，都在文件开头：
+#   1. on.push.branches 换成自己的发布分支，一般是 main
+#   2. env.SITE_URL     换成站点地址，只写协议与域名，不带路径
+#   3. env.BASE_PATH    部署在子目录写 /<仓库名>/，部署在根目录写 /
+#
+# 前置：仓库 Settings → Pages → Source 选 GitHub Actions。
+# 选 Deploy from a branch 会走 GitHub 自带的构建，产物不是 dist/。
+#
+# 也可以在 Actions 页面手动运行本工作流。
+
 on:
   push:
     branches: [demo]
@@ -13,18 +22,24 @@ permissions:
   pages: write
   id-token: write
 
+# 同一时间只跑一个部署；有新任务时取消未完成的旧任务。
 concurrency:
   group: pages
   cancel-in-progress: true
 
+env:
+  # 项目页部署在子路径：域名给 owner 的 github.io，子路径交给 BASE_PATH。
+  # 仓库名是 <owner>.github.io（用户主页仓库）或绑定自定义域名时，BASE_PATH 写 /。
+  SITE_URL: https://planetarium1001.github.io
+  BASE_PATH: /astro-versicarium/
+
 jobs:
   build:
+    name: build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: demo
 
       - name: Resolve Node version
         id: node
@@ -33,7 +48,7 @@ jobs:
           if [ -f .nvmrc ]; then
             version="$(cat .nvmrc)"
           else
-            version="22"
+            version="24"
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
@@ -46,27 +61,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # 项目页部署在 /<repo>/ 子路径下：站点域名给 owner 的 github.io，子路径交给 base。
-      # 示例站仓库是 astro-versicarium，base 动态推导为 /astro-versicarium/。
-      # 仓库名若是 <owner>.github.io（用户主页仓库），则部署在根路径。
-      # 绑定自定义域名后，把这两项改成固定的域名与 `/`。
-      - name: Resolve site URL and base path
-        shell: bash
-        run: |
-          echo "SITE_URL=https://${GITHUB_REPOSITORY_OWNER}.github.io" >> "$GITHUB_ENV"
-          repo="${GITHUB_REPOSITORY#*/}"
-          owner_lc="$(printf '%s' "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
-          repo_lc="$(printf '%s' "${repo}" | tr '[:upper:]' '[:lower:]')"
-          if [ "${repo_lc}" = "${owner_lc}.github.io" ]; then
-            echo "ASTRO_VERSICARIUM_BASE_PATH=/" >> "$GITHUB_ENV"
-          else
-            echo "ASTRO_VERSICARIUM_BASE_PATH=/${repo}/" >> "$GITHUB_ENV"
-          fi
-
-      - name: Build
+      - name: Build site
+        env:
+          ASTRO_VERSICARIUM_BASE_PATH: ${{ env.BASE_PATH }}
         run: npm run build
 
-      # 复用上面 Build 的 dist（不重复构建）：拦截重复 base 与无法解析的本地 URL。
+      # 直接检查上一步的 dist，不重复构建：拦重复 base 与无法解析的站内地址。
       - name: Verify deployment base
         run: node ./scripts/check-deployment-base.mjs
 
@@ -76,12 +76,13 @@ jobs:
           path: dist
 
   deploy:
+    name: deploy
     needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy
+      - name: Deploy to Pages
         id: deployment
         uses: actions/deploy-pages@v4

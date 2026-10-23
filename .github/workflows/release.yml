@@ -1,24 +1,35 @@
 name: release
 
-# Release Please 创建 GitHub Release 后，打包该标签对应的已跟踪文件为模板 zip，
-# 并生成 SHA256SUMS 附到同一个 Release。不包含 node_modules、dist、示例站截图或本地缓存。
+# 手动运行，不随 Release 事件自动触发。
+#
+# 作用：把指定标签对应的已跟踪文件打包成模板 zip，生成 SHA256SUMS，
+# 附到该标签的 GitHub Release。不包含 node_modules、dist、本地缓存。
+#
+# 前置：GitHub Release 已创建，且标签与 package.json 版本一致。
+# 标签不匹配或 Release 不存在时工作流直接失败，不会上传任何文件。
+
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 要打包的标签，与 package.json 版本对应，例如 v1.0.0-rc.2
+        required: true
+        type: string
 
 permissions:
   contents: write
 
 jobs:
   package:
+    name: package
     runs-on: ubuntu-latest
     env:
-      RELEASE_TAG: ${{ github.event.release.tag_name }}
+      RELEASE_TAG: ${{ inputs.tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ inputs.tag }}
           fetch-depth: 0
 
       - name: Resolve Node version
@@ -28,7 +39,7 @@ jobs:
           if [ -f .nvmrc ]; then
             version="$(cat .nvmrc)"
           else
-            version="22"
+            version="24"
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
@@ -37,16 +48,25 @@ jobs:
         with:
           node-version: ${{ steps.node.outputs.version }}
 
-      - name: Check release tag and package version
+      - name: Verify release tag
         shell: bash
         run: |
           version="${RELEASE_TAG#v}"
           pkg="$(node -p "require('./package.json').version")"
           if [ "$version" != "$pkg" ]; then
-            echo "release tag $RELEASE_TAG does not match package.json version $pkg" >&2
+            echo "标签 ${RELEASE_TAG} 与 package.json 版本 ${pkg} 不一致" >&2
             exit 1
           fi
           echo "VERSION=$pkg" >> "$GITHUB_ENV"
+
+      - name: Verify release exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            echo "标签 ${RELEASE_TAG} 还没有对应的 GitHub Release，先在 Releases 页面创建" >&2
+            exit 1
+          fi
 
       - name: Package template
         shell: bash

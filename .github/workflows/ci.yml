@@ -1,5 +1,18 @@
 name: ci
 
+# 推送或提交 PR 时运行完整校验，不部署、不接触服务器。
+#
+# 模板使用者只改一处：下方 env 里的 SITE_URL，换成自己站点的地址。
+#
+# 校验分两段：
+#   1. npm run ci 等价于 npm run verify，含类型检查、构建、字体覆盖、测试与
+#      全部产物检查。产物检查会断言 dist/sitemap-*.xml 存在，而站点地图只在
+#      SITE_URL 非空时生成，所以这里必须给地址。
+#   2. check:subpath 以子路径再构建一次。根路径构建抓不到只在子目录部署时
+#      才出现的重复 base，这一步专门拦它。
+#
+# Node 版本优先读 .nvmrc；没有时退回 package.json 的 engines，再退回 24。
+
 on:
   push:
     branches: [main, demo]
@@ -9,8 +22,13 @@ on:
 permissions:
   contents: read
 
+env:
+  # 只写协议与域名，不带路径；子路径由构建时的 base 决定。
+  SITE_URL: https://planetarium1001.github.io
+
 jobs:
-  ci:
+  verify:
+    name: verify
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,7 +44,7 @@ jobs:
             version="$(grep -E '"node"\s*:' package.json | head -n 1 | sed -E 's/.*"node"\s*:\s*"([^"]+)".*/\1/')"
           fi
           if [ -z "$version" ]; then
-            version="22"
+            version="24"
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
@@ -39,16 +57,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # npm run ci 等价于 npm run verify，已包含构建、测试与全部产物守卫。
-      # astro.config.mjs 只在 SITE_URL 非空时注册 sitemap 集成，而产物守卫会断言
-      # dist/sitemap-*.xml 存在，因此 CI 必须提供它。
-      # SITE_URL 只给仓库 owner 的 github.io origin；项目页子路径由构建时的 base 决定。
       - name: Run verification
         run: npm run ci
-        env:
-          SITE_URL: https://planetarium1001.github.io
 
-      # 根路径 verify 抓不到只在子路径部署出现的重复 base：再以
-      # ASTRO_VERSICARIUM_BASE_PATH=/astro-versicarium/ 真实构建一次并扫描 dist。
       - name: Verify subpath build
         run: npm run check:subpath
