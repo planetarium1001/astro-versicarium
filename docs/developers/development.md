@@ -52,6 +52,7 @@
 | `npm run check:home-critical-css` | 检查首页首屏样式快照与样式源文件一致 |
 | `npm run check:admin-editor-emoji-boundary` | 检查编辑器工具栏的 emoji 选择器边界 |
 | `npm run check:prod-artifacts` | 检查构建产物的必需文件、只读后台与链接 |
+| `npm run check:subpath` | 按 `package.json` 的 `homepage` 推导子路径，真实构建并扫描重复 base 与不可解析 URL |
 | `npm run check:font-charset` | 检查字符集文件与子集戳记是否最新 |
 | `npm run check:svelte` | 编译全部 `.svelte` 组件 |
 | `npm run check:image-references` | 检查 Markdown、HTML、frontmatter 与设置里的本地图片引用 |
@@ -70,7 +71,7 @@
 | `npm run font:subset` | 生成 base/DLC 的 WOFF2、CSS 与 `tools/font-manifest.json` |
 | `npm run font:build` | 编排字体生成的完整流程 |
 | `npm run font:check` | 校验清单、文件、哈希、CSS 对应与输入是否过期 |
-| `npm run font:coverage` | 构建后检查页面字符覆盖；`--strict` 用于 `verify` |
+| `npm run font:coverage` | 构建后检查页面字符覆盖；`--strict` 用于 `verify`，并校验 `dist` 角色字符集与 `tools/charset-roles.json` 是否过期 |
 | `npm run font:report` | 输出各页面的字体下载量估算，调试用 |
 
 `predev` 与 `prebuild` 由 npm 生命周期自动触发。`scripts/favicon.mjs` 的生成物写在 `public/images/site/generated/`，标记文件为 `tools/favicon-generated.json` 与 `public/images/site/generated/.favicon-generated.json`；用户放在根目录的 `public/favicon.ico` 不会被覆盖。
@@ -81,7 +82,7 @@
 
 1. `npm run check`：只读源码、设置与已提交的字体资产。
 2. `npm run build`：产出 `dist/`。
-3. `npm run font:coverage -- --strict`：读 `dist/` 与字体清单，只把「源字体有、生成时漏掉」判为失败。
+3. `npm run font:coverage -- --strict`：读 `dist/`、字体清单与 `tools/charset-roles.json`，把「源字体有、生成时漏掉」和「内容变了但字体没重建」都判为失败。
 4. `npm run test:fixtures`：从 `dist/` 刷新 `tests/fixtures/`。
 5. `npm test`：运行 Vitest。
 6. `npm run check:prod-artifacts`：检查产物、sitemap 与后台只读边界。
@@ -151,7 +152,7 @@
 - `public/fonts/base/`：基础分片，分 core、mid、display、meta、latin；`public/fonts/dlc/`：生僻字分片，按 `unicode-range` 下载。
 - `tools/font-manifest.json`：schemaVersion 2，记录 families、faces、targets、inputs 与汇总统计，供 CSS、后台与检查脚本共用。
 
-当前清单（`generatedAt` 为 2026-10-21T10:29:17.420Z）：base 34 个字体文件、2,321,308 字节；DLC 121 个文件、21,469,680 字节；合计 155 个 WOFF2、23,790,988 字节。最大 DLC 分片 239,856 字节，`summary.estimate.commonPageBytes` 为 341,016 字节（333.0 KB）。`npm run font:report` 在现有 `dist/` 的 20 个页面上给出 p50 305.6 KB、p90 319.6 KB、max 319.6 KB，触发 DLC 的页面 0/20；这些数值随内容与构建结果变化，改动后重新运行确认。
+当前清单（`generatedAt` 为 2026-10-22T21:23:54.233Z）：base 33 个字体文件、2,338,700 字节；DLC 82 个文件、21,092,964 字节；合计 115 个 WOFF2、23,431,664 字节。最大 DLC 分片 319,836 字节，`summary.estimate.commonPageBytes` 为 385,348 字节（376.3 KB）。DLC 目标为 240KB，display 安全余量为 300 字。`npm run font:report` 在现有 `dist/` 的 21 个页面上给出 p50 297.8 KB、p90=max 311.8 KB，触发 DLC 的页面 0/21；这些数值随内容与构建结果变化，改动后重新运行确认。
 
 ### 覆盖策略
 
@@ -160,11 +161,11 @@
 - `full`：加载基础字体与 DLC 两张 CSS，生僻字按 `unicode-range` 下载；
 - `common`：只加载基础字体 CSS，生僻字交给系统字体，不请求 DLC。
 
-`src/layouts/BaseLayout.astro` 根据该值决定是否输出 DLC 样式。`font:coverage` 区分「源字体本来没有」与「生成时漏掉」：前者按系统回退处理，后者在 `--strict` 下失败；设计范围外的字符单独列出。
+`src/layouts/BaseLayout.astro` 根据该值决定是否输出 DLC 样式。`font:coverage` 区分「源字体本来没有」与「生成时漏掉」：前者按系统回退处理，后者在 `--strict` 下失败；同时校验 `tools/charset-roles.json` 与当前 `dist` 是否一致，内容变化后没重建字体也会失败。设计范围外的字符单独列出。
 
 源字体本身覆盖不全：Noto Serif SC 与 LXGW WenKai Lite 都只含部分扩展区字符，manifest 的 `sourceCjkRanges` 记录了实际范围。`src/lib/fonts/registry.ts` 只把拉丁等宽字体（JetBrains Mono、Fira Code）注册给 Astro Fonts API，`system-mono` 不产生字体请求。字体选择在 Astro 配置期读取，改 `ui.json` 的字体后要重启开发服务器。
 
-CI 不运行 `font:build`，`public/fonts/`、生成 CSS、`tools/charset-*` 与 `tools/font-manifest.json` 都由维护者提交。改了内容或字体选择后重新生成并一起提交这些文件，否则 `check:font-charset` 与 `font:check` 会失败。
+CI 不运行 `font:build`，`public/fonts/`、生成 CSS、`tools/charset-*` 与 `tools/font-manifest.json` 都由维护者提交。改了内容或字体选择后重新生成并一起提交这些文件，否则 `check:font-charset`、`font:check` 与 `font:coverage --strict` 会失败。
 
 ## 测试组织
 
@@ -206,9 +207,9 @@ CI 不运行 `font:build`，`public/fonts/`、生成 CSS、`tools/charset-*` 与
 
 ## CI 与发布联动
 
-`.github/workflows/ci.yml` 在推送到 `main`、`demo` 或向两者提 PR 时运行：解析 Node 版本，`npm ci`，再以 `SITE_URL=https://planetarium1001.github.io` 执行 `npm run ci`。`SITE_URL` 只给 origin；CI 不设置 `ASTRO_WHONO_BASE_PATH`，所以 CI 产物按根路径构建，Pages 部署时的子路径由 `pages.yml` 推导。
+`.github/workflows/ci.yml` 在推送到 `main`、`demo` 或向两者提 PR 时运行：解析 Node 版本，`npm ci`，再以 `SITE_URL=https://planetarium1001.github.io` 执行 `npm run ci`。`SITE_URL` 只给 origin；CI 不设置 `ASTRO_VERSICARIUM_BASE_PATH`，所以 CI 产物按根路径构建，Pages 部署时的子路径由 `pages.yml` 推导。`ci` 之后还会运行 `npm run check:subpath`：从 `package.json` 的 `homepage` 推导子路径，真实构建一次并扫描重复 base 与不可解析 URL。
 
-`.github/workflows/pages.yml` 在推送到 `demo` 或手动触发时运行：检出 `demo`，推导 `SITE_URL=https://<owner>.github.io` 与 base（仓库名为 `<owner>.github.io` 时用根路径，否则 `/<repo>/`），构建后用 `dist/` 发布 GitHub Pages。
+`.github/workflows/pages.yml` 在推送到 `demo` 或手动触发时运行：检出 `demo`，推导 `SITE_URL=https://<owner>.github.io` 与 base（仓库名为 `<owner>.github.io` 时用根路径，否则 `/<repo>/`），构建后先运行 `node ./scripts/check-deployment-base.mjs` 检查产物，再用 `dist/` 发布 GitHub Pages。
 
 `.github/workflows/release-please.yml` 在推送到 `main` 时运行 Release Please，维护后续版本号与 `CHANGELOG.md` 的变更 PR；`release-please-config.json` 配置 `release-type: node`、`prerelease: true`、`prerelease-type: rc`，当前 `1.0.0-rc.2` 在 `.release-please-manifest.json` 与 `package.json` 中一致。`.github/workflows/release.yml` 在 Release 发布后校验标签与 `package.json` 版本一致，用 `git archive` 打包已跟踪文件为 `astro-versicarium-<version>.zip`，生成 `SHA256SUMS` 并上传到同一个 Release。
 

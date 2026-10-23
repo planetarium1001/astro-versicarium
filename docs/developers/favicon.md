@@ -72,7 +72,7 @@
 | `favicon.ico` | 手工拼装 ICO，内含 16、32、48 三个尺寸 |
 | `site.webmanifest` | 名称、起始路径、主题色与图标清单 |
 
-`site.webmanifest` 的 `start_url` 与 `scope` 由 `ASTRO_WHONO_BASE_PATH` 规范化得到，`name`/`short_name` 取 `site.json` 的 `title`，`background_color` 为 `#fffefc`，`theme_color` 为 `#b91c1c`，图标指向 `icon-192.png` 与 `icon-512.png`。
+`site.webmanifest` 的 `start_url` 与 `scope` 由 `ASTRO_VERSICARIUM_BASE_PATH` 规范化得到，`name`/`short_name` 取 `site.json` 的 `title`，`background_color` 为 `#fffefc`，`theme_color` 为 `#b91c1c`，图标指向 `icon-192.png` 与 `icon-512.png`。
 
 生成记录写入两个文件：`tools/favicon-generated.json`（被跟踪）与 `public/images/site/generated/.favicon-generated.json`。记录内容是各生成文件的存在标记、`rootIco`、`rootIcoHash` 与源图相对路径。
 

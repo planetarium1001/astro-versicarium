@@ -60,7 +60,7 @@
 构建前会推导两个变量：
 
 - `SITE_URL` 是 `https://${GITHUB_REPOSITORY_OWNER}.github.io`。
-- `ASTRO_WHONO_BASE_PATH` 取仓库名：仓库名是 `<owner>.github.io` 时用 `/`，否则用 `/<仓库名>/`。判断时把仓库名与 owner 转小写比较，路径里保留原始仓库名。
+- `ASTRO_VERSICARIUM_BASE_PATH` 取仓库名：仓库名是 `<owner>.github.io` 时用 `/`，否则用 `/<仓库名>/`。判断时把仓库名与 owner 转小写比较，路径里保留原始仓库名。
 
 本仓库得到 `https://planetarium1001.github.io` 与 `/astro-versicarium/`。两个值只在工作流内部生成，不使用仓库变量或 Secrets。
 
@@ -82,7 +82,7 @@
 
 - 触发分支改成自己的发布分支，例如把 `branches: [demo]` 改成 `branches: [main]`。
 - 检出分支同步改掉 `ref: demo`，或删掉该行，使用当前触发分支。
-- `SITE_URL` 与 `ASTRO_WHONO_BASE_PATH` 按实际地址填写：项目页保留 `/<仓库名>/`，用户主页仓库与自定义域名用 `/`。
+- `SITE_URL` 与 `ASTRO_VERSICARIUM_BASE_PATH` 按实际地址填写：项目页保留 `/<仓库名>/`，用户主页仓库与自定义域名用 `/`。
 
 `ci.yml` 里固定的 `SITE_URL` 也换成自己的站点 origin；它只服务于构建检查，不参与部署。`release-please.yml` 与 `release.yml` 只服务主题发版，自己的站点不需要保留。
 
@@ -95,7 +95,7 @@
   run: npm run build
   env:
     SITE_URL: https://example.com
-    ASTRO_WHONO_BASE_PATH: /
+    ASTRO_VERSICARIUM_BASE_PATH: /
 ```
 
 权限保留 `pages: write` 与 `id-token: write`；上传与部署继续使用 `actions/upload-pages-artifact@v3` 与 `actions/deploy-pages@v4`，部署步骤继续使用 `github-pages` 环境。
@@ -120,7 +120,7 @@
 
 ### 构建
 
-先按[站点地址与子目录](#站点地址与子目录)确定 `SITE_URL` 与子目录设置，再运行 `npm run build`，产物在 `dist/`。站点放在域名根目录时不用设置 `ASTRO_WHONO_BASE_PATH`；放在子目录时设置成对应的路径，例如 `/blog/`。
+先按[站点地址与子目录](#站点地址与子目录)确定 `SITE_URL` 与子目录设置，再运行 `npm run build`，产物在 `dist/`。站点放在域名根目录时不用设置 `ASTRO_VERSICARIUM_BASE_PATH`；放在子目录时设置成对应的路径，例如 `/blog/`。
 
 ### 上传
 
@@ -128,7 +128,7 @@
 
 ### Nginx
 
-Nginx 的 `root` 指向站点目录，`index` 设为 `index.html`。站点按目录生成页面，文章地址对应目录里的 `index.html`，不需要额外的重写规则。改完配置先用 `nginx -t` 检查，再重新加载。
+Nginx 的 `root` 指向站点目录，`index` 设为 `index.html`。站点按目录生成页面，文章地址对应目录里的 `index.html`，不需要额外的重写规则。改完配置先用 `nginx -t` 检查，再重新加载。`/_astro/` 与 `/fonts/` 下的文件名带内容哈希，建议在服务端配置长缓存；`public/_headers` 只对 Netlify/Cloudflare Pages 等宿主生效，nginx 不读取。
 
 ### HTTPS
 
@@ -148,11 +148,11 @@ Nginx 的 `root` 指向站点目录，`index` 设为 `index.html`。站点按目
 
 `SITE_URL` 是站点的完整地址，例如 `https://example.com`。它用于生成订阅地址、分享图和页面里的绝对链接；不设置会退回占位域名，并被发布检查拦下。
 
-`ASTRO_WHONO_BASE_PATH` 用于站点放在子目录的情况。部署到 `https://example.com/blog/` 时设为 `/blog/`，不设置就是根路径 `/`。
+`ASTRO_VERSICARIUM_BASE_PATH` 用于站点放在子目录的情况。部署到 `https://example.com/blog/` 时设为 `/blog/`，不设置就是根路径 `/`。
 
 ```bash
 SITE_URL=https://example.com npm run build
-SITE_URL=https://example.com ASTRO_WHONO_BASE_PATH=/blog/ npm run build
+SITE_URL=https://example.com ASTRO_VERSICARIUM_BASE_PATH=/blog/ npm run build
 ```
 
 GitHub Pages 的项目页会自动推导这两个值，一般不用手动填；绑定自定义域名后，按工作流注释改成固定域名和 `/`。

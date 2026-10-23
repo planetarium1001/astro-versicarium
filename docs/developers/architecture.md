@@ -64,7 +64,7 @@
 
 归档在 `src/lib/archive.ts`：`getArchiveRows()` 合并博客版本（受 `versionMode` 控制全部或最新）、项目文档版本与 devlog，不包含动态；排序为日期降序、`versionOrder` 降序、ID 升序；`groupArchiveRows()` 按年月分组。`versionMode` 来自 `page.archive.versionMode`。`/archive/`、`/blog/`、`/bits/` 各自的 `index.json` 为浏览器端筛选、搜索与计数提供数据；分页由页面上的 `data-page-size` 与已渲染条目计算。其中 `/blog/index.json` 的 `isLatest` 也用于构建后的 sitemap 过滤。
 
-站内链接统一走部署 base：`ASTRO_WHONO_BASE_PATH` 在 `astro.config.mjs` 中归一化为 `/` 或 `/<segment>/`，`trailingSlash` 固定为 `always`。`withDeploymentBase()`（`src/plugins/markdown-pipeline.mjs`）与 `createWithBase()`（`src/utils/format.ts`）分别处理 Markdown 正文与源码链接。`SITE_URL` 为空时不注册 sitemap、robots 不写 sitemap 行、canonical 与 og:url 省略。
+站内链接统一走部署 base：`ASTRO_VERSICARIUM_BASE_PATH` 在 `astro.config.mjs` 中归一化为 `/` 或 `/<segment>/`，`trailingSlash` 固定为 `always`。`withDeploymentBase()`（`src/plugins/markdown-pipeline.mjs`）与 `createWithBase()`（`src/utils/format.ts`）分别处理 Markdown 正文与源码链接；`createWithBase()` 对内容集合 `image()` 返回的、已经带 base 的 URL 幂等，避免重复拼接。`SITE_URL` 为空时不注册 sitemap、robots 不写 sitemap 行、canonical 与 og:url 省略。
 
 ## 开发与生产运行模式
 
@@ -143,6 +143,6 @@
 2. 五个集合的加载器读取内容，渲染 Markdown 并生成页面、`/blog|bits|archive/index.json`、RSS、robots 与 sitemap。
 3. `astro:build:done` 阶段复制被引用的内容附件，并按 `/blog/index.json` 的 `isLatest` 允许列表删除 sitemap 中的历史版本与日期别名 URL。
 
-`npm run verify` 的顺序固定为：`check`（类型与 Svelte 检查、后台源码边界、首页 critical CSS、图片引用、字体字符集与字体检查）→ `build` → `font:coverage --strict` → `test:fixtures` → `test` → `check:prod-artifacts` → `check:layout-geometry` → `check:touch-targets` → `check:viewport-overflow`。`SITE_URL` 与 `ASTRO_WHONO_BASE_PATH` 的行为见 [deployment.md](deployment.md)，主题更新对站点自有路径的保护见 [upstream.md](upstream.md)。
+`npm run verify` 的顺序固定为：`check`（类型与 Svelte 检查、后台源码边界、首页 critical CSS、图片引用、字体字符集与字体检查）→ `build` → `font:coverage --strict` → `test:fixtures` → `test` → `check:prod-artifacts` → `check:layout-geometry` → `check:touch-targets` → `check:viewport-overflow`。CI 在 verify 之后额外运行 `npm run check:subpath`，以子路径真实构建扫描重复 base 与不可解析 URL。`SITE_URL` 与 `ASTRO_VERSICARIUM_BASE_PATH` 的行为见 [deployment.md](deployment.md)，主题更新对站点自有路径的保护见 [upstream.md](upstream.md)。
 
 命令细节与测试组织见 [development.md](development.md)，后台页面与设置字段见 [admin-console.md](admin-console.md)。

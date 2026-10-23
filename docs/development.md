@@ -44,7 +44,7 @@ SITE_URL=https://example.com npm run build
 站点部署在子目录时（例如 `https://example.com/blog/`），再加一项子目录设置：
 
 ```bash
-SITE_URL=https://example.com ASTRO_WHONO_BASE_PATH=/blog/ npm run build
+SITE_URL=https://example.com ASTRO_VERSICARIUM_BASE_PATH=/blog/ npm run build
 ```
 
 构建产物可以放到任意静态托管。想在本地确认产物的效果，运行：
@@ -84,7 +84,7 @@ npm run dev -- --port 4322
 **Git Bash 把路径改写了。** 在 Windows 的 Git Bash 里设置子目录时，`/blog/` 会被改写成 Windows 路径，构建报错。在命令前加 `MSYS_NO_PATHCONV=1`：
 
 ```bash
-MSYS_NO_PATHCONV=1 SITE_URL=https://example.com ASTRO_WHONO_BASE_PATH=/blog/ npm run build
+MSYS_NO_PATHCONV=1 SITE_URL=https://example.com ASTRO_VERSICARIUM_BASE_PATH=/blog/ npm run build
 ```
 
 **重新生成字体需要额外工具。** 只有改动内容或字体后重新生成字体（`npm run font:build`）才需要在本机安装 Python 与字体处理工具；日常开发和构建不需要，具体步骤见开发者版。

@@ -11,7 +11,7 @@
 - 上游仓库是 [cxro/astro-whono](https://github.com/cxro/astro-whono)。
 - `LICENSE` 保留 cxro 的版权声明，另有一行 Planetarium (modifications)，MIT 条文未改。
 - 本仓库的提交历史从 `66ded04`（2026-01-17，cxro）开始，cxro 的提交止于 `b6bc4f9`（2026-08-13）；`git rev-parse 5b0914d^` 为 `b6bc4f9`，即 `5b0914d`（2026-10-02，Planetarium）紧跟其后，从这一提交起由本项目维护。
-- 部分兼容名称仍在使用。用户可见的是 `ASTRO_WHONO_BASE_PATH`，站点时区环境变量是 `SITE_TIMEZONE`；代码里的 Shiki 处理名是 `astro-whono-code-toolbar`。改用户可见的名称会破坏现有站点配置，内部名只影响代码。
+- 部分兼容名称仍在使用。部署子路径变量已改名为 `ASTRO_VERSICARIUM_BASE_PATH`，旧名 `ASTRO_WHONO_BASE_PATH` 不再读取；站点时区环境变量仍是 `SITE_TIMEZONE`；代码里的 Shiki 处理名是 `astro-whono-code-toolbar`。站点同步主题后需要把构建环境与文档里的变量名一起改掉。
 
 ## 相对上游的结构
 
