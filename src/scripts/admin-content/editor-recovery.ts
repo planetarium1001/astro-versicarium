@@ -1,4 +1,7 @@
 import { createModalDialogFocusController } from '../admin-console/modal-dialog-focus';
+// 共享版 isRecord 排除数组；这里判定的是 Event、event.target 与 detail 等宿主对象，
+// 不会是数组，因此与原本地实现行为一致。
+import { isRecord } from '../../lib/is-record';
 
 const COMMAND = 'npm run dev:clean';
 const CLEANUP_KEY = '__astroWhonoAdminEditorRecoveryCleanup';
@@ -29,9 +32,6 @@ const EDITOR_MODULE_PATTERNS = [
   '/node_modules/.vite/deps/',
   'emoji-picker-element'
 ];
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
 
 const getNonEmptyString = (value: unknown): string | null =>
   typeof value === 'string' && value.length > 0 ? value : null;

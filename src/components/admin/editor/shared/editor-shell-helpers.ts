@@ -1,5 +1,4 @@
 import {
-  isRecord,
   type AdminContentWriteResult
 } from '../../../../scripts/admin-content/entry-transport';
 import type { AdminEditorDefaults } from '../../../../lib/admin-console/ui-prefs-keys';
@@ -9,6 +8,7 @@ import {
   type MarkdownHighlightTheme
 } from '../markdown/editor-markdown-highlight';
 import type { EditorOutlineTab } from '../markdown/editor-outline-helpers';
+import { isRecord } from '../../../../lib/is-record';
 
 export type StatusState = 'idle' | 'loading' | 'ready' | 'ok' | 'warn' | 'error';
 export type EditorScrollSource = 'body' | 'preview';

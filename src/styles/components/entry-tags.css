@@ -632,9 +632,7 @@
   gap: 8px;
   position: relative;
   flex: 0 1 auto;
-/* 字号 13px，内容视觉高度 28px（34px 容器 − 6px）；可点高度 44px 由 min-height: var(--tap-min-h) 撑起。
-   不用 ::before 覆盖层撑热区：该伪元素在构建产物中会被移除。 */
-  /* 视觉高度 28px（与原年份胶囊一致），可点高度 44px 由下面的 ::before 覆盖层提供 */
+/* 视觉高度 28px；44px 触控热区由 .entry-tag-option::before 覆盖层撑起，不占布局，check-touch-targets 按它判定 */
   height: 28px;
   max-width: 100%;
   padding: 0 12px;

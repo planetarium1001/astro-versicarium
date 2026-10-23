@@ -11,6 +11,11 @@ import {
 import { readRawFrontmatter } from '../content-entry-files';
 import { getMimeTypeFromFileName } from './image-cloud-storage';
 import { IMAGE_LOCAL_EXT_RE } from './image-params';
+import { getProjectRoot } from '../project-root';
+import {
+  toAdminContentAbsoluteProjectPath,
+  toAdminContentRelativeProjectPath
+} from './content-entry-source';
 
 /**
  * 媒体管理器索引：把 content/ 条目目录与 public/images/ 条目图片统一成
@@ -144,15 +149,6 @@ const SHARED_LABEL = '共享资源';
 const DEFAULT_LIMIT = 40;
 const MAX_LIMIT = 100;
 
-const getProjectRoot = (): string =>
-  process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
-
-const toAbsolutePath = (relativePath: string): string =>
-  path.join(getProjectRoot(), ...relativePath.split('/'));
-
-const toRelativePath = (absolutePath: string): string =>
-  path.relative(getProjectRoot(), absolutePath).replace(/\\/g, '/');
-
 const normalizeText = (value: unknown): string =>
   typeof value === 'string' ? value.trim() : '';
 
@@ -166,7 +162,7 @@ const isIgnoredFile = (fileName: string): boolean =>
 const toPreviewSrc = (assetPath: string): string | null => {
   if (assetPath.startsWith('public/')) return `/${assetPath.slice('public/'.length)}`;
   if (assetPath.startsWith('content/')) {
-    return `/@fs/${encodeURI(toAbsolutePath(assetPath))}`;
+    return `/@fs/${encodeURI(toAdminContentAbsoluteProjectPath(assetPath))}`;
   }
   return null;
 };
@@ -221,7 +217,7 @@ const readEntryMeta = async (
   return {
     collection,
     entryId,
-    dirRel: toRelativePath(directory),
+    dirRel: toAdminContentRelativeProjectPath(directory),
     series,
     seriesLabel: series,
     version: entryId,
@@ -396,7 +392,7 @@ const resolveReferencePath = (
   if (!absolutePath) return null;
   const contentRoot = path.join(getProjectRoot(), CONTENT_ROOT);
   if (absolutePath !== contentRoot && !absolutePath.startsWith(`${contentRoot}${path.sep}`)) return null;
-  return toRelativePath(absolutePath);
+  return toAdminContentRelativeProjectPath(absolutePath);
 };
 
 /** 统计每个资源被 content/ Markdown 引用的次数。 */
@@ -471,7 +467,7 @@ const loadAssets = async (
   for (const collection of ADMIN_CONTENT_COLLECTION_KEYS) {
     const collectionRoot = path.join(contentRoot, collection);
     for (const filePath of await walkFiles(collectionRoot)) {
-      const relativePath = toRelativePath(filePath);
+      const relativePath = toAdminContentRelativeProjectPath(filePath);
       if (MARKDOWN_EXT_RE.test(relativePath)) continue;
       const relativeToCollection = relativePath.slice(`content/${collection}/`.length);
       // _shared 是 collection 级共享资源目录，不属于任何条目。
@@ -512,7 +508,7 @@ const loadAssets = async (
   // public/images/<collection>/<entry>/...：兼容存量的条目图片目录。
   const publicImagesRoot = path.join(getProjectRoot(), 'public', 'images');
   for (const filePath of await walkFiles(publicImagesRoot)) {
-    const relativePath = toRelativePath(filePath);
+    const relativePath = toAdminContentRelativeProjectPath(filePath);
     const resolved = findEntryForPublicPath(relativePath, entries);
     if (!resolved || !isImageFile(relativePath)) continue;
     const fileName = path.posix.basename(relativePath);
@@ -544,7 +540,7 @@ const loadAssets = async (
     let size = 0;
     let mtimeMs: number | null = null;
     try {
-      const fileStat = await stat(toAbsolutePath(asset.path));
+      const fileStat = await stat(toAdminContentAbsoluteProjectPath(asset.path));
       size = fileStat.size;
       mtimeMs = fileStat.mtimeMs;
     } catch {
@@ -1043,9 +1039,3 @@ export const getAdminMediaListRequest = (searchParams: URLSearchParams): AdminMe
     page: Number.parseInt(searchParams.get('page') ?? '1', 10),
     limit: Number.parseInt(searchParams.get('limit') ?? String(DEFAULT_LIMIT), 10)
   });
-
-export const getAdminMediaFilterLabels = (): Record<AdminMediaReferenceStatus, string> => ({
-  referenced: '已引用',
-  unreferenced: '未引用',
-  orphan: '孤儿'
-});

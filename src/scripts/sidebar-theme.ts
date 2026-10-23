@@ -1,3 +1,5 @@
+import { prefersReducedMotion } from './input-modality';
+
 const THEME_KEY = 'theme';
 const THEME_MODE_KEY = 'theme-mode';
 type Theme = 'light' | 'dark';
@@ -28,7 +30,9 @@ const readThemeMode = (): ThemeMode => {
 
     const legacyTheme = localStorage.getItem(THEME_KEY);
     if (isTheme(legacyTheme)) return legacyTheme;
-  } catch (_) {}
+  } catch (_) {
+    // 隐私模式/禁用存储：读不到就当作没有偏好，返回 system。
+  }
 
   return 'system';
 };
@@ -41,7 +45,9 @@ const writeThemeMode = (mode: ThemeMode) => {
     } else {
       localStorage.setItem(THEME_KEY, mode);
     }
-  } catch (_) {}
+  } catch (_) {
+    // 隐私模式/禁用存储：写不进去也继续切主题，仅本次访问生效。
+  }
 };
 
 const getNextThemeMode = (mode: ThemeMode): ThemeMode => {
@@ -112,10 +118,6 @@ const RIPPLE_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
 const RIPPLE_ORIGIN_OFFSET_LIMIT_PX = 160;
 // 透明探针元素在过渡期间以命名快照存在，用于读取快照坐标系的位置。
 const RIPPLE_PROBE_NAME = 'theme-ripple-origin';
-
-const prefersReducedMotion = () =>
-  typeof window.matchMedia === 'function'
-  && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const getStartViewTransition = (): StartViewTransitionLike | null => {
   const candidate = (document as unknown as { startViewTransition?: unknown }).startViewTransition;

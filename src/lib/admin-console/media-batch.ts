@@ -2,6 +2,8 @@ import { existsSync } from 'node:fs';
 import { readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { CONTENT_ROOT } from '../../../site.config.mjs';
+import { getProjectRoot } from '../project-root';
+import { toAdminContentAbsoluteProjectPath } from './content-entry-source';
 
 /**
  * 媒体批量操作：重命名 / 删除 / 移动。
@@ -47,9 +49,6 @@ export class AdminMediaBatchError extends Error {
 }
 
 const MARKDOWN_EXT_RE = /\.(?:md|mdx)$/i;
-const getProjectRoot = (): string =>
-  process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
-
 /** 规范化并校验媒体路径；只允许 content/ 或 public/images/ 下的文件。 */
 export const normalizeAdminMediaPath = (value: string): string => {
   const normalized = (value ?? '')
@@ -87,11 +86,8 @@ export const normalizeAdminMediaPath = (value: string): string => {
   return normalized;
 };
 
-const toAbsolutePath = (relativePath: string): string =>
-  path.join(getProjectRoot(), ...relativePath.split('/'));
-
 const assertExistingFile = async (relativePath: string): Promise<void> => {
-  const absolutePath = toAbsolutePath(relativePath);
+  const absolutePath = toAdminContentAbsoluteProjectPath(relativePath);
   if (!existsSync(absolutePath)) {
     throw new AdminMediaBatchError('not-found', 404, `文件不存在：${relativePath}`);
   }
@@ -153,7 +149,7 @@ const normalizeTargetDirectory = (value: string): string => {
 };
 
 const assertTargetDirectory = async (relativePath: string): Promise<void> => {
-  const absolutePath = toAbsolutePath(relativePath);
+  const absolutePath = toAdminContentAbsoluteProjectPath(relativePath);
   if (!existsSync(absolutePath)) {
     throw new AdminMediaBatchError('target-not-found', 404, `目标目录不存在：${relativePath}`);
   }
@@ -187,7 +183,7 @@ const findContentEntryRoot = async (relativePath: string): Promise<string | null
   let directory = path.posix.dirname(relativePath);
   while (directory.startsWith(`${CONTENT_ROOT}/`) && directory !== CONTENT_ROOT) {
     try {
-      const entries = await readdir(toAbsolutePath(directory), { withFileTypes: true });
+      const entries = await readdir(toAdminContentAbsoluteProjectPath(directory), { withFileTypes: true });
       if (entries.some((entry) => entry.isFile() && MARKDOWN_EXT_RE.test(entry.name))) {
         return directory;
       }
@@ -262,7 +258,7 @@ const runBatchItem = async (
   const sourceDirectory = path.posix.dirname(sourcePath);
 
   if (action === 'delete') {
-    await rm(toAbsolutePath(sourcePath), { force: false });
+    await rm(toAdminContentAbsoluteProjectPath(sourcePath), { force: false });
     return { path: sourcePath, action, ok: true };
   }
 
@@ -272,10 +268,10 @@ const runBatchItem = async (
       throw new AdminMediaBatchError('no-op', 400, `新文件名与原文件名相同：${sourcePath}`);
     }
     const targetPath = `${sourceDirectory}/${fileName}`;
-    if (existsSync(toAbsolutePath(targetPath))) {
+    if (existsSync(toAdminContentAbsoluteProjectPath(targetPath))) {
       throw new AdminMediaBatchError('target-exists', 409, `目标文件已存在：${targetPath}`);
     }
-    await rename(toAbsolutePath(sourcePath), toAbsolutePath(targetPath));
+    await rename(toAdminContentAbsoluteProjectPath(sourcePath), toAdminContentAbsoluteProjectPath(targetPath));
     await rewriteReferences(sourcePath, targetPath);
     return { path: sourcePath, action, ok: true, to: targetPath };
   }
@@ -286,10 +282,10 @@ const runBatchItem = async (
   if (targetPath === sourcePath) {
     throw new AdminMediaBatchError('no-op', 400, `文件已经在该目录：${sourcePath}`);
   }
-  if (existsSync(toAbsolutePath(targetPath))) {
+  if (existsSync(toAdminContentAbsoluteProjectPath(targetPath))) {
     throw new AdminMediaBatchError('target-exists', 409, `目标文件已存在：${targetPath}`);
   }
-  await rename(toAbsolutePath(sourcePath), toAbsolutePath(targetPath));
+  await rename(toAdminContentAbsoluteProjectPath(sourcePath), toAdminContentAbsoluteProjectPath(targetPath));
   await rewriteReferences(sourcePath, targetPath);
   return { path: sourcePath, action, ok: true, to: targetPath };
 };

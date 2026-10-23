@@ -183,7 +183,9 @@ const adminUiPrefsScriptHref = isDevAdminPage
         try {
           storedMode = localStorage.getItem(modeKey);
           legacyTheme = localStorage.getItem(themeKey);
-        } catch (_) {}
+        } catch (_) {
+          // 隐私模式/禁用存储：读不到偏好就按 system 走，首屏直接渲染默认主题。
+        }
         const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         const mode = storedMode === 'system' || storedMode === 'dark' || storedMode === 'light'
           ? storedMode
@@ -210,11 +212,19 @@ const adminUiPrefsScriptHref = isDevAdminPage
           if (!isPageScopedAdminSidebar) {
             let storedNavMode = null;
             let storedDefaultNavMode = null;
-            try { storedNavMode = sessionStorage.getItem(sidebarNavModeKey); } catch (_) {}
+            try {
+              storedNavMode = sessionStorage.getItem(sidebarNavModeKey);
+            } catch (_) {
+              // sessionStorage 不可用时视为没有会话内选择，继续回退到 localStorage。
+            }
             if (storedNavMode === 'admin' || storedNavMode === 'public') {
               root.dataset.adminNavMode = storedNavMode;
             } else {
-              try { storedDefaultNavMode = localStorage.getItem(defaultSidebarNavModeKey); } catch (_) {}
+              try {
+                storedDefaultNavMode = localStorage.getItem(defaultSidebarNavModeKey);
+              } catch (_) {
+                // 隐私模式禁用存储：读不到默认值就按 public 渲染导航，不阻塞首屏。
+              }
               root.dataset.adminNavMode = storedDefaultNavMode === 'admin' ? 'admin' : 'public';
             }
           }
@@ -230,7 +240,11 @@ const adminUiPrefsScriptHref = isDevAdminPage
           }
 
           let storedShowTopNav = null;
-          try { storedShowTopNav = localStorage.getItem(showTopNavKey); } catch (_) {}
+          try {
+            storedShowTopNav = localStorage.getItem(showTopNavKey);
+          } catch (_) {
+            // 隐私模式禁用存储：读不到开关值就按「不显示顶栏」渲染。
+          }
           if (storedShowTopNav === 'true') {
             root.dataset.adminShowTopNav = 'true';
           } else {

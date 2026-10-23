@@ -8,6 +8,7 @@ import {
   normalizeMarkdownImageSource
 } from './blog-image-blocks';
 import { collectBlogGalleryImageSources } from './blog-gallery-blocks';
+import { getProjectRoot } from '../project-root';
 
 type MarkdownBodyLocalImageReference = {
   kind: 'markdown' | 'figure' | 'gallery';
@@ -35,9 +36,6 @@ const parseSrcsetCandidates = (srcset: string): string[] =>
     .split(',')
     .map((candidate) => candidate.trim().split(/\s+/, 1)[0]?.trim() ?? '')
     .filter(Boolean);
-
-const getProjectRoot = (): string =>
-  process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
 
 type LocalImagePathPart = {
   /**

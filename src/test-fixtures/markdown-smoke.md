@@ -1,0 +1,52 @@
+---
+title: Markdown Smoke Fixture
+---
+
+# Markdown Smoke Fixture
+
+## Callout
+
+:::tip[一个小建议]
+这里是 smoke fixture 的 callout 内容。
+:::
+
+## Code Block
+
+```js
+export const smoke = 'ok';
+console.log(smoke);
+```
+
+## Math
+
+Inline math $$x + y$$ should render as KaTeX.
+
+$$
+x^2 + y^2 = z^2
+$$
+
+## Figure
+
+<figure class="figure figure--md figure--left">
+  <picture>
+    <source srcset="/og-default.png" type="image/webp" />
+    <img src="/og-default.png" alt="Smoke fixture standalone figure" />
+  </picture>
+  <figcaption class="figure-caption">Smoke fixture standalone figure</figcaption>
+</figure>
+
+## Gallery
+
+<ul class="gallery cols-2">
+  <li>
+    <figure>
+      <img src="/og-default.png" alt="Smoke fixture gallery item 1" />
+      <figcaption>Smoke fixture gallery item 1</figcaption>
+    </figure>
+  </li>
+  <li>
+    <figure>
+      <img src="/og-default.png" alt="Smoke fixture gallery item 2" />
+    </figure>
+  </li>
+</ul>

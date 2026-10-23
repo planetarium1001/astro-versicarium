@@ -45,6 +45,7 @@ import {
   listAdminCloudStorageImages,
   type AdminImageCloudListItem
 } from './image-cloud-storage';
+import { getProjectRoot } from '../project-root';
 
 export type { AdminImageBrowseGroup, AdminImageOrigin, AdminImageScopeKey } from './image-contract';
 export type { AdminImageScopeIndex } from './image-browse';
@@ -76,22 +77,6 @@ type AdminImageOwnerOption = {
   value: string;
   label: string;
   count: number;
-};
-
-export type AdminImageBrowseIndexItem = {
-  path: string;
-  origin: AdminImageOrigin;
-  fileName: string;
-  owner: string | null;
-  ownerLabel: string | null;
-  browseGroup: Exclude<AdminImageBrowseGroup, 'all'>;
-  browseGroupLabel: string;
-  browseSubgroup: string;
-  browseSubgroupLabel: string | null;
-  preferredValue: string | null;
-  previewSrc: string | null;
-  size: number | null;
-  mimeType: string | null;
 };
 
 export type AdminImageListItem = {
@@ -250,8 +235,6 @@ const adminImageInspectionMetaPendingLoads = new Map<string, Promise<AdminImageI
 const adminImageScopeIndexCache = new Map<string, AdminImageShortCacheEntry<AdminImageScopeIndex>>();
 const adminImageScopeIndexPendingLoads = new Map<string, Promise<AdminImageScopeIndex>>();
 
-export const getProjectRoot = (): string =>
-  process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
 const toAbsoluteAssetPath = (assetPath: string): string => path.join(getProjectRoot(), ...assetPath.split('/'));
 const getAdminImageCacheKey = (...parts: string[]): string => `${getProjectRoot()}::${parts.join('::')}`;
 
@@ -808,25 +791,6 @@ const listAdminImageBrowseAssets = async (): Promise<AdminImageBrowseAsset[]> =>
 const withoutCloudBrowseGroupOption = (
   options: readonly AdminImageBrowseFilterOption[]
 ): AdminImageBrowseFilterOption[] => options.filter((option) => option.value !== 'cloud');
-
-export const listAdminImageBrowseIndex = async (): Promise<AdminImageBrowseIndexItem[]> => {
-  const browseAssets = await listAdminImageBrowseAssets();
-  return browseAssets.map((asset) => ({
-    path: asset.path,
-    origin: asset.origin,
-    fileName: asset.fileName,
-    owner: asset.owner,
-    ownerLabel: asset.ownerLabel,
-    browseGroup: asset.browseGroup,
-    browseGroupLabel: asset.browseGroupLabel,
-    browseSubgroup: asset.browseSubgroup,
-    browseSubgroupLabel: asset.browseSubgroupLabel,
-    preferredValue: asset.preferredValue,
-    previewSrc: getPreviewSrcFromPath(asset.path),
-    size: asset.origin === 'cloud' ? asset.cloudMeta?.size ?? null : null,
-    mimeType: asset.origin === 'cloud' ? asset.cloudMeta?.mimeType ?? null : null
-  }));
-};
 
 const createAdminImageScopeIndex = async (
   browseAssets: readonly AdminImageBrowseAsset[]

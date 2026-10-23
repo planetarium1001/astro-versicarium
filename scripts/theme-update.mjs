@@ -1,0 +1,251 @@
+#!/usr/bin/env node
+/**
+ * 从主题仓库同步更新：按 theme.json 的仓库与基准提交做三方合并，站点自有路径不覆盖。
+ *
+ *   npm run theme:update                        合并并更新 theme.json 的基准提交
+ *   npm run theme:update -- --check             只报告变更，不写入
+ *   npm run theme:update -- --include-fonts     同时合并主题生成的字体资产/清单（演示站用）
+ */
+
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import process from 'node:process';
+import { CONTENT_ROOT } from '../site.config.mjs';
+
+const ROOT = process.cwd();
+const THEME_MANIFEST = path.join(ROOT, 'theme.json');
+const CHECK_ONLY = process.argv.includes('--check');
+/** 主题演示站可显式把生成的字体资产/清单也纳入合并；普通站点仍保留站点自有字体。 */
+const INCLUDE_FONTS = process.argv.includes('--include-fonts');
+
+/** 站点自有路径：主题更新不覆盖这些文件，只在报告中列出。 */
+const SITE_OWNED_PREFIXES = [
+  `${CONTENT_ROOT}/`,
+  'src/data/settings/',
+  'public/images/',
+  'public/author/',
+  'public/fonts/',
+  'tools/',
+  'tests/fixtures/'
+];
+/** `--include-fonts` 时从站点自有路径中放行的主题字体文件。 */
+const THEME_FONT_PATHS = [
+  'public/fonts/',
+  'tools/font-sources.json',
+  'tools/font-manifest.json',
+  'tools/charset-base.txt',
+  'tools/charset-common.txt',
+  'tools/charset-common.sha256',
+  'tools/charset-roles.json',
+  'tools/charset-frequency.txt'
+];
+const SITE_OWNED_FILES = new Set(['README.md', 'theme.json', '.github/workflows/pages.yml']);
+
+const isThemeFontPath = (filePath) => THEME_FONT_PATHS.some((prefix) => filePath.startsWith(prefix));
+
+const isSiteOwned = (filePath) =>
+  !(INCLUDE_FONTS && isThemeFontPath(filePath))
+  && (
+    SITE_OWNED_FILES.has(filePath)
+    || SITE_OWNED_PREFIXES.some((prefix) => filePath.startsWith(prefix))
+  );
+
+/** 字体清单等生成物可能超过 spawnSync 默认 1 MB 输出上限，超限会被当成文件删除。 */
+const GIT_MAX_BUFFER = 64 * 1024 * 1024;
+
+const runGit = (args, encoding = 'utf8') =>
+  spawnSync('git', args, { cwd: ROOT, encoding, maxBuffer: GIT_MAX_BUFFER });
+
+const git = (args, { allowFailure = false } = {}) => {
+  const result = runGit(args);
+  if (result.status !== 0 && !allowFailure) {
+    const detail = (result.stderr || result.stdout || '').trim();
+    throw new Error(`git ${args.join(' ')} failed: ${detail}`);
+  }
+  return result.status === 0 ? result.stdout : '';
+};
+
+const readManifest = () => {
+  if (!existsSync(THEME_MANIFEST)) {
+    throw new Error('missing theme.json: this repository is not tracked as a theme instance');
+  }
+  const manifest = JSON.parse(readFileSync(THEME_MANIFEST, 'utf8'));
+  if (!manifest.repository || !manifest.branch || !manifest.commit) {
+    throw new Error('theme.json requires repository, branch and commit fields');
+  }
+  return manifest;
+};
+
+/** 取某个提交下的文件内容；文件不存在返回 null。二进制按 Buffer 取。 */
+const readBlob = (commit, filePath, binary = false) => {
+  const result = runGit(['show', `${commit}:${filePath}`], binary ? null : 'utf8');
+  return result.status === 0 ? result.stdout : null;
+};
+
+const readWorktree = (filePath, binary = false) => {
+  const absolute = path.join(ROOT, filePath);
+  return existsSync(absolute) ? readFileSync(absolute, binary ? null : 'utf8') : null;
+};
+
+/** git 的 numstat 用 -/- 标记二进制文件。 */
+const detectBinaryPaths = (baseCommit, headCommit) => {
+  const paths = new Set();
+  for (const line of git(['diff', '--numstat', baseCommit, headCommit]).split('\n')) {
+    const [added, deleted, ...rest] = line.trim().split(/\t/);
+    if (added === '-' && deleted === '-' && rest.length > 0) paths.add(rest.at(-1));
+  }
+  return paths;
+};
+
+/** 二进制文件无法三方合并：一边未改动就取另一边，双方都改过则保留站点版本并报冲突。 */
+const mergeBinary = (base, ours, theirs) => {
+  const unchanged = (a, b) => a !== null && b !== null && a.equals(b);
+  if (ours === null) return { content: theirs, conflicted: false };
+  if (theirs === null) return { content: null, conflicted: false };
+  // 基准不存在、或双方已是同一份内容（例如主题新增的资源提交站点已取过）视为无差异
+  if (unchanged(ours, theirs)) return { content: ours, conflicted: false };
+  if (unchanged(ours, base)) return { content: theirs, conflicted: false };
+  if (unchanged(theirs, base)) return { content: ours, conflicted: false };
+  return { content: ours, conflicted: true };
+};
+
+/** 站点侧是否与基准一致；文本比对字符串，二进制比对字节。 */
+const isUnchangedFromBase = (ours, base, binary) => {
+  if (binary) {
+    if (ours === null || base === null) return ours === null && base === null;
+    return ours.equals(base);
+  }
+  return ours === base;
+};
+
+/** 三方合并；返回合并结果与是否冲突。无基准时退化为取主题版本。 */
+const mergeFile = (filePath, base, ours, theirs, scratchDir) => {
+  if (ours === null) return { content: theirs, conflicted: false };
+  if (theirs === null) return { content: null, conflicted: false };
+  if (ours === base) return { content: theirs, conflicted: false };
+  if (theirs === base) return { content: ours, conflicted: false };
+
+  const stamp = filePath.replaceAll('/', '_');
+  const oursPath = path.join(scratchDir, `${stamp}.ours`);
+  const basePath = path.join(scratchDir, `${stamp}.base`);
+  const theirsPath = path.join(scratchDir, `${stamp}.theirs`);
+  writeFileSync(oursPath, ours);
+  writeFileSync(basePath, base ?? '');
+  writeFileSync(theirsPath, theirs);
+
+  const result = spawnSync(
+    'git',
+    ['merge-file', '-p', '--diff3', oursPath, basePath, theirsPath],
+    { encoding: 'utf8' }
+  );
+  if (result.error) throw result.error;
+
+  return { content: result.stdout, conflicted: result.status !== 0 };
+};
+
+const main = async () => {
+  const manifest = readManifest();
+  const { repository, branch, commit: baseCommit } = manifest;
+
+  if (git(['status', '--porcelain']).trim()) {
+    throw new Error('working tree is not clean; commit or stash changes before updating');
+  }
+
+  git(['fetch', '--no-tags', '--force', repository, branch]);
+  const headCommit = git(['rev-parse', 'FETCH_HEAD']).trim();
+
+  if (headCommit === baseCommit) {
+    console.log(`[theme:update] 已是最新：${baseCommit.slice(0, 10)}`);
+    return;
+  }
+
+  const changed = git(['diff', '--name-status', baseCommit, headCommit])
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [status, ...rest] = line.split(/\t/);
+      return { status, filePath: rest.at(-1) };
+    });
+
+  const binaryPaths = detectBinaryPaths(baseCommit, headCommit);
+  const summary = { updated: [], merged: [], conflicts: [], skipped: [], removed: [] };
+  const scratchDir = mkdtempSync(path.join(tmpdir(), 'theme-update-'));
+
+  try {
+    for (const { filePath } of changed) {
+      if (isSiteOwned(filePath)) {
+        summary.skipped.push(filePath);
+        continue;
+      }
+
+      const binary = binaryPaths.has(filePath);
+      const base = readBlob(baseCommit, filePath, binary);
+      const theirs = readBlob(headCommit, filePath, binary);
+      const ours = readWorktree(filePath, binary);
+      const { content, conflicted } = binary
+        ? mergeBinary(base, ours, theirs)
+        : mergeFile(filePath, base, ours, theirs, scratchDir);
+
+      if (conflicted) {
+        summary.conflicts.push(filePath);
+      } else if (content === null) {
+        summary.removed.push(filePath);
+      } else if (isUnchangedFromBase(ours, base, binary)) {
+        summary.updated.push(filePath);
+      } else {
+        summary.merged.push(filePath);
+      }
+
+      if (!CHECK_ONLY && content !== null) {
+        const target = path.join(ROOT, filePath);
+        // 站点可能删过整个目录（例如只保留内容的示例站），写入前补齐父目录。
+        mkdirSync(path.dirname(target), { recursive: true });
+        writeFileSync(target, content);
+      }
+    }
+  } finally {
+    rmSync(scratchDir, { recursive: true, force: true });
+  }
+
+  const printGroup = (label, items) => {
+    if (items.length === 0) return;
+    console.log(`\n${label}（${items.length}）`);
+    for (const item of items) console.log(`  ${item}`);
+  };
+
+  console.log(`[theme:update] ${baseCommit.slice(0, 10)} → ${headCommit.slice(0, 10)}${CHECK_ONLY ? '（仅检查）' : ''}`);
+  printGroup('取主题新版本', summary.updated);
+  printGroup('已合并双方改动', summary.merged);
+  printGroup('主题已删除', summary.removed);
+  printGroup('站点自有，未覆盖', summary.skipped);
+  printGroup('存在冲突，需手工处理', summary.conflicts);
+  if (!CHECK_ONLY && summary.removed.length > 0) {
+    console.log('\n主题已删除的文件不会自动移除，确认后请自行删除。');
+  }
+
+  if (summary.conflicts.length > 0) {
+    console.error('\n[theme:update] 存在冲突，theme.json 未更新。解决冲突后重跑本命令。');
+    process.exitCode = 1;
+    return;
+  }
+
+  if (CHECK_ONLY) {
+    console.log('\n[theme:update] 检查模式，未写入任何文件。');
+    return;
+  }
+
+  writeFileSync(
+    THEME_MANIFEST,
+    `${JSON.stringify({ ...manifest, commit: headCommit }, null, 2)}\n`
+  );
+  console.log('\n[theme:update] 合并完成，theme.json 已更新到新基准提交。');
+  console.log('建议执行：npm run verify');
+};
+
+main().catch((error) => {
+  console.error(`[theme:update] ${error.message}`);
+  process.exit(1);
+});

@@ -10,7 +10,7 @@ import {
   escapeHtmlAttribute,
   escapeHtmlText,
   normalizeInlineText
-} from './editor-html-escape';
+} from '../../../../scripts/editor-html-escape';
 
 export const REMOTE_IMAGE_URL_ERROR = '请输入 https:// 开头的图片链接';
 

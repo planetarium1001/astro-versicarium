@@ -217,7 +217,7 @@ $effect(() => {
   {/if}
 
   {#if layout === 'stacked'}
-    <!-- WAI-ARIA APG window splitter pattern uses a focusable separator with range values. -->
+    <!-- 按 WAI-ARIA APG 的 window splitter 模式：分隔条可聚焦，并用 aria-value* 暴露可拖动范围 -->
     <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
     <div
       class="admin-editor-side-panels__resize"

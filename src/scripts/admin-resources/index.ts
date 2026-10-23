@@ -1,9 +1,12 @@
 import {
   MEDIA_FILE_ICON_PATHS,
+  formatSize,
+  formatTime,
   getMediaFileExtension,
   resolveMediaFileVisual,
   type MediaFileIcon
 } from '../../lib/admin-console/media-file-visual';
+import { isRecord } from '../../lib/is-record';
 
 type ResourceKind = 'image' | 'file';
 type ReferenceStatus = 'referenced' | 'unreferenced' | 'orphan';
@@ -114,9 +117,6 @@ const COLLECTION_LABELS: Record<string, string> = {
   about: '关于'
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
 const getPayload = (value: unknown): Record<string, unknown> | null =>
   isRecord(value) ? value : null;
 
@@ -137,22 +137,6 @@ const fuzzyScore = (label: string, query: string): number => {
     cursor = found + 1;
   }
   return Math.max(1, 60 - gaps);
-};
-
-const formatSize = (size: number): string => {
-  if (!size || size <= 0) return '大小未知';
-  if (size < 1024) return `${size} B`;
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-};
-
-const formatTime = (mtimeMs: number | null): string => {
-  if (!mtimeMs) return '—';
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).format(new Date(mtimeMs));
 };
 
 const getCollectionLabel = (collection: string): string =>

@@ -43,3 +43,5 @@ public/images/site/generated/
 tools/fonts-src/
 tools/font-sources.lock.json
 
+# Temporary design workspace (local only, not committed)
+docs/.workspaces/

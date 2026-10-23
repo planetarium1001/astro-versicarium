@@ -10,7 +10,6 @@ import {
   buildBlogRouting,
   getBlogEntryHrefMap,
   getBlogVersionInfo,
-  getLatestBlogEntries,
   type BlogRouteInfo,
   type BlogRoutingResult
 } from './blog-routing';
@@ -305,11 +304,6 @@ export async function getVisibleblogs(options: BlogQueryOptions = {}) {
 
   visibleblogsPromise ??= getSortedblogs();
   return cloneBlogEntries(await visibleblogsPromise);
-}
-
-/** 每个 series 只保留最新版，用于 RSS、sitemap 与版本导航。 */
-export async function getLatestVisibleblogs(options: BlogQueryOptions = {}) {
-  return getLatestBlogEntries(await getVisibleblogs(options));
 }
 
 export async function getVisibleBlogRouting(

@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { parseMarkdownFrontmatterDocument, splitMarkdownFrontmatter } from './frontmatter';
+import { isRecord } from './is-record';
 
 export type ContentEntryFile = {
   entryId: string;
@@ -16,9 +17,6 @@ type CandidateFile = {
 
 const MARKDOWN_EXT_RE = /\.md$/i;
 const ASSET_DIR_NAMES = new Set(['images', 'files', 'assets']);
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 export const readRawFrontmatter = (source: string): Record<string, unknown> => {
   const section = splitMarkdownFrontmatter(source);

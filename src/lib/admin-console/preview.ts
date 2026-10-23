@@ -32,6 +32,7 @@ import {
 } from './content-entry-source';
 import type { AdminContentCollectionKey } from './content-collections';
 import { extractMarkdownOutline } from './editor-outline';
+import { getProjectRoot } from '../project-root';
 
 export const ADMIN_PREVIEW_CODE_HIGHLIGHT_MODE = 'shiki-rehype' as const;
 
@@ -89,8 +90,6 @@ const previewShikiOptions: RehypeShikiOptions = {
 
 const previewBase = import.meta.env.BASE_URL ?? '/';
 
-const getProjectRoot = (): string => process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
-
 const isInsideProject = (filePath: string): boolean => {
   const relative = path.relative(getProjectRoot(), filePath);
   return Boolean(relative) && !relative.startsWith('..') && !path.isAbsolute(relative);
@@ -100,31 +99,64 @@ const hasUrlScheme = (value: string): boolean => /^[a-z][a-z\d+.-]*:/i.test(valu
 
 const toViteFsUrl = (filePath: string): string => `/@fs${pathToFileURL(filePath).pathname}`;
 
-const getPreviewLocalImageSrc = (sourceFilePath: string, value: string): string | null => {
+/**
+ * 预览里的本地图片解析结果。
+ *
+ * 早先这里用 `null` 表示「不是本地图片 / 越界 / 扩展名不支持 / 文件不存在」九种情况，
+ * 调用方无法区分「本来就该原样保留」与「本地图片但文件丢了」。现在把原因显式带出来，
+ * 需要提示作者的场景可以直接按 `reason` 分支，不必再猜。
+ */
+export type AdminPreviewLocalImageResolution =
+  | { ok: true; src: string }
+  | { ok: false; reason: AdminPreviewLocalImageFailureReason };
+
+export type AdminPreviewLocalImageFailureReason =
+  /** 空 src。 */
+  | 'empty'
+  /** 站内绝对路径（`/images/...`），由构建期资源管线处理，预览不改写。 */
+  | 'site-absolute'
+  /** 协议相对 URL（`//cdn...`）。 */
+  | 'protocol-relative'
+  /** 页内锚点（`#...`）。 */
+  | 'anchor'
+  /** 带 query 或 hash，指向的不是磁盘上的裸路径。 */
+  | 'decorated'
+  /** 带 URL scheme（`https:` / `data:` / `mailto:` 等），不是本地文件。 */
+  | 'remote'
+  /** 解析后越出仓库根目录。 */
+  | 'outside-project'
+  /** 扩展名不在预览可内联的图片白名单内。 */
+  | 'unsupported-extension'
+  /** 扩展名合法、路径在仓库内，但磁盘上没有这个文件。 */
+  | 'missing';
+
+export const resolvePreviewLocalImage = (
+  sourceFilePath: string,
+  value: string
+): AdminPreviewLocalImageResolution => {
   const trimmed = value.trim();
-  if (
-    !trimmed
-    || trimmed.startsWith('/')
-    || trimmed.startsWith('//')
-    || trimmed.startsWith('#')
-    || trimmed.includes('?')
-    || trimmed.includes('#')
-    || hasUrlScheme(trimmed)
-  ) {
-    return null;
-  }
+  if (!trimmed) return { ok: false, reason: 'empty' };
+  if (trimmed.startsWith('//')) return { ok: false, reason: 'protocol-relative' };
+  if (trimmed.startsWith('/')) return { ok: false, reason: 'site-absolute' };
+  if (trimmed.startsWith('#')) return { ok: false, reason: 'anchor' };
+  if (trimmed.includes('?') || trimmed.includes('#')) return { ok: false, reason: 'decorated' };
+  if (hasUrlScheme(trimmed)) return { ok: false, reason: 'remote' };
 
   let decoded = trimmed;
   try {
     decoded = decodeURI(trimmed);
-  } catch {}
-
-  const filePath = path.resolve(path.dirname(sourceFilePath), decoded);
-  if (!isInsideProject(filePath) || !PREVIEW_IMAGE_EXTENSIONS.has(path.extname(filePath).toLowerCase())) {
-    return null;
+  } catch {
+    // 非法百分号转义：沿用原字符串继续按路径解析，越界与白名单校验仍在后面兜底。
   }
 
-  return existsSync(filePath) ? toViteFsUrl(filePath) : null;
+  const filePath = path.resolve(path.dirname(sourceFilePath), decoded);
+  if (!isInsideProject(filePath)) return { ok: false, reason: 'outside-project' };
+  if (!PREVIEW_IMAGE_EXTENSIONS.has(path.extname(filePath).toLowerCase())) {
+    return { ok: false, reason: 'unsupported-extension' };
+  }
+  if (!existsSync(filePath)) return { ok: false, reason: 'missing' };
+
+  return { ok: true, src: toViteFsUrl(filePath) };
 };
 
 const createPreviewImageSrcPlugin = (sourceFilePath: string | null): Plugin<[], Root> => {
@@ -136,9 +168,9 @@ const createPreviewImageSrcPlugin = (sourceFilePath: string | null): Plugin<[], 
       const src = node.properties?.src;
       if (typeof src !== 'string') return;
 
-      const previewSrc = getPreviewLocalImageSrc(sourceFilePath, src);
-      if (previewSrc) {
-        node.properties.src = previewSrc;
+      const resolution = resolvePreviewLocalImage(sourceFilePath, src);
+      if (resolution.ok) {
+        node.properties.src = resolution.src;
       }
     });
   };

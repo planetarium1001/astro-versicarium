@@ -10,7 +10,7 @@ import {
   readAdminContentBulkEntriesInput
 } from '../../../../lib/admin-console/content-bulk';
 import { patchAdminContentDraftStatusBulk } from '../../../../lib/admin-console/content-bulk-status';
-import { isRecord } from '../../../../lib/admin-console/content-entry-utils';
+import { isRecord } from '../../../../lib/is-record';
 
 const JSON_HEADERS = ADMIN_JSON_HEADERS;
 const DEV_ONLY_NOT_FOUND_RESPONSE = new Response('Not Found', { status: 404 });

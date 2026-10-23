@@ -12,6 +12,16 @@
 
 const root = document.documentElement;
 
+/**
+ * 是否要求减弱动效。6 个 `src/scripts/*.ts` 曾各有一份逐字相同的副本，统一到这里。
+ *
+ * 放在本模块是因为它已经负责输入模态判定；`matchMedia` 在无头环境（jsdom、
+ * 旧内核）可能不存在，此时按「不减弱」处理，保持默认动画。
+ */
+export const prefersReducedMotion = (): boolean =>
+  typeof window.matchMedia === 'function'
+  && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 /** 触屏 tap 的兼容鼠标事件窗口：覆盖 WebKit 的整串补发事件。 */
 const TOUCH_SETTLE_MS = 800;
 

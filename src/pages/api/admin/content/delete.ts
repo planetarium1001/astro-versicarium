@@ -22,6 +22,7 @@ import {
   type AdminContentDeletableCollectionKey
 } from '../../../../lib/admin-console/content-delete-contract';
 import { withAdminContentWriteLock } from '../../../../lib/admin-console/content-write-lock';
+import { isRecord } from '../../../../lib/is-record';
 
 type DeleteInput = {
   collection?: AdminContentDeletableCollectionKey;
@@ -41,9 +42,6 @@ const METHOD_NOT_ALLOWED_RESPONSE = new Response('Method Not Allowed', {
     'cache-control': 'no-store'
   }
 });
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const createJsonErrorResponse = (
   status: number,

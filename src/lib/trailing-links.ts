@@ -5,6 +5,7 @@
  */
 
 import { withDeploymentBase } from '../plugins/markdown-pipeline.mjs';
+import { escapeHtmlAttribute } from '../scripts/editor-html-escape';
 
 export type TrailingLink = {
   label: string;
@@ -90,13 +91,6 @@ export const stripTrailingLinks = (body: string | null | undefined): string => {
 /** 链接行的统一 class：项目卡片/弹窗、更新展开面板与后台预览复用同一份样式。 */
 const TRAILING_LINKS_CLASS = 'trailing-links';
 
-const escapeHtml = (value: string): string =>
-  value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-
 /** 链接行标记：右对齐、按书写顺序排列，链接之间只留等距间隔，不输出 `·` 等分隔符。 */
 export const renderTrailingLinksHtml = (
   links: readonly TrailingLink[],
@@ -106,7 +100,7 @@ export const renderTrailingLinksHtml = (
   const items = links
     .map(
       (link) =>
-        `<a href="${escapeHtml(withDeploymentBase(link.href, base))}">${escapeHtml(link.label)}</a>`
+        `<a href="${escapeHtmlAttribute(withDeploymentBase(link.href, base))}">${escapeHtmlAttribute(link.label)}</a>`
     )
     .join('');
   return `<p class="${TRAILING_LINKS_CLASS}">${items}</p>`;

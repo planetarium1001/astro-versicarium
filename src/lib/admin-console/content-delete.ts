@@ -14,6 +14,7 @@ import {
 } from './content-collections';
 import type { AdminContentDeletableCollectionKey } from './content-delete-contract';
 import { invalidateAdminImageCaches } from './image-shared';
+import { getProjectRoot } from '../project-root';
 
 export {
   ADMIN_CONTENT_DELETABLE_COLLECTION_KEYS,
@@ -48,8 +49,6 @@ export class AdminContentDeleteConfirmationError extends Error {
 
 export const getAdminContentDeleteUnsupportedReason = (collection: AdminContentCollectionKey): string | null =>
   getAdminContentCollectionCapability(collection).deleteUnsupportedReason;
-
-const getProjectRoot = (): string => process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT?.trim() || process.cwd();
 
 const toRelativeProjectPath = (filePath: string): string =>
   path.relative(getProjectRoot(), filePath).replace(/\\/g, '/');

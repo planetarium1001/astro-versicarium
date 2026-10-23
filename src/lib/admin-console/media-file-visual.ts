@@ -219,3 +219,30 @@ export const resolveMediaFileVisual = (fileName: string): MediaFileVisual => {
     ...preset
   };
 };
+
+/**
+ * 字节数 → 展示文案（B / KB / MB）。
+ *
+ * 全仓唯一的尺寸格式化实现：`admin-resources` 等控制台脚本一律 import，
+ * 不要在各自模块里再复制一份，否则同一张图片在不同面板里会显示成不同字符串。
+ */
+export const formatSize = (size: number): string => {
+  if (!size || size <= 0) return '大小未知';
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+/**
+ * 修改时间（毫秒时间戳）→ `zh-CN` 年月日。
+ *
+ * `fallback` 是空值占位符：资源台用 `'—'`，其它面板若需要空串可显式传入。
+ */
+export const formatTime = (mtimeMs: number | null, fallback = '—'): string => {
+  if (!mtimeMs) return fallback;
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date(mtimeMs));
+};

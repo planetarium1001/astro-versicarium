@@ -1,42 +1,61 @@
 # Versicarium · 垄录
 
-本仓库的 `demo` 分支是 Versicarium 主题的示例站，用完整示例内容展示主题的内容模型与页面形态。
+Versicarium 主题的示例站，用完整示例内容展示内容模型与页面形态。
 
 - 在线站点：<https://planetarium1001.github.io/astro-versicarium/>
-- 代码仓库：<https://github.com/planetarium1001/astro-versicarium>
+- 主题仓库：<https://github.com/planetarium1001/astro-versicarium>
+- 主题版本：`1.0.0-rc.2`
 
-## 这是什么
+## 分支定位
 
-`demo` 分支维护示例站的内容、示例设置与构建所需资源，部署在 GitHub Pages。主题源码与开发文档不在本分支维护，这里不提供模板获取与开发说明。
-
-示例站基于 Astro 构建，文章、项目、动态、开发日志与关于页共用同一套目录式内容结构。
+- `main` 是模板与更新来源，放主题代码、默认设置与全部文档。
+- `demo` 是示例站，放完整示例内容与示例设置，部署到 GitHub Pages。
+- 同步方向只有 `main` → `demo`，由 `npm run theme:update -- --include-fonts` 按文件合并。
+- 站点自有路径不被覆盖：`content/`、`src/data/settings/`、`public/images/`、`public/author/`、`public/fonts/`、`tools/`、`tests/fixtures/`、`README.md`、`theme.json`。
 
 ## 展示内容
 
-- **文章**：主题说明、上手指南与开发记录，支持按系列（`series`）维护多个版本。
-- **项目**：项目介绍与多版本历史，版本在卡片弹窗中切换，每个版本有独立地址。
-- **动态**：短文本、图片与作者信息。
-- **开发日志**：按项目归档的改动记录与结果。
-- **关于**：独立单页。
-- **归档**：把文章、项目版本与开发日志按年月汇总，支持筛选、搜索与标签组合。
+- 文章：主题介绍与上手指南按系列保留多个版本，另有写作、后台、部署、更新等教程。
+- 项目：项目介绍与历史版本，卡片弹窗里切换版本，每个版本有独立地址。
+- 动态：短文本、配图与作者信息。
+- 开发日志：按项目归档的方向性记录。
+- 关于：独立单页，含友链、常见问题与联系入口。
+- 归档：文章版本、项目版本与日志按年月汇总，支持筛选、搜索与标签组合。
 
-## 主题特性
+## 本地运行
 
-- **侧栏与内容区**：桌面端固定侧栏配内容区，右侧目录树随滚动高亮当前段落，并记住阅读位置；内容区附带浮动操作列。
-- **亮色与暗色**：跟随系统或手动切换，切换带过渡，并提供专注阅读模式。
-- **多版本内容**：文章系列与项目各自保留历史版本；项目在弹窗中切换，文章在侧边抽屉中切换。
-- **本地后台**：开发环境下可以修改设置、撰写内容与管理图片；生产构建只输出只读静态页面。
-- **内容与代码分离**：示例内容位于 `content/`，主题代码位于 `src/`。
-- **中文字体分层**：字体按用途分层分片，常用字优先加载，生僻字按需下载。
+需要 Node.js 22.12.0 或更高版本；`.nvmrc` 里的 `24.22.1` 是建议版本。
+
+```bash
+npm ci
+npm run dev
+```
+
+启动后访问 `http://localhost:4321`，后台在 `/admin/`。
 
 ## 部署
 
-`demo` 分支推送到 GitHub Pages：每次推送由 `.github/workflows/pages.yml` 构建 `dist/` 并发布到 <https://planetarium1001.github.io/astro-versicarium/>。站点部署在 `/astro-versicarium/` 子路径下。默认分支 `main` 保留同名工作流，可在 Actions 页面手动触发部署。
+`demo` 分支推送后由 `.github/workflows/pages.yml` 构建 `dist/` 并发布到 <https://planetarium1001.github.io/astro-versicarium/>，站点在 `/astro-versicarium/` 子路径下。
+
+工作流里写死了两处配置：
+
+- `env.SITE_URL`：`https://planetarium1001.github.io`
+- `env.BASE_PATH`：`/astro-versicarium/`
+
+也可以在 Actions 页面手动运行 `pages` 工作流。
+
+## 文档
+
+主题的使用、开发与 Agent 文档都在 `docs/`：
+
+- [使用文档](docs/README.md)
+- [开发文档](docs/developers/README.md)
+- [Agent 文档](docs/agents/README.md)
 
 ## 版本状态
 
-当前版本为 `1.0.0-rc.2`，属于预览候选，暂不发布。示例站与内容仍会持续调整。
+当前版本 `1.0.0-rc.2`，属于预览候选。示例站内容随主题一起调整。
 
 ## 许可
 
-MIT 许可，见 [LICENSE](LICENSE)。主题从 [cxro/astro-whono](https://github.com/cxro/astro-whono)（MIT）修改而来。
+MIT，见 [LICENSE](LICENSE)。主题派生自 [cxro/astro-whono](https://github.com/cxro/astro-whono)，保留原版权声明。

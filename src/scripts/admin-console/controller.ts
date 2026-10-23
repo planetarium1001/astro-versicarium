@@ -13,9 +13,9 @@ import {
   extractSettingsPayload,
   getPayloadErrors,
   getPayloadMessage,
-  isRecord,
   requestSettingsWrite
 } from './settings-transport';
+import { isRecord } from '../../lib/is-record';
 
 type LoadSource = 'bootstrap' | 'remote';
 type AdminThemeFormCodec = ReturnType<typeof createFormCodec>;

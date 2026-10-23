@@ -7,16 +7,17 @@ import {
   resolveAdminContentEntrySourcePath
 } from './content-entry-source';
 import {
-  getProjectRoot,
   invalidateAdminImageCaches,
   readAdminLocalImageInspectionMeta
 } from './image-shared';
+import { getProjectRoot } from '../project-root';
 import {
   getMimeTypeFromFileName,
   isAdminImageCloudStorageEnabled,
   uploadAdminImageToCloudStorage
 } from './image-cloud-storage';
 import { AdminImageUploadError } from './image-upload-error';
+import { isRecord } from '../is-record';
 
 type AdminImageUploadResult = {
   src: string;
@@ -160,9 +161,6 @@ const writeUniqueImageFile = async (
 
   throw new AdminImageUploadError('无法生成可用文件名，请重命名图片后再上传', 409);
 };
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
 
 /** 落盘到该条目的 public 目录，返回绝对路径与仓库相对路径。 */
 const writeLocalImageFile = async (

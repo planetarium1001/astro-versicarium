@@ -43,7 +43,9 @@ const normalizeAboutDirectiveAvatarSource = (value, base = '/') => {
   try {
     const parsed = new URL(trimmed);
     return parsed.protocol === 'https:' ? parsed.toString() : '';
-  } catch {}
+  } catch {
+    // 不是绝对 URL：控制流依赖异常，落到下面的相对路径归一化。
+  }
 
   const normalized = trimmed.replace(/\\/g, '/').replace(/^\.\/+/, '');
   if (

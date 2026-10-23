@@ -265,7 +265,9 @@ export const persistAdminFileTransaction = async <TId extends string>(
         } else if (operation.backupCreated) {
           await rename(operation.backupPath, operation.filePath);
         }
-      } catch {}
+      } catch {
+        // 回滚尽力而为：单个文件恢复失败不阻断其余文件，原始错误在循环后统一抛出。
+      }
 
       await rm(operation.tempPath, { force: true }).catch(() => {});
     }

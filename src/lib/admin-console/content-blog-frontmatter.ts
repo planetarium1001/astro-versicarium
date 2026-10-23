@@ -23,9 +23,9 @@ import {
 import {
   createAdminContentValidationIssue as createIssue,
   hasOwn,
-  isRecord,
   normalizeOptionalText
 } from './content-entry-utils';
+import { isRecord } from '../is-record';
 
 export type AdminBlogFrontmatter = {
   title: string;
@@ -154,9 +154,6 @@ export const loadBlogPublicSlugIndex = async (): Promise<AdminBlogPublicSlugInde
   }
   return { usage, seriesByEntryId };
 };
-
-export const loadBlogPublicSlugUsage = async (): Promise<AdminBlogPublicSlugUsage> =>
-  (await loadBlogPublicSlugIndex()).usage;
 
 export const validateBlogPublicSlug = async (
   state: {

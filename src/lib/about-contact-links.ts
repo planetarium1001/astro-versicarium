@@ -1,3 +1,4 @@
+import { escapeHtmlQuoted } from '../scripts/editor-html-escape';
 import { BRAND_SVG_ICON_BODIES, type BrandSvgIconName } from './brand-icon-bodies';
 import type { ResolvedSocialItem, SiteSocialIconKey } from './theme-settings';
 
@@ -15,14 +16,6 @@ const LUCIDE_CONTACT_ICON_BODIES = {
     '<path d="M2 12h20"/>'
   ].join('')
 } as const satisfies Record<Extract<SiteSocialIconKey, 'email' | 'website'>, string>;
-
-const escapeHtml = (value: string): string =>
-  value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 
 const formatExternalLabel = (href: string): string => {
   try {
@@ -69,7 +62,7 @@ export const renderAboutContactLinksHtml = (
     '<span class="contact-link-head" aria-hidden="true">',
     renderContactIconHtml(item.iconKey),
     '</span>',
-    `<a href="${escapeHtml(item.href)}">${escapeHtml(getContactText(item))}</a>`,
+    `<a href="${escapeHtmlQuoted(item.href)}">${escapeHtmlQuoted(getContactText(item))}</a>`,
     '</li>'
   ].join(''));
 

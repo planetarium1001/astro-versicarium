@@ -32,7 +32,7 @@ import {
   splitMarkdownFrontmatter
 } from '../frontmatter';
 import { getStringArray } from './content-editor-payload';
-import { isRecord, normalizeOptionalText } from './content-entry-utils';
+import { normalizeOptionalText } from './content-entry-utils';
 import { compareByNullableDateDesc } from './content-shared';
 import {
   compareAdminContentSeriesVersions,
@@ -40,6 +40,7 @@ import {
   resolveAdminContentSeriesVersionStates
 } from './content-series';
 import { isDateFormProjectSlug } from '../project-routing';
+import { isRecord } from '../is-record';
 
 // Admin Content 列表跟随 src/content.config.ts 当前 glob 边界：仅索引 .md。
 const ADMIN_CONTENT_SOURCE_INDEX_EXT_RE = /\.md$/i;

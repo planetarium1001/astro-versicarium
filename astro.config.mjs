@@ -13,7 +13,7 @@ import {
 import { site, hasSiteUrl } from './site.config.mjs';
 
 const isProductionBuild = process.env.NODE_ENV === 'production';
-const SITEMAP_ROUTE_ROOTS = new Set(['about', 'admin', 'archive', 'bits', 'blog', 'devlog', 'projects']);
+const SITEMAP_ROUTE_ROOTS = new Set(['about', 'admin', 'archive', 'bits', 'checks', 'blog', 'devlog', 'projects']);
 const rawDeploymentBase = process.env.ASTRO_VERSICARIUM_BASE_PATH ?? '/';
 const trimmedDeploymentBase = String(rawDeploymentBase).trim();
 
@@ -57,6 +57,8 @@ const normalizeSitemapPathname = (page) => {
 const isExcludedSitemapPathname = (pathname) =>
   pathname === '/admin'
   || pathname.startsWith('/admin/')
+  || pathname === '/checks'
+  || pathname.startsWith('/checks/')
   || pathname === '/bits/draft-dialog';
 
 const isExcludedSitemapEntry = (page) => isExcludedSitemapPathname(normalizeSitemapPathname(page));
@@ -189,7 +191,7 @@ const fonts = selectedApiFonts.flatMap((entry) => {
 });
 
 export default defineConfig({
-  // Required for RSS generation. Prefer SITE_URL; fallback keeps build passing.
+  // RSS 生成需要 site；优先取 SITE_URL，未设置时回退 example.invalid，保证构建不中断。
   site: site.url,
   base: deploymentBase,
   // DEV 使用 server output 允许 Theme Console 的 /api/admin/settings/ 处理读写；

@@ -1,0 +1,31 @@
+name: release-please
+
+# 手动运行，不随推送自动触发。
+#
+# 作用：读取 release-please-config.json 与 .release-please-manifest.json，
+# 根据约定式提交生成或更新一个发布用的 PR，内容是新版本号与 CHANGELOG 条目。
+# 它只开 PR，不合并、不打标签、不创建 Release。
+#
+# 发布流程：
+#   1. 在 Actions 页面手动运行本工作流，等它开出发布 PR。
+#   2. 检查 PR 里的版本号与变更记录，合并。
+#   3. 合并后手动创建 GitHub Release，标签与 package.json 版本对应。
+#   4. 手动运行 release 工作流，打包模板并附到该 Release。
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    name: release-please
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Release Please
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

@@ -16,6 +16,7 @@ import {
   getAdminContentReadOnlyReason
 } from '../../../../lib/admin-console/content-entry-source';
 import { renderAdminMarkdownPreview } from '../../../../lib/admin-console/preview';
+import { isRecord } from '../../../../lib/is-record';
 
 type PreviewInput = {
   collection?: AdminContentWriteCollectionKey;
@@ -35,9 +36,6 @@ const METHOD_NOT_ALLOWED_RESPONSE = new Response('Method Not Allowed', {
     'cache-control': 'no-store'
   }
 });
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const createJsonErrorResponse = (
   status: number,

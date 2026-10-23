@@ -1,5 +1,5 @@
 import type { AdminContentValidationIssue } from './content-entry-contract';
-import { isRecord } from './content-entry-utils';
+import { isRecord } from '../is-record';
 
 export const ADMIN_CONTENT_BULK_ENTRY_LIMIT = 200;
 

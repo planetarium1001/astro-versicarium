@@ -12,87 +12,155 @@ versionSummary: npm ci 起站，五个集合，条目目录自带图片与附件
 versionOrder: 2
 draft: false
 ---
-<h1 align="center">Versicarium · 垄录</h1>
-<p align="center">面向开发者的内容与版本管理博客主题，基于 Astro 构建，修改自<a href="https://github.com/cxro/astro-whono">Whono</a>。</p>
-<div align="center">
-  <div style="display:inline-grid; grid-template-columns:auto auto auto auto auto; justify-items:center; column-gap:.6em;">
-    <div><b>Versicarium</b></div><div>=</div><div><b><code>versiculus</code></b></div><div>+</div><div><b><code>arium</code></b></div>
-    <div></div><div></div><div>诗行短句</div><div></div><div>收卷之匣</div>
-  </div>
-</div>
 
 这份说明对应 `1.0.0-rc.2`。内容根在仓库根的 `content/`，五个集合，条目以目录为单位；后台在开发环境下可写，生产构建只输出静态页面。
 
 ## 环境
 
-需要 Node.js 22.12.0 或更高版本，仓库带 `.nvmrc`，`package.json` 的 `engines` 也写着同一下限。获取模板有三种方式：在仓库页面选择 Use this template，得到历史独立的仓库；浅克隆 `main` 分支；fork 后手工合并上游。
+- Node.js 22.12.0 或更高版本，`package.json` 的 `engines` 写着同一下限。
+- `.nvmrc` 里是建议版本 `24.22.1`，用 nvm 时执行 `nvm use` 即可。
+- 首次安装依赖需要联网，之后日常运行可以离线。
+
+<details>
+<summary>安装依赖并启动</summary>
+
+```bash
+npm ci
+npm run dev
+```
+
+</details>
+
+`npm ci` 按 `package-lock.json` 安装，不会改动 `package.json`，适合克隆后与 CI 里使用；需要更新依赖时改用 `npm install`。
+
+启动后访问 `http://localhost:4321`，开发环境下访问 `/admin/` 进入后台。端口 4321 被占用时用 `npm run dev -- --port 4322` 换一个。
+
+## 获取主题
+
+两条路径，任选一条。
+
+<details>
+<summary>用模板建仓库</summary>
+
+在仓库页面选择 **Use this template**，得到一份保留主题代码与示例内容的新仓库，历史独立。
+
+```bash
+git clone <YOUR-REPO> my-site
+cd my-site
+```
+
+</details>
+
+<details>
+<summary>浅克隆模板仓库</summary>
 
 ```bash
 git clone --depth 1 --branch main --single-branch \
   https://github.com/planetarium1001/astro-versicarium.git my-site
 cd my-site
-npm ci
-npm run dev
 ```
 
-启动后访问 `http://localhost:4321`，开发环境下访问 `/admin/` 进入后台。`npm ci` 按 lockfile 安装依赖，不会改动 `package.json`，适合在克隆后与 CI 里使用。
-
-## 作为自己的站点
-
-浅克隆只取 `main` 的最新提交，`origin` 仍指向主题仓库。作为自有站点时删除 `.git` 后重新初始化，再换成自己的远端：
+`--depth 1` 只取最新一次提交。作为自己的站点使用时，先删掉模板自带的提交历史与发布工作流，再重新初始化：
 
 ```bash
-rm -rf .git
+rm -rf .git .github/workflows/release-please.yml .github/workflows/release.yml
 git init -b main
 git add -A
 git commit -m "chore: 初始化站点"
-git remote add origin <你的仓库地址>
+git remote add origin <YOUR-REPO>
 git push -u origin main
 ```
 
-## 内容放在哪
+</details>
 
-一个条目一个目录，主文件通常是 `index.md`，图片、附件与素材放在同级的 `images/`、`files/`、`assets/`：
+完整说明见[安装与运行](https://github.com/planetarium1001/astro-versicarium/blob/main/docs/install.md)。
+
+## 内容组织
+
+一个条目一个目录，主文件是 `index.md`，图片与附件放在同级的 `images/`、`files/`。
 
 | 集合 | 位置 | 公开地址 |
-| --- | --- | --- |
+|---|---|---|
 | 文章 | `content/blog/<条目>/` | `/blog/`、`/blog/<条目>/` |
 | 项目 | `content/projects/<条目>/` | `/projects/` |
 | 动态 | `content/bits/<条目>/` | `/bits/` |
 | 开发日志 | `content/devlog/<项目>/<条目>/` | `/devlog/` |
 | 关于 | `content/about/index.md` | `/about/` |
 
-正文图片用相对路径引用，例如 `![封面](images/cover.webp)`；附件放 `files/`，构建时只复制被正文引用的文件。目录名即条目 ID，规范写成 `YYYY-MM-DD-title`；集合根目录下的 Markdown 文件不会被收为条目。
+- 目录名即条目 ID，规范写成 `YYYY-MM-DD-title`；集合根目录下的 Markdown 文件不会被收为条目。
+- 目录里只有一个 Markdown 文件时，主文件可以不叫 `index.md`；有多个时给主文件标 `entry: true`。
+- 正文图片用相对路径引用，例如 `![封面](images/cover.webp)`；附件放 `files/`，构建时只复制被正文引用的文件。
+- `draft: true` 的条目只在开发环境可见，生产构建、列表与订阅都会跳过。
 
-主文件通常叫 `index.md`，也可以是目录内唯一的 `.md` 文件，或标了 `entry: true` 的文件。`draft: true` 的条目只在开发环境可见，生产构建、列表与订阅都会跳过。动态条目可以没有标题；关于页是固定单页，只有一个 `index.md`。归档页把文章、项目版本与日志按年月放在一起，支持筛选与标签组合。
+新建内容有两种方式：运行 `npm run dev` 后在写作页选区新建，或手动建目录与 `index.md`。字段全表见[内容与写作](https://github.com/planetarium1001/astro-versicarium/blob/main/docs/content.md)。
 
 ## 构建与部署
 
+<details>
+<summary>带站点地址构建</summary>
+
 ```bash
-SITE_URL=https://example.com npm run build
-SITE_URL=https://example.com ASTRO_VERSICARIUM_BASE_PATH=/blog/ npm run build
+SITE_URL=<SITE-URL> npm run build
+SITE_URL=<SITE-URL> ASTRO_VERSICARIUM_BASE_PATH=/<SUBDIR>/ npm run build
 ```
 
-`SITE_URL` 只写站点地址，不带路径；部署到子目录时另设 `ASTRO_VERSICARIUM_BASE_PATH`，例如 `/blog/`。不填 `SITE_URL` 时页面里的正式地址与分享图不输出，站点地图不生成，`npm run verify` 会失败。
+</details>
 
-产物在 `dist/`，是纯静态文件，Netlify、Cloudflare Pages 与自己架设的静态服务器都能直接托管；构建命令是 `npm run build`，发布目录是 `dist/`。
+- `SITE_URL` 只写站点地址，不带路径。
+- 部署到子目录时另设 `ASTRO_VERSICARIUM_BASE_PATH`，例如 `/blog/`。
+- 不填 `SITE_URL` 时页面里的正式地址与分享图不输出，站点地图不生成，`npm run verify` 会失败。
+
+产物在 `dist/`，是纯静态文件，任何静态托管都能放。GitHub Pages 的改法见[部署上线](https://github.com/planetarium1001/astro-versicarium/blob/main/docs/deploy.md)。
 
 ## 主题更新
 
-`theme.json` 记录主题仓库、分支与基准提交。先运行 `npm run theme:update -- --check` 查看变更，再运行 `npm run theme:update` 执行合并。合并按文件做三方合并，`content/`、`src/data/settings/`、`public/fonts/` 等站点自有路径不会被覆盖；有冲突时命令以非零状态退出，解决后重跑。
+`theme.json` 记录主题仓库、分支与基准提交。
 
-改了内容之后要重跑 `npm run font:build`，否则字体仍按旧字符集生成。
+<details>
+<summary>查看与执行更新</summary>
+
+```bash
+npm run theme:update -- --check
+npm run theme:update
+```
+
+</details>
+
+- `--check` 只列清单，不写文件。
+- 合并按文件做三方合并，`content/`、`src/data/settings/`、`public/fonts/` 等站点自有路径不会被覆盖。
+- 有冲突时命令以非零状态退出，解决后重跑。
+- 合并完成后执行 `npm run verify`。
 
 ## 后台
 
-`npm run dev` 后打开 `/admin/`，后台分概览、主题、写作、资源与快照五个页面。主题设置分七组，写作页带实时预览与字段检查。资源页统一管理图片与附件，支持上传、批量重命名、移动与删除，显示引用状态，也支持整条目 ZIP 导入导出。生产构建不包含写入接口，线上改内容要先在本地改完再重新部署。
+`npm run dev` 后打开 `/admin/`，后台分概览、主题、写作、资源与快照五个页面。
+
+- 主题设置分七组：站点设置、侧栏设置、首页设置、内页设置、条目版本、代码显示、排版字体。
+- 写作页带实时预览与字段检查，保存博客正文时校验本地图片是否存在。
+- 资源页统一管理图片与附件，支持上传、批量重命名、移动与删除，也支持整条目 ZIP 导入导出。
+- 生产构建不包含写入接口，线上改内容要先在本地改完再重新部署。
 
 ## 字体
 
-中文字体按角色分层分片：常用字随页面加载，生僻字在需要时下载。常用页面的首屏字体约 305 KB，生僻字切片按内容实际用字生成。后台可以在常用覆盖与完整覆盖之间切换。
+中文字体按用途与常用程度分层分片，随构建一起发布。
+
+- 基础分片 33 个，合计 2,338,700 字节，随页面加载。
+- 生僻字分片 82 个，合计 21,092,964 字节，单块目标 240 KB，页面出现生僻字时才下载。
+- 合计 115 个 WOFF2，共 23,431,664 字节；常用页实际下载约 385 KB。
+- 覆盖策略在后台的排版字体里切换；新写大量内容或换字体后，用 `npm run font:build` 按当前内容重建。
 
 ## 常用命令
 
-`npm run check` 做类型检查与源码守卫，`npm test` 跑测试，`npm run verify` 是提交前的完整检查，`npm run preview` 预览构建产物。`verify` 依次执行类型检查、构建、快照刷新、测试与产物检查，包含图片引用、布局尺寸、触控尺寸与字体覆盖。
+| 命令 | 作用 |
+|---|---|
+| `npm run dev` | 启动开发服务器与本地后台 |
+| `npm run build` | 构建静态产物到 `dist/` |
+| `npm run preview` | 预览上一次构建的产物 |
+| `npm run check` | 类型检查与源码守卫 |
+| `npm test` | 运行测试用例，不构建 |
+| `npm run verify` | 完整检查：代码、构建、字体、测试与产物 |
+| `npm run new:bit` | 生成一条动态草稿 |
+| `npm run theme:update` | 同步主题新版本 |
+| `npm run font:build` | 按当前内容重新生成字体 |
 
-内容模型在这一版不再有大改：条目目录、文章系列与项目版本、可写后台、按文件主题更新都已就位。日常使用时只需要记住两件事：内容写在 `content/` 的条目目录里，提交前跑一次 `npm run verify`。
+`verify` 依次执行 `check`、`build`、`font:coverage --strict`、`test:fixtures`、`test`、`check:prod-artifacts`、`check:layout-geometry`、`check:touch-targets` 与 `check:viewport-overflow`。提交前跑一次，页面记录有变化时一起提交。

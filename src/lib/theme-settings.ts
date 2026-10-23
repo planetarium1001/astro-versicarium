@@ -80,6 +80,7 @@ import {
   isAdminArticleDateGranularity,
   normalizeAdminSocialIconKey,
 } from './admin-console/theme-shared';
+import { isRecord } from './is-record';
 
 type SettingSource = 'new' | 'legacy' | 'default';
 
@@ -822,9 +823,6 @@ const SIDEBAR_HREFS: Record<SidebarNavId, string> = {
 
 let cachedSettings: ThemeSettingsResolved | null = null;
 const shouldCacheThemeSettings = import.meta.env.PROD;
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const asString = (value: unknown): string | undefined =>
   typeof value === 'string' ? value.trim() : undefined;

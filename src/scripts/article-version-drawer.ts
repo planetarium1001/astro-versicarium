@@ -1,3 +1,5 @@
+import { prefersReducedMotion } from './input-modality';
+
 type VersionDrawerRoot = HTMLElement;
 
 /** 退出动画 220ms，兜底留 20ms 余量：animationend 丢失时也不会把抽屉卡住。 */
@@ -36,10 +38,6 @@ const clearPointerFocus = (element: HTMLElement | null): void => {
   if (!element) return;
   delete element.dataset.pointerFocus;
 };
-
-const prefersReducedMotion = (): boolean =>
-  typeof window.matchMedia === 'function'
-  && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const roots = Array.from(document.querySelectorAll<VersionDrawerRoot>('[data-article-version]'));
 

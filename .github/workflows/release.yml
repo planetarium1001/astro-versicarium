@@ -1,0 +1,85 @@
+name: release
+
+# 手动运行，不随 Release 事件自动触发。
+#
+# 作用：把指定标签对应的已跟踪文件打包成模板 zip，生成 SHA256SUMS，
+# 附到该标签的 GitHub Release。不包含 node_modules、dist、本地缓存。
+#
+# 前置：GitHub Release 已创建，且标签与 package.json 版本一致。
+# 标签不匹配或 Release 不存在时工作流直接失败，不会上传任何文件。
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 要打包的标签，与 package.json 版本对应，例如 v1.0.0-rc.2
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: package
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+
+      - name: Resolve Node version
+        id: node
+        shell: bash
+        run: |
+          if [ -f .nvmrc ]; then
+            version="$(cat .nvmrc)"
+          else
+            version="24"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.node.outputs.version }}
+
+      - name: Verify release tag
+        shell: bash
+        run: |
+          version="${RELEASE_TAG#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "$version" != "$pkg" ]; then
+            echo "标签 ${RELEASE_TAG} 与 package.json 版本 ${pkg} 不一致" >&2
+            exit 1
+          fi
+          echo "VERSION=$pkg" >> "$GITHUB_ENV"
+
+      - name: Verify release exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            echo "标签 ${RELEASE_TAG} 还没有对应的 GitHub Release，先在 Releases 页面创建" >&2
+            exit 1
+          fi
+
+      - name: Package template
+        shell: bash
+        run: |
+          name="astro-versicarium-${VERSION}"
+          git archive --format=zip --prefix="${name}/" -o "${name}.zip" HEAD
+          sha256sum "${name}.zip" > SHA256SUMS
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$RELEASE_TAG" \
+            "astro-versicarium-${VERSION}.zip" \
+            SHA256SUMS \
+            --clobber

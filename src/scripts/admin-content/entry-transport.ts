@@ -16,6 +16,7 @@ import type {
   AdminAboutEditorPayload,
   AdminAboutEditorValues
 } from '../../lib/admin-console/content-about-contract';
+import { isRecord } from '../../lib/is-record';
 
 export type AdminContentWriteResult = {
   changed: boolean;
@@ -43,9 +44,6 @@ export type AdminContentIssue = {
   path: string;
   message: string;
 };
-
-export const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 export const getStringArray = (value: unknown): string[] =>
   Array.isArray(value)
