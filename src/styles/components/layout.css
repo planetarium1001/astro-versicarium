@@ -789,6 +789,14 @@ body.admin-page :is(
   z-index: 1;
 }
 
+/**
+ * 窄屏后台侧栏顶部 logo：站点 favicon（Sidebar.astro 按 svg → png → appleTouchIcon 解析）。
+ * 宽屏（含桌面折叠 rail）仍显示 AdminIcon，favicon 只在窄屏壳层替换，见文件内 900px 断点。
+ */
+body.admin-page .sidebar__title-favicon {
+  display: none;
+}
+
 body.admin-page :is(
   .sidebar__title--admin-rail,
   .public-nav-group__summary,
@@ -1007,6 +1015,33 @@ body.admin-page .sidebar-actions .icon-button[data-tooltip]::after {
   body.admin-page:not(.admin-page--content-editor) {
     --admin-rail-block-start: 28px;
     --admin-content-rail-padding-top: 24px;
+  }
+
+  /**
+   * 窄屏后台壳层贴住屏幕左缘：起始外边距归零后，侧栏 4px 内边距正好成为
+   * 「图标到屏幕左缘」的距离，与图标到分割线的距离相同。
+   * 只作用于 body.admin-page 的窄屏壳层，宽屏与公开站点窄屏壳层不受影响。
+   * 带 fallback 的 env() 只为横屏刘海机型留出不可点区域；无刘海时等于 0。
+   */
+  body.admin-page .shell {
+    padding-inline-start: env(safe-area-inset-left, 0px);
+  }
+
+  /**
+   * 窄屏后台侧栏顶部 logo 换成站点 favicon：尺寸沿用 AdminIcon 的 22px，
+   * 容器 44px 命中区、圆角与悬停背板都不变；未配置站点图标时模板不输出 img，AdminIcon 照旧。
+   */
+  body.admin-page .sidebar__title--favicon-logo .sidebar__title-favicon {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+  }
+
+  body.admin-page .sidebar__title--favicon-logo .sidebar__title-icon--default {
+    display: none;
   }
 
   body.admin-page:not(.admin-page--content-editor) .content {
