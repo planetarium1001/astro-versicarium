@@ -73,7 +73,8 @@ const siteTitleMaxPercent = settings.site.titleMaxPercent;
 const siteRailOffsetPx = settings.site.railOffsetPx;
 /**
  * 页面外缘间隙（后台可配，默认 41px）：内容盒到浏览器边缘的距离。
- * 换算 --page-inline 时扣掉 html 的 scrollbar-gutter: stable 占住的滚动条槽。
+ * 换算 --page-inline 时扣掉 html 的 scrollbar-gutter: stable 占住的滚动条槽；
+ * 浮层滚动条系统上槽位并不存在，head 的内联探针脚本会按实测槽宽就地改写 --page-inline。
  */
 const sitePageGapPx = settings.site.pageGapPx;
 const pageInlinePx = sitePageGapPx - SCROLLBAR_GUTTER_INLINE_PX;
@@ -86,6 +87,7 @@ const typographyStyleOverride = getTypographyStyleOverride(settings.ui.typograph
  * 与窄屏浮动列右侧距离。
  * 内联属性优先于 :root 与首页 critical CSS；窄屏由 global.css 在 body 覆写 --page-inline，
  * layout.css 在窄屏读 --rail-action-offset-narrow 覆盖 --rail-action-offset。
+ * 这里的 --page-inline 是「按 15px 滚动条槽换算」的构建期值，浮层滚动条系统上由 head 内联脚本改写。
  */
 const htmlStyleOverride = [
   typographyStyleOverride,
@@ -255,6 +257,37 @@ const adminUiPrefsScriptHref = isDevAdminPage
     ) : null}
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {
+      /**
+       * 滚动条系统探针（必须在样式表之前执行）：浮层滚动条（macOS 默认等）不占布局宽度，
+       * thumb 浮在窗口最右缘。构建期按 15px 槽位换算的 --page-inline 在浮层系统上会让结束内边距
+       * 少 15px（左右不对称），右下角浮动列与目录把手也会压在 thumb 上。
+       * 这里量真实滚动条宽度，在 <html> 上写两个内联变量：
+       * --scrollbar-actual-inline（实测槽宽，浮层系统为 0）与 --scrollbar-overlay-inline
+       * （浮层补偿，浮层系统 15px、经典滚动条 0px，见 global.css 同名 token 说明），
+       * 并把 --page-inline 就地修正为「视觉间隙 − 实测槽宽」，让结束内边距与起始对称。
+       * 脚本在样式表之前执行，首屏就按实测值排版，不会先画一版再跳；禁用 JS 时退回构建期换算值。
+       * 后台壳层不走公开页的对称外边距方案，整段跳过（admin-page 仍用构建期换算值）。
+       */
+      !isAdminPage ? (
+        <script is:inline>
+          (() => {
+            const root = document.documentElement;
+            const probe = document.createElement('div');
+            probe.style.cssText = 'position:absolute;top:-9999px;width:100px;height:100px;overflow:scroll';
+            root.appendChild(probe);
+            const scrollbarWidth = probe.offsetWidth - probe.clientWidth;
+            probe.remove();
+            root.style.setProperty('--scrollbar-actual-inline', `${scrollbarWidth}px`);
+            root.style.setProperty('--scrollbar-overlay-inline', `${scrollbarWidth === 0 ? 15 : 0}px`);
+            root.style.setProperty(
+              '--page-inline',
+              `calc(var(--page-gap-inline) - ${scrollbarWidth}px)`
+            );
+          })();
+        </script>
+      ) : null
+    }
     {faviconLinks.map((link) => (
       <link rel={link.rel} type={link.type} sizes={link.sizes} href={withBase(link.href)} />
     ))}

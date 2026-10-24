@@ -140,9 +140,14 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
   /**
    * 收起后只留把手宽度的窄轨，保证把手在壳层内可见。
    * 把手尺寸与偏移跟悬浮列统一（--rail-action-size / --rail-action-offset，见 layout.css）；
-   * 窄轨宽度 = 左右各一份偏移 + 把手本身，改大把手须同步加宽窄轨。
+   * 窄轨宽度 = 左侧偏移 + 右侧有效偏移 + 把手本身，改大把手须同步加宽窄轨。
+   * 右侧有效偏移在浮层滚动条系统上还要让出 thumb 宽度（--scrollbar-overlay-inline，
+   * 由 BaseLayout 的 head 内联脚本写入，静态 CSS 按 fallback 0 求值），
+   * 窄轨因此跟着加宽，把手才不会被挤到轨外。
    */
-  --article-toc-handle-column: calc(var(--rail-action-offset) * 2 + var(--rail-action-size));
+  --article-toc-handle-column: calc(
+    var(--rail-action-offset) * 2 + var(--rail-action-size) + var(--scrollbar-overlay-inline, 0px)
+  );
   /**
    * 实际列宽 = 文字区宽度 - --page-inline，收起 / 入场时收窄，栅格规则统一引用。
    * 列右边界落在壳层内容盒右缘，左边界稳定在距视口右缘 --article-toc-inline-size 处，
@@ -168,23 +173,29 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
   transition: opacity 160ms ease, visibility 0s linear 160ms;
 }
 
-:root[data-toc-collapsed='true'] .article-toc--rail,
+/* 入场态（data-toc-intro）列宽已是把手列：右内边距归零，把手位置交给表头的负外边距补偿，
+   与展开态落在同一条竖线上；左内边距留一份偏移，窄轨里把手不贴左。 */
 :root[data-toc-intro='true'] .article-toc--rail {
-  /* 收起态列宽 = --article-toc-handle-column（左右偏移 + 把手），左右内边距各留一份偏移 */
+  padding: var(--sidebar-padding-block) 0 40px var(--rail-action-offset);
+}
+
+/* 收起态（宽屏由下方 1024px 断点的 position: fixed 接管）：左右各留一份偏移 */
+:root[data-toc-collapsed='true'] .article-toc--rail {
   padding: var(--sidebar-padding-block) var(--rail-action-offset) 40px var(--rail-action-offset);
 }
 
-/* 收起 / 入场态列宽已是把手列，表头不再向右补偿，否则把手会被推出视口右缘 */
-:root[data-toc-collapsed='true'] .article-toc__rail-head,
-:root[data-toc-intro='true'] .article-toc__rail-head {
+/* 收起态把手已由 fixed 定位贴到竖线上，表头不再做右补偿，否则会再往右推一段 */
+:root[data-toc-collapsed='true'] .article-toc__rail-head {
   margin-right: 0;
   padding-right: 0;
 }
 
 /**
  * 把手与「本文目录」同行并贴行右端，收起 / 展开 / 入场都不位移：
- * 用负右外边距补偿列宽里扣掉的 --page-inline，再用右内边距把把手压回
- * 距视口右缘 --rail-action-offset 的竖线上（与右下角浮动列同线）。
+ * 用负右外边距补偿列宽里扣掉的 --page-inline（列右边界因此回到视口初始包含块右缘），
+ * 再用右内边距把把手压回距该右缘 --rail-action-offset 的竖线上（与右下角浮动列同线）。
+ * 浮层滚动条系统上滚动条不占布局宽度、thumb 浮在窗口最右缘，
+ * 因此再让出 --scrollbar-overlay-inline（由 BaseLayout 的 head 内联脚本写入，静态 CSS 按 fallback 0 求值）。
  */
 .article-toc__rail-head {
   display: flex;
@@ -192,7 +203,7 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
   justify-content: flex-end;
   gap: 8px;
   margin-right: calc(var(--page-inline) * -1);
-  padding-right: var(--rail-action-offset);
+  padding-right: calc(var(--rail-action-offset) + var(--scrollbar-overlay-inline, 0px));
   margin-bottom: 10px;
 }
 
@@ -373,12 +384,13 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
 
   /**
    * 收起态的把手用 position: fixed，跟随滚动常驻，不随页面滚走。
-   * 位置与右下角浮动列同一条竖线（--rail-action-offset）。
+   * 位置与右下角浮动列同一条竖线（--rail-action-offset）；
+   * 浮层滚动条系统上两者再各自让出 --scrollbar-overlay-inline（thumb 宽度），仍然同线。
    */
   :root[data-toc-collapsed='true'] body.immersive-page .article-toc--rail {
     position: fixed;
     top: var(--sidebar-padding-block);
-    right: var(--rail-action-offset);
+    right: calc(var(--rail-action-offset) + var(--scrollbar-overlay-inline, 0px));
     width: auto;
     margin-right: 0;
     padding: 0;

@@ -756,12 +756,16 @@ describe('文章目录列：右边界跟随页面外缘间隙', () => {
     const head = /^\.article-toc__rail-head\s*\{([^}]*)\}/m.exec(css)?.[1] ?? '';
     expect(head, '需要 .article-toc__rail-head 规则').not.toBe('');
     expect(head).toMatch(/margin-right:\s*calc\(var\(--page-inline\) \* -1\)/);
-    expect(head).toMatch(/padding-right:\s*var\(--rail-action-offset\)/);
-
-    // 收起 / 入场态抵消表头补偿，把手位置与今天一致
-    expect(css).toMatch(
-      /:root\[data-toc-collapsed='true'\] \.article-toc__rail-head,[\s\S]*?:root\[data-toc-intro='true'\] \.article-toc__rail-head\s*\{[^}]*margin-right:\s*0[^}]*padding-right:\s*0/
+    // 右内边距 = 把手偏移 + 浮层滚动条 thumb 宽度（静态 CSS 按 fallback 0 求值）
+    expect(head).toMatch(
+      /padding-right:\s*calc\(var\(--rail-action-offset\) \+ var\(--scrollbar-overlay-inline,\s*0px\)\)/
     );
+
+    // 收起态把手由 fixed 定位贴到竖线上，表头不再做右补偿；入场态改走与展开态相同的表头补偿
+    expect(css).toMatch(
+      /:root\[data-toc-collapsed='true'\] \.article-toc__rail-head\s*\{[^}]*margin-right:\s*0[^}]*padding-right:\s*0/
+    );
+    expect(css).not.toMatch(/:root\[data-toc-intro='true'\] \.article-toc__rail-head/);
     // 收起态列宽仍压到把手宽；1024–1279 普通模式也常驻目录列，不再占位 0px
     expect(css).toMatch(/--article-toc-column:\s*var\(--article-toc-handle-column\)/);
     expect(css).toMatch(
