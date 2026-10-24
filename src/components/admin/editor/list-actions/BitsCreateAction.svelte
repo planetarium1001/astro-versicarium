@@ -1,6 +1,7 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 import { createModalDialogFocusController } from '../../../../scripts/admin-console/modal-dialog-focus';
+import { bindModalScrollLock } from '../../../../scripts/admin-console/modal-scroll-binding';
 import { createWithBase } from '../../../../utils/format';
 import AdminEditorIcon from '../shared/AdminEditorIcon.svelte';
 import type { AdminStatusFeedbackOptions, StatusState } from './content-action-feedback';
@@ -199,6 +200,12 @@ $effect(() => {
   return () => {
     document.removeEventListener('keydown', dialogFocus.handleKeydown);
   };
+});
+
+$effect(() => {
+  const panel = panelEl;
+  if (!panel) return;
+  return bindModalScrollLock(panel);
 });
 </script>
 

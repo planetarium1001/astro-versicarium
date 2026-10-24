@@ -1,5 +1,6 @@
 <script lang="ts">
 import { createModalDialogFocusController } from '../../../../scripts/admin-console/modal-dialog-focus';
+import { bindModalScrollLock } from '../../../../scripts/admin-console/modal-scroll-binding';
 import AdminEditorIcon from '../shared/AdminEditorIcon.svelte';
 import type { AdminContentBodyImageUploadCollectionKey } from '../../../../lib/admin-console/content-collections';
 import { uploadContentEditorImage, type EditorImageUploadResult } from './editor-image-upload';
@@ -253,6 +254,12 @@ $effect(() => {
   return () => {
     document.removeEventListener('keydown', imageDialogFocus.handleKeydown);
   };
+});
+
+$effect(() => {
+  const panel = dialogPanelEl;
+  if (!panel) return;
+  return bindModalScrollLock(panel);
 });
 
 $effect(() => {

@@ -1,5 +1,6 @@
 <script lang="ts">
 import { createModalDialogFocusController } from '../../../../scripts/admin-console/modal-dialog-focus';
+import { bindModalScrollLock } from '../../../../scripts/admin-console/modal-scroll-binding';
 import AdminEditorIcon from '../shared/AdminEditorIcon.svelte';
 import { uploadBlogEditorImage } from './editor-image-upload';
 import {
@@ -280,6 +281,12 @@ $effect(() => {
   return () => {
     document.removeEventListener('keydown', galleryDialogFocus.handleKeydown);
   };
+});
+
+$effect(() => {
+  const panel = dialogPanelEl;
+  if (!panel) return;
+  return bindModalScrollLock(panel);
 });
 </script>
 

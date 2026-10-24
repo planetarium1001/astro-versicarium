@@ -1,5 +1,6 @@
 <script lang="ts">
 import { createModalDialogFocusController } from '../../../../scripts/admin-console/modal-dialog-focus';
+import { bindModalScrollLock } from '../../../../scripts/admin-console/modal-scroll-binding';
 import AdminEditorIcon from '../shared/AdminEditorIcon.svelte';
 import type {
   ContentBulkResultDialog as ResultDialog,
@@ -75,6 +76,12 @@ $effect(() => {
   return () => {
     document.removeEventListener('keydown', dialogFocus.handleKeydown);
   };
+});
+
+$effect(() => {
+  const panel = panelEl;
+  if (!panel) return;
+  return bindModalScrollLock(panel);
 });
 </script>
 
