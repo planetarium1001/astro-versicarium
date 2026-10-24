@@ -471,6 +471,17 @@ hr {
   outline: none;
 }
 
+/*
+ * 弹窗与灯箱关闭后把焦点还给触发器时，这次聚焦由指针引起，不应留下焦点环；
+ * 标记由 scripts/pointer-focus.ts 打上，下一次按键或失焦即撤掉。
+ * :focus-visible 一并压掉：Safari 与部分 Android 内核对程序化聚焦也会命中它。
+ * 用 :root 前缀抬高特异性，盖过各组件自己的 `.x:focus-visible` 焦点环。
+ */
+:root [data-pointer-focus]:focus,
+:root [data-pointer-focus]:focus-visible {
+  outline: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-dialog-close] {
     transition: none;

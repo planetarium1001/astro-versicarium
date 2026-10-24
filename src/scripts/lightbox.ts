@@ -1,5 +1,6 @@
 import { toSafeHttpUrl } from '../utils/format';
 import { lockScrollFor, unlockScrollFor } from './modal-scroll-lock';
+import { isPointerInput, markPointerFocus } from './pointer-focus';
 
 type LightboxImage = {
   src: string;
@@ -25,6 +26,8 @@ type ArticleLightboxOptions = LightboxOptions & {
 
 type LightboxOpenOptions = {
   opener?: HTMLElement | null;
+  /** 由鼠标 / 触摸打开；关闭时把焦点还给触发器但不画焦点环。缺省按当前输入模态推断。 */
+  pointer?: boolean;
 };
 
 type LightboxController = {
@@ -115,6 +118,7 @@ const createLightboxController = (options: LightboxOptions): LightboxController 
   let containerWidth = 0;
   let containerHeight = 0;
   let openerEl: HTMLElement | null = null;
+  let openerFromPointer = false;
 
   const showDialog = () => {
     dialog.removeAttribute('hidden');
@@ -257,18 +261,26 @@ const createLightboxController = (options: LightboxOptions): LightboxController 
     });
   };
 
+  /**
+   * 关闭时把焦点还给触发器。
+   *
+   * `dialog.close()` 会同步把焦点还给打开前的元素，之后再在 rAF 里补标记已经晚于
+   * 这次聚焦，部分内核会先画出焦点环。因此指针打开的弹窗在 close() 之前就给触发器
+   * 打上标记，让浏览器还原焦点的那一次聚焦直接不画环。
+   */
   const restoreOpenerFocus = () => {
     const target = openerEl;
+    const fromPointer = openerFromPointer;
     openerEl = null;
+    openerFromPointer = false;
     if (!target?.isConnected) return;
-    window.requestAnimationFrame(() => {
-      target.focus({ preventScroll: true });
-    });
+    if (fromPointer) markPointerFocus(target);
   };
 
   const openDialog = (images: LightboxImage[], index: number, openOptions?: LightboxOpenOptions) => {
     if (images.length === 0) return;
     openerEl = openOptions?.opener ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    openerFromPointer = openOptions?.pointer ?? isPointerInput();
     currentImages = images;
     currentIndex = clampIndex(index, images.length);
     updateView();
@@ -286,6 +298,8 @@ const createLightboxController = (options: LightboxOptions): LightboxController 
   };
 
   const closeDialog = () => {
+    // 先给触发器打标记：dialog.close() 同步还原焦点，晚一步就会漏掉这次聚焦。
+    if (openerFromPointer && openerEl?.isConnected) markPointerFocus(openerEl);
     if (dialog.open) {
       if (typeof dialog.close === 'function') {
         dialog.close();
@@ -739,7 +753,7 @@ export const initArticleLightbox = (options: ArticleLightboxOptions = {}) => {
     }
   });
 
-  const openFromTrigger = (trigger: HTMLElement) => {
+  const openFromTrigger = (trigger: HTMLElement, options: { pointer: boolean }) => {
     const index = Number(trigger.getAttribute('data-lightbox-index') ?? '-1');
     if (!Number.isFinite(index) || index < 0 || index >= items.length) return;
 
@@ -753,7 +767,7 @@ export const initArticleLightbox = (options: ArticleLightboxOptions = {}) => {
         src: nextSrc
       };
     });
-    controller.open(list, index, { opener: trigger });
+    controller.open(list, index, { opener: trigger, pointer: options.pointer });
   };
 
   container.addEventListener('click', (event) => {
@@ -768,7 +782,7 @@ export const initArticleLightbox = (options: ArticleLightboxOptions = {}) => {
     if (trigger instanceof HTMLAnchorElement && (event.metaKey || event.ctrlKey)) return;
     event.preventDefault();
 
-    openFromTrigger(trigger);
+    openFromTrigger(trigger, { pointer: true });
   });
 
   container.addEventListener('keydown', (event) => {
@@ -778,6 +792,6 @@ export const initArticleLightbox = (options: ArticleLightboxOptions = {}) => {
     const trigger = target.closest<HTMLElement>('[data-lightbox-trigger="true"]');
     if (!trigger || trigger instanceof HTMLAnchorElement || trigger instanceof HTMLButtonElement) return;
     event.preventDefault();
-    openFromTrigger(trigger);
+    openFromTrigger(trigger, { pointer: false });
   });
 };
