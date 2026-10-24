@@ -33,26 +33,26 @@ import {
   CONTENT_LIST_DELETE_FEEDBACK_VALUE
 } from '../shared/content-list-feedback';
 import {
-  applyPreviewHtmlPreservingScroll,
   buildContentExportHref,
-  captureEditorScrollSnapshot,
   clearStoredWriteFeedback,
   EDITOR_OUTLINE_TARGET_SCROLL_OFFSET_RATIO,
-  EDITOR_SCROLLBAR_VISIBILITY_TIMEOUT_MS,
   getEditorBodyCharCount,
   getEditorScrollSyncToggleLabel,
   getPreviewDebounceMs,
   normalizeEditorBodyValue,
   readStoredWriteFeedback,
-  restoreEditorScrollSnapshot,
   storeWriteFeedback,
-  type EditorScrollSource,
   type StatusState
 } from '../shared/editor-shell-helpers';
 import { createEditorShellController } from '../shared/editor-shell-controller.svelte';
+import {
+  createEditorScrollBinding,
+  waitForAnimationFrame
+} from '../shared/editor-scroll-binding.svelte';
+import { attachEditorScrollListeners } from '../shared/editor-scroll-listeners';
+import { buildEditorTopControlsProps } from '../shared/editor-top-controls-props';
 import type { EditableImageBlock } from '../media-insert/editor-image-blocks';
 import type { EditableGalleryBlock } from '../media-insert/editor-gallery-blocks';
-import { createEditorScrollSyncController } from '../shared/editor-scroll-sync';
 import {
   buildBlogOutlineListItems,
   extractMarkdownOutline,
@@ -166,13 +166,23 @@ const markdownCommandDispatcher = createMarkdownCommandDispatcher({
 });
 let editorShellEl = $state<HTMLElement | null>(null);
 let topActionsEl = $state<HTMLDivElement | null>(null);
-let bodyScrollElement = $state<HTMLElement | null>(null);
-let previewScrollElement = $state<HTMLElement | null>(null);
 let syncScrollEnabled = $state(true);
 let writeFeedbackRestored = false;
 let pendingPreviewOutlineKey = $state<string | null>(null);
 let pendingPreviewOutlineJumpId = 0;
 let outlineJumpCommandId = 0;
+
+const scrollBinding = createEditorScrollBinding({
+  getEffectiveViewMode: () => shell.effectiveViewMode,
+  isSyncEnabled: () => syncScrollEnabled,
+  setSyncEnabled: (enabled) => {
+    syncScrollEnabled = enabled;
+  },
+  isSyncAvailable: () => scrollSyncAvailable,
+  setPreviewHtml: (html) => {
+    previewHtml = html;
+  }
+});
 
 const bodyLineCount = $derived(body.length === 0 ? 1 : body.split(/\r\n|\r|\n/).length);
 const bodyCharCount = $derived(getEditorBodyCharCount(body));
@@ -186,14 +196,17 @@ const frontmatterIssueCount = $derived(
 const visibleWriteResult = $derived(!isDirty ? writeResult : null);
 const exportHref = $derived(buildContentExportHref(exportEndpoint, collection, entryId));
 const scrollSyncAvailable = $derived(
-  shell.effectiveViewMode === 'both' && Boolean(bodyScrollElement && previewScrollElement)
+  shell.effectiveViewMode === 'both'
+    && Boolean(scrollBinding.bodyScrollElement && scrollBinding.previewScrollElement)
 );
 const scrollSyncToggleLabel = $derived(getEditorScrollSyncToggleLabel({
   available: scrollSyncAvailable,
   enabled: syncScrollEnabled
 }));
 const scrollSyncControlDisabled = $derived(!scrollSyncAvailable);
-const scrollTopControlDisabled = $derived(!bodyScrollElement && !previewScrollElement);
+const scrollTopControlDisabled = $derived(
+  !scrollBinding.bodyScrollElement && !scrollBinding.previewScrollElement
+);
 const markdownOutlineItems = $derived(
   BlogOutlineEnabled && shell.outlineVisible && shell.outlineActiveTab === 'headings'
     ? extractMarkdownOutline(body)
@@ -270,67 +283,8 @@ const removeEditingGallery = () => {
   editingGalleryBlock = null;
 };
 
-const setBodyScrollElement = (element: HTMLElement | null) => {
-  bodyScrollElement = element;
-};
-
-const setPreviewScrollElement = (element: HTMLElement | null) => {
-  previewScrollElement = element;
-};
-
-const getScrollElement = (source: EditorScrollSource): HTMLElement | null =>
-  source === 'body' ? bodyScrollElement : previewScrollElement;
-
-const scrollSyncController = createEditorScrollSyncController({
-  getScrollElement,
-  isEnabled: () => syncScrollEnabled,
-  setEnabled: (enabled) => {
-    syncScrollEnabled = enabled;
-  },
-  isAvailable: () => scrollSyncAvailable,
-  scrollbarVisibilityTimeoutMs: EDITOR_SCROLLBAR_VISIBILITY_TIMEOUT_MS
-});
-
-const handleEditorPaneScroll = (source: EditorScrollSource) => {
-  scrollSyncController.handlePaneScroll(source);
-};
-
-const toggleScrollSync = () => {
-  scrollSyncController.toggleEnabled();
-};
-
-const scrollEditorPanesToTop = () => {
-  scrollSyncController.scrollToTop(shell.effectiveViewMode);
-};
-
-const waitForAnimationFrame = (): Promise<void> =>
-  new Promise((resolve) => {
-    window.requestAnimationFrame(() => resolve());
-  });
-
-const applyPreviewHtmlRefresh = async (html: string) => {
-  await applyPreviewHtmlPreservingScroll({
-    captureScrollPosition: () => captureEditorScrollSnapshot(previewScrollElement),
-    applyHtml: () => {
-      previewHtml = html;
-    },
-    waitForRender: () => tick(),
-    restoreScrollPosition: (snapshot) => {
-      restoreEditorScrollSnapshot(snapshot, previewScrollElement);
-    },
-    waitForLayoutSettle: () => waitForAnimationFrame(),
-    cancelQueuedScrollSync: () => scrollSyncController.cancelQueued(),
-    setScrollSyncGuarded: (guarded) => {
-      scrollSyncController.setGuarded(guarded);
-    },
-    releaseScrollSyncGuard: (frameDelay) => scrollSyncController.releaseGuard(frameDelay),
-    isScrollSyncActive: () => syncScrollEnabled && scrollSyncAvailable,
-    realignScrollSync: () => scrollSyncController.queueLastSource()
-  });
-};
-
 const scrollPreviewToOutlineTarget = (outlineKey: string): boolean => {
-  const previewElement = previewScrollElement;
+  const previewElement = scrollBinding.previewScrollElement;
   const scrolled = scrollPreviewElementToOutlineKey(
     previewElement,
     outlineKey,
@@ -339,12 +293,12 @@ const scrollPreviewToOutlineTarget = (outlineKey: string): boolean => {
   );
   if (!scrolled || !previewElement) return false;
 
-  scrollSyncController.markElementScrolling(previewElement);
+  scrollBinding.controller.markElementScrolling(previewElement);
   return true;
 };
 
 const scrollBodyToOutlineTarget = (item: MarkdownOutlineItem): boolean => {
-  if (!bodyScrollElement) return false;
+  if (!scrollBinding.bodyScrollElement) return false;
 
   outlineJumpCommandId += 1;
   outlineJumpCommand = {
@@ -356,7 +310,7 @@ const scrollBodyToOutlineTarget = (item: MarkdownOutlineItem): boolean => {
 };
 
 const handleBodyOutlineJump = (element: HTMLElement) => {
-  scrollSyncController.markElementScrolling(element);
+  scrollBinding.controller.markElementScrolling(element);
 };
 
 const handleOutlineHeadingSelect = (item: MarkdownOutlineItem) => {
@@ -365,8 +319,8 @@ const handleOutlineHeadingSelect = (item: MarkdownOutlineItem) => {
   let bodyScrolled = false;
   let previewScrolled = false;
 
-  scrollSyncController.cancelQueued();
-  scrollSyncController.setGuarded(true);
+  scrollBinding.controller.cancelQueued();
+  scrollBinding.controller.setGuarded(true);
 
   try {
     if (shouldScrollPreview) {
@@ -378,16 +332,16 @@ const handleOutlineHeadingSelect = (item: MarkdownOutlineItem) => {
       bodyScrolled = scrollBodyToOutlineTarget(item);
     }
   } finally {
-    scrollSyncController.releaseGuard(2);
+    scrollBinding.controller.releaseGuard(2);
   }
 
   if (bodyScrolled) {
-    scrollSyncController.setLastSource('body');
+    scrollBinding.controller.setLastSource('body');
     return;
   }
 
   if (previewScrolled) {
-    scrollSyncController.setLastSource('preview');
+    scrollBinding.controller.setLastSource('preview');
   }
 };
 
@@ -407,16 +361,16 @@ const runPendingPreviewOutlineJump = async (outlineKey: string) => {
     return;
   }
 
-  scrollSyncController.cancelQueued();
-  scrollSyncController.setGuarded(true);
+  scrollBinding.controller.cancelQueued();
+  scrollBinding.controller.setGuarded(true);
   const scrolled = scrollPreviewToOutlineTarget(outlineKey);
   if (scrolled) {
     pendingPreviewOutlineKey = null;
-    scrollSyncController.setLastSource('preview');
+    scrollBinding.controller.setLastSource('preview');
   } else if (previewRequestGuard.getLatestSource() === body) {
     pendingPreviewOutlineKey = null;
   }
-  scrollSyncController.releaseGuard(2);
+  scrollBinding.controller.releaseGuard(2);
 };
 
 const closeFrontmatterPanel = () => {
@@ -557,7 +511,7 @@ const requestPreview = async () => {
       return;
     }
 
-    await applyPreviewHtmlRefresh(previewResult.html);
+    await scrollBinding.refreshPreviewHtml(previewResult.html);
     previewWarnings = previewResult.warnings;
   } catch {
     if (previewRequest.signal.aborted || !previewRequest.isCurrent()) return;
@@ -700,41 +654,16 @@ $effect(() => {
   });
 });
 
-$effect(() => {
-  const bodyElement = bodyScrollElement;
-  const previewElement = previewScrollElement;
-  if (!bodyElement || !previewElement || shell.effectiveViewMode !== 'both') return;
-
-  const handleBodyScroll = () => {
-    handleEditorPaneScroll('body');
-  };
-
-  const handlePreviewScroll = () => {
-    handleEditorPaneScroll('preview');
-  };
-
-  const handlePreviewContentLoad = () => {
-    if (syncScrollEnabled && scrollSyncAvailable) {
-      scrollSyncController.queueLastSource();
-    }
-  };
-
-  bodyElement.addEventListener('scroll', handleBodyScroll, { passive: true });
-  previewElement.addEventListener('scroll', handlePreviewScroll, { passive: true });
-  previewElement.addEventListener('load', handlePreviewContentLoad, true);
-
-  if (syncScrollEnabled) {
-    scrollSyncController.queueLastSource();
-  }
-
-  return () => {
-    bodyElement.removeEventListener('scroll', handleBodyScroll);
-    previewElement.removeEventListener('scroll', handlePreviewScroll);
-    previewElement.removeEventListener('load', handlePreviewContentLoad, true);
-    scrollSyncController.clearElement(bodyElement);
-    scrollSyncController.clearElement(previewElement);
-  };
-});
+$effect(() => attachEditorScrollListeners({
+  getBodyElement: () => scrollBinding.bodyScrollElement,
+  getPreviewElement: () => scrollBinding.previewScrollElement,
+  isBothMode: () => shell.effectiveViewMode === 'both',
+  isSyncEnabled: () => syncScrollEnabled,
+  isSyncAvailable: () => scrollSyncAvailable,
+  onPaneScroll: scrollBinding.handlePaneScroll,
+  queueLastSource: () => scrollBinding.controller.queueLastSource(),
+  clearElement: (element) => scrollBinding.controller.clearElement(element)
+}));
 
 $effect(() => {
   const outlineKey = pendingPreviewOutlineKey;
@@ -745,7 +674,7 @@ $effect(() => {
 
 $effect(() => {
   return () => {
-    scrollSyncController.destroy();
+    scrollBinding.destroy();
     previewRequestGuard.destroy();
   };
 });
@@ -812,51 +741,21 @@ $effect(() => {
 >
   <EditorTopControls
     bind:actionMenuElement={topActionsEl}
+    {...buildEditorTopControlsProps({
+      shell,
+      dispatcher: markdownCommandDispatcher,
+      onOpenGallery: openGalleryInsert,
+      statusText,
+      statusState,
+      canWriteContent,
+      dirty: isDirty,
+      returnHref,
+      exportHref
+    })}
+    outlinePanelId={OUTLINE_PANEL_ID}
+    syntaxPanelId={SYNTAX_PANEL_ID}
     {busy}
     bodyToolsEnabled={bodyEditingEnabled}
-    outlineOpen={shell.outlineOpen}
-    outlineVisible={shell.outlineVisible}
-    outlineToggleLabel={shell.outlineToggleLabel}
-    outlineControlDisabled={shell.outlineControlDisabled}
-    outlinePanelId={OUTLINE_PANEL_ID}
-    syntaxOpen={shell.syntaxOpen}
-    syntaxVisible={shell.syntaxVisible}
-    syntaxToggleLabel={shell.syntaxToggleLabel}
-    syntaxControlDisabled={shell.syntaxControlDisabled}
-    syntaxPanelId={SYNTAX_PANEL_ID}
-    lineNumbersEnabled={shell.lineNumbers}
-    lineNumbersToggleLabel={shell.lineNumbersToggleLabel}
-    markdownHighlightTheme={shell.markdownHighlightTheme}
-    editorLayoutIsSplit={shell.layout === 'split'}
-    editorLayoutToggleLabel={shell.layoutToggleLabel}
-    editorLayoutToggleIcon={shell.layoutToggleIcon}
-    singleViewActive={shell.singleViewActive}
-    singleViewReturnLabel={shell.singleViewReturnLabel}
-    splitBothIsCompact={shell.splitBothIsCompact}
-    compactPaneToggleLabel={shell.compactPaneToggleLabel}
-    compactPaneToggleText={shell.compactPaneToggleText}
-    editViewToggleLabel={shell.editViewToggleLabel}
-    previewViewToggleLabel={shell.previewViewToggleLabel}
-    effectiveViewMode={shell.effectiveViewMode}
-    onApplyTool={markdownCommandDispatcher.applyTool}
-    onApplyHeading={markdownCommandDispatcher.applyHeading}
-    onApplyCallout={markdownCommandDispatcher.applyCallout}
-    onInsertText={markdownCommandDispatcher.insertText}
-    onOpenGallery={openGalleryInsert}
-    onToggleOutline={shell.toggleOutline}
-    onToggleSyntax={shell.toggleSyntax}
-    onToggleLineNumbers={shell.toggleLineNumbers}
-    onSelectMarkdownHighlightTheme={shell.selectMarkdownHighlightTheme}
-    onToggleLayout={shell.toggleLayout}
-    onToggleView={shell.toggleViewMode}
-    onReturnToBothView={shell.returnToBothView}
-    onToggleCompactPane={shell.toggleCompactPaneMode}
-    {statusText}
-    {statusState}
-    {canWriteContent}
-    dirty={isDirty}
-    {returnHref}
-    {exportHref}
     onSave={requestContentWrite}
     onReset={handleActionMenuReset}
     onDownload={handleActionMenuDownload}
@@ -895,14 +794,14 @@ $effect(() => {
       outlineActiveTab={shell.outlineActiveTab}
       {markdownOutlineItems}
       {outlineListItems}
-      onBodyScrollElementChange={setBodyScrollElement}
+      onBodyScrollElementChange={scrollBinding.setBodyScrollElement}
       onBodyOutlineJump={handleBodyOutlineJump}
       onImageToolRequest={handleImageToolRequest}
       onGalleryEditRequest={handleGalleryEditRequest}
-      onPreviewScrollElementChange={setPreviewScrollElement}
+      onPreviewScrollElementChange={scrollBinding.setPreviewScrollElement}
       onShortcutTool={markdownCommandDispatcher.applyTool}
-      onToggleScrollSync={toggleScrollSync}
-      onScrollToTop={scrollEditorPanesToTop}
+      onToggleScrollSync={scrollBinding.toggleSync}
+      onScrollToTop={scrollBinding.scrollToTop}
       onOutlineTabChange={shell.setOutlineTab}
       onOutlineHeadingSelect={handleOutlineHeadingSelect}
       onSyntaxMaximizeToggle={shell.toggleSyntaxMaximize}
