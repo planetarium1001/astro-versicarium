@@ -2,6 +2,9 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { readModuleDir } from './module-source-reader';
+
+
 /**
  * 只能在单位层守住的布局与交互不变量：类型检查、构建与 DOM 断言都覆盖不到。
  * jsdom 不做布局，端到端用例断言不了几何，因此直接读样式与组件源码做契约断言。
@@ -9,7 +12,6 @@ import { describe, expect, it } from 'vitest';
 
 const SRC = process.cwd();
 const read = (relative: string) => readFile(path.join(SRC, relative), 'utf8');
-
 const DEVLOG_CSS = 'src/styles/devlog-page.css';
 const LAYOUT_CSS = 'src/styles/components/layout.css';
 const ENTRY_TAGS_CSS = 'src/styles/components/entry-tags.css';
@@ -879,7 +881,7 @@ describe('后台设置行的排版', () => {
     // 新字段的标签与提示：提示走 TS 常量，避免把非子集字符写进模板
     expect(section).toContain('页面外缘间隙');
     expect(section).toContain('{ADMIN_SITE_PAGE_GAP_HINT}');
-    const themeShared = await read('src/lib/admin-console/theme-shared.ts');
+    const themeShared = await readModuleDir(SRC, 'src/lib/admin-console/theme-shared');
     expect(themeShared).toContain('（px，最小 ${ADMIN_SITE_PAGE_GAP_MIN}；仅 901px 以上生效）');
 
     // 两列均分来自 .admin-grid
@@ -952,8 +954,8 @@ describe('RSS 点击区域与 RSS 开关', () => {
       read('src/pages/archive/index.astro'),
       read('src/components/BitsPageView.astro'),
       read('src/lib/theme-settings.ts'),
-      read('src/lib/admin-console/theme-shared.ts'),
-      read('src/scripts/admin-console/form-codec.ts')
+      readModuleDir(SRC, 'src/lib/admin-console/theme-shared'),
+      readModuleDir(SRC, 'src/scripts/admin-console/form-codec')
     ]);
 
     // 后台：单独一个 topic，总开关在标题行最右（`admin-label__toggle` = 首页导语那款「展示」）
@@ -1125,7 +1127,7 @@ describe('归档条目固定排版「项目名: 标题 v2.0」', () => {
 describe('首页导语链接选项', () => {
   it('标签选项使用 #归档标签，且选择框加宽', async () => {
     const [shared, form] = await Promise.all([
-      read('src/lib/admin-console/theme-shared.ts'),
+      readModuleDir(SRC, 'src/lib/admin-console/theme-shared'),
       read('src/styles/components/admin/theme/form.css')
     ]);
 

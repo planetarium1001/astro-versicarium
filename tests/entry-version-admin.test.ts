@@ -2,6 +2,9 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { readModuleDir } from './module-source-reader';
+
+
 const read = (relative: string) => readFile(path.join(process.cwd(), relative), 'utf8');
 
 describe('后台：条目版本名称唯一选项', () => {
@@ -9,7 +12,7 @@ describe('后台：条目版本名称唯一选项', () => {
     const [uiSection, themeConsole, composer, section, css] = await Promise.all([
       read('src/components/admin/AdminUiSection.astro'),
       read('src/components/admin/AdminThemeDevConsole.astro'),
-      read('src/scripts/admin-console/form-codec.ts'),
+      readModuleDir(process.cwd(), 'src/scripts/admin-console/form-codec'),
       read('src/lib/entry-display.ts'),
       read('src/styles/components/admin/theme/index.css')
     ]);
@@ -28,7 +31,7 @@ describe('后台：条目版本名称唯一选项', () => {
     const [uiSection, section, composer, bindings, css] = await Promise.all([
       read('src/components/admin/AdminUiSection.astro'),
       read('src/lib/entry-display.ts'),
-      read('src/scripts/admin-console/form-codec.ts'),
+      readModuleDir(process.cwd(), 'src/scripts/admin-console/form-codec'),
       read('src/scripts/admin-console/bindings.ts'),
       read('src/styles/components/admin/theme/form.css')
     ]);
@@ -74,7 +77,7 @@ describe('后台：条目版本名称唯一选项', () => {
   it('设置链路从类型到表单 codec 都使用 entryVersionName', async () => {
     const [settings, shared, controls, validation] = await Promise.all([
       read('src/lib/theme-settings.ts'),
-      read('src/lib/admin-console/theme-shared.ts'),
+      readModuleDir(process.cwd(), 'src/lib/admin-console/theme-shared'),
       read('src/scripts/admin-console/controls.ts'),
       read('src/scripts/admin-console/validation.ts')
     ]);

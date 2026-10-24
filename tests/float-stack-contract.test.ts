@@ -2,6 +2,9 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { readModuleDir } from './module-source-reader';
+
+
 /**
  * 浮动列可点击性的静态几何探针：jsdom 不做布局，`::before` 覆盖层也拿不到矩形，
  * 端到端用例断言不了「相邻 44px 热区有没有互相压住」「右缘间距是否与桌面统一」。
@@ -23,7 +26,6 @@ import { describe, expect, it } from 'vitest';
 
 const SRC = process.cwd();
 const read = (relative: string) => readFile(path.join(SRC, relative), 'utf8');
-
 const LAYOUT_CSS = 'src/styles/components/layout.css';
 const GLOBAL_CSS = 'src/styles/global.css';
 const BASE_LAYOUT_ASTRO = 'src/layouts/BaseLayout.astro';
@@ -103,7 +105,6 @@ const readGeometry = async () => {
   };
 };
 
-
 /** 取 BaseLayout 里浮动列的标记片段（从容器到脚本之前），用于断言按钮属性。 */
 const floatStackMarkup = (source: string) => {
   const start = source.indexOf('data-float-stack');
@@ -135,7 +136,7 @@ describe('浮动列：窄屏右缘距离由后台设置控制', () => {
   it('默认值与范围与后台常量一致（site.json 默认 6）', async () => {
     const [siteJsonRaw, shared] = await Promise.all([
       read('src/data/settings/site.json'),
-      read('src/lib/admin-console/theme-shared.ts')
+      readModuleDir(SRC, 'src/lib/admin-console/theme-shared')
     ]);
     const siteJson = JSON.parse(siteJsonRaw) as { railOffsetPx?: number };
     expect(siteJson.railOffsetPx, '默认构建仍输出 6px').toBe(6);
@@ -191,7 +192,6 @@ describe('浮动列：44px 热区保留，相邻热区留净空', () => {
     expect(ruleBody(narrow, /body:not\(\.admin-page\) \.float-stack/)).not.toBe('');
   });
 });
-
 
 describe('浮动列：华为浏览器（ArkWeb）点按兼容', () => {
   it('按钮只写 aria-label，不写 title（title 会触发原生提示并吞掉首次点按）', async () => {
