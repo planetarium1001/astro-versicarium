@@ -114,7 +114,7 @@ const bodyEditingEnabled = editorAdapter.capabilities.body;
 const previewEnabled = editorAdapter.capabilities.preview;
 const imageInsertEnabled = editorAdapter.capabilities.bodyImageInsert;
 const galleryInsertEnabled = editorAdapter.capabilities.bodyGalleryInsert;
-const BlogOutlineEnabled = editorAdapter.capabilities.BlogOutline;
+const blogOutlineEnabled = editorAdapter.capabilities.blogOutline;
 
 const createInitialSnapshot = () => ({
   revision,
@@ -208,12 +208,12 @@ const scrollTopControlDisabled = $derived(
   !scrollBinding.bodyScrollElement && !scrollBinding.previewScrollElement
 );
 const markdownOutlineItems = $derived(
-  BlogOutlineEnabled && shell.outlineVisible && shell.outlineActiveTab === 'headings'
+  blogOutlineEnabled && shell.outlineVisible && shell.outlineActiveTab === 'headings'
     ? extractMarkdownOutline(body)
     : []
 );
 const outlineListItems = $derived(
-  BlogOutlineEnabled ? buildBlogOutlineListItems(BlogOutlineItems, entryId) : []
+  blogOutlineEnabled ? buildBlogOutlineListItems(BlogOutlineItems, entryId) : []
 );
 
 const setStatus = (state: StatusState, text: string) => {

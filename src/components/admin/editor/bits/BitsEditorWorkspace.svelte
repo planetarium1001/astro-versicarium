@@ -778,7 +778,7 @@ onMount(() => {
         {previewHtml}
         {previewBusy}
         {previewError}
-        onScrollElementChange={setPreviewScrollElement}
+        onScrollElementChange={scrollBinding.setPreviewScrollElement}
       />
     {/snippet}
   </EditorWorkspace>
