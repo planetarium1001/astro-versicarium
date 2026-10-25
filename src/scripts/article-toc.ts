@@ -18,6 +18,9 @@ const INLINE_TOC_ANIM_MS = 320;
 // 过渡高度变量与状态属性，见 article-toc.css 同名选择器。
 const INLINE_TOC_HEIGHT_VAR = '--article-toc-inline-height';
 const INLINE_TOC_ANIM_ATTR = 'data-toc-anim';
+// 宽屏目录收起 / 展开的列宽过渡：与 layout.css 的 520ms 对齐，另留余量后撤掉动画标记。
+const TOC_RAIL_ANIM_MS = 560;
+const TOC_RAIL_ANIM_ATTR = 'tocRailAnim';
 
 const initArticleToc = () => {
   const tocRoots = Array.from(document.querySelectorAll<HTMLElement>('[data-article-toc]'));
@@ -287,7 +290,25 @@ const initArticleToc = () => {
     });
   };
 
+  let tocRailAnimTimer: number | undefined;
+
+  /**
+   * 目录动画窗口标记：切换期间给 `<html>` 打上 `data-toc-rail-anim`，
+   * article-toc.css 据此把 `.shell` 的列宽过渡换成起步更缓的曲线。
+   * 必须在改 `data-toc-collapsed` 之前打上——过渡按目标态取曲线，
+   * 晚一步就会用回 layout.css 那条「起步很冲」的曲线。
+   */
+  const markRailAnimating = () => {
+    rootEl.dataset[TOC_RAIL_ANIM_ATTR] = 'true';
+    if (tocRailAnimTimer !== undefined) window.clearTimeout(tocRailAnimTimer);
+    tocRailAnimTimer = window.setTimeout(() => {
+      delete rootEl.dataset[TOC_RAIL_ANIM_ATTR];
+      tocRailAnimTimer = undefined;
+    }, TOC_RAIL_ANIM_MS);
+  };
+
   const setCollapsed = (collapsed: boolean, persist: boolean) => {
+    markRailAnimating();
     if (collapsed) {
       rootEl.dataset.tocCollapsed = 'true';
     } else {
