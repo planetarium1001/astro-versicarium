@@ -104,6 +104,10 @@
 - `npm run ci` 与 `verify` 完全相同，CI 调用的是 `ci`。
 - `verify` 必须提供 `SITE_URL`：`check:prod-artifacts` 断言 sitemap 存在，而 `astro.config.mjs` 只在 `SITE_URL` 非空时注册 sitemap 集成。
 - `verify` 会改写 `tests/fixtures/`，运行前先确认工作树状态，跑完把快照变化一起提交。
+- 快照里的 canonical、`og:url` 与 sitemap 地址来自构建时的 `SITE_URL`。用与已有快照不同的
+  地址跑 `verify`，这些 URL 会整体改写并污染 `tests/fixtures/`，但不会有断言失败。
+- 本仓库的快照按 `https://example.com` 生成，本地复跑请用同一地址；模板使用者换过站点地址后，
+  快照里的域名会随之更新，之后固定用自己站点的地址。
 - `check:subpath` 不在 `verify` 内，只在 CI 与手动运行时执行。
 
 ## 源码检查

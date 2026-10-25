@@ -45,3 +45,6 @@ tools/font-sources.lock.json
 
 # Temporary design workspace (local only, not committed)
 docs/.workspaces/
+
+# Demo worktree (local only)
+.worktrees/

@@ -48,25 +48,26 @@
 - 动态模块分三块：`src/lib/bits-public-routing.ts` 管 `/bits/` 路径与 `#bit-<id>` 锚点，`src/lib/bits-card-view-model.ts` 管卡片视图模型，`src/lib/bits.ts` 管查询与索引。`bits.ts` 会转发前者的 4 个符号，不构成统一出口。
 - 后台：页面在 `src/pages/admin/`，接口在 `src/pages/api/admin/`；能力表在 `src/lib/admin-console/content-collections.ts`，条目契约在 `src/lib/admin-console/content-entry-contract.ts`。
 - 浏览数据只给槽位与写入 API：槽位组件是 `src/components/ViewStats.astro`，写入函数在 `src/lib/view-stats.ts`，接入点 `src/scripts/view-stats.ts` 当前只有 `export {}`，仓库内没有统计实现。
-- 浏览器端入口按页面加载，不按 `src/scripts/` 目录全量罗列。`src/scripts/` 共 59 个文件，被页面实际加载的入口如下。
+- 浏览器端入口按页面加载，不按 `src/scripts/` 目录全量罗列。`src/scripts/` 共 69 个文件，被页面实际加载的入口如下。
+
+行号随编辑漂移，下表只记文件路径，入口按路径 grep 定位。
 
 | 加载方 | 入口 |
 | --- | --- |
-| `src/layouts/BaseLayout.astro:396` | `input-modality`、`article-dates`、`page-subtitle`、`sidebar-theme`、`sidebar-rail-nav`、`sidebar-floating-actions`、`sidebar-reading` |
-| `src/layouts/BaseLayout.astro:404` | `view-stats`，并调用 `dispatchViewStatsReady()` |
-| `src/layouts/ArticleLayout.astro:282` | `article-toc`、`lightbox` 的 `initArticleLightbox` 与 `initCodeCopyButtons` |
-| `src/pages/index.astro:878` | `page-pagination` |
-| `src/pages/archive/index.astro:166` | `entry-search`、`archive-scope` |
-| `src/pages/devlog/index.astro:180` | `devlog-excerpts`、`devlog-drawer`、`devlog-filter`、`page-pagination` |
-| `src/pages/projects/index.astro:378` | `projects-dialog` |
-| `src/components/BlogPageView.astro:98` | `entry-search` |
-| `src/components/BitsPageView.astro:213` | `entry-search`、`bits-search`、`bits-year-filter`、`bits-lightbox`、`bits-dialog` |
-| `src/components/ArticleVersionNotice.astro:112` | `article-version-drawer` |
-| `src/pages/admin/theme/index.astro:40` | `admin-console/index` |
-| `src/pages/admin/resources/index.astro:338` | `admin-resources/index` |
-| `src/pages/admin/data/index.astro:29` | `admin-data/index` |
-| `src/pages/admin/content/index.astro:54` | `admin-content/filter-menus` |
-| `src/components/admin/AdminContentEditPage.astro:72` | `admin-content/editor-recovery` |
+| `src/layouts/BaseLayout.astro` | `input-modality`、`article-dates`、`page-subtitle`、`sidebar-theme`、`sidebar-rail-nav`、`sidebar-floating-actions`、`sidebar-reading`；另加载 `view-stats` 并调用 `dispatchViewStatsReady()` |
+| `src/layouts/ArticleLayout.astro` | `article-toc`、`lightbox` 的 `initArticleLightbox` 与 `initCodeCopyButtons` |
+| `src/pages/index.astro` | `page-pagination` |
+| `src/pages/archive/index.astro` | `entry-search`、`archive-scope` |
+| `src/pages/devlog/index.astro` | `devlog-excerpts`、`devlog-drawer`、`devlog-filter`、`page-pagination` |
+| `src/pages/projects/index.astro` | `projects-dialog` |
+| `src/components/BlogPageView.astro` | `entry-search` |
+| `src/components/BitsPageView.astro` | `entry-search`、`bits-search`、`bits-year-filter`、`bits-lightbox`、`bits-dialog` |
+| `src/components/ArticleVersionNotice.astro` | `article-version-drawer` |
+| `src/pages/admin/theme/index.astro` | `admin-console/index` |
+| `src/pages/admin/resources/index.astro` | `admin-resources/index` |
+| `src/pages/admin/data/index.astro` | `admin-data/index` |
+| `src/pages/admin/content/index.astro` | `admin-content/filter-menus` |
+| `src/components/admin/AdminContentEditPage.astro` | `admin-content/editor-recovery` |
 
 后台编辑器与列表操作另用 Svelte 岛（`client:only="svelte"`），由 `src/components/admin/admin-content-editor-islands.ts` 按集合选择 `BlogEditorIsland`、`BitsEditorIsland` 或 `AboutEditorIsland`。
 
@@ -109,7 +110,7 @@
 ## 设置解析
 
 - 设置是 `src/data/settings/` 下的五个 JSON：`site.json`、`shell.json`、`home.json`、`page.json`、`ui.json`。
-- 文件组与相对路径在 `src/lib/theme-settings.ts` 的 `SETTINGS_FILE_GROUPS` 与 `SETTINGS_RELATIVE_PATHS`（`:558`），`getThemeSettingsFilePath()` 负责定位。
+- 文件组与相对路径在 `src/lib/theme-settings.ts` 的 `SETTINGS_FILE_GROUPS` 与 `SETTINGS_RELATIVE_PATHS`（`:560`），`getThemeSettingsFilePath()` 负责定位。
 - `getThemeSettings()` 逐字段用 `resolveValue(newValue, legacyValue, defaultValue)` 解析，来源记为 `new`、`legacy` 或 `default`。
 - 读取诊断由 `getThemeSettingsReadDiagnostics()` 产生：`invalid-json`、`invalid-root`、`read-failed`、`schema-mismatch`；`schema-mismatch` 表示字段会在读取时被静默修补。
 - 开发环境不缓存（`shouldCacheThemeSettings = import.meta.env.PROD`），改 JSON 后刷新即可；生产构建缓存解析结果。
@@ -122,7 +123,7 @@
 - 样式入口是 `src/styles/global.css`，引入公共组件样式与 `src/styles/fonts.generated.css`。
 - 页面私有样式在 `src/styles/`：`home.css`、`article.css`、`bits-page.css`、`archive-page.css`、`projects-page.css`、`devlog-page.css`、`about.css`；后台样式在 `src/styles/components/admin/`。
 - 桌面壳层是三列栅格 `var(--sidebar) 1px 1fr`，`--sidebar: 224px`；`900px` 及以下切单列，桌面规则从 `901px` 起（`src/styles/global.css:49`、`src/styles/components/layout.css:8`）。
-- 页面外缘间隙由 `site.pageGapPx` 控制（32–160，默认 32），`BaseLayout` 把 `--page-gap-inline` 与 `--page-inline` 写到 `<html>` 内联样式（`src/layouts/BaseLayout.astro:78`）。
+- 页面外缘间隙由 `site.pageGapPx` 控制（32–160，默认 32），`BaseLayout` 把 `--page-gap-inline`、`--page-inline` 与 `--scrollbar-gutter-inline` 写到 `<html>` 内联样式（`src/layouts/BaseLayout.astro` 的 `htmlStyleOverride`）。`--scrollbar-gutter-inline` 是 head 内联探针的唯一取值来源：探针在样式表之前执行，读不到 `:root`，只能读 `<html>` 内联属性，这样槽宽在 TS 里只定义一次。
 - 窄屏浮动列右缘距离由 `site.railOffsetPx` 控制（0–32，默认 6），写入 `--rail-action-offset-narrow`。
 - 首页 critical CSS 是 `src/pages/index.astro` 的 `homeHeadCriticalCss` 快照（`:49`），由 `BaseLayout` 的 `head` 插槽输出在 `global.css` 之后。
 - 产物检查：`check:layout-geometry`（`GUTTER = 15`、`MIN_RAIL_INSET = 4`）、`check:touch-targets`（`MIN_TAP_PX = 44`）、`check:viewport-overflow`。
@@ -138,7 +139,7 @@
 
 ## Markdown 管线
 
-- 公开页面处理器由 `src/plugins/markdown-pipeline.mjs` 的 `createPublicMarkdownConfig({ base })` 组装（`:384`），在 `astro.config.mjs` 作为 `markdown.processor` 传入。
+- 公开页面处理器由 `src/plugins/markdown-pipeline.mjs` 的 `createPublicMarkdownConfig({ base })` 组装（`:382`），在 `astro.config.mjs` 作为 `markdown.processor` 传入。
 - Astro 内建的 GFM 与智能标点先执行，项目插件随后处理。
 - remark：`remark-math`（`singleDollarTextMath: false`）、`remark-directive`、文本指令还原、关于页指令、提示块。
 - rehype：数学边界保护与还原、`rehype-raw`、关于页指令、内容附件链接改写、部署 base 改写、共享白名单清洗、KaTeX 渲染。

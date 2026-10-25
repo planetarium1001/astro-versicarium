@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="zh-CN" style="--site-title-max-inline: 50%; --page-gap-inline: 32px; --page-inline: 17px; --rail-action-offset-narrow: 6px"> <head><script>
+<!DOCTYPE html><html lang="zh-CN" style="--site-title-max-inline: 50%; --page-gap-inline: 32px; --page-inline: 17px; --scrollbar-gutter-inline: 15px; --rail-action-offset-narrow: 6px"> <head><script>
       (() => {
         // 与 src/scripts/sidebar-theme.ts 保持同一主题偏好契约，避免首屏与运行时状态漂移。
         const themeKey = 'theme';
@@ -27,8 +27,9 @@
             root.appendChild(probe);
             const scrollbarWidth = probe.offsetWidth - probe.clientWidth;
             probe.remove();
-            root.style.setProperty('--scrollbar-actual-inline', `${scrollbarWidth}px`);
-            root.style.setProperty('--scrollbar-overlay-inline', `${scrollbarWidth === 0 ? 15 : 0}px`);
+            // 设计假定的槽宽；浮层系统上它并不占布局，需要原样让回去。
+            const gutterWidth = parseFloat(root.style.getPropertyValue('--scrollbar-gutter-inline')) || 0;
+            root.style.setProperty('--scrollbar-overlay-inline', `${scrollbarWidth === 0 ? gutterWidth : 0}px`);
             root.style.setProperty(
               '--page-inline',
               `calc(var(--page-gap-inline) - ${scrollbarWidth}px)`

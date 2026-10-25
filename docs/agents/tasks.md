@@ -115,6 +115,7 @@
   - `--include-fonts` 会把字体资产纳入合并，只给主题演示站使用。
   - 站点自有路径不覆盖：`content/`、`src/data/settings/`、`public/images/`、`public/author/`、`public/fonts/`、`tools/`、`tests/fixtures/`。
   - 站点自有文件不覆盖：`README.md`、`theme.json`、`.github/workflows/pages.yml`。
+  - 生成的字体样式表（`src/styles/fonts[.<分层>].generated.css`）按模式识别，与 `public/fonts/` 的分片同源，必须整套同进同出。
   - 冲突按文件报告，需要手工处理后重新运行。
 - 验证
   - `npm run check`
@@ -124,11 +125,11 @@
 ## 改后台设置字段
 
 - 改哪些文件
-  - `src/lib/admin-console/theme-shared.ts`：服务端校验与规范化
+  - `src/lib/admin-console/theme-shared/`：服务端校验（`validate.ts`）、归一化（`guards.ts`）与规范化（`canonicalize.ts`）
   - `src/lib/theme-settings.ts`：解析与默认值
   - `src/components/admin/`：表单控件
   - `src/scripts/admin-console/controls.ts`：控件引用
-  - `src/scripts/admin-console/form-codec.ts`：表单编码
+  - `src/scripts/admin-console/form-codec/`：表单编码（入口 `index.ts`）
   - `src/pages/api/admin/settings.ts`：写入接口
 - 注意
   - 服务端归一化与客户端编码要保持一致，两处都要改。

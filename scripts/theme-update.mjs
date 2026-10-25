@@ -30,6 +30,20 @@ const SITE_OWNED_PREFIXES = [
   'tools/',
   'tests/fixtures/'
 ];
+/**
+ * 生成的字体样式表：`src/styles/fonts.generated.css`、`src/styles/fonts.dlc.generated.css` 等。
+ *
+ * 按模式识别而不是逐个列文件名：新增字体分层（例如再加一份 dlc 之外的 CSS）时，
+ * 这里无需同步，字体产物仍然整套同进同出。
+ *
+ * 字体产物是一个原子单元：这些 CSS 里的 `url()` 指向 `public/fonts/` 下带内容哈希的分片，
+ * 清单在 `tools/`。三者必须同源——只换 CSS 不换字体文件，引用就会 404。因此生成的字体 CSS
+ * 与字体资产一起列为站点自有：普通站点保留自己的一份；演示站带 `--include-fonts` 时
+ * 与字体文件一起取主题版本，仍然是同一套。
+ */
+const isGeneratedFontStylesheet = (filePath) =>
+  /^src\/styles\/fonts(\.[\w-]+)?\.generated\.css$/.test(filePath);
+
 /** `--include-fonts` 时从站点自有路径中放行的主题字体文件。 */
 const THEME_FONT_PATHS = [
   'public/fonts/',
@@ -43,12 +57,15 @@ const THEME_FONT_PATHS = [
 ];
 const SITE_OWNED_FILES = new Set(['README.md', 'theme.json', '.github/workflows/pages.yml']);
 
-const isThemeFontPath = (filePath) => THEME_FONT_PATHS.some((prefix) => filePath.startsWith(prefix));
+const isThemeFontPath = (filePath) =>
+  THEME_FONT_PATHS.some((prefix) => filePath.startsWith(prefix))
+  || isGeneratedFontStylesheet(filePath);
 
 const isSiteOwned = (filePath) =>
   !(INCLUDE_FONTS && isThemeFontPath(filePath))
   && (
     SITE_OWNED_FILES.has(filePath)
+    || isGeneratedFontStylesheet(filePath)
     || SITE_OWNED_PREFIXES.some((prefix) => filePath.startsWith(prefix))
   );
 

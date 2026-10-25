@@ -24,12 +24,14 @@
 - 内容：`content/`
 - 设置：`src/data/settings/` 下的五个设置文件
 - 图片与头像：`public/images/`、`public/author/`
-- 字体：`public/fonts/`
+- 字体：`public/fonts/`，以及引用这些分片的生成字体样式表（`src/styles/fonts*.generated.css`）
 - 工具清单与生成记录：`tools/`
 - 测试快照：`tests/fixtures/`
 - `README.md`
 - 主题基准文件：`theme.json`
 - 示例站发布配置：`.github/workflows/pages.yml`
+
+字体是一整套：生成的字体 CSS 按文件名引用 `public/fonts/` 下带内容哈希的分片，只换其中一边会让引用 404，所以它们一起保留或一起更新。
 
 想长期保留的定制，放进这些位置或单独的文件。
 

@@ -64,9 +64,13 @@
 
 `SITE_OWNED_FILES`：`README.md`、`theme.json`、`.github/workflows/pages.yml`。
 
+生成的字体样式表按模式识别（`src/styles/fonts[.<分层>].generated.css`），不逐个列文件名，新增字体分层时无需同步清单。
+
 - 命中任一清单的文件在同步时只列入报告，不覆盖站点版本。
-- `--include-fonts` 只影响 `THEME_FONT_PATHS`：`public/fonts/` 与 `tools/` 下的 `font-sources.json`、`font-manifest.json`、`charset-base.txt`、`charset-common.txt`、`charset-common.sha256`、`charset-roles.json`、`charset-frequency.txt`。
+- `--include-fonts` 放行 `THEME_FONT_PATHS` 列出的路径（`public/fonts/` 与 `tools/` 下的字体清单文件），
+  以及 `isThemeFontPath` 里按模式识别的生成字体样式表——后者不在 `THEME_FONT_PATHS` 数组中。
 - 这些文件在 `--include-fonts` 下不再被当作站点自有路径；`SITE_OWNED_FILES` 与其余前缀仍然跳过。
+- 字体产物是一个原子单元：生成的字体 CSS 里的 `url()` 指向 `public/fonts/` 下带内容哈希的分片，清单在 `tools/`。三者必须同源，只换 CSS 不换字体文件会让引用 404，因此字体 CSS 与字体资产同进同出——普通站点整套保留自己的，演示站带 `--include-fonts` 时整套取主题版本。
 - `content/` 的目录名来自 `CONTENT_ROOT`，修改内容根时要同步更新脚本里的路径判断。
 
 ## 失败行为
@@ -87,6 +91,7 @@
 | --- | --- |
 | 新增站点自有路径 | `scripts/theme-update.mjs` 的 `SITE_OWNED_PREFIXES` 或 `SITE_OWNED_FILES`，以及本页路径表 |
 | 新增主题字体清单文件 | `scripts/theme-update.mjs` 的 `THEME_FONT_PATHS`，以及 [development.md](development.md#字体管线) |
+| 新增字体分层样式表 | 命名保持 `src/styles/fonts[.<分层>].generated.css`，`isGeneratedFontStylesheet` 会按模式识别，无需改清单 |
 | 修改 `theme.json` 字段 | `readManifest` 的校验、`main` 与 `demo` 两个分支的 `theme.json`，以及 [release.md](release.md#themejson-基准) |
 | 改变内容根名称 | `site.config.mjs` 的 `CONTENT_ROOT`，以及依赖它的路径判断 |
 | 推进基准 | `main` 侧由维护者在发布或同步提交里手动更新；`demo` 与站点由 `theme:update` 成功后自动写入 |

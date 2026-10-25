@@ -24,7 +24,7 @@
 
 ## 七组设置与写入文件
 
-主题页把设置分成七组，服务端只写入 `src/data/settings/` 的五个文件；`SETTINGS_RELATIVE_PATHS` 固定了文件映射（`src/lib/theme-settings.ts:558`）。
+主题页把设置分成七组，服务端只写入 `src/data/settings/` 的五个文件；`SETTINGS_RELATIVE_PATHS` 固定了文件映射（`src/lib/theme-settings.ts:560`）。
 
 | 分组 | 写入文件 | 主要字段 |
 | --- | --- | --- |
@@ -36,9 +36,9 @@
 | 代码显示 | `ui.json` 的 `codeBlock` | 代码块行号 |
 | 排版字体 | `ui.json` 的 `typography`、`fontCoverage` | readable、copy、mono、brand 四个字体用途；覆盖策略 `full` 或 `common` |
 
-- 服务端校验在 `src/lib/admin-console/theme-shared.ts`：字段类型、长度、范围、URL 与图标路径限制集中在这里。
-- 客户端表单编码在 `src/scripts/admin-console/form-codec.ts`：它把 DOM 输入归一化成设置快照，归一化函数直接从 `theme-shared.ts` 导入，两侧行为一致。
-- 改归一化规则只改 `theme-shared.ts`；`form-codec.ts` 只负责 DOM 读写与调用顺序。
+- 服务端校验在 `src/lib/admin-console/theme-shared/validate.ts`：字段类型、长度、范围、URL 与图标路径限制集中在这里。
+- 客户端表单编码在 `src/scripts/admin-console/form-codec/`（入口 `index.ts`）：它把 DOM 输入归一化成设置快照，归一化函数由 `theme-shared/guards.ts` 提供（经 `theme-shared.ts` 统一导出），两侧行为一致。
+- 改归一化规则只改 `theme-shared/guards.ts`；`form-codec/` 只负责 DOM 读写与调用顺序。
 
 - 归档版本模式 `all` 同时影响归档里的博客系列与项目版本文档，`latest` 只显示最新版；不影响项目弹窗与文章页的版本导航。
 - 站点图标上传在 `src/lib/admin-console/site-assets.ts`：仅 `png`、`appleTouchIcon` 两个位置，接受 PNG，≤256KB，写入 `public/images/site/`，文件名带尺寸与内容哈希。
@@ -80,10 +80,10 @@
 
 ## 资源
 
-- `src/lib/admin-console/media-index.ts` 扫描 `content/` 条目目录与 `public/images/`，组织成集合 → 系列 → 版本或条目 → 目录树；`content/<集合>/_shared/` 标记为共享资源。
-- 引用状态：引用数大于 0 为 `referenced`，条目仍存在为 `unreferenced`，条目不存在为 `orphan`（`src/lib/admin-console/media-index.ts:441`）。
+- `src/lib/admin-console/media-index/` 扫描 `content/` 条目目录与 `public/images/`，组织成集合 → 系列 → 版本或条目 → 目录树（`tree.ts`）；`content/<集合>/_shared/` 标记为共享资源。
+- 引用状态：引用数大于 0 为 `referenced`，条目仍存在为 `unreferenced`，条目不存在为 `orphan`（`src/lib/admin-console/media-index/references.ts:120`）。
 - 上传：图片落当前条目的 `images/`，附件落 `files/`，共享资源落 `content/<集合>/_shared/`；文件名规范化，重名追加序号（`src/lib/admin-console/image-upload.ts`）。
-- 批量重命名、移动、删除与引用改写走 `src/lib/admin-console/media-batch.ts`，单次最多 100 个文件（`:310`）；移动与改名会同步改写 `content/` 中的引用。
+- 批量重命名、移动、删除与引用改写走 `src/lib/admin-console/media-batch.ts`，单次最多 100 个文件（`:306`）；移动与改名会同步改写 `content/` 中的引用。
 - 条目 ZIP 导入导出在 `src/lib/admin-console/content-archive.ts`，只写入 `content/<集合>/<条目>/`，拒绝 `..`、绝对路径与覆盖已有条目。
 - 云端图片：设置 `ASTRO_WHONO_IMAGE_STORAGE=s3` 与 `ASTRO_WHONO_S3_BUCKET`、`ASTRO_WHONO_S3_REGION`、`ASTRO_WHONO_S3_ACCESS_KEY_ID`、`ASTRO_WHONO_S3_SECRET_ACCESS_KEY`（可选 `ASTRO_WHONO_S3_ENDPOINT`、`ASTRO_WHONO_S3_FORCE_PATH_STYLE`、`ASTRO_WHONO_S3_PUBLIC_BASE_URL`、`ASTRO_WHONO_S3_PREFIX`）后，上传进入云端，列表并入云端项。
 - 未配置对象存储时只用本地文件（`src/lib/admin-console/image-cloud-storage.ts`）。
@@ -116,7 +116,7 @@
 - 需要 `revision`：设置保存、内容编辑、单条删除（另需 `expectedRelativePath`）、批量删除（逐条带 `revision` 与 `expectedRelativePath`）。
 - 写队列由 `createAdminWriteQueue()`（`src/lib/admin-console/admin-api.ts:192`）建立，按用途串行：内容写锁、设置与站点图标锁、图片上传、附件上传、条目导入、媒体批处理各自独立。
 - 返回 409 的情形：`revision` 不一致、文件在外部被修改、`expectedRelativePath` 不匹配；服务端不覆盖现有文件。
-- 内容编辑在写锁内二次比对最新 `revision`（`src/pages/api/admin/content/entry.ts:319`）。
+- 内容编辑在写锁内二次比对最新 `revision`（`src/pages/api/admin/content/entry.ts:317`）。
 
 ## 生产边界
 

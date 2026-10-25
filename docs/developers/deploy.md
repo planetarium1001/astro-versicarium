@@ -47,7 +47,7 @@
 - 工作流文件都在 `.github/workflows/`：`ci.yml`、`pages.yml`、`release-please.yml`、`release.yml`。
 - `ci.yml` 与 `pages.yml` 的可变值都提到文件顶部的 `env:`，改配置只看开头几行。
 - `ci.yml` 的 `SITE_URL` 是固定字面量 `https://planetarium1001.github.io`；`npm run ci` 包含构建，因此必须提供非空 `SITE_URL`。
-- `ci.yml` 不设置 `ASTRO_VERSICARIUM_BASE_PATH`，产物按根路径构建；子路径由 `pages.yml` 的 `BASE_PATH` 覆盖。
+- `ci.yml` 不设置 `ASTRO_VERSICARIUM_BASE_PATH`，产物按根路径构建；子路径由 `pages.yml` 的工作流级 `env` 提供。
 - `pages.yml` 的 `checkout` 不指定 `ref`，部署触发本次运行的分支；本仓库的触发分支是 `demo`。
 - `pages.yml` 的 build 与 deploy 是两个 job；部署 job 使用 `github-pages` 环境与 `actions/deploy-pages@v4`，并发组 `pages`、`cancel-in-progress: true`。
 - `pages.yml` 不跑 `verify`，静态校验由 `ci.yml` 负责；构建后额外跑一次 `node ./scripts/check-deployment-base.mjs` 扫描产物。
@@ -55,7 +55,7 @@
 - `release.yml` 的 `RELEASE_TAG` 来自 `inputs.tag`，`VERSION` 取自 `package.json.version`，标签去掉 `v` 后必须与 `VERSION` 相同。
 - `release.yml` 在上传前用 `gh release view` 确认 Release 已存在，缺失时给出可读错误并退出，不上传任何文件。
 - `release.yml` 只打包已跟踪文件（`git archive ... HEAD`），不含 `node_modules`、`dist` 或本地缓存；`docs/images/` 下的截图已跟踪，会随包分发。
-- 从模板复制出的站点要改两处：`ci.yml` 的 `on` 分支列表与 `env.SITE_URL`，`pages.yml` 的 `on` 分支与 `env` 的 `SITE_URL`、`BASE_PATH`。
+- 从模板复制出的站点要改两处：`ci.yml` 的 `on` 分支列表与 `env.SITE_URL`，`pages.yml` 的 `on` 分支与 `env` 的 `SITE_URL`、`ASTRO_VERSICARIUM_BASE_PATH`。
 
 ## 构建期环境变量
 
@@ -73,19 +73,20 @@
 
 ## GitHub Pages 与 base 配置
 
-`pages.yml` 的 `env` 直接给出两个值，不做动态推导：
+`pages.yml` 的工作流级 `env` 直接给出两个值，不做动态推导：
 
 - `SITE_URL` 是站点 origin，只写协议与域名。
-- `BASE_PATH` 是子目录前缀，构建时以 `ASTRO_VERSICARIUM_BASE_PATH` 传入。
+- `ASTRO_VERSICARIUM_BASE_PATH` 直接写子目录前缀，构建与 `check-deployment-base` 都读同一个变量。
+- 两者必须放在工作流级：只挂在 `Build site` 一个 step 上时，构建带前缀而校验按 `/` 比对，`check-deployment-base` 会把全部带前缀的 URL 判为无法映射。
 
 - 本仓库对应 `https://planetarium1001.github.io` 与 `/astro-versicarium/`。
-- 用户主页仓库（`<owner>.github.io`）与自定义域名把 `BASE_PATH` 写成 `/`。
+- 用户主页仓库（`<owner>.github.io`）与自定义域名把 `ASTRO_VERSICARIUM_BASE_PATH` 写成 `/`。
 - 动态推导会随仓库改名漂移，显式配置更易读也更容易改。
 - `dist/` 的目录结构不随 base 嵌套，base 只影响产物内的 URL；`trailingSlash: 'always'` 与 `redirects` 目标都按 base 生成。
 - GitHub Pages 不读取 `public/_headers`，长缓存规则在该宿主上不生效。
 - 仓库 Pages 的发布源要选 GitHub Actions，不能选 Deploy from a branch；`pages.yml` 用 `actions/upload-pages-artifact@v3` 上传、`actions/deploy-pages@v4` 发布。
 - 部署 job 使用 `github-pages` 环境；该环境若配置了部署分支限制，需要放行触发分支。
-- 绑定自定义域名后，把 `SITE_URL` 改成域名、`BASE_PATH` 改成 `/`。
+- 绑定自定义域名后，把 `SITE_URL` 改成域名、`ASTRO_VERSICARIUM_BASE_PATH` 改成 `/`。
 
 ## check:subpath
 

@@ -2,8 +2,8 @@ import type { ThemeSettingsFileGroup } from '../../theme-settings';
 import { isRecord } from '../../is-record';
 import { createValidationIssue, type AdminThemeSettingsValidationIssue } from './validate';
 
-export type AdminThemeSettingsMismatchMode = 'exact' | 'subset';
-export type AdminThemeSettingsChangeKind = 'added' | 'removed' | 'updated';
+type AdminThemeSettingsMismatchMode = 'exact' | 'subset';
+type AdminThemeSettingsChangeKind = 'added' | 'removed' | 'updated';
 
 export type AdminThemeSettingsChangePreview = {
   path: string;
@@ -12,17 +12,17 @@ export type AdminThemeSettingsChangePreview = {
   after: string;
 };
 
-export const appendPathSegment = (basePath: string, segment: string): string => {
+const appendPathSegment = (basePath: string, segment: string): string => {
   if (!basePath) return segment;
   if (segment.startsWith('[')) return `${basePath}${segment}`;
   return `${basePath}.${segment}`;
 };
 
-export const MISSING_CHANGE_VALUE = Symbol('adminThemeSettingsMissingValue');
+const MISSING_CHANGE_VALUE = Symbol('adminThemeSettingsMissingValue');
 
-export const createChangePath = (basePath: string): string => basePath || 'root';
+const createChangePath = (basePath: string): string => basePath || 'root';
 
-export const formatChangePreviewValue = (
+const formatChangePreviewValue = (
   value: unknown | typeof MISSING_CHANGE_VALUE
 ): string => {
   if (value === MISSING_CHANGE_VALUE) return '(missing)';
@@ -48,7 +48,7 @@ export const formatChangePreviewValue = (
   return String(value);
 };
 
-export const createChangePreview = (
+const createChangePreview = (
   path: string,
   before: unknown | typeof MISSING_CHANGE_VALUE,
   after: unknown | typeof MISSING_CHANGE_VALUE
@@ -67,7 +67,7 @@ export const createChangePreview = (
   };
 };
 
-export const collectMismatchPaths = (
+const collectMismatchPaths = (
   actual: unknown,
   expected: unknown,
   mode: AdminThemeSettingsMismatchMode,
@@ -119,7 +119,7 @@ export const getAdminThemeSettingsMismatchPaths = (
   mode: AdminThemeSettingsMismatchMode = 'exact'
 ): string[] => Array.from(new Set(collectMismatchPaths(actual, expected, mode)));
 
-export const collectChangePreviews = (
+const collectChangePreviews = (
   actual: unknown,
   expected: unknown,
   mode: AdminThemeSettingsMismatchMode,

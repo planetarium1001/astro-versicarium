@@ -325,7 +325,7 @@ describe('bits 灯箱索引基准', () => {
       .join('');
 
     document.body.innerHTML = `
-      <dialog id="lightbox" hidden>
+      <dialog id="lightbox" tabindex="-1" hidden>
         <button type="button" data-lightbox-close></button>
         <button type="button" data-lightbox-prev></button>
         <button type="button" data-lightbox-next></button>
@@ -403,5 +403,61 @@ describe('bits 灯箱索引基准', () => {
     click(secondCardButton);
     expect(lightboxImage().src).toBe(images[1]);
     expect(lightboxCount().textContent).toBe(`2 / ${images.length}`);
+  });
+
+  /**
+   * jsdom 没有实现 `showModal`/`close`，灯箱走 `setAttribute('open')` 降级分支——
+   * 这正是「关闭后焦点掉到 body」回归发生的那条路径。降级关闭不会由浏览器还原焦点，
+   * 必须由脚本补一次，因此这条用例能真实覆盖修复。
+   */
+  it('降级关闭后焦点回到触发按钮，且不留下焦点环标记', async () => {
+    const nextFrame = () => new Promise((resolve) => window.requestAnimationFrame(() => resolve(null)));
+    // 模拟鼠标交互：只有指针打开时才会打「压掉焦点环」标记
+    document.documentElement.dataset.input = 'mouse';
+    const opener = document.querySelector<HTMLButtonElement>(
+      '.bit-card [data-bit-image-button][data-bit-image-index="0"]'
+    )!;
+    opener.focus();
+    click(opener);
+    await nextFrame();
+    expect(document.activeElement, '打开后焦点应移入灯箱').not.toBe(opener);
+
+    click(document.querySelector('[data-lightbox-close]')!);
+    // 补焦点在 rAF 里做，等一帧再断言
+    await nextFrame();
+
+    expect(document.activeElement, '降级关闭后焦点应回到触发按钮').toBe(opener);
+    // 这次聚焦由指针引起，标记用于压掉焦点环；下一次按键或失焦时撤掉
+    expect(opener.hasAttribute('data-pointer-focus'), '指针打开时应打标记压掉焦点环').toBe(true);
+    opener.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+    expect(opener.hasAttribute('data-pointer-focus'), '键盘导航后应撤掉标记').toBe(false);
+    delete document.documentElement.dataset.input;
+  });
+
+  /**
+   * 关闭动作不还原焦点的内核：`close()` 存在但只摘 `open` 属性，焦点会留在原处甚至落到
+   * `body`。补焦点必须无条件做，不能靠「浏览器会自己还原」的假设——这条用例把该假设打掉。
+   */
+  it('关闭动作不还原焦点时，脚本仍要把焦点还给触发器', async () => {
+    const nextFrame = () => new Promise((resolve) => window.requestAnimationFrame(() => resolve(null)));
+    const dialog = document.querySelector<HTMLDialogElement>('#lightbox')!;
+    // jsdom 没有 close；补一个「只关 open、不还原焦点」的桩，模拟上述内核
+    Object.defineProperty(dialog, 'close', {
+      configurable: true,
+      value: () => dialog.removeAttribute('open')
+    });
+
+    const opener = document.querySelector<HTMLButtonElement>(
+      '.bit-card [data-bit-image-button][data-bit-image-index="0"]'
+    )!;
+    opener.focus();
+    click(opener);
+    await nextFrame();
+
+    click(document.querySelector('[data-lightbox-close]')!);
+    await nextFrame();
+
+    expect(document.activeElement, 'close() 不还原焦点时脚本必须补').toBe(opener);
+    delete (dialog as unknown as Record<string, unknown>).close;
   });
 });
