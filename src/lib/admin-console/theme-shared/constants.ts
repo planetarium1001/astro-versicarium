@@ -36,7 +36,7 @@ export const ADMIN_NAV_IDS = [
 ] as const satisfies readonly SidebarNavId[];
 export const ADMIN_SOCIAL_CUSTOM_LIMIT = 8;
 
-export const ADMIN_HERO_PRESETS = ['default', 'none'] as const satisfies readonly HeroPresetId[];
+const ADMIN_HERO_PRESETS = ['default', 'none'] as const satisfies readonly HeroPresetId[];
 export const ADMIN_HERO_PRESET_SET: ReadonlySet<HeroPresetId> = new Set(ADMIN_HERO_PRESETS);
 export const ADMIN_HERO_IMAGE_ALT_DEFAULT = 'Versicarium 主题预览';
 export const ADMIN_HERO_IMAGE_ALT_MAX_LENGTH = 120;
@@ -106,7 +106,7 @@ export const ADMIN_POLICE_FILING_HOSTS = ['beian.mps.gov.cn', 'beian.gov.cn'] as
  * 备案信息显示范围：'all' 渲染到所有公开页面（默认，保证既有实例升级后行为不变），
  * 'root' 只在站点根目录（首页）渲染。
  */
-export const ADMIN_FILINGS_SCOPES = ['all', 'root'] as const satisfies readonly SiteFilingsScope[];
+const ADMIN_FILINGS_SCOPES = ['all', 'root'] as const satisfies readonly SiteFilingsScope[];
 export const ADMIN_FILINGS_SCOPE_DEFAULT: SiteFilingsScope = 'all';
 export const ADMIN_FILINGS_SCOPE_SET: ReadonlySet<SiteFilingsScope> = new Set(ADMIN_FILINGS_SCOPES);
 export const ADMIN_FILINGS_SCOPE_OPTIONS = [
@@ -121,7 +121,7 @@ export const ADMIN_VIEW_STATS_PV_LABEL_DEFAULT = '浏览';
 export const ADMIN_VIEW_STATS_UV_LABEL_DEFAULT = '访客';
 export const ADMIN_VIEW_STATS_LABEL_MAX_LENGTH = 8;
 
-export const ADMIN_SIDEBAR_DIVIDER_VARIANTS = [
+const ADMIN_SIDEBAR_DIVIDER_VARIANTS = [
   'default',
   'subtle',
   'none'
@@ -142,7 +142,7 @@ export const getAdminTypographyFontOptions = getThemeFontOptionsForRole;
 export const isAdminTypographyFontId = isThemeFontIdForRole;
 
 /** 全局字体覆盖策略：默认完整覆盖；常用覆盖只加载 base 分片，生僻字回退系统字体。 */
-export const ADMIN_FONT_COVERAGES = ['full', 'common'] as const satisfies readonly FontCoverage[];
+const ADMIN_FONT_COVERAGES = ['full', 'common'] as const satisfies readonly FontCoverage[];
 export const ADMIN_FONT_COVERAGE_DEFAULT: FontCoverage = 'full';
 export const ADMIN_FONT_COVERAGE_SET: ReadonlySet<FontCoverage> = new Set(ADMIN_FONT_COVERAGES);
 
@@ -154,7 +154,7 @@ export const ADMIN_FONT_COVERAGE_OPTIONS = [
   label: string;
 }[];
 
-export const ADMIN_HOME_INTRO_LINK_KEYS = [
+const ADMIN_HOME_INTRO_LINK_KEYS = [
   'archive',
   'blog',
   'projects',
@@ -193,7 +193,7 @@ export const ADMIN_SOCIAL_ORDER_MAX = ADMIN_SOCIAL_PRESET_IDS.length + ADMIN_SOC
 export const ADMIN_NAV_ORDER_MIN = 1;
 export const ADMIN_NAV_ORDER_MAX = 999;
 
-export const ADMIN_SOCIAL_ICON_KEYS = [
+const ADMIN_SOCIAL_ICON_KEYS = [
   'github',
   'x',
   'email',

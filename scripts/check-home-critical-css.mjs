@@ -93,7 +93,9 @@ const rootTokenPairs = [
   ['--sidebar-padding-inline', '--sidebar-padding-inline'],
   ['--pad-x', '--public-content-padding-inline'],
   ['--card-pad', '--card-pad'],
-  ['--tap-min-h', '--tap-min-h']
+  ['--tap-min-h', '--tap-min-h'],
+  // 滚动条槽宽在 global.css 只定义一次；快照里写死同一数值时，改槽宽会漏改首页
+  ['--scrollbar-gutter-inline', '--scrollbar-gutter-inline']
 ];
 rootTokenPairs.forEach(([snapshotToken, globalToken]) => {
   compare(

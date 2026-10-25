@@ -262,19 +262,24 @@ const createLightboxController = (options: LightboxOptions): LightboxController 
   };
 
   /**
-   * 关闭时把焦点还给触发器。
+   * 关闭后把焦点还给触发器。
    *
-   * `dialog.close()` 会同步把焦点还给打开前的元素，之后再在 rAF 里补标记已经晚于
-   * 这次聚焦，部分内核会先画出焦点环。因此指针打开的弹窗在 close() 之前就给触发器
-   * 打上标记，让浏览器还原焦点的那一次聚焦直接不画环。
+   * 无条件补一次 rAF 聚焦，不判断浏览器有没有自己还原：
+   * - 原生 `dialog.close()` 已经还原时，对已聚焦元素再调 `focus()` 是空操作；
+   * - 降级分支（无 `showModal`，用 `setAttribute('open')` 打开）不会还原，这一步补上；
+   * - 部分内核里鼠标点击本身不给按钮焦点，原生还原会落到 `body`，同样靠这一步兜住。
+   *
+   * 标记由调用方在关闭动作之前打好，所以这次聚焦不画焦点环；这里不再重复标记——
+   * 重复打会晚于聚焦，拦不住焦点环。
    */
   const restoreOpenerFocus = () => {
     const target = openerEl;
-    const fromPointer = openerFromPointer;
     openerEl = null;
     openerFromPointer = false;
     if (!target?.isConnected) return;
-    if (fromPointer) markPointerFocus(target);
+    window.requestAnimationFrame(() => {
+      target.focus({ preventScroll: true });
+    });
   };
 
   const openDialog = (images: LightboxImage[], index: number, openOptions?: LightboxOpenOptions) => {
@@ -298,7 +303,7 @@ const createLightboxController = (options: LightboxOptions): LightboxController 
   };
 
   const closeDialog = () => {
-    // 先给触发器打标记：dialog.close() 同步还原焦点，晚一步就会漏掉这次聚焦。
+    // 先给触发器打标记：浏览器还原焦点发生在关闭动作里，晚一步就会漏掉这次聚焦。
     if (openerFromPointer && openerEl?.isConnected) markPointerFocus(openerEl);
     if (dialog.open) {
       if (typeof dialog.close === 'function') {

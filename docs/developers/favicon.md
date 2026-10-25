@@ -26,7 +26,7 @@
 
 `src/lib/theme-settings.ts` 用 `resolveValue` 读取：合法值优先，缺失或非法时回退默认值。合法路径即使文件不存在也会保留，渲染时跳过。
 
-后台保存时，`src/lib/admin-console/theme-shared.ts` 的 `canonicalFaviconSlot` 把非法值原样保留，再由 `validateAdminThemeSettings` 报错，并用 `localFileExists` 检查文件是否存在。
+后台保存时，`src/lib/admin-console/theme-shared/canonicalize.ts` 的 `canonicalFaviconSlot` 把非法值原样保留，再由 `validateAdminThemeSettings` 报错，并用 `localFileExists` 检查文件是否存在。
 
 `favicon.source` 只被生成器读取，不在后台表单与设置校验里。
 
@@ -37,7 +37,7 @@
 | `src/data/settings/site.json` | `favicon` 字段的配置文件 |
 | `src/utils/favicon-defaults.ts` | `DEFAULT_SITE_FAVICON` 与 `GENERATED_SITE_FAVICON` 常量 |
 | `src/utils/format.ts` | `normalizeSiteFaviconPath`、`getSiteFaviconLocalFilePath`、`getSiteFaviconSizesFromPath` |
-| `src/lib/theme-settings.ts` | favicon 值解析与 `getSiteFaviconLinks`（`:2375`） |
+| `src/lib/theme-settings.ts` | favicon 值解析与 `getSiteFaviconLinks`（`:2373`） |
 | `src/layouts/BaseLayout.astro` | 渲染 `<link>`，给链接补部署 base |
 | `scripts/favicon.mjs` | 生成器，`predev` 与 `prebuild` 自动执行 |
 | `src/lib/admin-console/site-assets.ts` | PNG 上传校验、命名与旧文件清理 |
@@ -124,7 +124,7 @@ curl -sS -o /dev/null -D - https://example.com/images/site/generated/favicon-32x
 | --- | --- |
 | 新增生成尺寸 | `src/utils/favicon-defaults.ts` 的 `GENERATED_SITE_FAVICON`、`scripts/favicon.mjs` 的生成步骤、`getSiteFaviconLinks` 的链接输出、本页与[主题设置](../settings.md) |
 | 修改上传限制 | `src/lib/admin-console/site-assets.ts` 的常量与校验、`AdminSiteSection.astro` 的提示文案、本页 |
-| 修改格式校验 | `src/utils/format.ts` 的 `normalizeSiteFaviconPath`、`theme-shared.ts` 的错误文案、本页 |
+| 修改格式校验 | `src/utils/format.ts` 的 `normalizeSiteFaviconPath`、`theme-shared/validate.ts` 的错误文案、本页 |
 | 更换默认图标 | `public/` 下的默认文件、`src/utils/favicon-defaults.ts`、本页 |
 | 调整回退顺序 | `getSiteFaviconLinks`，同步 `tests/theme-settings.test.ts` 的用例 |
 | 图标不显示 | 放行规则与缓存，见[常见问题](../faq.md) |

@@ -141,11 +141,12 @@ export type FormCodecContext = {
 };
 
 /**
- * 归一化函数全部来自 `src/lib/admin-console/theme-shared.ts`：服务端规范化与这里必须同源，
- * 各自复制一份会让「客户端提交 → 服务端规范化」对同一段文本得出不同结果。
+ * 归一化函数复用服务端实现：经 `theme-shared.ts` 桶导出，实现在
+ * `theme-shared/guards.ts`。两端必须同源，各自复制一份会让
+ * 「客户端提交 → 服务端规范化」对同一段文本得出不同结果。
  *
- * `normalizeSingleLine` 在这里额外拒绝换行：表单读的是单行输入框，含换行的值按无效处理并回退默认值；
- * 服务端则保留换行，交给后续校验判定。
+ * `normalizeSingleLine` 在这里额外拒绝换行：表单读的是单行输入框，
+ * 含换行的值按无效处理并回退默认值；服务端则保留换行，交给后续校验判定。
  */
 export const normalizeSingleLine = (value: unknown, fallback = ''): string =>
   normalizeSingleLineValue(value, fallback, { rejectMultiline: true });

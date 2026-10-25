@@ -523,6 +523,53 @@ describe('页面外缘间隙：后台 px 设置', () => {
     expect(guard).toMatch(/const rightInset = shellPadEnd \+ gutter;/);
   });
 
+  /**
+   * 首屏探针只在浏览器里跑，构建期断言看不到它，`check-layout-geometry` 读的也是构建期
+   * 内联值——这段代码改坏了没有自动门禁会红，因此单独守住它的契约。
+   */
+  it('滚动条探针在样式表之前执行，且槽宽取自 <html> 内联属性而非裸写', async () => {
+    const [layout, globalCss] = await Promise.all([
+      read(BASE_LAYOUT_ASTRO),
+      read('src/styles/global.css')
+    ]);
+
+    const head = /<head>([\s\S]*?)<\/head>/.exec(layout)?.[1] ?? '';
+    // 锚在脚本本体而不是变量名：变量名在 JSDoc 注释里也出现，用它定位会指到注释上，
+    // 「脚本在样式表之前」这条断言就永远成立、测不出顺序回退。
+    const probeAt = head.search(/<script is:inline>\s*\(\(\) => \{\s*const root = document\.documentElement/);
+    expect(probeAt, '探针脚本应写在 <head> 里').toBeGreaterThan(-1);
+    // 必须在任何样式表之前：否则首屏会先按构建期值画一版再跳
+    const firstStylesheet = head.search(/<link[^>]+rel="stylesheet"|<style[\s>]/);
+    expect(firstStylesheet, 'head 里应有样式表').toBeGreaterThan(-1);
+    expect(probeAt).toBeLessThan(firstStylesheet);
+
+    // 槽宽只能来自 SCROLLBAR_GUTTER_INLINE_PX（构建期写进 <html>），不能在脚本里再写一个 15
+    expect(layout).toContain('--scrollbar-gutter-inline: ${SCROLLBAR_GUTTER_INLINE_PX}px');
+    /**
+     * 必须写在 `<html>` 的内联样式里，不能挪进 `<style>` 块：探针读的是
+     * `root.style.getPropertyValue(...)`，只看内联声明；放进样式表会读成空串、
+     * parseFloat 得 0，浮层系统的补偿就静默失效。这条断言盯住「写在哪」。
+     */
+    const htmlStyleOverride = /const htmlStyleOverride = \[([\s\S]*?)\]\.filter/.exec(layout)?.[1] ?? '';
+    expect(htmlStyleOverride, 'htmlStyleOverride 应存在').not.toBe('');
+    expect(htmlStyleOverride).toContain('--scrollbar-gutter-inline: ${SCROLLBAR_GUTTER_INLINE_PX}px');
+    const probeScript = /<script is:inline>([\s\S]*?)<\/script>/.exec(head.slice(probeAt))?.[1] ?? '';
+    expect(probeScript).toContain("getPropertyValue('--scrollbar-gutter-inline')");
+    expect(probeScript, '探针里不应再出现裸写的槽宽常量').not.toMatch(/\b15\b/);
+
+    // 浮层系统（实测槽宽 0）补回槽宽；经典滚动条系统不补
+    expect(probeScript).toMatch(/scrollbarWidth === 0 \? gutterWidth : 0/);
+    // --page-inline 就地修正为「视觉间隙 − 实测槽宽」
+    expect(probeScript).toContain('calc(var(--page-gap-inline) - ${scrollbarWidth}px)');
+
+    // 实测槽宽本身没有消费者，不应再写出这个变量
+    expect(layout).not.toContain('--scrollbar-actual-inline');
+    // 后台壳层不走对称外边距方案，探针整段跳过
+    expect(layout).toContain('!isAdminPage ? (');
+    // 静态 CSS 里的 overlay 默认值是 0（等同经典滚动条），运行时由探针覆盖
+    expect(globalCss).toMatch(/--scrollbar-overlay-inline:\s*0px/);
+  });
+
   it('壳层起始内边距取视觉间隙、结束内边距扣掉滚动条槽', async () => {
     const [layoutCss, critical] = await Promise.all([
       read('src/styles/components/layout.css'),

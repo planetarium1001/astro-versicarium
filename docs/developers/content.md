@@ -16,7 +16,7 @@
 
 - 集合在 `src/content.config.ts` 用 `entryDirLoader({ collection, fixedPage })` 声明，加载器实现在 `src/lib/content-loader.ts`。
 - `sync()` 找到每个条目的主文件，读取源码、拆分 frontmatter、调用 `context.renderMarkdown` 与 `context.parseData`，写入 `context.store`，并删除本轮未出现的旧条目。
-- 开发环境监听集合根目录，`WATCH_DEBOUNCE_MS = 120` 防抖后重新同步（`src/lib/content-loader.ts:17`）；条目 ID 是目录相对集合根目录的路径，可以多层。
+- 开发环境监听集合根目录，`WATCH_DEBOUNCE_MS = 120` 防抖后重新同步（`src/lib/content-loader.ts:18`）；条目 ID 是目录相对集合根目录的路径，可以多层。
 - `about` 使用固定页面加载器，只读 `content/about/index.md`，entryId 固定为 `index`（`src/content.config.ts:353`）。
 
 主文件按以下顺序确定（`src/lib/content-entry-files.ts:62`）：
@@ -42,7 +42,7 @@
 
 - `date`、`publishedAt`、`updatedAt` 在 schema 里先以 `z.unknown()` 接收，再由 `normalizeDateFields` 解析成 `date`、`dateText`、`dateHasTime`（`src/content.config.ts:82`）。
 - YAML 可能把纯日期解析成 `Date`，`parseContentDateInput` 会处理：UTC 零点视为纯日期，其余保留时分（`src/utils/date-only.ts:166`）。
-- 站点时区优先级：`SITE_TIMEZONE` > `src/data/settings/site.json` 的 `timezone` > `site.config.mjs` 的 `DEFAULT_SITE_TIMEZONE`（默认 `Asia/Shanghai`）；非法的 `SITE_TIMEZONE` 直接抛错（`src/utils/site-timezone.ts:61`）。
+- 站点时区优先级：`SITE_TIMEZONE` > `src/data/settings/site.json` 的 `timezone` > `site.config.mjs` 的 `DEFAULT_SITE_TIMEZONE`（默认 `Asia/Shanghai`）；非法的 `SITE_TIMEZONE` 直接抛错（`src/utils/site-timezone.ts:59`）。
 - 浏览器端使用配置期注入的快照，改 `site.json` 的时区后要重启开发服务器；`publishedAt` 缺失时回退 `date`，`updatedAt` 不得早于 `date`。
 
 显示由 `src/lib/display-date.ts` 的 `resolveArticleDateItems` 计算：

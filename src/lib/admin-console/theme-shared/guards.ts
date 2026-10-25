@@ -197,11 +197,11 @@ export const isAdminAllowedHttpsUrl = (value: string, allowedHosts?: readonly st
 };
 
 /**
- * 归一化函数组：`theme-shared.ts`（服务端规范化）与
- * `src/scripts/admin-console/form-codec.ts`（浏览器端表单编码）共用这一份实现。
+ * 归一化函数组：本文件 `theme-shared/guards.ts`（服务端归一化）与
+ * `src/scripts/admin-console/form-codec/`（浏览器端表单编码）共用这一份实现。
  *
  * 两端对同一段文本必须得到相同结果，否则「客户端提交 → 服务端规范化」会漂移；
- * 因此这里全部导出，`form-codec.ts` 只 import、不再复制。
+ * 因此这里全部导出，`form-codec/` 只 import、不再复制。
  */
 
 export const normalizeMultiline = (value: string): string => value.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
