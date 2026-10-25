@@ -163,15 +163,21 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
 }
 
 /**
- * 收起态不再用 `display: none`：它是离散切换，列表在点击的同一帧就消失，
- * 而第 4 列要走完 520ms 才收拢——观感上就是「一眨眼目录没了」，后面只剩空列在缩。
- * 改成淡出：列表先淡掉，列宽随后收拢，两个动作叠在一起读作一次收起。
- * `visibility` 延后到淡出结束，否则元素在淡出开始时就不可见、看不到淡出过程。
+ * 收起态的淡出必须与展开的淡入用同一组参数，否则两个方向的手感对不上。
+ *
+ * 曾经的写法是 `opacity 180ms ease`（无延迟）：内容在 180ms 内就淡没了，而第 4 列要走
+ * 520ms 才收拢——剩下 340ms 只有一个空列在缩，肉眼几乎看不到内容变化，于是「收起来像
+ * 一眨眼」。展开之所以顺，是因为它 `240ms 延迟 + 240ms 时长`，内容是在列宽长过大半之后
+ * 才出现的。
+ *
+ * 这里取与展开完全相同的 `240ms 延迟 + 240ms 时长`：前 240ms 内容保持可见、列宽先收一段，
+ * 后 240ms 淡出，总时长与展开的 520ms 一致。
+ * `visibility` 延后到淡出结束（480ms），否则元素在淡出开始时就不可见、看不到淡出过程。
  */
 :root[data-toc-collapsed='true'] .article-toc__rail-body {
   opacity: 0;
   visibility: hidden;
-  transition: opacity 180ms ease, visibility 0s linear 180ms;
+  transition: opacity 240ms ease 240ms, visibility 0s linear 480ms;
 }
 
 :root[data-toc-collapsed='true'] .article-toc__title,

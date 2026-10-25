@@ -148,6 +148,40 @@ describe('article-toc 目录把手客户端行为', () => {
     expect(collapsedBody).toMatch(/transition:[^;]*opacity/);
   });
 
+  /**
+   * 收起与展开必须用同一组淡入淡出参数。
+   *
+   * 曾经收起是 `180ms` 且无延迟、展开是 `240ms` 延迟 + `240ms` 时长：收起的内容在 180ms
+   * 就淡没了，而列宽要走 520ms，剩下 340ms 只有一个空列在缩——观感上「收起来像一眨眼」。
+   * 这条把两个方向的 opacity 时长与延迟锁成相等，改一边不改另一边会红。
+   */
+  it('收起与展开的淡入淡出时长和延迟一致', async () => {
+    const css = await readFile(
+      path.join(process.cwd(), 'src', 'styles', 'components', 'article-toc.css'),
+      'utf8'
+    );
+
+    const parseOpacityTransition = (block: string) => {
+      const match = /transition:\s*opacity\s+(\d+)ms\s+\w+(?:\s+(\d+)ms)?/.exec(block);
+      return match ? { duration: Number(match[1]), delay: Number(match[2] ?? 0) } : null;
+    };
+
+    // 必须锚在行首的裸选择器：收起规则里也含 `.article-toc__rail-body`，
+    // 用宽松正则会把收起规则当成展开规则，两边永远相等、断言恒真。
+    const expandBlock = /^\.article-toc__rail-body\s*\{([^}]*)\}/m.exec(css)?.[1] ?? '';
+    const collapseBlock = /:root\[data-toc-collapsed='true'\]\s+\.article-toc__rail-body\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+    const expand = parseOpacityTransition(expandBlock);
+    const collapse = parseOpacityTransition(collapseBlock);
+
+    expect(expand, '展开方向应声明 opacity 过渡').not.toBeNull();
+    expect(collapse, '收起方向应声明 opacity 过渡').not.toBeNull();
+    expect(collapse, '收起与展开的 opacity 时长/延迟必须一致').toEqual(expand);
+    // 内容要在列宽开始收拢之后才淡出，否则又变成「一眨眼」
+    expect(collapse!.delay, '收起也要有延迟，别在点击当帧就开始淡出').toBeGreaterThan(0);
+    // 淡出结束时间（延迟 + 时长）必须落在列宽过渡（520ms）之内
+    expect(collapse!.delay + collapse!.duration).toBeLessThanOrEqual(520);
+  });
+
   it('列宽曲线只在目录动画窗口内换，且不覆盖减少动效', async () => {
     const css = await readFile(
       path.join(process.cwd(), 'src', 'styles', 'components', 'article-toc.css'),
