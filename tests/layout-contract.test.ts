@@ -808,9 +808,11 @@ describe('文章目录列：右边界跟随页面外缘间隙', () => {
       /padding-right:\s*calc\(var\(--rail-action-offset\) \+ var\(--scrollbar-overlay-inline,\s*0px\)\)/
     );
 
-    // 收起态把手由 fixed 定位贴到竖线上，表头不再做右补偿；入场态改走与展开态相同的表头补偿
+    // 收起态把手由 fixed 定位贴到竖线上，表头不再做右补偿；入场态改走与展开态相同的表头补偿。
+    // 收起规则带 `:not([data-toc-rail-anim='true'])`（动画窗口内 nav 仍在第 4 列里，补偿要留着），
+    // 这里允许可选的窗口排除条件，断言本身不因此放宽。
     expect(css).toMatch(
-      /:root\[data-toc-collapsed='true'\] \.article-toc__rail-head\s*\{[^}]*margin-right:\s*0[^}]*padding-right:\s*0/
+      /:root\[data-toc-collapsed='true'\](?::not\(\[data-toc-rail-anim='true'\]\))? \.article-toc__rail-head\s*\{[^}]*margin-right:\s*0[^}]*padding-right:\s*0/
     );
     expect(css).not.toMatch(/:root\[data-toc-intro='true'\] \.article-toc__rail-head/);
     // 收起态列宽仍压到把手宽；1024–1279 普通模式也常驻目录列，不再占位 0px
