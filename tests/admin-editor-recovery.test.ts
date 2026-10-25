@@ -1,7 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { isModalScrollLocked } from '../src/scripts/modal-scroll-lock';
 
 describe('admin editor recovery', () => {
+  let cleanup: (() => void) | undefined;
+
   afterEach(() => {
+    cleanup?.();
+    cleanup = undefined;
+    expect(isModalScrollLocked(), '上一个用例结束时锁未释放').toBe(false);
     vi.clearAllMocks();
     vi.unstubAllGlobals();
   });
@@ -93,6 +99,9 @@ describe('admin editor recovery', () => {
 
     const documentRoot = {
       elements,
+      // 滚动锁会读取并改写 body / documentElement 的内联样式，这里给出最小可写替身。
+      body: { style: { overflow: '', position: '', top: '', width: '', paddingRight: '' } },
+      documentElement: { style: { overflow: '' }, clientWidth: 0, scrollTop: 0 },
       listeners: new Map<string, EventListener>(),
       activeElement: null,
       contains: () => true,
@@ -189,7 +198,7 @@ describe('admin editor recovery', () => {
     const documentRoot = createDocumentRoot();
     const windowRef = createWindowRef();
 
-    initAdminEditorRecovery(windowRef, documentRoot);
+    cleanup = initAdminEditorRecovery(windowRef, documentRoot);
     windowRef.listeners.get('unhandledrejection')?.({
       reason: new Error('Failed to fetch dynamically imported module: http://localhost:4321/node_modules/.vite/deps/svelte.js?v=old')
     } as PromiseRejectionEvent);
@@ -199,12 +208,27 @@ describe('admin editor recovery', () => {
     expect(documentRoot.elements.modal.hidden).toBe(false);
   });
 
+  it('locks page scroll while the recovery modal is open and unlocks after close', async () => {
+    const { initAdminEditorRecovery } = await import('../src/scripts/admin-content/editor-recovery');
+    const documentRoot = createDocumentRoot();
+    const windowRef = createWindowRef();
+
+    cleanup = initAdminEditorRecovery(windowRef, documentRoot);
+    documentRoot.elements.trigger.click();
+    expect(documentRoot.elements.modal.hidden).toBe(false);
+    expect(isModalScrollLocked()).toBe(true);
+
+    documentRoot.elements.closeButton.click();
+    expect(documentRoot.elements.modal.hidden).toBe(true);
+    expect(isModalScrollLocked()).toBe(false);
+  });
+
   it('does not reveal recovery when editor shell has mounted', async () => {
     const { initAdminEditorRecovery } = await import('../src/scripts/admin-content/editor-recovery');
     const documentRoot = createDocumentRoot({ shellMounted: true });
     const windowRef = createWindowRef();
 
-    initAdminEditorRecovery(windowRef, documentRoot);
+    cleanup = initAdminEditorRecovery(windowRef, documentRoot);
     windowRef.listeners.get('vite:preloadError')?.({
       payload: {
         message: 'Outdated Optimize Dep',
@@ -221,7 +245,7 @@ describe('admin editor recovery', () => {
     const documentRoot = createDocumentRoot();
     const windowRef = createWindowRef();
 
-    initAdminEditorRecovery(windowRef, documentRoot);
+    cleanup = initAdminEditorRecovery(windowRef, documentRoot);
     windowRef.listeners.get('error')?.({
       message: 'error loading dynamically imported module',
       filename: '',
@@ -239,7 +263,7 @@ describe('admin editor recovery', () => {
     const documentRoot = createDocumentRoot();
     const windowRef = createWindowRef();
 
-    initAdminEditorRecovery(windowRef, documentRoot);
+    cleanup = initAdminEditorRecovery(windowRef, documentRoot);
     windowRef.listeners.get('astro:hydration-error')?.({
       detail: {
         error: new Error('Failed to fetch dynamically imported module: http://localhost:4321/src/components/admin/editor/blog/EditorShell.svelte#astro-retry=1'),
@@ -256,7 +280,7 @@ describe('admin editor recovery', () => {
     const documentRoot = createDocumentRoot();
     const windowRef = createWindowRef({ manualAnimationFrame: true });
 
-    initAdminEditorRecovery(windowRef, documentRoot);
+    cleanup = initAdminEditorRecovery(windowRef, documentRoot);
     windowRef.listeners.get('unhandledrejection')?.({
       reason: new Error('Failed to fetch dynamically imported module: http://localhost:4321/node_modules/.vite/deps/svelte.js?v=old')
     } as PromiseRejectionEvent);
@@ -274,7 +298,7 @@ describe('admin editor recovery', () => {
     const writeText = vi.fn(() => Promise.resolve());
     vi.stubGlobal('navigator', { clipboard: { writeText } });
 
-    initAdminEditorRecovery(windowRef, documentRoot);
+    cleanup = initAdminEditorRecovery(windowRef, documentRoot);
     documentRoot.elements.copyButton.click();
     await Promise.resolve();
     documentRoot.elements.reloadButton.click();
@@ -289,7 +313,7 @@ describe('admin editor recovery', () => {
     const documentRoot = createDocumentRoot();
     const windowRef = createWindowRef();
 
-    initAdminEditorRecovery(windowRef, documentRoot);
+    cleanup = initAdminEditorRecovery(windowRef, documentRoot);
     documentRoot.elements.trigger.click();
     documentRoot.elements.copyButton.focus.mockClear();
     Object.assign(documentRoot, { activeElement: documentRoot.elements.closeButton });

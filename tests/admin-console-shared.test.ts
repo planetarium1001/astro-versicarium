@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+
+import { readModuleDir } from './module-source-reader';
 import {
   canonicalizeAdminThemeSettings,
   createAdminThemeSettingsCanonicalMismatchIssues,
@@ -33,6 +35,7 @@ import {
   normalizeSiteFaviconPath,
   tokenizeSearchQuery
 } from '../src/utils/format';
+
 
 /** 可编辑设置载荷的深拷贝，供各用例在副本上做规范化与校验断言。 */
 const baseSettings = () => structuredClone(getEditableThemeSettingsPayload().settings);
@@ -584,7 +587,6 @@ describe('admin-console/theme-shared：备案信息显示范围', () => {
   });
 });
 
-
 describe('列表分页设置', () => {
   it('缺少分页组时补齐默认值', () => {
     const raw = baseSettings() as Record<string, any>;
@@ -727,7 +729,7 @@ describe('admin-console/theme-shared：窄屏浮动列右侧距离的后台接�
       read('src/components/admin/AdminSiteSection.astro'),
       read('src/scripts/admin-console/controls.ts'),
       read('src/scripts/admin-console/index.ts'),
-      read('src/scripts/admin-console/form-codec.ts'),
+      readModuleDir(SRC, 'src/scripts/admin-console/form-codec'),
       read('src/scripts/admin-console/validation.ts')
     ]);
 
@@ -773,12 +775,11 @@ describe('admin-console/theme-shared：窄屏浮动列右侧距离的后台接�
  * 粘贴自其他系统的多行文本会带着 \r 写进设置，与共享层读回的值不一致。
  */
 describe('admin-console/form-codec：多行文本换行归一化', () => {
-  const read = (relative: string) => readFile(path.join(process.cwd(), relative), 'utf8');
 
   it('孤立回车符与 CRLF 都归一化为换行，与 theme-shared 保持一致', async () => {
     const [formCodec, themeShared] = await Promise.all([
-      read('src/scripts/admin-console/form-codec.ts'),
-      read('src/lib/admin-console/theme-shared.ts')
+      readModuleDir(process.cwd(), 'src/scripts/admin-console/form-codec'),
+      readModuleDir(process.cwd(), 'src/lib/admin-console/theme-shared')
     ]);
     const normalizeChain = "value.replace(/\\r\\n/g, '\\n').replace(/\\r/g, '\\n')";
 

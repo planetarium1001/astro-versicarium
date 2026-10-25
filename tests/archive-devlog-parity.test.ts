@@ -2,6 +2,8 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { readModuleDir } from './module-source-reader';
+
 vi.mock('astro:content', () => ({
   getCollection: vi.fn()
 }));
@@ -11,6 +13,7 @@ import { getArchiveRows } from '../src/lib/archive';
 import { getVisibleDevlogs } from '../src/lib/content';
 import { flattenEntryIdToSlug } from '../src/utils/slug-rules';
 import { deriveEntryDescription } from '../src/lib/entry-body';
+
 
 const getCollectionMock = vi.mocked(getCollection);
 
@@ -84,7 +87,7 @@ describe('归档更新行与 /devlog/ 数据一致', () => {
     const read = (relative: string) => readFile(path.join(process.cwd(), relative), 'utf8');
     const [pageJson, shared, archivePage] = await Promise.all([
       read('src/data/settings/page.json'),
-      read('src/lib/admin-console/theme-shared.ts'),
+      readModuleDir(process.cwd(), 'src/lib/admin-console/theme-shared'),
       read('src/pages/archive/index.astro')
     ]);
 

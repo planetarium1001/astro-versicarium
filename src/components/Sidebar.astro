@@ -12,7 +12,12 @@ import {
 } from '../lib/admin-console/routes';
 import { createWithBase } from '../utils/format';
 import { renderSettingHtml, toSettingPlainText } from '../lib/setting-html';
-import { getSidebarHref, getThemeSettings, type SidebarNavId } from '../lib/theme-settings';
+import {
+  getSidebarHref,
+  getSiteFaviconLinks,
+  getThemeSettings,
+  type SidebarNavId
+} from '../lib/theme-settings';
 
 const {
   siteTitle = 'Versicarium',
@@ -74,6 +79,22 @@ const siteTitleLabel = `${siteTitlePlain} 首页`;
 const adminOverviewRoute = getAdminRoute('overview');
 const adminRailTitleLabel = adminOverviewRoute.description;
 const isAdminOverviewActive = pathname === adminOverviewHref;
+/**
+ * 窄屏后台侧栏顶部 logo 使用站点图标：按设置槽位优先 svg → png → appleTouchIcon，
+ * 且只接受 getSiteFaviconLinks 确认可渲染的链接（文件缺失时该槽位不会出现在结果里）。
+ * 三个槽位都没有可渲染文件时返回 null，模板回退到 AdminIcon。
+ */
+const adminRailFaviconSrc = (() => {
+  const favicon = settings.site.favicon;
+  const slots = [favicon.svg, favicon.png, favicon.appleTouchIcon];
+  const links = getSiteFaviconLinks(favicon);
+  for (const slot of slots) {
+    if (!slot) continue;
+    const link = links.find((item) => item.href === slot);
+    if (link) return withBase(link.href);
+  }
+  return null;
+})();
 const adminRailRoutes = ADMIN_ROUTES.filter((route) => route.id !== 'overview');
 const adminSidebarRoutes = ADMIN_ROUTES.map((route) => {
   const href = withBase(route.href);
@@ -98,13 +119,28 @@ const adminSidebarRoutes = ADMIN_ROUTES.map((route) => {
 
   {isAdminContext ? (
     <a
-      class="sidebar__title sidebar__title--admin-rail"
+      class:list={[
+        'sidebar__title',
+        'sidebar__title--admin-rail',
+        adminRailFaviconSrc ? 'sidebar__title--favicon-logo' : undefined
+      ]}
       href={adminOverviewHref}
       aria-label={adminRailTitleLabel}
       title={adminRailTitleLabel}
       aria-current={isAdminOverviewActive ? 'page' : undefined}
     >
-      <AdminIcon name={adminOverviewRoute.sidebarIcon} size={ADMIN_RAIL_OVERVIEW_ICON_SIZE} class="icon sidebar__title-icon" />
+      {/* 窄屏后台侧栏顶部 logo 用站点图标；宽屏（含桌面折叠 rail）仍显示 AdminIcon */}
+      {adminRailFaviconSrc ? (
+        <img
+          class="sidebar__title-icon sidebar__title-favicon"
+          src={adminRailFaviconSrc}
+          width={ADMIN_RAIL_OVERVIEW_ICON_SIZE}
+          height={ADMIN_RAIL_OVERVIEW_ICON_SIZE}
+          alt=""
+          decoding="async"
+        />
+      ) : null}
+      <AdminIcon name={adminOverviewRoute.sidebarIcon} size={ADMIN_RAIL_OVERVIEW_ICON_SIZE} class="icon sidebar__title-icon sidebar__title-icon--default" />
     </a>
   ) : null}
 

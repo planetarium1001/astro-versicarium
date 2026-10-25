@@ -1,4 +1,5 @@
 import { createModalDialogFocusController } from '../admin-console/modal-dialog-focus';
+import { lockScrollFor, unlockScrollFor } from '../modal-scroll-lock';
 // 共享版 isRecord 排除数组；这里判定的是 Event、event.target 与 detail 等宿主对象，
 // 不会是数组，因此与原本地实现行为一致。
 import { isRecord } from '../../lib/is-record';
@@ -91,6 +92,7 @@ const setStatus = (root: RecoveryRoot, text: string) => {
 const openModal = (root: RecoveryRoot, dialogFocus: ReturnType<typeof createModalDialogFocusController>) => {
   root.modal.hidden = false;
   root.trigger.setAttribute('aria-expanded', 'true');
+  lockScrollFor(root.modal);
   dialogFocus.focusInitial();
 };
 
@@ -101,6 +103,7 @@ const closeModal = (
 ) => {
   root.modal.hidden = true;
   root.trigger.setAttribute('aria-expanded', 'false');
+  unlockScrollFor(root.modal);
   if (restoreFocus) dialogFocus.restoreFocus();
 };
 
@@ -217,6 +220,8 @@ export const initAdminEditorRecovery = (
     closeButtonHandlers.forEach(({ button, handler }) => {
       button.removeEventListener('click', handler);
     });
+    // 弹窗可能仍处于打开状态；热重载或测试重建时释放锁，避免页面留在锁定态。
+    unlockScrollFor(root.modal);
   };
 
   windowWithCleanup[CLEANUP_KEY] = cleanup;

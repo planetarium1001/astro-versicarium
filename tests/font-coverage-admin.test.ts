@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+
+import { readModuleDir } from './module-source-reader';
 import {
   formatFontBudgetBytes,
   getFontBudgetSummary,
@@ -10,6 +12,7 @@ import {
   type FontManifest
 } from '../src/lib/fonts/budget';
 import { THEME_TYPOGRAPHY_DEFAULT } from '../src/lib/fonts/registry';
+
 
 const KB = 1024;
 
@@ -240,8 +243,8 @@ describe('后台：字体覆盖策略接线', () => {
   it('设置链路覆盖类型、默认值、表单读写、校验焦点与持久化', async () => {
     const [settings, shared, codec, validation, controls, index, bindings, uiJsonRaw] = await Promise.all([
       read('src/lib/theme-settings.ts'),
-      read('src/lib/admin-console/theme-shared.ts'),
-      read('src/scripts/admin-console/form-codec.ts'),
+      readModuleDir(process.cwd(), 'src/lib/admin-console/theme-shared'),
+      readModuleDir(process.cwd(), 'src/scripts/admin-console/form-codec'),
       read('src/scripts/admin-console/validation.ts'),
       read('src/scripts/admin-console/controls.ts'),
       read('src/scripts/admin-console/index.ts'),

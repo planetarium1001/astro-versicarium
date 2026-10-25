@@ -55,8 +55,20 @@
    * 悬浮列距视口右缘 >= 4px 且与目录把手同线。改值须同步首页首屏快照。
    */
   --scrollbar-gutter-inline: 15px;
+  /**
+   * 浮层滚动条系统的补偿宽度：滚动条不占布局宽度、thumb 浮在窗口最右缘。
+   * 静态 CSS 里没有真实值，按 var() 的 fallback 0 求值（等同经典滚动条，check-layout-geometry 照旧可解析）；
+   * 真实值由 BaseLayout 的 head 内联脚本探针写入 <html>：浮层系统 15px，经典滚动条 0px。
+   * 消费者：.float-stack 的结束外边距与目录把手的右内边距。
+   */
+  --scrollbar-overlay-inline: 0px;
   /* 内容盒到浏览器边缘的视觉间隙：起始内边距直接取它，结束内边距再扣掉滚动条槽。 */
   --page-gap-inline: 32px;
+  /**
+   * 结束内边距 = 视觉间隙 − 滚动条槽。构建期按 15px 槽位换算；浮层滚动条系统上槽位并不存在，
+   * 由 BaseLayout 的 head 内联脚本按实测槽宽就地改写为「间隙 − 实测槽宽」，正文右缘才与起始对称。
+   * 后台壳层不参与这套修正，仍用构建期换算值。
+   */
   --page-inline: 17px;
   --sidebar-padding-inline: 15px;
   /* 卡片弹窗的统一宽度：项目与动态的弹窗在同一视口下等宽，只有高度随内容变化。 */
@@ -468,6 +480,17 @@ hr {
 
 /* 指针打开时浏览器会自动聚焦关闭按钮；先压掉焦点环，键盘 Tab 进入时仍可见 */
 [data-dialog-close][data-pointer-focus]:focus {
+  outline: none;
+}
+
+/*
+ * 弹窗与灯箱关闭后把焦点还给触发器时，这次聚焦由指针引起，不应留下焦点环；
+ * 标记由 scripts/pointer-focus.ts 打上，下一次按键或失焦即撤掉。
+ * :focus-visible 一并压掉：Safari 与部分 Android 内核对程序化聚焦也会命中它。
+ * 用 :root 前缀抬高特异性，盖过各组件自己的 `.x:focus-visible` 焦点环。
+ */
+:root [data-pointer-focus]:focus,
+:root [data-pointer-focus]:focus-visible {
   outline: none;
 }
 

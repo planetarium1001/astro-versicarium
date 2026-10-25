@@ -1,5 +1,6 @@
 import { prefersReducedMotion } from './input-modality';
 import { lockScrollFor, unlockScrollFor } from './modal-scroll-lock';
+import { isPointerInput, markPointerFocus } from './pointer-focus';
 
 /**
  * 卡片弹窗的通用交互：点卡片主体打开 `<dialog>`，关闭按钮 / Esc / 点遮罩关闭，打开后焦点进入弹窗。
@@ -125,9 +126,14 @@ export const initCardDialogs = (wiring: CardDialogWiring) => {
     for (const animation of animations) animation.cancel();
   };
 
+  /** 打开前的焦点元素：dialog.close() 会把焦点还给它，指针打开时据此压掉焦点环。 */
+  const returnFocusTargets = new WeakMap<HTMLDialogElement, HTMLElement>();
+
   const showDialog = (dialog: HTMLDialogElement) => {
     if (dialog.open) return;
     delete dialog.dataset.closing;
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) returnFocusTargets.set(dialog, active);
     // showModal() 会先把焦点放到关闭按钮；指针打开时压掉这一帧的焦点环。
     const closeTarget = dialog.querySelector<HTMLElement>(wiring.closeSelector);
     closeTarget?.setAttribute('data-pointer-focus', 'true');
@@ -231,6 +237,9 @@ export const initCardDialogs = (wiring: CardDialogWiring) => {
     const anchor = getDialogAnchor(dialog);
     const finish = () => {
       if (runId !== motionRunId) return;
+      // dialog.close() 同步把焦点还给打开它的元素；指针打开时先给该元素打标记，
+      // 这次聚焦就不画环。晚到 rAF 里补标记会晚于聚焦本身，部分内核已经画出焦点环。
+      if (isPointerInput()) markPointerFocus(returnFocusTargets.get(dialog) ?? null);
       if (typeof dialog.close === 'function') {
         dialog.close();
       } else {

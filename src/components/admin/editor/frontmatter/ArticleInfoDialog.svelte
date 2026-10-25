@@ -8,6 +8,7 @@ import type {
 } from '../../../../lib/admin-console/content-editor-payload';
 import type { BitsCardAuthorInput } from '../../../../lib/bits-card-view-model';
 import { createModalDialogFocusController } from '../../../../scripts/admin-console/modal-dialog-focus';
+import { bindModalScrollLock } from '../../../../scripts/admin-console/modal-scroll-binding';
 import AdminEditorIcon from '../shared/AdminEditorIcon.svelte';
 import FrontmatterSidebar from './FrontmatterSidebar.svelte';
 import { isBlogEditorValues } from '../shared/content-editor-adapters';
@@ -119,6 +120,12 @@ $effect(() => {
   return () => {
     document.removeEventListener('keydown', dialogFocus.handleKeydown);
   };
+});
+
+$effect(() => {
+  const panel = panelEl;
+  if (!panel) return;
+  return bindModalScrollLock(panel);
 });
 
 $effect(() => {

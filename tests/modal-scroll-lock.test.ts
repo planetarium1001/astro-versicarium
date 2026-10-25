@@ -14,20 +14,76 @@ import { initCardDialogs } from '../src/scripts/dialog-controller';
  *
  * 回归点：`<dialog>.showModal()` 只让背景不可交互，不阻止滚动穿透。
  * 在遮罩上滚动、或弹窗内容不足一屏时，滚动会落到后面的页面上。
- * 这里锁定 body 与根元素的 overflow，并按引用计数支持嵌套。
+ *
+ * 另一条回归点（真机反馈）：body fixed 会让页面里所有 `position: sticky` 元素失去
+ * 滚动容器，落到 -scrollY，表现为打开弹窗时背景侧栏往上跳。因此细指针改走
+ * 「只锁 html overflow + --page-inline 补偿滚动条槽」，粗指针保留 body fixed。
  */
 
 const resetPage = () => {
   document.body.removeAttribute('style');
   document.documentElement.removeAttribute('style');
+  delete document.documentElement.dataset.input;
   document.body.innerHTML = '';
 };
+
+/** 媒体查询按用例切换指针类型；其余查询（prefers-reduced-motion 等）一律不命中。 */
+const stubPointer = (fine: boolean) => {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: query === '(pointer: fine)' ? fine : false,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false
+  }));
+};
+
+/**
+ * 模拟布局宽度。
+ *
+ * 真实浏览器里加锁后有两种结果：
+ * - `scrollbar-gutter: stable` 已预留槽位：clientWidth 报告变宽，但布局宽度不变；
+ * - 没有预留槽位：布局真的变宽一个槽宽，内容会右移。
+ * 锁用布局宽度（body 的 rect）判断要不要补偿，所以这里把两者分开模拟。
+ */
+const stubLayout = ({ gutter = 15, reserved = true }: { gutter?: number; reserved?: boolean } = {}) => {
+  const innerWidth = 1200;
+  const locked = () => document.documentElement.style.overflow === 'hidden';
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: innerWidth });
+  Object.defineProperty(document.documentElement, 'clientWidth', {
+    configurable: true,
+    get: () => (locked() ? innerWidth : innerWidth - gutter)
+  });
+  Object.defineProperty(document.body, 'getBoundingClientRect', {
+    configurable: true,
+    value: () =>
+      ({
+        width: reserved || !locked() ? innerWidth - gutter : innerWidth,
+        height: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        x: 0,
+        y: 0
+      }) as DOMRect
+  });
+};
+
+const readPageInline = () => document.documentElement.style.getPropertyValue('--page-inline').trim();
 
 let scrollToSpy: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   resetPage();
   Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 });
+  // 默认粗指针：保留 body fixed 路径的既有断言，细指针用例单独覆盖。
+  stubPointer(false);
+  // 1200 视口、15px 滚动条槽，且 scrollbar-gutter 已预留（桌面默认形态）。
+  stubLayout();
   scrollToSpy = vi.fn();
   vi.stubGlobal('scrollTo', scrollToSpy);
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
@@ -43,7 +99,90 @@ afterEach(() => {
   resetPage();
 });
 
-describe('modal-scroll-lock：页面锁定', () => {
+describe('modal-scroll-lock：细指针路径', () => {
+  beforeEach(() => {
+    stubPointer(true);
+  });
+
+  it('只锁 html 的 overflow，body 保持静态，不移动滚动位置', () => {
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 320 });
+    document.documentElement.style.setProperty('--page-inline', '17px');
+
+    lockModalScroll();
+    expect(document.documentElement.style.overflow).toBe('hidden');
+    expect(document.body.style.position).toBe('');
+    expect(document.body.style.top).toBe('');
+    expect(document.body.style.overflow).toBe('');
+
+    unlockModalScroll();
+    expect(document.documentElement.style.overflow).toBe('');
+    // 滚动位置本来就没动，不需要 scrollTo 还原。
+    expect(scrollToSpy).not.toHaveBeenCalled();
+  });
+
+  it('滚动条槽被撤销、布局变宽时补偿 --page-inline，解锁还原原内联值', () => {
+    stubLayout({ gutter: 15, reserved: false });
+    document.documentElement.style.setProperty('--page-inline', '17px');
+
+    lockModalScroll();
+    // 结束内边距加回槽宽：17px + 15px，内容盒右缘与加锁前重合。
+    expect(readPageInline()).toBe('calc(17px + 15px)');
+
+    unlockModalScroll();
+    expect(readPageInline()).toBe('17px');
+  });
+
+  it('scrollbar-gutter 已预留槽位时不补偿（布局没变，补偿会推歪内容）', () => {
+    document.documentElement.style.setProperty('--page-inline', '17px');
+
+    lockModalScroll();
+    expect(readPageInline()).toBe('17px');
+
+    unlockModalScroll();
+    expect(readPageInline()).toBe('17px');
+  });
+
+  it('原内联值为空时解锁移除变量，不留下空声明', () => {
+    stubLayout({ gutter: 15, reserved: false });
+
+    lockModalScroll();
+    expect(readPageInline()).toBe('var(--page-gap-inline)');
+
+    unlockModalScroll();
+    expect(readPageInline()).toBe('');
+    expect(document.documentElement.getAttribute('style') ?? '').not.toContain('--page-inline');
+  });
+
+  it('没有滚动条槽（浮层滚动条）时不写 --page-inline', () => {
+    stubLayout({ gutter: 0, reserved: false });
+    document.documentElement.style.setProperty('--page-inline', '17px');
+
+    lockModalScroll();
+    expect(readPageInline()).toBe('17px');
+
+    unlockModalScroll();
+    expect(readPageInline()).toBe('17px');
+  });
+
+  it('嵌套加锁时只在最后一个解锁后还原', () => {
+    stubLayout({ gutter: 15, reserved: false });
+    const dialog = document.createElement('dialog');
+    const lightbox = document.createElement('dialog');
+
+    lockScrollFor(dialog);
+    lockScrollFor(lightbox);
+    unlockScrollFor(lightbox);
+    expect(isModalScrollLocked()).toBe(true);
+    expect(document.documentElement.style.overflow).toBe('hidden');
+    expect(readPageInline()).toBe('var(--page-gap-inline)');
+
+    unlockScrollFor(dialog);
+    expect(isModalScrollLocked()).toBe(false);
+    expect(document.documentElement.style.overflow).toBe('');
+  });
+});
+
+describe('modal-scroll-lock：粗指针路径', () => {
   it('加锁时固定 body 并记住滚动位置，解锁时还原', () => {
     Object.defineProperty(window, 'scrollY', { configurable: true, value: 320 });
 
@@ -52,13 +191,27 @@ describe('modal-scroll-lock：页面锁定', () => {
     expect(document.body.style.top).toBe('-320px');
     expect(document.body.style.overflow).toBe('hidden');
     expect(document.documentElement.style.overflow).toBe('hidden');
+    // 槽宽 15px 转成 body 的右内边距补偿。
+    expect(document.body.style.paddingRight).toBe('15px');
 
     unlockModalScroll();
     expect(document.body.style.position).toBe('');
     expect(document.body.style.top).toBe('');
     expect(document.body.style.overflow).toBe('');
+    expect(document.body.style.paddingRight).toBe('');
     expect(document.documentElement.style.overflow).toBe('');
     expect(scrollToSpy).toHaveBeenCalledWith(0, 320);
+  });
+
+  it('粗指针不写 --page-inline，补偿只落在 body 内边距上', () => {
+    document.documentElement.style.setProperty('--page-inline', '17px');
+
+    lockModalScroll();
+    expect(readPageInline()).toBe('17px');
+    expect(document.body.style.paddingRight).toBe('15px');
+
+    unlockModalScroll();
+    expect(readPageInline()).toBe('17px');
   });
 
   it('嵌套加锁时只在最后一个解锁后还原', () => {
@@ -140,6 +293,30 @@ describe('modal-scroll-lock：页面锁定', () => {
 
     unlockScrollFor(locked);
     expect(isModalScrollLocked()).toBe(false);
+  });
+});
+
+describe('modal-scroll-lock：指针判定', () => {
+  it('触屏输入优先于细指针：data-input="touch" 时仍走 body fixed', () => {
+    stubPointer(true);
+    document.documentElement.dataset.input = 'touch';
+
+    lockModalScroll();
+    expect(document.body.style.position).toBe('fixed');
+    expect(readPageInline()).toBe('');
+
+    unlockModalScroll();
+    expect(document.body.style.position).toBe('');
+  });
+
+  it('没有 matchMedia 的环境按粗指针处理', () => {
+    vi.stubGlobal('matchMedia', undefined);
+
+    lockModalScroll();
+    expect(document.body.style.position).toBe('fixed');
+
+    unlockModalScroll();
+    expect(document.body.style.position).toBe('');
   });
 });
 

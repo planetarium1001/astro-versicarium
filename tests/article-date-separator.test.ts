@@ -2,6 +2,9 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { readModuleDir } from './module-source-reader';
+
+
 const read = (file: string) => readFile(path.join(process.cwd(), file), 'utf8');
 
 describe('文章日期分隔符', () => {
@@ -47,7 +50,7 @@ describe('文章日期分隔符', () => {
   });
 
   it('后台预览的 tag 之间使用单个 NBSP', async () => {
-    const codec = await read('src/scripts/admin-console/form-codec.ts');
+    const codec = await readModuleDir(process.cwd(), 'src/scripts/admin-console/form-codec');
     expect(codec).toContain("ARTICLE_META_PREVIEW_TAGS.join('\\u00A0')");
     expect(codec).not.toContain("ARTICLE_META_PREVIEW_TAGS.join('\\u00A0\\u00A0')");
 

@@ -789,6 +789,14 @@ body.admin-page :is(
   z-index: 1;
 }
 
+/**
+ * 窄屏后台侧栏顶部 logo：站点 favicon（Sidebar.astro 按 svg → png → appleTouchIcon 解析）。
+ * 宽屏（含桌面折叠 rail）仍显示 AdminIcon，favicon 只在窄屏壳层替换，见文件内 900px 断点。
+ */
+body.admin-page .sidebar__title-favicon {
+  display: none;
+}
+
 body.admin-page :is(
   .sidebar__title--admin-rail,
   .public-nav-group__summary,
@@ -1007,6 +1015,33 @@ body.admin-page .sidebar-actions .icon-button[data-tooltip]::after {
   body.admin-page:not(.admin-page--content-editor) {
     --admin-rail-block-start: 28px;
     --admin-content-rail-padding-top: 24px;
+  }
+
+  /**
+   * 窄屏后台壳层贴住屏幕左缘：起始外边距归零后，侧栏 4px 内边距正好成为
+   * 「图标到屏幕左缘」的距离，与图标到分割线的距离相同。
+   * 只作用于 body.admin-page 的窄屏壳层，宽屏与公开站点窄屏壳层不受影响。
+   * 带 fallback 的 env() 只为横屏刘海机型留出不可点区域；无刘海时等于 0。
+   */
+  body.admin-page .shell {
+    padding-inline-start: env(safe-area-inset-left, 0px);
+  }
+
+  /**
+   * 窄屏后台侧栏顶部 logo 换成站点 favicon：尺寸沿用 AdminIcon 的 22px，
+   * 容器 44px 命中区、圆角与悬停背板都不变；未配置站点图标时模板不输出 img，AdminIcon 照旧。
+   */
+  body.admin-page .sidebar__title--favicon-logo .sidebar__title-favicon {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+  }
+
+  body.admin-page .sidebar__title--favicon-logo .sidebar__title-icon--default {
+    display: none;
   }
 
   body.admin-page:not(.admin-page--content-editor) .content {
@@ -1575,6 +1610,8 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
    * position: fixed 相对初始包含块，正文右缘已含壳层内边距，偏移只定义这一份；
    * 6px 使按钮贴住滚动条槽，与正文之间留 6px 净空。这是桌面值；
    * 窄屏公开页面由 body 上的 --rail-action-offset 覆盖成后台可配值（见文件末尾宽度断点）。
+   * 浮层滚动条系统上滚动条槽并不存在，两者再各自让出 --scrollbar-overlay-inline（见 .float-stack
+   * 的结束外边距与 article-toc.css 的把手右内边距），仍落在同一条竖线上。
    * 44px 覆盖层比视觉按钮每侧外扩 5px，热区外沿仍可能压在系统手势判定区边界上，属已知残余。
    * 相交判定见 check-layout-geometry.mjs。
    */
@@ -1596,6 +1633,21 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
   align-items: center;
   gap: 10px;
   z-index: 6;
+}
+
+/**
+ * 浮层滚动条系统（macOS 默认等）上滚动条不占布局宽度，thumb 浮在窗口最右缘，
+ * 只让出 --rail-action-offset 的浮动列会压在 thumb 上。这里再让出 thumb 宽度。
+ * 补偿值由 BaseLayout 的 head 内联脚本探针写入 --scrollbar-overlay-inline
+ * （浮层系统 15px，经典滚动条 0px），静态 CSS 里按 fallback 0 求值。
+ * 用结束外边距而不是改 right：首页首屏快照（src/pages/index.astro）在 global.css 之后输出，
+ * 固定了 .float-stack 的 right，快照与本文件的 right 一致性由 check-home-critical-css 断言。
+ * 只在桌面断点生效：窄屏公开页面的偏移由后台 --rail-action-offset-narrow 决定，不再叠加。
+ */
+@media (min-width: 901px) {
+  .float-stack {
+    margin-inline-end: var(--scrollbar-overlay-inline, 0px);
+  }
 }
 
 .float-stack__button {
