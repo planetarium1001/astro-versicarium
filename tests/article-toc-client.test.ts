@@ -149,13 +149,18 @@ describe('article-toc 目录把手客户端行为', () => {
   });
 
   /**
-   * 收起与展开必须用同一组淡入淡出参数。
+   * 收起必须与展开互为**时间反演**，而不是把同一组参数照抄过来。
    *
-   * 曾经收起是 `180ms` 且无延迟、展开是 `240ms` 延迟 + `240ms` 时长：收起的内容在 180ms
-   * 就淡没了，而列宽要走 520ms，剩下 340ms 只有一个空列在缩——观感上「收起来像一眨眼」。
-   * 这条把两个方向的 opacity 时长与延迟锁成相等，改一边不改另一边会红。
+   * 展开：前 240ms 内容不可见（列宽从 0 长起来），后 240ms 淡入。
+   * 反演：前 240ms 淡出，后 240ms 空列收拢。所以收起的延迟必须是 0、时长与展开相等，
+   * 且「收起淡出结束」正好落在「展开淡入开始」的 240ms 上。
+   *
+   * 曾经这里断言两个方向的参数完全相等（240ms 延迟 + 240ms 时长），把 bug 写成了契约：
+   * 延迟 240ms 意味着列宽已经收掉一半的这 240ms 里内容仍然全可见，观感是被挤压；
+   * 再叠加收起当帧 `position: fixed` 的离散跳变，就成了「只闪一帧 / 卡一帧」。
+   * 那两轮修复（换曲线、把时长和延迟调成与展开一致）都建立在这个错误前提上。
    */
-  it('收起与展开的淡入淡出时长和延迟一致', async () => {
+  it('收起是展开的时间反演：延迟归零、时长相等、淡出结束接上淡入开始', async () => {
     const css = await readFile(
       path.join(process.cwd(), 'src', 'styles', 'components', 'article-toc.css'),
       'utf8'
@@ -175,11 +180,22 @@ describe('article-toc 目录把手客户端行为', () => {
 
     expect(expand, '展开方向应声明 opacity 过渡').not.toBeNull();
     expect(collapse, '收起方向应声明 opacity 过渡').not.toBeNull();
-    expect(collapse, '收起与展开的 opacity 时长/延迟必须一致').toEqual(expand);
-    // 内容要在列宽开始收拢之后才淡出，否则又变成「一眨眼」
-    expect(collapse!.delay, '收起也要有延迟，别在点击当帧就开始淡出').toBeGreaterThan(0);
-    // 淡出结束时间（延迟 + 时长）必须落在列宽过渡（520ms）之内
+    expect(collapse!.duration, '两个方向的淡入淡出时长必须相等').toBe(expand!.duration);
+    expect(collapse!.delay, '收起要在点击当帧就开始淡出，不能等列宽先收一半').toBe(0);
+    expect(
+      collapse!.delay + collapse!.duration,
+      '收起淡出结束的时刻必须正好是展开淡入开始的时刻'
+    ).toBe(expand!.delay);
+    // 两个方向都要落在列宽过渡（520ms）之内
+    expect(expand!.delay + expand!.duration).toBeLessThanOrEqual(520);
     expect(collapse!.delay + collapse!.duration).toBeLessThanOrEqual(520);
+    // visibility 必须跟着淡出一起结束，否则淡出被截断 / 元素留残影
+    const visibilityDelay = Number(
+      /visibility\s+0s\s+linear\s+(\d+)ms/.exec(collapseBlock)?.[1] ?? -1
+    );
+    expect(visibilityDelay, 'visibility 的延迟必须等于淡出结束时刻').toBe(
+      collapse!.delay + collapse!.duration
+    );
   });
 
   it('列宽曲线只在目录动画窗口内换，且不覆盖减少动效', async () => {

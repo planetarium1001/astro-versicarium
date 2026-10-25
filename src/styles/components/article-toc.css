@@ -163,21 +163,24 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
 }
 
 /**
- * 收起态的淡出必须与展开的淡入用同一组参数，否则两个方向的手感对不上。
+ * 收起的淡出是展开淡入的时间反演，不是把同一组参数照抄过来。
  *
- * 曾经的写法是 `opacity 180ms ease`（无延迟）：内容在 180ms 内就淡没了，而第 4 列要走
- * 520ms 才收拢——剩下 340ms 只有一个空列在缩，肉眼几乎看不到内容变化，于是「收起来像
- * 一眨眼」。展开之所以顺，是因为它 `240ms 延迟 + 240ms 时长`，内容是在列宽长过大半之后
- * 才出现的。
+ * 展开：前 240ms 内容不可见（列宽从 0 长到四成），后 240ms 淡入（列宽同时长到收尾）。
+ * 所以收起必须是前 240ms 淡出、后 240ms 空列收拢——内容在列还宽的时候就走了。
  *
- * 这里取与展开完全相同的 `240ms 延迟 + 240ms 时长`：前 240ms 内容保持可见、列宽先收一段，
- * 后 240ms 淡出，总时长与展开的 520ms 一致。
- * `visibility` 延后到淡出结束（480ms），否则元素在淡出开始时就不可见、看不到淡出过程。
+ * 曾经的两种写法都错在同一个前提上：以为「内容可见的这段时间里列宽在动，所以看得见过渡」。
+ *  - `opacity 180ms ease`（无延迟）：内容 180ms 就没了，剩下 340ms 空列在缩，像一眨眼；
+ *  - `opacity 240ms ease 240ms`（延迟 240ms）：前 240ms 列表在可见状态下被收窄的列重新折行，
+ *    同时正文已经长过来，观感是被挤压、不是淡出。
+ *
+ * `visibility` 与淡出同时结束（240ms），否则元素在淡出开始时才不可见 / 淡出结束后还留着残影。
+ * 动画窗口内 nav 仍在第 4 列里（见下方 1024px 断点），`rail-body` 的 overflow 把内容裁在列内，
+ * 正文不会压到目录上。
  */
 :root[data-toc-collapsed='true'] .article-toc__rail-body {
   opacity: 0;
   visibility: hidden;
-  transition: opacity 240ms ease 240ms, visibility 0s linear 480ms;
+  transition: opacity 240ms ease, visibility 0s linear 240ms;
 }
 
 :root[data-toc-collapsed='true'] .article-toc__title,
@@ -193,13 +196,10 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
   padding: var(--sidebar-padding-block) 0 40px var(--rail-action-offset);
 }
 
-/* 收起态（宽屏由下方 1024px 断点的 position: fixed 接管）：左右各留一份偏移 */
-:root[data-toc-collapsed='true'] .article-toc--rail {
-  padding: var(--sidebar-padding-block) var(--rail-action-offset) 40px var(--rail-action-offset);
-}
-
-/* 收起态把手已由 fixed 定位贴到竖线上，表头不再做右补偿，否则会再往右推一段 */
-:root[data-toc-collapsed='true'] .article-toc__rail-head {
+/* 收起态把手已由 fixed 定位贴到竖线上，表头不再做右补偿，否则会再往右推一段。
+   只在「收起动画已结束」时生效：动画窗口内 nav 仍是第 4 列里的 sticky 元素，
+   补偿一旦在点击当帧撤掉，把手会横跳一个 --page-inline，等 560ms 后再跳回来。 */
+:root[data-toc-collapsed='true']:not([data-toc-rail-anim='true']) .article-toc__rail-head {
   margin-right: 0;
   padding-right: 0;
 }
@@ -398,11 +398,20 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
   }
 
   /**
-   * 收起态的把手用 position: fixed，跟随滚动常驻，不随页面滚走。
+   * 收起稳态的把手用 position: fixed，跟随滚动常驻，不随页面滚走。
    * 位置与右下角浮动列同一条竖线（--rail-action-offset）；
    * 浮层滚动条系统上两者再各自让出 --scrollbar-overlay-inline（thumb 宽度），仍然同线。
+   *
+   * 这是**稳态**需求，不是动画需求，所以必须等动画窗口结束才生效：
+   * `position: fixed` 是离散切换，一旦在点击当帧落下，nav 立刻脱离第 4 列，
+   * 变成按内容收缩（width: auto）的视口级浮层——520ms 的列宽过渡对它完全失效，
+   * 列表在列宽还没动时已经按新宽度重排到别的位置；同时正文开始长过来，直接压在目录下面。
+   * 这正是「中间只闪一帧 / 卡一帧在中间」的来源。
+   *
+   * 动画窗口内（data-toc-rail-anim）保持 sticky：nav 留在列里，列宽收拢时被 rail-body 的
+   * overflow 裁掉，正文不会压上来；等内容淡出（240ms）后，560ms 再切 fixed 已经看不见。
    */
-  :root[data-toc-collapsed='true'] body.immersive-page .article-toc--rail {
+  :root[data-toc-collapsed='true']:not([data-toc-rail-anim='true']) body.immersive-page .article-toc--rail {
     position: fixed;
     top: var(--sidebar-padding-block);
     right: calc(var(--rail-action-offset) + var(--scrollbar-overlay-inline, 0px));
@@ -461,7 +470,14 @@ body.immersive-page .prose :is(h2, h3)[id][tabindex]:focus-visible {
   .article-toc__bar,
   .article-toc--inline[data-toc-anim],
   .article-toc--inline[data-toc-anim] .article-toc__list,
-  .article-toc--rail {
+  .article-toc--rail,
+  .article-toc__title,
+  .article-toc__rail-body,
+  /* 收起 / 入场规则的属性选择器抬高了特异性，必须用同形选择器才压得住（否则淡入淡出照跑） */
+  :root[data-toc-collapsed='true'] .article-toc__title,
+  :root[data-toc-intro='true'] .article-toc__title,
+  :root[data-toc-collapsed='true'] .article-toc__rail-body,
+  :root[data-toc-intro='true'] .article-toc__rail-body {
     transition: none;
   }
 }
