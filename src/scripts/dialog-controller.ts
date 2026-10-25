@@ -129,9 +129,22 @@ export const initCardDialogs = (wiring: CardDialogWiring) => {
   /** 打开前的焦点元素：dialog.close() 会把焦点还给它，指针打开时据此压掉焦点环。 */
   const returnFocusTargets = new WeakMap<HTMLDialogElement, HTMLElement>();
 
-  const showDialog = (dialog: HTMLDialogElement) => {
+  /**
+   * 版本切换时旧弹窗先关闭、新弹窗再打开，两者是不同元素：旧遮罩随旧弹窗
+   * 一起消失，新遮罩若还从透明淡入，中间会露出整页背景——亮色下就是一次刺眼的闪白。
+   * `instantBackdrop` 让新遮罩在打开的同一帧就达到最终不透明度，切换看起来是连续的。
+   *
+   * 时序要求（改动前先读这段）：
+   * - 标记必须在 `showModal()` 之前打上，浏览器算首帧时才读得到；
+   * - 撤标记放在下一帧，且依赖 `lockScrollFor()` 在本次任务里同步强制一次布局
+   *   （`clientWidth` / `getBoundingClientRect`）把首帧刷出去。若哪天把加锁改成异步，
+   *   首帧还没提交标记就被撤掉，淡入会静默回来——那时要把撤标记改到 `transitionend` 或更晚；
+   * - 加锁在 `lockCount > 1` 时提前返回、不做这次布局，因此该时序只在单层弹窗时成立。
+   */
+  const showDialog = (dialog: HTMLDialogElement, options: { instantBackdrop?: boolean } = {}) => {
     if (dialog.open) return;
     delete dialog.dataset.closing;
+    if (options.instantBackdrop) dialog.dataset.backdropInstant = 'true';
     const active = document.activeElement;
     if (active instanceof HTMLElement) returnFocusTargets.set(dialog, active);
     // showModal() 会先把焦点放到关闭按钮；指针打开时压掉这一帧的焦点环。
@@ -146,6 +159,12 @@ export const initCardDialogs = (wiring: CardDialogWiring) => {
       dialog.showModal();
     } else {
       dialog.setAttribute('open', '');
+    }
+    if (options.instantBackdrop) {
+      // 下一帧撤标记：首帧已按不透明排过版；留着会压过关闭时的淡出规则。
+      window.requestAnimationFrame(() => {
+        delete dialog.dataset.backdropInstant;
+      });
     }
     // 弹窗打开期间锁住页面：遮罩上滚动、内容不足一屏时都不会带动后面的页面。
     lockScrollFor(dialog);
@@ -194,7 +213,8 @@ export const initCardDialogs = (wiring: CardDialogWiring) => {
 
     const reveal = () => {
       if (runId !== motionRunId) return;
-      showDialog(dialog);
+      // 有旧弹窗在场就是版本切换：遮罩必须连续，不能重新淡入。
+      showDialog(dialog, { instantBackdrop: outgoing.length > 0 });
       if (options.syncHash !== false) writeHashAnchor(getDialogAnchor(dialog));
       if (shouldAnimate) void animatePanel(dialog, 'enter');
       focusDialog(dialog);
@@ -233,6 +253,14 @@ export const initCardDialogs = (wiring: CardDialogWiring) => {
 
   const closeDialog = (dialog: HTMLDialogElement) => {
     if (!dialog.open) return;
+    /**
+     * 退出动画进行中重复触发时直接忽略。
+     *
+     * 点遮罩、按 Esc、点关闭按钮都会走到这里，而退出动画有 500ms。每次触发都会递增
+     * `motionRunId` 并重启动画，上一次的收尾看到 runId 变了就不再关闭——于是连点时
+     * 弹窗反复从初始态淡出（一闪一闪），却始终关不掉。
+     */
+    if (dialog.dataset.closing === 'true') return;
     const runId = ++motionRunId;
     const anchor = getDialogAnchor(dialog);
     const finish = () => {
