@@ -129,6 +129,61 @@ describe('article-toc 目录把手客户端行为', () => {
     expect(isCollapsed()).toBe(false);
   });
 
+  /**
+   * 宽屏收起曾经是「一眨眼」：列表用 `display: none` 在点击的同一帧消失，
+   * 而第 4 列要走完 520ms 才收拢——用户只看到目录瞬间没了，后面是空列在缩。
+   * 这两条守住「列表淡出而不是瞬灭」以及「列宽曲线只在目录动画窗口内换」。
+   */
+  it('收起时列表淡出而不是瞬间消失', async () => {
+    const css = await readFile(
+      path.join(process.cwd(), 'src', 'styles', 'components', 'article-toc.css'),
+      'utf8'
+    );
+
+    const collapsedBody = /:root\[data-toc-collapsed='true'\]\s+\.article-toc__rail-body\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(collapsedBody, '需要有收起态的 rail-body 规则').not.toBe('');
+    expect(collapsedBody, '不能再用 display: none 瞬灭').not.toMatch(/display:\s*none/);
+    expect(collapsedBody).toMatch(/opacity:\s*0/);
+    expect(collapsedBody, 'visibility 要延后到淡出结束').toMatch(/visibility:\s*hidden/);
+    expect(collapsedBody).toMatch(/transition:[^;]*opacity/);
+  });
+
+  it('列宽曲线只在目录动画窗口内换，且不覆盖减少动效', async () => {
+    const css = await readFile(
+      path.join(process.cwd(), 'src', 'styles', 'components', 'article-toc.css'),
+      'utf8'
+    );
+
+    // 目录专用曲线挂在 data-toc-rail-anim 上，阅读模式用的是 layout.css 的原曲线
+    const rule = /:root\[data-toc-rail-anim='true'\]\s+body\.immersive-page\s+\.shell\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(rule, '需要目录动画窗口的列宽曲线覆盖').not.toBe('');
+    expect(rule).toMatch(/grid-template-columns\s+520ms\s+cubic-bezier\(0\.4,\s*0,\s*0\.2,\s*1\)/);
+    // 必须排除 reduce，否则会盖掉 layout.css 的 transition: none
+    expect(css).toMatch(/@media \(min-width: 901px\) and \(prefers-reduced-motion: no-preference\)\s*\{[\s\S]*?data-toc-rail-anim/);
+  });
+
+  it('切换目录时打上动画标记，并在动画结束后撤掉', async () => {
+    vi.useFakeTimers();
+    try {
+      await importToc();
+
+      clickToggle();
+      expect(
+        document.documentElement.dataset.tocRailAnim,
+        '点击后应进入目录动画窗口'
+      ).toBe('true');
+
+      vi.advanceTimersByTime(600);
+      expect(
+        document.documentElement.dataset.tocRailAnim,
+        '动画结束后应撤掉标记，否则下次阅读模式切换也会用这条曲线'
+      ).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+      delete document.documentElement.dataset.tocRailAnim;
+    }
+  });
+
   it('目录把手与悬浮列按钮共用同一尺寸 token', async () => {
     // 两处都必须引用 --rail-action-size，而不是各自的字面值。
     const [tocCss, layoutCss] = await Promise.all([
