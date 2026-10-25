@@ -246,6 +246,16 @@
   }
 }
 
+/**
+ * 版本切换：旧弹窗的遮罩随旧弹窗一起消失，新弹窗的遮罩必须同帧到位。
+ * 否则中间会露出整页背景——亮色模式下就是一次闪白。
+ * 选择器比 @starting-style 多一个属性，确保压过那条 opacity: 0。
+ */
+.project-dialog[open][data-backdrop-instant]::backdrop {
+  opacity: 1;
+  transition: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .project-dialog::backdrop {
     transition: none;
