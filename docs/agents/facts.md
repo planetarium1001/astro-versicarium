@@ -8,10 +8,10 @@
 
 | 项 | 值 | 来源 |
 |---|---|---|
-| 主题版本 | `1.0.0-rc.2` | `package.json` |
-| 版本清单 | `{".": "1.0.0-rc.2"}` | `.release-please-manifest.json` |
-| 最新变更记录 | `[1.0.0-rc.2] - 2026-10-21` | `CHANGELOG.md` |
-| 标签 | `v1.0.0-rc.1`、`v1.0.0-rc.2` | `git tag` |
+| 主题版本 | `0.1.0-rc.1` | `package.json` |
+| 版本清单 | `{".": "0.1.0-rc.1"}` | `.release-please-manifest.json` |
+| 最新变更记录 | `[0.1.0-rc.1] - 2026-10-31` | `CHANGELOG.md` |
+| 标签 | 旧版本线 `v1.0.0-rc.1`、`v1.0.0-rc.2`；0.x 版本线发布后再创建 `v0.1.0-rc.x` | `git tag` |
 | Node 要求 | `>=22.12.0` | `package.json` 的 `engines` |
 | `.nvmrc` | `24.22.1` | `.nvmrc` |
 | 包管理器 | npm，锁文件 `package-lock.json` | 仓库根 |

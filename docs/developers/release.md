@@ -7,23 +7,23 @@
 ## 版本策略与当前版本
 
 - 仓库是 `private: true` 的模板仓库，不发布到 npm；版本号只用于标记兼容性、生成 `CHANGELOG.md` 与命名 Release 附件。
-- 主题使用 Semantic Versioning，四处保持同一个版本号：`package.json` 的 `version`、Git 标签（`v` 前缀）、`CHANGELOG.md` 的最新条目、`.release-please-manifest.json`。
+- 主题使用 Semantic Versioning 的 `0.y.z` 方案：0.x 阶段把次版本留给破坏性变更，1.0.0 之前不承诺主版本稳定。
+- 四处保持同一个版本号：`package.json` 的 `version`、Git 标签（`v` 前缀）、`CHANGELOG.md` 的最新条目、`.release-please-manifest.json`。
 
 | 变更类型 | 版本位 | 示例 |
 | --- | --- | --- |
-| 破坏性变更 | 主版本 | 修改 frontmatter 字段含义、删除设置项、改变公开路径或 `theme:update` 行为 |
-| 向后兼容的功能 | 次版本 | 新增设置字段、后台模块或页面能力 |
-| 向后兼容的修复 | 修订版本 | 修复渲染、布局、合并逻辑或文档错误 |
+| 破坏性变更 | 次版本 | `0.1.0` → `0.2.0` |
+| 向后兼容的功能 | 修订版本 | `0.1.0` → `0.1.1` |
+| 向后兼容的修复 | 修订版本 | `0.1.0` → `0.1.1` |
 
 | 位置 | 当前值 |
 | --- | --- |
-| `package.json` 的 `version` | `1.0.0-rc.2` |
-| `.release-please-manifest.json` | `1.0.0-rc.2` |
-| `CHANGELOG.md` 最新条目 | `1.0.0-rc.2`（2026-10-21），前一条为 `1.0.0-rc.1`（2026-10-20） |
-| 版本标签 | `v1.0.0-rc.1`（annotated tag）、`v1.0.0-rc.2`（lightweight tag） |
+| `package.json` 的 `version` | `0.1.0-rc.1` |
+| `.release-please-manifest.json` | `0.1.0-rc.1` |
+| `CHANGELOG.md` 最新条目 | `0.1.0-rc.1`（2026-10-31），前一条为 `1.0.0-rc.2`（2026-10-21） |
+| 版本标签 | 旧版本线 `v1.0.0-rc.1`、`v1.0.0-rc.2`；`v0.1.0-rc.1` 在发布时创建 |
 
-- `v1.0.0-rc.2` 指向 `89fc493`（`git rev-list -n1 v1.0.0-rc.2`），该提交的 `package.json` 版本为 `1.0.0-rc.2`。
-- 版本序列从 `1.0.0` 的预览候选 `1.0.0-rc.1` 开始，当前处于预览阶段。
+- 版本线从 `0.1.0-rc.1` 重新开始；`1.0.0-rc.x` 是旧版本线的历史标签，保留但不再推进。
 - 版本号里不写日期：日期不表达兼容性，提交时间由 Git 记录。
 
 ## 关键文件与入口
@@ -47,7 +47,9 @@
 | 配置字段 | 值 |
 | --- | --- |
 | `release-type` | `node` |
-| `initial-version` | `1.0.0-rc.1` |
+| `initial-version` | `0.1.0-rc.1` |
+| `bump-minor-pre-major` | `true` |
+| `bump-patch-for-minor-pre-major` | `true` |
 | `include-v-in-tag` | `true` |
 | `include-component-in-tag` | `false` |
 | `versioning` | `prerelease` |
@@ -59,14 +61,14 @@
 
 | 提交类型 | 版本影响 |
 | --- | --- |
-| `feat` | 次版本 |
+| `feat` | 修订版本（0.x 下由 `bump-patch-for-minor-pre-major` 控制） |
 | `fix`、`perf` | 修订版本 |
-| `feat!`、`fix!` 或 footer 写 `BREAKING CHANGE` | 主版本 |
+| `feat!`、`fix!` 或 footer 写 `BREAKING CHANGE` | 次版本（0.x 下由 `bump-minor-pre-major` 控制） |
 | `docs`、`refactor`、`chore`、`ci`、`build` | 不改变版本 |
 
 - 工作流维护一个发布 PR，更新 `package.json` 的版本与 `CHANGELOG.md`；手动运行才执行，不随推送自动触发。
-- 两个预览候选的版本号、CHANGELOG 与 manifest 由维护者手动写入，不从发布 PR 产生。
-- 发布稳定版时去掉 `versioning`、`prerelease`、`prerelease-type`，把 manifest 与 `package.json` 的版本改成 `1.0.0`；仓库里没有对应脚本。
+- 预览候选的版本号、CHANGELOG 与 manifest 由维护者手动写入，不从发布 PR 产生。
+- 发布 `0.1.0` 稳定版时去掉 `versioning`、`prerelease`、`prerelease-type`，把 manifest 与 `package.json` 的版本改成 `0.1.0`；仓库里没有对应脚本。
 
 ## 数据流
 
@@ -100,7 +102,7 @@
 
 | 资产 | 命名 |
 | --- | --- |
-| 标签 | `v<version>`，例如 `v1.0.0-rc.2` |
+| 标签 | `v<version>`，例如 `v0.1.0-rc.1` |
 | 模板压缩包 | `astro-versicarium-<version>.zip` |
 | 校验文件 | `SHA256SUMS` |
 | 解压目录 | `astro-versicarium-<version>/` |
@@ -117,7 +119,7 @@
 
 - `theme.json` 的 `commit` 是 `theme:update` 的合并基准，不是版本号或标签。
 - 脚本启动时读取 `repository`、`branch`、`commit`，缺任一字段会报错（`scripts/theme-update.mjs` 的 `readManifest`）。
-- 当前 `main` 的值是 `89fc493`，也就是 `v1.0.0-rc.2` 标签指向的提交；`demo` 的值由最近一次 `theme:update` 写入，随同步提交变化。
+- 当前 `main` 上 `theme.json` 的值仍是 `89fc493`，即旧版本线 `v1.0.0-rc.2` 标签指向的提交；0.x 版本线发布后再把它推进到新的发布提交。`demo` 的值由最近一次 `theme:update` 写入，随同步提交变化。
 - `main` 上的基准通常停在最近一次发布提交，之后的新提交不会自动推进它。
 - 从仓库复制出的站点带着这个值开始第一次合并：从基准合并到主题最新提交，两者之间没有文件差异时内容不变，只更新基准。
 - 合并有冲突时脚本不写 `theme.json`，解决后重跑。
@@ -135,7 +137,7 @@
 ## 下载与校验
 
 ```bash
-VERSION=1.0.0-rc.2
+VERSION=0.1.0-rc.1
 BASE="https://github.com/planetarium1001/astro-versicarium/releases/download/v${VERSION}"
 curl -LO "${BASE}/astro-versicarium-${VERSION}.zip"
 curl -LO "${BASE}/SHA256SUMS"
@@ -146,13 +148,13 @@ cd "astro-versicarium-${VERSION}" && npm ci
 
 - 校验失败时不要解压使用，重新下载并核对 `SHA256SUMS` 中的文件名与下载文件名。
 - 压缩包没有 `.git`，作为自有站点使用前按 [仓库 README](../../README.md) 的获取模板步骤初始化仓库。
-- 发布后确认附件时，在能访问 GitHub 的环境执行 `gh release view v1.0.0-rc.2`；这一步依赖网络与登录状态，不在仓库内校验。
+- 发布后确认附件时，在能访问 GitHub 的环境执行 `gh release view v0.1.0-rc.1`；这一步依赖网络与登录状态，不在仓库内校验。
 - 本地核对版本链：
 
 ```bash
 node -p "require('./package.json').version"
 cat .release-please-manifest.json
 git tag -l
-git rev-list -n1 v1.0.0-rc.2
+git rev-list -n1 v0.1.0-rc.1
 npm run ci
 ```

@@ -1,6 +1,19 @@
 # Changelog
 
-本文件记录面向模板使用者的公共变更。版本号遵循 Semantic Versioning，日期使用 `YYYY-MM-DD`。
+本文件记录面向模板使用者的公共变更。版本号遵循 Semantic Versioning 的 `0.y.z` 方案，日期使用 `YYYY-MM-DD`。
+
+## [0.1.0-rc.1] - 2026-10-31
+
+版本线从 `1.0.0-rc.2` 重启为 `0.y.z`：0.x 阶段破坏性变更提升次版本，功能与修复提升修订版本；旧版本线 `v1.0.0-rc.x` 标签保留，不再推进。
+
+### Added
+
+- 站点配置自定义 favicon 时，构建与开发服务器接管根路径默认图标：`/favicon-32x32.png`、`/apple-touch-icon.png` 使用自定义生成分片；配置了自定义 SVG 时 `/favicon.svg` 使用该文件，否则返回 404；根 `favicon.ico` 也以自定义源图为准。
+
+### Changed
+
+- `release-please-config.json` 启用 `bump-minor-pre-major` 与 `bump-patch-for-minor-pre-major`，对应 0.x 的版本位规则。
+- README 徽章、文档与当前示例内容的版本引用更新到 `0.1.0-rc.1`。
 
 ## [1.0.0-rc.2] - 2026-10-21
 

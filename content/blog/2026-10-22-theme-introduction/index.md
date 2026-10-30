@@ -6,7 +6,7 @@ publishedAt: 2026-10-22
 tags: [主题, 介绍]
 series: theme-introduction
 slug: theme-introduction
-versionLabel: 1.0.0-rc.2
+versionLabel: 0.1.0-rc.1
 versionName: 当前版本
 versionSummary: 收束内容结构、版本能力与发布方式的当前说明。
 versionOrder: 2

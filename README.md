@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-22C55E?style=flat-square" alt="License: MIT"></a>
-  <a href="./CHANGELOG.md"><img src="https://img.shields.io/badge/version-1.0.0--rc.2-F59E0B?style=flat-square" alt="Version 1.0.0-rc.2"></a>
+  <a href="./CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.1.0--rc.1-F59E0B?style=flat-square" alt="Version 0.1.0-rc.1"></a>
 </p>
 
 ## 概览

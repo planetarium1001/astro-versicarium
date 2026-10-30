@@ -1,6 +1,6 @@
 {
   "name": "astro-versicarium",
-  "version": "1.0.0-rc.2",
+  "version": "0.1.0-rc.1",
   "private": true,
   "license": "MIT",
   "description": "面向开发者的极简 Astro 写作主题：文章、项目版本、开发日志与动态共用同一套内容结构。",

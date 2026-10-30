@@ -95,8 +95,8 @@
   - `CHANGELOG.md`：由 Release Please 生成
   - `theme.json`：站点合并基准
 - 注意
-  - 版本号与 `CHANGELOG.md` 不手改，在 Actions 页面手动运行 `release-please.yml` 开 PR。
-  - 标签形如 `v1.0.0-rc.2`；创建 Release 后手动运行 `release.yml` 打包模板 zip 与 `SHA256SUMS`。
+  - 稳定版的版本号与 `CHANGELOG.md` 由 Release Please 生成；预览候选（如 `0.1.0-rc.x`）由维护者手动写入。
+  - 标签形如 `v0.1.0-rc.1`；创建 Release 后手动运行 `release.yml` 打包模板 zip 与 `SHA256SUMS`。
   - `theme.json` 的 `commit` 是站点合并基准，发版时同步为发布提交。
 - 验证
   - `SITE_URL=https://example.com npm run verify`

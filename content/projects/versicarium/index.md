@@ -5,7 +5,7 @@ description: 用目录式内容结构管理文章、项目、动态与开发日�
 type: 主题
 date: 2026-10-02
 slug: versicarium
-versionLabel: "1.0.0-rc.2"
+versionLabel: "0.1.0-rc.1"
 versionOrder: 2
 image: images/og-default.png
 draft: false
