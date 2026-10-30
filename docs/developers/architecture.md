@@ -128,7 +128,7 @@
 - 首页 critical CSS 是 `src/pages/index.astro` 的 `homeHeadCriticalCss` 快照（`:49`），由 `BaseLayout` 的 `head` 插槽输出在 `global.css` 之后。
 - 产物检查：`check:layout-geometry`（`GUTTER = 15`、`MIN_RAIL_INSET = 4`）、`check:touch-targets`（`MIN_TAP_PX = 44`）、`check:viewport-overflow`。
 - 字体 CSS 由 `npm run font:build` 生成；`ui.fontCoverage = 'full'` 时 `BaseLayout` 额外加载 `fonts.dlc.generated.css`。
-- 站点图标由 `scripts/favicon.mjs` 在 `predev`、`prebuild` 生成到 `public/images/site/generated/`，源图顺序为 `png` → `source` → `svg`；根 `public/favicon.ico` 只在仍是生成版本时覆盖，标记在 `tools/favicon-generated.json`。
+- 站点图标由 `scripts/favicon.mjs` 在 `predev`、`prebuild` 生成到 `public/images/site/generated/`，源图顺序为 `png` → `source` → `svg`；根 `public/favicon.ico` 在文件缺失、内容与本次生成一致、上次记录确认或配置了非默认源图时写入，标记在 `tools/favicon-generated.json`。配置自定义图标后，`src/integrations/site-favicon.mjs` 还会在构建与开发服务器里接管根路径的默认图标。
 
 | 命令 | 检查对象 |
 | --- | --- |

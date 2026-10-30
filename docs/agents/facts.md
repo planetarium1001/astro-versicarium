@@ -191,3 +191,4 @@
 
 - 以上文件不手改；需要调整时改输入或脚本，再运行对应命令。
 - `tools/fonts-src/` 由 `npm run font:fetch` 生成，已在 `.gitignore` 中忽略。
+- 根路径图标接管由 `src/integrations/site-favicon.mjs` 在构建与开发服务器执行，共享的默认路径与接管计划在 `scripts/favicon-shared.mjs`。

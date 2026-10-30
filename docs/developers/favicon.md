@@ -2,7 +2,7 @@
 
 ## 范围
 
-本篇覆盖：`site.json` 的 `favicon` 字段解析、生成器输出、渲染回退、后台上传与反向代理放行。前置：仓库能本地运行，设置字段说明见 [主题设置](../settings.md)。
+本篇覆盖：`site.json` 的 `favicon` 字段解析、生成器输出、渲染回退、根路径图标接管、后台上传与反向代理放行。前置：仓库能本地运行，设置字段说明见 [主题设置](../settings.md)。
 
 ## 配置字段与校验
 
@@ -40,6 +40,8 @@
 | `src/lib/theme-settings.ts` | favicon 值解析与 `getSiteFaviconLinks`（`:2373`） |
 | `src/layouts/BaseLayout.astro` | 渲染 `<link>`，给链接补部署 base |
 | `scripts/favicon.mjs` | 生成器，`predev` 与 `prebuild` 自动执行 |
+| `scripts/favicon-shared.mjs` | 共享模块：默认路径、设置读取、源图解析、根 ICO 判断与根路径图标计划 |
+| `src/integrations/site-favicon.mjs` | Astro 集成，在构建与开发服务器里接管根路径默认图标 |
 | `src/lib/admin-console/site-assets.ts` | PNG 上传校验、命名与旧文件清理 |
 | `src/pages/api/admin/site-assets/upload.ts` | 上传接口，仅开发环境可用 |
 | `src/components/admin/AdminSiteSection.astro` | 后台上传控件与尺寸提示文案 |
@@ -70,9 +72,26 @@
 
 - 文件不存在；
 - 文件内容与本次生成结果相同；
-- 上次生成记录里 `rootIco` 为 `true`，且 `rootIcoHash` 与当前文件哈希一致。
+- 上次生成记录里 `rootIco` 为 `true`，且 `rootIcoHash` 与当前文件哈希一致；
+- 配置的源图不是模板默认源图（用户配置了自定义图标）时，以配置为准写入。
 
-用户替换过且与生成结果不同的 ICO 不会被覆盖；生成记录里的 `rootIcoHash` 总是重新计算当前根文件的哈希。
+模板默认源图下，用户替换过且与生成结果不同的 ICO 不会被覆盖；配置自定义源图后，根 ICO 以配置为准写入。判断逻辑在 `scripts/favicon-shared.mjs` 的 `shouldWriteRootIco` 与 `isDefaultFaviconSource`。生成记录里的 `rootIcoHash` 总是重新计算当前根文件的哈希。
+
+## 自定义图标与根路径默认文件
+
+模板默认图标位于 `public/` 根目录：`/favicon.svg`、`/favicon-32x32.png`、`/apple-touch-icon.png`、`/favicon.ico`。配置自定义图标后，浏览器隐式请求、旧 HTML 与图标探测请求仍会访问这些根路径，可能拿到模板默认图标。`src/integrations/site-favicon.mjs` 在构建产物与开发服务器里覆盖前三个路径，`/favicon.ico` 由生成器处理。
+
+触发条件：`site.json` 的 `favicon.svg` 或 `favicon.png` 指向非默认路径，且该路径的文件存在。`/favicon.svg` 与 `/favicon-32x32.png` 是模板默认路径；两项都没有命中时，集成不介入。判断逻辑在 `scripts/favicon-shared.mjs` 的 `resolveFaviconProbePlan`。
+
+触发后：
+
+- 构建结束（`astro:build:done`）：`dist/` 下的 `/favicon-32x32.png` 与 `/apple-touch-icon.png` 换成 `public/images/site/generated/` 下的同名分片；配置了自定义 SVG 时 `/favicon.svg` 换成该文件，否则从产物中删除。
+- 开发服务器（Vite 中间件）：同样的路径在请求时返回生成分片或自定义 SVG；未配置自定义 SVG 时 `/favicon.svg` 返回 404。中间件挂载在 `publicDir` 静态中间件之前，`public/` 下的模板默认文件不会抢先返回。
+- 生成分片缺失时，产物中的目标文件被删除，开发服务器返回 404，不会退回模板默认图标。
+
+改图标路径或替换源图后要重启 `npm run dev`：生成器只在 `predev` 与 `prebuild` 运行，集成的接管计划在启动时确定，开发服务器读取的是上一次生成的目录；构建会在 `prebuild` 重新生成。
+
+`/favicon.ico` 不在集成的接管范围内，由生成器按上一节的规则写入；配置自定义源图时同样以配置为准。
 
 ## 渲染回退
 
@@ -126,6 +145,7 @@ curl -sS -o /dev/null -D - https://example.com/images/site/generated/favicon-32x
 | 修改上传限制 | `src/lib/admin-console/site-assets.ts` 的常量与校验、`AdminSiteSection.astro` 的提示文案、本页 |
 | 修改格式校验 | `src/utils/format.ts` 的 `normalizeSiteFaviconPath`、`theme-shared/validate.ts` 的错误文案、本页 |
 | 更换默认图标 | `public/` 下的默认文件、`src/utils/favicon-defaults.ts`、本页 |
+| 调整根路径图标接管 | `scripts/favicon-shared.mjs` 的 `resolveFaviconProbePlan`、`src/integrations/site-favicon.mjs`、本页 |
 | 调整回退顺序 | `getSiteFaviconLinks`，同步 `tests/theme-settings.test.ts` 的用例 |
 | 图标不显示 | 放行规则与缓存，见[常见问题](../faq.md) |
 
@@ -140,5 +160,16 @@ curl -sSI http://localhost:4321/images/site/generated/favicon-32x32.png
 npm test
 ```
 
+配置自定义 PNG、`favicon.svg` 保持模板默认路径时，再检查根路径接管：
+
+```bash
+curl -sSI http://localhost:4321/favicon.svg            # 期望 404
+curl -sSI http://localhost:4321/favicon-32x32.png      # 期望自定义图标
+curl -sSI http://localhost:4321/apple-touch-icon.png   # 期望自定义图标
+curl -sSI http://localhost:4321/favicon.ico            # 期望自定义图标
+```
+
 - `tests/theme-settings.test.ts` 覆盖链接回退顺序、缺失文件与默认图标；`tests/admin-site-assets-api.test.ts` 覆盖上传限制、命名与清理。
-- 改完生成器后至少跑一次 `npm run build`（会触发 `prebuild`），确认生成目录与生成记录都更新，且根 `public/favicon.ico` 没有被意外覆盖。
+- 改完生成器后至少跑一次 `npm run build`（会触发 `prebuild`），确认生成目录与生成记录都更新；未配置自定义源图时，根 `public/favicon.ico` 不应被意外覆盖。
+- `/favicon.svg` 应返回 404，`/favicon-32x32.png`、`/apple-touch-icon.png`、`/favicon.ico` 应返回自定义图标，`Content-Type` 分别为 `image/png` 与 `image/x-icon`；配置了自定义 SVG 时，`/favicon.svg` 返回该文件与 `image/svg+xml`。
+- 构建后检查 `dist/`：未配置自定义 SVG 时 `dist/favicon.svg` 不存在，`dist/favicon-32x32.png` 与 `dist/apple-touch-icon.png` 与生成目录中的同名文件一致。

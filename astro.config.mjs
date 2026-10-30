@@ -6,6 +6,7 @@ import sitemap from '@astrojs/sitemap';
 import svelte from '@astrojs/svelte';
 import { createPublicMarkdownConfig } from './src/plugins/markdown-pipeline.mjs';
 import { contentAssets } from './src/integrations/content-assets.mjs';
+import { siteFavicon } from './src/integrations/site-favicon.mjs';
 import {
   getSelectedAstroApiFonts,
   resolveTypographyFromRawUiSettings
@@ -129,6 +130,7 @@ const createSitemapBlogFilter = () => ({
 
 const integrations = [
   contentAssets(),
+  siteFavicon(),
   ...(!isProductionBuild ? [svelte()] : []),
   ...(hasSiteUrl ? [sitemap({ filter: (page) => !isExcludedSitemapEntry(page) }), createSitemapBlogFilter()] : [])
 ];

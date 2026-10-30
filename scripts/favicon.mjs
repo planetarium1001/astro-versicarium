@@ -2,33 +2,17 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
+import {
+  isDefaultFaviconSource,
+  readSiteSettings,
+  resolveFaviconSourceImage,
+  shouldWriteRootIco
+} from './favicon-shared.mjs';
 
 const ROOT = process.cwd();
 const GENERATED_DIR = path.join(ROOT, 'public', 'images', 'site', 'generated');
 const GENERATED_MARKER_FILE = path.join(GENERATED_DIR, '.favicon-generated.json');
 const MARKER_FILE = path.join(ROOT, 'tools', 'favicon-generated.json');
-
-const readSiteSettings = () => {
-  try {
-    return JSON.parse(readFileSync(path.join(ROOT, 'src', 'data', 'settings', 'site.json'), 'utf8'));
-  } catch {
-    return {};
-  }
-};
-
-const toPublicFile = (value) => {
-  if (typeof value !== 'string' || !value.trim()) return null;
-  const normalized = value.trim().replace(/^\/+/, '');
-  const filePath = path.join(ROOT, 'public', ...normalized.split('/'));
-  return existsSync(filePath) ? filePath : null;
-};
-
-const resolveSourceImage = (favicon) =>
-  toPublicFile(favicon.png)
-  ?? toPublicFile(favicon.source)
-  ?? toPublicFile(favicon.svg)
-  ?? toPublicFile('/favicon-32x32.png')
-  ?? toPublicFile('/favicon.svg');
 
 const pngAt = (source, size) =>
   sharp(source, { density: 384 })
@@ -69,9 +53,9 @@ const basePath = (() => {
 })();
 
 const main = async () => {
-  const settings = readSiteSettings();
+  const settings = readSiteSettings(ROOT);
   const favicon = settings.favicon ?? {};
-  const source = resolveSourceImage(favicon);
+  const source = resolveFaviconSourceImage(ROOT, favicon);
   if (!source) {
     console.warn('[favicon] no source image found; leaving existing icons untouched');
     return;
@@ -124,11 +108,15 @@ const main = async () => {
   const currentRootIcoHash = existsSync(rootIco)
     ? createHash('sha256').update(readFileSync(rootIco)).digest('hex')
     : null;
-  // 只有「文件缺失」「内容与本次生成一致」或「仍是上次生成的版本」才写入；
-  // 用户替换过且与生成结果不同的 ICO 永不覆盖。
-  const rootIcoIsOurs = currentRootIcoHash === null
-    || currentRootIcoHash === generatedIcoHash
-    || (previousMarker.rootIco === true && previousMarker.rootIcoHash === currentRootIcoHash);
+  // 配置了自定义源图时以配置为准，避免根 ICO 停在模板默认图标上；
+  // 模板默认配置下仍保护用户手工替换的 ICO。
+  const sourceIsDefault = isDefaultFaviconSource(ROOT, source);
+  const rootIcoIsOurs = shouldWriteRootIco({
+    currentHash: currentRootIcoHash,
+    generatedHash: generatedIcoHash,
+    previousMarker,
+    sourceIsDefault
+  });
   if (rootIcoIsOurs) {
     writeFileSync(rootIco, generatedIcoBuffer);
   }
