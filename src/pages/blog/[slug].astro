@@ -2,32 +2,41 @@
 import { render } from 'astro:content';
 import {
   getVisibleBlogRouteEntries,
+  getVisibleBlogSeriesIndex,
   type BlogEntry,
   type BlogRouteEntry
 } from '../../lib/content';
 import ArticleLayout from '../../layouts/ArticleLayout.astro';
 import { getThemeSettings, getVisibleArticleMetaTags } from '../../lib/theme-settings';
+import { buildEntrySeriesLookup, type EntrySeriesView } from '../../lib/entry-display';
 
 export const prerender = true;
 
 export async function getStaticPaths() {
-  const routeEntries = await getVisibleBlogRouteEntries();
+  // 系列索引与路由一起构建一次：文章页元信息行要显示「系列名 N/M」，每页单独查会重复建索引。
+  const [routeEntries, seriesIndex] = await Promise.all([
+    getVisibleBlogRouteEntries(),
+    getVisibleBlogSeriesIndex()
+  ]);
+  const seriesByEntryId = buildEntrySeriesLookup(seriesIndex);
   return routeEntries.map((route) => ({
     params: { slug: route.slugParam },
     props: {
       entry: route.entry,
       route,
       prev: route.prev,
-      next: route.next
+      next: route.next,
+      series: seriesByEntryId.get(route.entry.id) ?? null
     }
   }));
 }
 
-const { entry, route, prev, next } = Astro.props as {
+const { entry, route, prev, next, series } = Astro.props as {
   entry: BlogEntry;
   route: BlogRouteEntry;
   prev: { href: string; title: string } | null;
   next: { href: string; title: string } | null;
+  series: EntrySeriesView | null;
 };
 const { Content, headings } = await render(entry);
 const { settings } = getThemeSettings();
@@ -41,6 +50,7 @@ const visibleTags = getVisibleArticleMetaTags(entry.data.tags, 'detail');
   route={route}
   prev={prev}
   next={next}
+  series={series}
   articleMetaSettings={articleMetaSettings}
   dateGranularity={entry.data.dateGranularity ?? articleMetaSettings.dateGranularity}
   viewStatsSettings={viewStatsSettings}

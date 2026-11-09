@@ -80,6 +80,8 @@
 - `slug` 不填时，默认公开路径取条目 ID 压平后的值，因此带日期前缀。
 - `versionGroup` 与版本字段只有同一 `versionGroup` 下才参与路由分组，单篇文章填了也不会产生版本页面。
 - `series`、`seriesName`、`seriesOrder` 只参与系列索引与呈现，不参与路由判定，不影响任何条目的公开地址。
+- 系列索引由 `src/lib/blog-series.ts` 的 `buildBlogSeriesIndex()` 生成（同一版本组只占一行）；列表与归档经 `buildEntrySeriesLookup()` 反查，文章页在 `src/pages/blog/[slug].astro` 的 `getStaticPaths` 里一次建好索引并作为 `series` prop 传入 `ArticleLayout`，避免每页重复构建。
+- 文章页元信息行的系列入口与列表共用 `.meta-line .entry-series-link` 与 `getSeriesFilterHref()`，链接同样是 `?tags=series%3A<slug>&mode=and`。
 
 ## bits
 
