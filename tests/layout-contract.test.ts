@@ -888,7 +888,10 @@ describe('blog 列表卡：tag 可悬停点击', () => {
     // 卡片内不能再有「外层 a 包住 tag a」这种非法嵌套
     expect(card).not.toMatch(/<a\s+class="list-item list-item--link"/);
     expect(lists).toMatch(/\.list-item__stretch::after\s*\{[^}]*position:\s*absolute/);
-    expect(lists).toMatch(/\.list-item--link \.meta-line \.tag--link\s*\{[^}]*z-index:\s*1/);
+    // 标签与系列入口共用同一条「浮到卡片覆盖层之上」的规则
+    expect(lists).toMatch(
+      /\.list-item--link \.meta-line \.tag--link,\s*\.list-item--link \.meta-line \.entry-series-link\s*\{[^}]*z-index:\s*1/
+    );
   });
 });
 

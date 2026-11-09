@@ -363,8 +363,12 @@
   border-radius: inherit;
 }
 
-/* tag 链接必须浮在整块覆盖层之上，否则点击会被卡片遮罩截走 */
-.list-item--link .meta-line .tag--link {
+/*
+ * 元信息行里的可点入口必须浮在整块覆盖层之上，否则点击会被卡片遮罩截走：
+ * 覆盖层是定位元素，静态的链接会被它盖住。标签与系列入口同属这一类。
+ */
+.list-item--link .meta-line .tag--link,
+.list-item--link .meta-line .entry-series-link {
   position: relative;
   z-index: 1;
 }
