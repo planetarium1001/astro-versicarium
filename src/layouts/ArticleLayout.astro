@@ -7,6 +7,13 @@ import ViewStats from '../components/ViewStats.astro';
 import Lightbox from '../components/Lightbox.astro';
 import '../styles/article.css';
 import { getBlogDerivedText, type BlogEntry, type BlogRouteEntry } from '../lib/content';
+import { getSeriesFilterHref, getSeriesTagKey } from '../lib/blog-series';
+import {
+  formatEntrySeriesOrder,
+  resolveEntrySeriesDisplay,
+  type EntrySeriesView
+} from '../lib/entry-display';
+import { getThemeSettings } from '../lib/theme-settings';
 import { containsMarkdownMath } from '../lib/markdown-math';
 import {
   MARKDOWN_MATH_STYLESHEET_DATA_ATTR,
@@ -39,7 +46,8 @@ const {
   dateGranularity,
   viewStatsSettings,
   visibleTags = [],
-  headings = []
+  headings = [],
+  series = null
 } = Astro.props as {
   entry: BlogEntry;
   route: BlogRouteEntry;
@@ -50,6 +58,8 @@ const {
   viewStatsSettings: ViewStatsSettings;
   visibleTags?: string[];
   headings?: { depth: number; slug: string; text?: string }[];
+  /** 本文所属的内容系列（含阅读序号）；不进系列时为 null。 */
+  series?: EntrySeriesView | null;
 };
 
 // 目录只收有锚点文本的 h2/h3
@@ -70,6 +80,23 @@ const tagLinks = visibleTags.map((tag) => {
     href: isRoutableTagKey(key) ? withBase(`/blog/?tags=${encodeURIComponent(key)}`) : null
   };
 });
+/**
+ * 详情页元信息行的系列入口：放在日期与标签之间，与标签同属「点一下就筛选」的入口，
+ * 但沿用列表里的中性色，不套 `#`、也不抢标签的强调色。
+ * 单篇系列没有「第几篇」可言，与同系列抽屉一样不显示。
+ */
+const seriesDisplay = resolveEntrySeriesDisplay(getThemeSettings().settings.ui);
+const seriesLink = series && series.total > 1 && seriesDisplay.mode !== 'hidden'
+  ? {
+      name: series.name,
+      tagKey: getSeriesTagKey(series.slug),
+      href: withBase(getSeriesFilterHref(series.slug)),
+      orderText: seriesDisplay.order === 'show'
+        ? formatEntrySeriesOrder(series.index, series.total)
+        : ''
+    }
+  : null;
+
 const ogImageValue = entry.data.ogImage;
 const ogImage = ogImageValue == null
   ? null
@@ -124,6 +151,7 @@ const numberFormatter = new Intl.NumberFormat('zh-CN');
 const viewStats = viewStatsSettings;
 const showViewStatsInMeta = viewStats.onArticleMeta && (viewStats.showPv || viewStats.showUv);
 const shouldShowMetaLine = articleMetaSettings.showDate
+  || Boolean(seriesLink)
   || (articleMetaSettings.showTags && visibleTags.length > 0)
   || articleMetaSettings.showWordCount
   || articleMetaSettings.showReadingTime
@@ -202,6 +230,16 @@ const shouldShowMetaLine = articleMetaSettings.showDate
                 >{`${item.label}${item.text}`}</time>
               </>
             ))}
+          </span>
+        ) : null}
+        {seriesLink ? (
+          <span class="meta-line__item meta-line__item--series">
+            <a
+              class="entry-series-link"
+              href={seriesLink.href}
+              aria-label={`筛选系列 ${seriesLink.name}`}
+              data-article-series-link={seriesLink.tagKey}
+            >{seriesLink.orderText ? `${seriesLink.name} ${seriesLink.orderText}` : seriesLink.name}</a>
           </span>
         ) : null}
         {articleMetaSettings.showTags && tagLinks.length ? (

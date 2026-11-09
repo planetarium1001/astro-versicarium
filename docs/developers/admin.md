@@ -33,7 +33,7 @@
 | 首页设置 | `home.json` | 头图开关与图片、替代文本、导语与补充文案、更多入口与链接 |
 | 内页设置 | `page.json`、`ui.json` 的 `articleMeta`、`cardDateDisplay`、`viewStats`、`floatStack`、`readingMode` | 各页面标题与副标题、归档版本模式、列表订阅开关、动态默认作者、文章元信息、卡片日期、浏览数据、浮动按钮、分页 |
 | 条目版本 | `ui.json` 的 `entryVersionName` | 版本名称隐藏、放在版本号前或版本号后 |
-| 条目系列 | `ui.json` 的 `entrySeriesMode`、`entrySeriesOrder` | 系列名与阅读序号放在元信息行、标题胶囊、标题前缀或不显示；序号可单独关闭 |
+| 条目系列 | `ui.json` 的 `entrySeriesMode`、`entrySeriesOrder` | 系列名与阅读序号放在元信息行、标题胶囊、标题前缀或不显示；序号可单独关闭。文章页元信息行的系列入口跟随该设置（「不显示」时不出入口） |
 | 代码显示 | `ui.json` 的 `codeBlock` | 代码块行号 |
 | 排版字体 | `ui.json` 的 `typography`、`fontCoverage` | readable、copy、mono、brand 四个字体用途；覆盖策略 `full` 或 `common` |
 

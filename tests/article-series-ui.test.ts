@@ -16,6 +16,7 @@ const NOTICE = 'src/components/ArticleSeriesNotice.astro';
 const VERSION_NOTICE = 'src/components/ArticleVersionNotice.astro';
 const DRAWER_SCRIPT = 'src/scripts/article-version-drawer.ts';
 const LAYOUT = 'src/layouts/ArticleLayout.astro';
+const ARTICLE_PAGE = 'src/pages/blog/[slug].astro';
 const VERSION_CSS = 'src/styles/components/article-version.css';
 
 /** 版本语义词汇：系列抽屉里一个都不许出现。 */
@@ -134,6 +135,52 @@ describe('ArticleLayout：系列提示条挂在版本提示条之后', () => {
     );
     expect(version).toBeGreaterThan(-1);
     expect(series).toBeGreaterThan(version);
+  });
+});
+
+describe('详情页元信息行：日期与标签之间的系列入口', () => {
+  it('页面把系列索引查好传进布局，避免每页重复建索引', async () => {
+    const source = await read(ARTICLE_PAGE);
+
+    expect(source).toContain('getVisibleBlogSeriesIndex()');
+    expect(source).toContain('buildEntrySeriesLookup(seriesIndex)');
+    expect(source).toContain('series: seriesByEntryId.get(route.entry.id) ?? null');
+    expect(source).toContain('series={series}');
+  });
+
+  it('入口夹在日期与标签之间，样式与筛选行为对齐标签', async () => {
+    const source = await read(LAYOUT);
+
+    // 版位：日期项 → 系列项 → 标签项
+    const date = source.indexOf('articleMetaSettings.showDate ? (');
+    const series = source.indexOf('meta-line__item--series');
+    const tags = source.indexOf('meta-line__item meta-line__item--tags');
+    expect(date).toBeGreaterThan(-1);
+    expect(series).toBeGreaterThan(date);
+    expect(tags).toBeGreaterThan(series);
+
+    // 与列表元信息行共用同一套链接类与筛选入口：点一下等于按系列筛选
+    expect(source).toContain('class="entry-series-link"');
+    expect(source).toContain('getSeriesFilterHref(series.slug)');
+    expect(source).toContain('getSeriesTagKey(series.slug)');
+    expect(source).toContain('data-article-series-link={seriesLink.tagKey}');
+    expect(source).toContain('aria-label={`筛选系列 ${seriesLink.name}`}');
+
+    // 系列只有一篇时没有「第几篇」，与抽屉一致地不显示
+    expect(source).toContain('series.total > 1');
+    // 站点关掉系列呈现后，这里也不再多出一个入口
+    expect(source).toContain("seriesDisplay.mode !== 'hidden'");
+    // 只有系列、没开日期与标签时，元信息行仍然要出现
+    expect(source).toContain('|| Boolean(seriesLink)');
+  });
+
+  it('悬停才出现下划线，常态与标签一样不带下划线', async () => {
+    const css = await read('src/styles/components/lists.css');
+
+    expect(css).toMatch(/\.meta-line \.entry-series-link\s*\{[^}]*text-decoration:\s*none/);
+    expect(css).toMatch(
+      /:root:not\(\[data-input="touch"\]\) \.meta-line \.entry-series-link:hover\s*\{[^}]*text-decoration:\s*underline/
+    );
   });
 });
 
