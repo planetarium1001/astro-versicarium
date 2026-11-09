@@ -16,15 +16,57 @@ import {
  * `/archive/` 的系列筛选。
  *
  * 归档行同时包含博客、项目版本与开发日志，但系列只属于博客：系列键写进归档索引后，
- * 同一个 `?tags=` 表达式就能把时间线收敛到该系列的成员行。这里直接用构建产物里的
- * 真实归档页与索引（示例内容里有一组 3 篇的系列），不再注入，避免夹具与真实产物分叉。
+ * 同一个 `?tags=` 表达式就能把时间线收敛到该系列的成员行。
+ *
+ * 夹具来自构建产物，但**不依赖示例内容里恰好有系列**：主题仓库与演示站（demo 分支）
+ * 内容不同，这里按 TagFilterHeader 的结构注入选项、给两条博客行写入系列键，
+ * 其余（事件绑定、索引加载、表达式求值、分组收合）全走真实脚本。
  */
 
-const SERIES_KEY = 'series:theme-build-notes';
+const SERIES_KEY = 'series:test-archive-series';
+const SERIES_LABEL = '测试归档系列';
 
-type ArchiveIndexItem = { slug: string; seriesKeys?: string[] };
+type ArchiveIndexItem = { slug: string; kind: string; seriesKeys?: string[] };
 
-const loadArchivePage = async () => {
+/**
+ * 按 TagFilterHeader 的结构补出「分割线 + 系列区块」。
+ * 夹具可能来自带示例系列的仓库：先清掉已有区块，保证不管示例内容有没有系列，
+ * 断言面对的都是一份注入好的、结构唯一的对话框。
+ */
+const appendSeriesOptions = () => {
+  const tagList = document.querySelector<HTMLElement>('[data-entry-tag-options]');
+  if (!tagList) throw new Error('fixture 里没有标签列表');
+
+  for (const stale of Array.from(
+    document.querySelectorAll('[data-entry-tag-divider], [data-entry-series-options]')
+  )) {
+    stale.remove();
+  }
+
+  const divider = document.createElement('hr');
+  divider.className = 'entry-tags-dialog__divider';
+  divider.dataset.entryTagDivider = '';
+
+  const list = document.createElement('div');
+  list.className = 'entry-tags-dialog__list entry-tags-dialog__list--series';
+  list.dataset.entrySeriesOptions = '';
+  list.setAttribute('role', 'group');
+  list.setAttribute('aria-label', '按系列筛选');
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'entry-tag-option';
+  button.dataset.entryTagKey = SERIES_KEY;
+  button.dataset.entryOptionKind = 'series';
+  button.setAttribute('aria-pressed', 'false');
+  button.innerHTML = `<span class="entry-tag-option__label">${SERIES_LABEL}</span>`
+    + '<span class="entry-tag-option__count">2 篇</span>';
+
+  list.append(button);
+  tagList.after(divider, list);
+};
+
+const loadArchivePageWithSeries = async () => {
   const [html, indexRaw] = await Promise.all([
     readFile(fixturePath('archive-page.dev.html'), 'utf8'),
     readFile(fixturePath('archive-index.dev.json'), 'utf8')
@@ -32,8 +74,17 @@ const loadArchivePage = async () => {
 
   renderFixture(html);
   const items = JSON.parse(indexRaw) as ArchiveIndexItem[];
+  // 系列只属于博客：取两条博客行作为成员，项目版本与开发日志不参与。
+  const members = items.filter((item) => item.kind === 'blog').slice(0, 2);
+  if (members.length < 2) throw new Error('归档夹具里需要至少两条博客行');
+  const memberSlugs = members.map((item) => item.slug);
+  for (const item of items) {
+    item.seriesKeys = memberSlugs.includes(item.slug) ? [SERIES_KEY] : [];
+  }
+
   stubIndexFetch(JSON.stringify(items));
-  return items;
+  appendSeriesOptions();
+  return { items, memberSlugs };
 };
 
 const expectedSlugs = (items: ArchiveIndexItem[]) =>
@@ -41,6 +92,10 @@ const expectedSlugs = (items: ArchiveIndexItem[]) =>
     .filter((item) => (item.seriesKeys ?? []).includes(SERIES_KEY))
     .map((item) => item.slug)
     .sort();
+
+const clickTagDirect = (key: string) => {
+  tagButton(key)!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+};
 
 describe('entry-search：归档页按系列筛选', () => {
   beforeEach(() => {
@@ -53,7 +108,7 @@ describe('entry-search：归档页按系列筛选', () => {
   });
 
   it('归档页渲染系列区块，且分割线只有一条', async () => {
-    await loadArchivePage();
+    await loadArchivePageWithSeries();
 
     const seriesList = document.querySelector('[data-entry-series-options]');
     expect(seriesList, '归档页应当有系列区块').not.toBeNull();
@@ -64,9 +119,9 @@ describe('entry-search：归档页按系列筛选', () => {
   });
 
   it('点系列选项后时间线只剩该系列的博客行，URL 用命名空间键', async () => {
-    const items = await loadArchivePage();
+    const { items } = await loadArchivePageWithSeries();
     const expected = expectedSlugs(items);
-    expect(expected.length, '示例内容里需要至少两条同系列归档行').toBeGreaterThan(1);
+    expect(expected.length).toBeGreaterThan(1);
 
     await importEntrySearch();
     await clickTag(SERIES_KEY);
@@ -80,20 +135,15 @@ describe('entry-search：归档页按系列筛选', () => {
     expect(params.has('series')).toBe(false);
   });
 
-  it('系列与标签同选时取交集，再点一次系列取消筛选', async () => {
-    const items = await loadArchivePage();
+  it('再点一次系列取消筛选，URL 与可见行一起复位', async () => {
+    const { items } = await loadArchivePageWithSeries();
     await importEntrySearch();
 
-    // 先选一个系列成员都有的标签，再叠加系列：结果应落在系列成员内部
-    const member = items.find((item) => (item.seriesKeys ?? []).includes(SERIES_KEY))!;
-    expect(member).toBeTruthy();
-
     await clickTag(SERIES_KEY);
-    const seriesOnly = visibleSlugs().sort();
-    expect(seriesOnly).toEqual(expectedSlugs(items));
+    expect(visibleSlugs().sort()).toEqual(expectedSlugs(items));
 
-    // 再点一次取消：`clickTag` 等的是 aria-pressed='true'，取消方向不能复用它
-    tagButton(SERIES_KEY)!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    // `clickTag` 等的是 aria-pressed='true'，取消方向不能复用它
+    clickTagDirect(SERIES_KEY);
     await vi.waitFor(
       () => {
         expect(tagButton(SERIES_KEY)!.getAttribute('aria-pressed')).toBe('false');

@@ -91,6 +91,25 @@ const clickMode = (mode: 'and' | 'or') => {
   button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
 };
 
+/**
+ * 从夹具里挑标签键，不写死示例内容的标签名：主题仓库与演示站（demo 分支）内容不同，
+ * 硬编码标签会让同一份测试只在其中一个仓库成立。
+ */
+const pickTagKey = (items: IndexItem[], accept: (key: string, owners: string[]) => boolean): string => {
+  const ownersByKey = new Map<string, string[]>();
+  for (const item of items) {
+    for (const key of getTagKeys(item.tags)) {
+      const owners = ownersByKey.get(key) ?? [];
+      owners.push(item.slug);
+      ownersByKey.set(key, owners);
+    }
+  }
+  for (const [key, owners] of ownersByKey) {
+    if (accept(key, owners)) return key;
+  }
+  throw new Error('夹具里找不到满足条件的标签键');
+};
+
 const visibleKeySlugs = (items: IndexItem[], keys: string[]) =>
   items
     .filter((item) => {
@@ -135,11 +154,15 @@ describe('entry-search：系列键并入同一条筛选表达式', () => {
   });
 
   it('系列与标签共用 +：同一段内 AND 取交集', async () => {
-    const { items } = await loadBlogPageWithSeries();
+    const { items, seriesSlugs } = await loadBlogPageWithSeries();
     await importEntrySearch();
 
-    const tagKey = (tagButton('配置')?.dataset.entryTagKey ?? '').trim();
-    expect(tagKey, 'fixture 需要有「配置」标签').not.toBe('');
+    // 只落在系列部分成员上的标签：AND 会收缩集合，OR 会放大集合
+    const tagKey = pickTagKey(
+      items,
+      (_key, owners) => seriesSlugs.some((slug) => owners.includes(slug))
+        && seriesSlugs.some((slug) => !owners.includes(slug))
+    );
 
     await clickTag(SERIES_KEY);
     await clickTag(tagKey);
@@ -151,11 +174,14 @@ describe('entry-search：系列键并入同一条筛选表达式', () => {
   });
 
   it('系列与标签共用 /：先切到 OR 再选，「任一命中」取并集', async () => {
-    const { items } = await loadBlogPageWithSeries();
+    const { items, seriesSlugs } = await loadBlogPageWithSeries();
     await importEntrySearch();
 
-    const tagKey = (tagButton('配置')?.dataset.entryTagKey ?? '').trim();
-    expect(tagKey).not.toBe('');
+    const tagKey = pickTagKey(
+      items,
+      (_key, owners) => seriesSlugs.some((slug) => owners.includes(slug))
+        && seriesSlugs.some((slug) => !owners.includes(slug))
+    );
 
     // `/` 作用于待选段：空表达式下先切，再依次选系列与标签，两者落在同一段 OR 里。
     clickMode('or');
@@ -190,15 +216,22 @@ describe('entry-search：系列键并入同一条筛选表达式', () => {
   });
 
   it('系列与不可能共存的标签组合时 0 命中，两个键都留在 URL 里', async () => {
-    await loadBlogPageWithSeries();
+    // 先渲染夹具与脚本，再挑标签：反过来会把已初始化的 DOM 换掉，监听器随之失效
+    const { items, seriesSlugs } = await loadBlogPageWithSeries();
     await importEntrySearch();
 
+    // 系列成员一个都没有的标签：与系列取交集必然 0 命中
+    const tagKey = pickTagKey(
+      items,
+      (_key, owners) => seriesSlugs.every((slug) => !owners.includes(slug))
+    );
+
     await clickTag(SERIES_KEY);
-    await clickTag('检查');
+    await clickTag(tagKey);
 
     expect(visibleSlugs()).toEqual([]);
     // 表达式是唯一真相：两个键都在，AND 语义不变
-    expect(searchParams().get('tags')).toBe(`${SERIES_KEY},检查`);
+    expect(searchParams().get('tags')).toBe(`${SERIES_KEY},${tagKey}`);
     expect(searchParams().get('mode')).toBe('and');
   });
 });
