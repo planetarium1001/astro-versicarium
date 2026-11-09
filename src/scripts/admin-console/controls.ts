@@ -140,6 +140,8 @@ export type AdminThemeControls = RequiredElements<{
   inputTypographyBrand: HTMLElement | null;
   inputFontCoverage: HTMLSelectElement | null;
   inputEntryVersionName: HTMLSelectElement | null;
+  inputEntrySeriesMode: HTMLSelectElement | null;
+  inputEntrySeriesOrder: HTMLSelectElement | null;
 }> & {
   statusEl: HTMLElement | null;
   statusLiveEl: HTMLElement | null;
@@ -264,7 +266,9 @@ export const queryAdminThemeControls = (): AdminThemeControls | null => {
     inputTypographyMono: byId<HTMLElement>('ui-typography-mono'),
     inputTypographyBrand: byId<HTMLElement>('ui-typography-brand'),
     inputFontCoverage: byId<HTMLSelectElement>('ui-font-coverage'),
-    inputEntryVersionName: byId<HTMLSelectElement>('ui-entry-version-name')
+    inputEntryVersionName: byId<HTMLSelectElement>('ui-entry-version-name'),
+    inputEntrySeriesMode: byId<HTMLSelectElement>('ui-entry-series-mode'),
+    inputEntrySeriesOrder: byId<HTMLSelectElement>('ui-entry-series-order')
   });
 
   if (!controls) return null;

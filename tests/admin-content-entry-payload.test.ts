@@ -121,7 +121,7 @@ describe('admin content entry payload contract', () => {
     }
   });
 
-  it('loads optional blog updatedAt as editable date text', async () => {
+  it('loads optional blog updatedAt as editable raw text', async () => {
     const updatedDirectory = path.join(getTempRoot(), 'content', 'blog', 'updated-date');
     await mkdir(updatedDirectory, { recursive: true });
     await writeFile(
@@ -144,7 +144,8 @@ describe('admin content entry payload contract', () => {
     const payload = await readAdminContentEntryEditorPayload('blog', 'updated-date');
 
     if (payload.collection === 'blog') {
-      expect(payload.values.updatedAt).toBe('2026-03-20');
+      // 后台时间字段按站点时区展示，但编辑器值保留原文，未改动时不会重写 frontmatter。
+      expect(payload.values.updatedAt).toBe('2026-03-20T22:30:00+08:00');
     }
   });
 

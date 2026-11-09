@@ -244,6 +244,38 @@ describe('admin content blog write contract', () => {
     expect(after).toContain('publishedAt: 2026-03-19T00:30:00+08:00');
   });
 
+  it('accepts every supported publishedAt form through the write API', async () => {
+    const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
+    const { POST } = await import('../src/pages/api/admin/content/entry');
+
+    for (const publishedAt of [
+      '2026-11-09',
+      '2026-11-09 14:30',
+      '2026-11-09T14:30',
+      '2026-11-09T06:30Z',
+      '2026-11-09T14:30+08:00'
+    ]) {
+      const current = await readAdminContentEntryEditorPayload('blog', 'demo');
+      const response = await POST({
+        request: createJsonRequest('http://127.0.0.1:4321/api/admin/content/entry?dryRun=1', {
+          collection: 'blog',
+          entryId: 'demo',
+          revision: current.revision,
+          frontmatter: {
+            ...current.values,
+            publishedAt
+          }
+        }),
+        url: new URL('http://127.0.0.1:4321/api/admin/content/entry?dryRun=1')
+      } as never);
+
+      expect(response.status, publishedAt).toBe(200);
+      const payload = JSON.parse(await response.text());
+      expect(payload.ok, publishedAt).toBe(true);
+      expect(payload.result.changedFields, publishedAt).toEqual(['publishedAt']);
+    }
+  });
+
   it('rejects updatedAt earlier than the blog date even when publishedAt is later', async () => {
     const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
     const { POST } = await import('../src/pages/api/admin/content/entry');
@@ -351,7 +383,7 @@ describe('admin content blog write contract', () => {
     );
   });
 
-  it('writes optional blog updatedAt as a date-only frontmatter field', async () => {
+  it('writes blog updatedAt with the time part kept', async () => {
     const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
     const { POST } = await import('../src/pages/api/admin/content/entry');
 
@@ -373,10 +405,107 @@ describe('admin content blog write contract', () => {
     const payload = JSON.parse(await response.text());
     expect(payload.ok).toBe(true);
     expect(payload.result.changedFields).toEqual(['updatedAt']);
-    expect(payload.payload.values.updatedAt).toBe('2026-03-20');
+    expect(payload.payload.values.updatedAt).toBe('2026-03-20 22:30');
 
     const after = await readFile(path.join(getTempRoot(), 'content', 'blog', 'demo', 'index.md'), 'utf8');
-    expect(after).toContain('updatedAt: 2026-03-20');
+    expect(after).toContain('updatedAt: 2026-03-20 22:30');
+  });
+
+  it('keeps the original updatedAt text when the author did not touch the field', async () => {
+    const BlogPath = path.join(getTempRoot(), 'content', 'blog', 'demo', 'index.md');
+    await writeFile(
+      BlogPath,
+      [
+        '---',
+        'title: Demo blog',
+        'date: 2026-03-18',
+        'updatedAt: 2026-03-20T22:30:00+08:00',
+        'draft: false',
+        '---',
+        '',
+        '# blog',
+        ''
+      ].join('\n'),
+      'utf8'
+    );
+
+    const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
+    const { POST } = await import('../src/pages/api/admin/content/entry');
+
+    const current = await readAdminContentEntryEditorPayload('blog', 'demo');
+    if (current.collection !== 'blog') throw new Error('Expected blog editor payload');
+    // 未改动时间字段时，前端把原文原样提交回来：写回必须保留原文，不产生无意义 diff。
+    expect(current.values.updatedAt).toBe('2026-03-20T22:30:00+08:00');
+
+    const response = await POST({
+      request: createJsonRequest('http://127.0.0.1:4321/api/admin/content/entry', {
+        collection: 'blog',
+        entryId: 'demo',
+        revision: current.revision,
+        frontmatter: {
+          ...current.values,
+          title: 'Untouched UpdatedAt'
+        }
+      }),
+      url: new URL('http://127.0.0.1:4321/api/admin/content/entry')
+    } as never);
+
+    expect(response.status).toBe(200);
+    const payload = JSON.parse(await response.text());
+    expect(payload.ok).toBe(true);
+    expect(payload.result.changedFields).toEqual(['title']);
+
+    const after = await readFile(BlogPath, 'utf8');
+    expect(after).toContain('title: Untouched UpdatedAt');
+    expect(after).toContain('updatedAt: 2026-03-20T22:30:00+08:00');
+  });
+
+  it('round-trips untouched UTC datetime fields without rewriting them', async () => {
+    const BlogPath = path.join(getTempRoot(), 'content', 'blog', 'demo', 'index.md');
+    const source = [
+      '---',
+      'title: Demo blog',
+      'date: 2026-11-09',
+      'publishedAt: 2026-11-09T03:44:53Z',
+      'updatedAt: 2026-11-10T03:44:53Z',
+      'draft: false',
+      '---',
+      '',
+      '# blog',
+      ''
+    ].join('\n');
+    await writeFile(BlogPath, source, 'utf8');
+
+    const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
+    const { POST } = await import('../src/pages/api/admin/content/entry');
+
+    const current = await readAdminContentEntryEditorPayload('blog', 'demo');
+    if (current.collection !== 'blog') throw new Error('Expected blog editor payload');
+    // 后台展示层按站点时区换算（2026-11-09T03:44:53Z = 11:44:53），但编辑器值仍是原文。
+    expect(current.values.publishedAt).toBe('2026-11-09T03:44:53Z');
+    expect(current.values.updatedAt).toBe('2026-11-10T03:44:53Z');
+
+    const response = await POST({
+      request: createJsonRequest('http://127.0.0.1:4321/api/admin/content/entry', {
+        collection: 'blog',
+        entryId: 'demo',
+        revision: current.revision,
+        frontmatter: {
+          ...current.values,
+          title: 'UTC Untouched'
+        }
+      }),
+      url: new URL('http://127.0.0.1:4321/api/admin/content/entry')
+    } as never);
+
+    expect(response.status).toBe(200);
+    const payload = JSON.parse(await response.text());
+    expect(payload.ok).toBe(true);
+    expect(payload.result.changedFields).toEqual(['title']);
+
+    const after = await readFile(BlogPath, 'utf8');
+    expect(after).toContain('publishedAt: 2026-11-09T03:44:53Z');
+    expect(after).toContain('updatedAt: 2026-11-10T03:44:53Z');
   });
 
   it('preserves existing updatedAt when older blog payloads omit the field', async () => {
@@ -927,4 +1056,82 @@ describe('admin content blog write contract', () => {
     expect(payload.payload.values.title).toBe('External Change');
   });
 
+  it('writes versionGroup and the three series fields through the write API', async () => {
+    const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
+    const { POST } = await import('../src/pages/api/admin/content/entry');
+    const current = await readAdminContentEntryEditorPayload('blog', 'demo');
+
+    const response = await POST({
+      request: createJsonRequest('http://127.0.0.1:4321/api/admin/content/entry', {
+        collection: 'blog',
+        entryId: 'demo',
+        revision: current.revision,
+        frontmatter: {
+          ...current.values,
+          versionGroup: 'theme-introduction',
+          versionLabel: 'v2',
+          series: 'pc-build',
+          seriesName: '折腾主机',
+          seriesOrder: '2'
+        }
+      }),
+      url: new URL('http://127.0.0.1:4321/api/admin/content/entry')
+    } as never);
+
+    expect(response.status).toBe(200);
+    const payload = JSON.parse(await response.text());
+    expect(payload.ok).toBe(true);
+    // 版本线字段与系列字段各自独立记录变更，互不覆盖。
+    expect(payload.result.changedFields).toEqual([
+      'versionGroup',
+      'versionLabel',
+      'series',
+      'seriesName',
+      'seriesOrder'
+    ]);
+
+    const after = await readFile(path.join(getTempRoot(), 'content', 'blog', 'demo', 'index.md'), 'utf8');
+    expect(after).toContain('versionGroup: theme-introduction');
+    expect(after).toContain('series: pc-build');
+    expect(after).toContain('seriesName: 折腾主机');
+    expect(after).toContain('seriesOrder: 2');
+
+    const reloaded = await readAdminContentEntryEditorPayload('blog', 'demo');
+    expect(reloaded.values).toMatchObject({
+      versionGroup: 'theme-introduction',
+      series: 'pc-build',
+      seriesName: '折腾主机',
+      seriesOrder: '2'
+    });
+  });
+
+  it('rejects a seriesOrder that is not a non-negative integer', async () => {
+    const { readAdminContentEntryEditorPayload } = await import('../src/lib/admin-console/content-shared');
+    const { POST } = await import('../src/pages/api/admin/content/entry');
+    const current = await readAdminContentEntryEditorPayload('blog', 'demo');
+
+    const response = await POST({
+      request: createJsonRequest('http://127.0.0.1:4321/api/admin/content/entry?dryRun=1', {
+        collection: 'blog',
+        entryId: 'demo',
+        revision: current.revision,
+        frontmatter: {
+          ...current.values,
+          series: 'pc-build',
+          seriesOrder: '-2'
+        }
+      }),
+      url: new URL('http://127.0.0.1:4321/api/admin/content/entry?dryRun=1')
+    } as never);
+
+    expect(response.status).toBe(400);
+    const payload = JSON.parse(await response.text());
+    expect(payload.ok).toBe(false);
+    expect(payload.issues).toEqual([
+      expect.objectContaining({
+        path: 'seriesOrder',
+        message: 'seriesOrder 必须是非负整数'
+      })
+    ]);
+  });
 });

@@ -6,7 +6,7 @@ import { addToCounts, createEmptyCounts } from './filter';
 import {
   SHARED_ENTRY_ID,
   SHARED_LABEL,
-  UNASSIGNED_SERIES,
+  UNASSIGNED_VERSION_GROUP,
   UNASSIGNED_VERSION,
   type AdminMediaBreadcrumb,
   type AdminMediaFilterOption,
@@ -19,9 +19,12 @@ import {
 const createTreeNode = (
   kind: AdminMediaTreeNode['kind'],
   label: string,
-  filters: Pick<AdminMediaTreeNode, 'collection' | 'series' | 'version' | 'entryId' | 'directory'>
+  filters: Pick<
+    AdminMediaTreeNode,
+    'collection' | 'versionGroup' | 'version' | 'entryId' | 'directory'
+  >
 ): AdminMediaTreeNode => ({
-  id: `${filters.collection}:${filters.series}:${filters.version}:${kind}:${filters.directory}`,
+  id: `${filters.collection}:${filters.versionGroup}:${filters.version}:${kind}:${filters.directory}`,
   kind,
   label,
   ...createEmptyCounts(),
@@ -30,8 +33,8 @@ const createTreeNode = (
 });
 
 /**
- * 树按 collection → series（仅系列）→ version/entry → 目录 逐层建立；
- * 非系列条目跳过 series 层，避免出现同名两级目录。count 只统计当前筛选池。
+ * 树按 collection → versionGroup（仅版本线）→ version/entry → 目录 逐层建立；
+ * 不在版本线里的条目跳过 versionGroup 层，避免出现同名两级目录。count 只统计当前筛选池。
  */
 export const buildMediaTree = (items: readonly AdminMediaItem[]): AdminMediaTreeNode[] => {
   const collectionNodes = new Map<string, AdminMediaTreeNode>();
@@ -42,7 +45,7 @@ export const buildMediaTree = (items: readonly AdminMediaItem[]): AdminMediaTree
     if (!collectionNode) {
       collectionNode = createTreeNode('collection', collectionLabel, {
         collection: item.collection,
-        series: '',
+        versionGroup: '',
         version: '',
         entryId: '',
         directory: ''
@@ -57,7 +60,7 @@ export const buildMediaTree = (items: readonly AdminMediaItem[]): AdminMediaTree
       if (!sharedNode) {
         sharedNode = createTreeNode('shared', SHARED_LABEL, {
           collection: item.collection,
-          series: '',
+          versionGroup: '',
           version: '',
           entryId: SHARED_ENTRY_ID,
           directory: ''
@@ -76,7 +79,7 @@ export const buildMediaTree = (items: readonly AdminMediaItem[]): AdminMediaTree
           sharedDirectoryKey || '条目根目录',
           {
             collection: item.collection,
-            series: '',
+            versionGroup: '',
             version: '',
             entryId: SHARED_ENTRY_ID,
             directory: sharedDirectoryKey
@@ -88,43 +91,49 @@ export const buildMediaTree = (items: readonly AdminMediaItem[]): AdminMediaTree
       continue;
     }
 
-    const seriesKey = item.hasSeries ? (item.series || UNASSIGNED_SERIES) : '';
+    const versionGroupKey = item.hasVersionGroup
+      ? (item.versionGroup || UNASSIGNED_VERSION_GROUP)
+      : '';
     let parentNode = collectionNode;
 
-    if (item.hasSeries) {
-      let seriesNode = collectionNode.children.find(
-        (child) => child.kind === 'series' && child.series === seriesKey
+    if (item.hasVersionGroup) {
+      let versionGroupNode = collectionNode.children.find(
+        (child) => child.kind === 'versionGroup' && child.versionGroup === versionGroupKey
       );
-      if (!seriesNode) {
-        seriesNode = createTreeNode('series', item.seriesLabel || seriesKey, {
-          collection: item.collection,
-          series: seriesKey,
-          version: '',
-          entryId: '',
-          directory: ''
-        });
-        collectionNode.children.push(seriesNode);
+      if (!versionGroupNode) {
+        versionGroupNode = createTreeNode(
+          'versionGroup',
+          item.versionGroupLabel || versionGroupKey,
+          {
+            collection: item.collection,
+            versionGroup: versionGroupKey,
+            version: '',
+            entryId: '',
+            directory: ''
+          }
+        );
+        collectionNode.children.push(versionGroupNode);
       }
-      addToCounts(seriesNode, item);
-      parentNode = seriesNode;
+      addToCounts(versionGroupNode, item);
+      parentNode = versionGroupNode;
     }
 
-    const versionKey = item.hasSeries
+    const versionKey = item.hasVersionGroup
       ? (item.version || item.entryId || UNASSIGNED_VERSION)
       : (item.entryId || UNASSIGNED_VERSION);
-    const nodeVersion = item.hasSeries ? versionKey : '';
+    const nodeVersion = item.hasVersionGroup ? versionKey : '';
     let versionNode = parentNode.children.find(
       (child) => child.kind === 'version' && child.version === nodeVersion && child.entryId === item.entryId
     );
     if (!versionNode) {
       versionNode = createTreeNode(
         'version',
-        item.hasSeries
+        item.hasVersionGroup
           ? (item.versionLabel || versionKey)
           : (item.entryId ? (item.entryLabel || versionKey) : '未归属资源'),
         {
           collection: item.collection,
-          series: seriesKey,
+          versionGroup: versionGroupKey,
           version: nodeVersion,
           entryId: item.entryId,
           directory: ''
@@ -139,8 +148,8 @@ export const buildMediaTree = (items: readonly AdminMediaItem[]): AdminMediaTree
     if (!directoryNode) {
       directoryNode = createTreeNode('directory', directoryKey || '条目根目录', {
         collection: item.collection,
-        series: seriesKey,
-        version: item.hasSeries ? versionKey : '',
+        versionGroup: versionGroupKey,
+        version: item.hasVersionGroup ? versionKey : '',
         entryId: item.entryId,
         directory: directoryKey
       });
@@ -186,17 +195,17 @@ export const buildBreadcrumb = (
     filters: { collection: filters.collection }
   });
   let parentNode = collectionNode;
-  if (filters.series) {
-    const seriesNode = collectionNode.children.find(
-      (node) => node.kind === 'series' && node.series === filters.series
+  if (filters.versionGroup) {
+    const versionGroupNode = collectionNode.children.find(
+      (node) => node.kind === 'versionGroup' && node.versionGroup === filters.versionGroup
     );
-    if (!seriesNode) return breadcrumb;
+    if (!versionGroupNode) return breadcrumb;
     breadcrumb.push({
-      id: seriesNode.id,
-      label: seriesNode.label,
-      filters: { collection: filters.collection, series: filters.series }
+      id: versionGroupNode.id,
+      label: versionGroupNode.label,
+      filters: { collection: filters.collection, versionGroup: filters.versionGroup }
     });
-    parentNode = seriesNode;
+    parentNode = versionGroupNode;
   }
 
   const entryId = filters.entry || filters.version;
@@ -241,7 +250,7 @@ export const buildBreadcrumb = (
     label: versionNode.label,
     filters: {
       collection: filters.collection,
-      ...(filters.series ? { series: filters.series } : {}),
+      ...(filters.versionGroup ? { versionGroup: filters.versionGroup } : {}),
       entry: entryId
     }
   });
@@ -254,7 +263,7 @@ export const buildBreadcrumb = (
       label: directoryNode.label,
       filters: {
         collection: filters.collection,
-        ...(filters.series ? { series: filters.series } : {}),
+        ...(filters.versionGroup ? { versionGroup: filters.versionGroup } : {}),
         entry: entryId,
         directory: filters.directory
       }
@@ -285,30 +294,30 @@ export const buildFilterOptions = (
 export const buildMediaFilterOptions = (
   items: readonly AdminMediaItem[]
 ): AdminMediaListResult['options'] => {
-  const series = new Map<string, AdminMediaFilterOption>();
+  const versionGroups = new Map<string, AdminMediaFilterOption>();
   const versions = new Map<string, AdminMediaFilterOption>();
   const directories = new Map<string, AdminMediaFilterOption>();
 
   for (const item of items) {
     if (item.entryExists) {
-      if (item.hasSeries) {
-        const seriesKey = `${item.collection}:${item.series}`;
-        const seriesOption = series.get(seriesKey) ?? {
-          value: item.series,
-          label: item.seriesLabel || item.series,
+      if (item.hasVersionGroup) {
+        const versionGroupKey = `${item.collection}:${item.versionGroup}`;
+        const versionGroupOption = versionGroups.get(versionGroupKey) ?? {
+          value: item.versionGroup,
+          label: item.versionGroupLabel || item.versionGroup,
           count: 0,
           collection: item.collection
         };
-        seriesOption.count += 1;
-        series.set(seriesKey, seriesOption);
+        versionGroupOption.count += 1;
+        versionGroups.set(versionGroupKey, versionGroupOption);
       }
 
       const versionOption = versions.get(item.entryId) ?? {
         value: item.entryId,
-        label: item.hasSeries ? (item.versionLabel || item.entryId) : item.entryLabel,
+        label: item.hasVersionGroup ? (item.versionLabel || item.entryId) : item.entryLabel,
         count: 0,
         collection: item.collection,
-        series: item.series,
+        versionGroup: item.versionGroup,
         entryId: item.entryId
       };
       versionOption.count += 1;
@@ -320,7 +329,7 @@ export const buildMediaFilterOptions = (
         label: item.directory || '条目根目录',
         count: 0,
         collection: item.collection,
-        series: item.series,
+        versionGroup: item.versionGroup,
         entryId: item.entryId
       };
       directoryOption.count += 1;
@@ -332,7 +341,7 @@ export const buildMediaFilterOptions = (
     values.sort((left, right) => left.label.localeCompare(right.label, 'zh-CN'));
 
   return {
-    series: sortOptions(Array.from(series.values())),
+    versionGroups: sortOptions(Array.from(versionGroups.values())),
     versions: sortOptions(Array.from(versions.values())),
     directories: sortOptions(Array.from(directories.values()))
   };

@@ -44,7 +44,7 @@
 
 - 配置层：`astro.config.mjs` 负责 `output`、部署 base、集成、字体与 Markdown 处理器；`site.config.mjs` 提供 `SITE_URL`、`CONTENT_ROOT`、默认时区与每页条数。
 - 加载层：`src/content.config.ts` 声明集合，`src/lib/content-loader.ts` 实现 `entryDirLoader`，`src/lib/content-entry-files.ts` 决定条目主文件。
-- 路由层：`src/pages/**` 生成静态路径；`src/lib/blog-routing.ts` 与 `src/lib/project-routing.ts` 是不依赖 `astro:content` 的纯函数模型。
+- 路由层：`src/pages/**` 生成静态路径；`src/lib/blog-routing.ts` 与 `src/lib/project-routing.ts` 是不依赖 `astro:content` 的纯函数模型。版本线（`versionGroup`）的路由只在 `blog-routing.ts` 里判定，内容系列（`series`）不参与任何路由判定，由 `src/lib/blog-series.ts` 单独组织分组、次序与序号。
 - 动态模块分三块：`src/lib/bits-public-routing.ts` 管 `/bits/` 路径与 `#bit-<id>` 锚点，`src/lib/bits-card-view-model.ts` 管卡片视图模型，`src/lib/bits.ts` 管查询与索引。`bits.ts` 会转发前者的 4 个符号，不构成统一出口。
 - 后台：页面在 `src/pages/admin/`，接口在 `src/pages/api/admin/`；能力表在 `src/lib/admin-console/content-collections.ts`，条目契约在 `src/lib/admin-console/content-entry-contract.ts`。
 - 浏览数据只给槽位与写入 API：槽位组件是 `src/components/ViewStats.astro`，写入函数在 `src/lib/view-stats.ts`，接入点 `src/scripts/view-stats.ts` 当前只有 `export {}`，仓库内没有统计实现。
@@ -62,7 +62,7 @@
 | `src/pages/projects/index.astro` | `projects-dialog` |
 | `src/components/BlogPageView.astro` | `entry-search` |
 | `src/components/BitsPageView.astro` | `entry-search`、`bits-search`、`bits-year-filter`、`bits-lightbox`、`bits-dialog` |
-| `src/components/ArticleVersionNotice.astro` | `article-version-drawer` |
+| `src/components/ArticleVersionNotice.astro`、`src/components/ArticleSeriesNotice.astro` | `article-version-drawer`（两套抽屉共用 `[data-article-drawer]` 的交互脚本） |
 | `src/pages/admin/theme/index.astro` | `admin-console/index` |
 | `src/pages/admin/resources/index.astro` | `admin-resources/index` |
 | `src/pages/admin/data/index.astro` | `admin-data/index` |
@@ -78,7 +78,7 @@
 - `getPublished()` 在开发环境默认包含草稿，生产构建过滤草稿；生产构建对缺少 `publishedAt` 的博客条目逐条告警（`src/lib/content.ts:61`）。
 - 页面：`src/pages/**` 在构建期调用 `src/lib/content.ts` 的查询函数，渲染完整列表与正文。
 - 浏览器：页面输出 `index.json`、`data-*` 属性与内联 JSON，脚本据此做筛选、搜索、分页与弹窗，不请求后台。
-- `/blog/index.json`、`/bits/index.json`、`/archive/index.json` 为浏览器端提供筛选、搜索与计数数据；分页由 `data-page-size` 与已渲染条目计算。
+- `/blog/index.json`、`/bits/index.json`、`/archive/index.json` 为浏览器端提供筛选、搜索与计数数据；分页由 `data-page-size` 与已渲染条目计算。`/blog/index.json` 额外输出 `series` 与 `seriesKeys`（`series:<slug>`），`entry-search` 把系列键并进同一套标签键。
 - 设置：`src/data/settings/*.json` → `src/lib/theme-settings.ts` 解析 → 页面与后台共用同一份快照。
 - 浏览数据：`ViewStats.astro` 输出 `[data-view-stats]` 与 `[data-view-stat-value]`，站点在 `src/scripts/view-stats.ts` 取数后调用 `setViewStatValue()`。
 - 附件：`src/integrations/content-assets.mjs` 在 `astro:build:done` 复制被引用的附件到 `dist/content-assets/`。
@@ -87,7 +87,9 @@
 
 - 站内链接统一走部署 base：`ASTRO_VERSICARIUM_BASE_PATH` 在 `astro.config.mjs` 归一化为 `/` 或 `/<segment>/`，`trailingSlash` 固定 `always`。
 - `createWithBase()`（`src/utils/format.ts`）处理源码链接，`withDeploymentBase()`（`src/plugins/markdown-pipeline.mjs`）处理 Markdown 正文；对已经带 base 的图片 URL 幂等。
-- 博客：分组键为 `series:<series>` 或 `single:<id>`，路由类型为 `latest-stable`、`latest-dated`、`latest-alias`、`version`，细节见 [content.md](content.md#博客系列与版本路由)。
+- 博客：版本线分组键为 `versionGroup:<versionGroup>`，单条为 `single:<id>`；路由类型为 `latest-stable`、`latest-dated`、`latest-alias`、`version`，细节见 [content.md](content.md#版本线路由与内容系列)。
+- 内容系列：`src/lib/blog-series.ts` 用 `buildBlogSeriesIndex()` 把路由分组投影成系列索引，同一版本组只贡献一行（取最新版），排序为 `seriesOrder` 升序 → `date` 升序 → 条目 ID。文章页抽屉、条目上的四档呈现与筛选面板都读这一份索引。
+- 系列筛选键是命名空间化的标签键 `series:<slug>`，由 `getSeriesTagKey()` / `getSeriesFilterHref()` 生成，与标签共用 `?tags=`、`mode` / `ops` 与同一个表达式引擎，`/archive`、`/bits` 不输出系列区块。
 - 项目：公开地址是 `/projects/#<anchor>`，最新版用稳定 `slug` 或压平条目 ID，历史版用压平条目 ID。
 - 动态：唯一列表页 `/bits/`，锚点为 `#bit-<entry.id>`。
 - 归档：`src/lib/archive.ts` 合并博客版本、项目文档版本与 devlog，按年月分组；`versionMode` 来自 `page.archive.versionMode`。
@@ -117,6 +119,7 @@
 - 可编辑快照带 `revision`，由 `getThemeSettingsRevision()` 对规范化快照做 SHA-1 得到；有诊断时 `getEditableThemeSettingsState()` 返回 `{ ok: false }`，后台禁用保存。
 - 字体选择在 Astro 配置期读取：`resolveTypographyFromRawUiSettings()` 与 `getSelectedAstroApiFonts()`（`src/lib/fonts/registry.ts`）注册选中的字体；改 `ui.json` 的字体后要重启开发服务器。
 - 保存、`revision` 冲突与 `?dryRun=1` 的行为见 [admin.md](admin.md#检查保存与冲突)。
+- 条目标题行上的版本名与系列呈现由 `ui.entryVersionName`、`ui.entrySeriesMode`、`ui.entrySeriesOrder` 控制；四档解析（`hidden` / `meta` / `pill` / `prefix`）与标题片段组装在 `src/lib/entry-display.ts`，`src/lib/theme-settings.ts` 只负责读写与默认值。
 
 ## 布局与样式组织
 

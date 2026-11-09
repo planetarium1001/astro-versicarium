@@ -12,7 +12,11 @@ import {
   resetThemeSettingsCache,
   toEditableThemeSettingsPayload
 } from '../src/lib/theme-settings';
-import { DEFAULT_ENTRY_VERSION_NAME_MODE } from '../src/lib/entry-display';
+import {
+  DEFAULT_ENTRY_SERIES_MODE,
+  DEFAULT_ENTRY_SERIES_ORDER,
+  DEFAULT_ENTRY_VERSION_NAME_MODE
+} from '../src/lib/entry-display';
 
 describe('theme-settings revision semantics', () => {
   const originalInternalTestFlag = process.env.ASTRO_WHONO_INTERNAL_TEST_SETTINGS;
@@ -189,6 +193,84 @@ describe('theme-settings revision semantics', () => {
     mutated.settings.ui.entryVersionName = 'after-label';
 
     expect(getThemeSettingsRevision(mutated)).not.toBe(getThemeSettingsRevision(resolved));
+  });
+
+  it('defaults ui.entrySeriesMode / ui.entrySeriesOrder when ui.json lacks both keys', async () => {
+    const settingsDir = await createTempSettingsFixture();
+    const uiPath = path.join(settingsDir, 'ui.json');
+    const uiJson = JSON.parse(await readFile(uiPath, 'utf8')) as Record<string, unknown>;
+    delete uiJson.entrySeriesMode;
+    delete uiJson.entrySeriesOrder;
+    await writeFile(uiPath, `${JSON.stringify(uiJson, null, 2)}\n`, 'utf8');
+
+    const resolved = getThemeSettings();
+    const state = getEditableThemeSettingsState(resolved);
+
+    // 旧 ui.json（本次改动之前保存的）必须能直接读：缺键落默认档，且不被判定为损坏配置。
+    expect(resolved.settings.ui.entrySeriesMode).toBe(DEFAULT_ENTRY_SERIES_MODE);
+    expect(resolved.settings.ui.entrySeriesOrder).toBe(DEFAULT_ENTRY_SERIES_ORDER);
+    expect(resolved.sources.ui.entrySeriesMode).toBe('default');
+    expect(resolved.sources.ui.entrySeriesOrder).toBe('default');
+    expect(getThemeSettingsReadDiagnostics(resolved)).toEqual([]);
+    expect(state.ok).toBe(true);
+
+    const { ui } = getEditableThemeSettingsPayload(resolved).settings;
+    expect(ui.entrySeriesMode).toBe(DEFAULT_ENTRY_SERIES_MODE);
+    expect(ui.entrySeriesOrder).toBe(DEFAULT_ENTRY_SERIES_ORDER);
+  });
+
+  it('accepts every series mode and order value and reports the source as new', async () => {
+    const settingsDir = await createTempSettingsFixture();
+    const uiPath = path.join(settingsDir, 'ui.json');
+    const uiJson = JSON.parse(await readFile(uiPath, 'utf8')) as Record<string, unknown>;
+
+    for (const mode of ['hidden', 'meta', 'pill', 'prefix'] as const) {
+      uiJson.entrySeriesMode = mode;
+      await writeFile(uiPath, `${JSON.stringify(uiJson, null, 2)}\n`, 'utf8');
+      const resolved = getThemeSettings();
+      expect(resolved.settings.ui.entrySeriesMode).toBe(mode);
+      expect(resolved.sources.ui.entrySeriesMode).toBe('new');
+    }
+
+    for (const order of ['show', 'hide'] as const) {
+      uiJson.entrySeriesOrder = order;
+      await writeFile(uiPath, `${JSON.stringify(uiJson, null, 2)}\n`, 'utf8');
+      const resolved = getThemeSettings();
+      expect(resolved.settings.ui.entrySeriesOrder).toBe(order);
+      expect(resolved.sources.ui.entrySeriesOrder).toBe('new');
+    }
+  });
+
+  it('normalizes unknown series values to the default and reports a schema mismatch', async () => {
+    const settingsDir = await createTempSettingsFixture();
+    const uiPath = path.join(settingsDir, 'ui.json');
+    const uiJson = JSON.parse(await readFile(uiPath, 'utf8')) as Record<string, unknown>;
+    uiJson.entrySeriesMode = 'latest';
+    uiJson.entrySeriesOrder = 2;
+    await writeFile(uiPath, `${JSON.stringify(uiJson, null, 2)}\n`, 'utf8');
+
+    const resolved = getThemeSettings();
+
+    // 系列不是版本：'latest' 这类版本语义取值必须被挡在设置之外。
+    expect(resolved.settings.ui.entrySeriesMode).toBe(DEFAULT_ENTRY_SERIES_MODE);
+    expect(resolved.settings.ui.entrySeriesOrder).toBe(DEFAULT_ENTRY_SERIES_ORDER);
+    expect(getEditableThemeSettingsState(resolved).ok).toBe(false);
+    expect(getThemeSettingsReadDiagnostics(resolved)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ group: 'ui', code: 'schema-mismatch' })])
+    );
+  });
+
+  it('changes revision when the series display setting changes', async () => {
+    await createTempSettingsFixture();
+    const resolved = getThemeSettings();
+    const mutated = structuredClone(resolved);
+    mutated.settings.ui.entrySeriesMode = 'pill';
+
+    expect(getThemeSettingsRevision(mutated)).not.toBe(getThemeSettingsRevision(resolved));
+
+    const orderMutated = structuredClone(resolved);
+    orderMutated.settings.ui.entrySeriesOrder = 'hide';
+    expect(getThemeSettingsRevision(orderMutated)).not.toBe(getThemeSettingsRevision(resolved));
   });
 
   it('defaults ui.fontCoverage to full without locking the console when ui.json lacks it', async () => {

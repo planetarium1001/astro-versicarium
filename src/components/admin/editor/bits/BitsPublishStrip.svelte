@@ -1,5 +1,11 @@
 <script lang="ts">
 import type { AdminBitsEditorValues } from '../../../../lib/admin-console/content-editor-payload';
+import {
+  composeDateTimeText,
+  formatSiteNowDateTimeText,
+  splitDateTimeText,
+  type SplitDateTime
+} from '../../../../lib/admin-console/datetime-field';
 import type { AdminContentIssue } from '../shared/content-editor-client';
 import AdminEditorIcon from '../shared/AdminEditorIcon.svelte';
 import {
@@ -25,8 +31,6 @@ let {
   onDirty
 }: Props = $props();
 
-const DEFAULT_BITS_DATETIME_OFFSET = '+08:00';
-const BITS_DATETIME_RE = /^(\d{4}-\d{2}-\d{2})(?:[T\s](\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
 const INLINE_TAGS_PLACEHOLDER = '#摄影 #建筑';
 const LOCATION_PLACEHOLDER = '(可选)';
 const FIELD_ICONS = {
@@ -35,7 +39,8 @@ const FIELD_ICONS = {
   tags: 'hash',
   location: 'map-pin'
 } as const;
-const pad2 = (value: number): string => String(value).padStart(2, '0');
+/** 只填日期时写入的时刻；与时间条改造前一致，避免出现「有日期没时间」的半成品。 */
+const DEFAULT_TIME_TEXT = '00:00';
 
 let currentDateTimeUndoValue = $state<string | null>(null);
 let currentDateTimeAppliedValue = $state<string | null>(null);
@@ -44,38 +49,17 @@ let locationAutosizeEl = $state<HTMLSpanElement | null>(null);
 let tagsMeasureEl = $state<HTMLSpanElement | null>(null);
 let locationMeasureEl = $state<HTMLSpanElement | null>(null);
 
-const normalizeOffset = (offset: string | undefined): string => {
-  if (!offset) return DEFAULT_BITS_DATETIME_OFFSET;
-  if (offset === 'Z') return offset;
-  return offset.includes(':') ? offset : `${offset.slice(0, 3)}:${offset.slice(3)}`;
-};
+/**
+ * 展示值与写入值都交给 datetime-field 的纯函数：无时区写法按站点时区解释，
+ * 不再用浏览器本地时区，也不再自带一套 date-only 正则（两套规则必然漂移）。
+ * 解析失败时退回空控件，由校验错误提示作者纠正原文。
+ */
+const getDateTimeParts = (dateText: string): SplitDateTime =>
+  splitDateTimeText(dateText) ?? { date: '', time: '', hasTime: false };
 
-const getDateTimeParts = (dateText: string) => {
-  const match = dateText.trim().match(BITS_DATETIME_RE);
-  return {
-    date: match?.[1] ?? '',
-    time: match?.[2] ?? '',
-    offset: normalizeOffset(match?.[3])
-  };
-};
-
-const buildDateTimeText = (dateText: string, timeText: string, offset: string): string => {
-  if (!dateText) return '';
-  return `${dateText}T${timeText || '00:00'}:00${offset}`;
-};
-
-const formatDateOffset = (date: Date): string => {
-  const offsetMinutes = -date.getTimezoneOffset();
-  const sign = offsetMinutes >= 0 ? '+' : '-';
-  const absoluteOffset = Math.abs(offsetMinutes);
-  return `${sign}${pad2(Math.floor(absoluteOffset / 60))}:${pad2(absoluteOffset % 60)}`;
-};
-
-const formatLocalBitsDateTime = (date = new Date()): string => {
-  const dateText = `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
-  const timeText = `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
-  return buildDateTimeText(dateText, timeText, formatDateOffset(date));
-};
+/** 日期 + 可选时间 → `YYYY-MM-DD HH:mm`（站点时区字面量，不带偏移）。 */
+const buildDateTimeText = (dateText: string, timeText: string): string =>
+  composeDateTimeText(dateText, timeText || DEFAULT_TIME_TEXT);
 
 const dateTimeParts = $derived(getDateTimeParts(value.date));
 const tagsParts = $derived(splitBitsPublishTagsText(value.tagsText));
@@ -108,12 +92,12 @@ const clearCurrentDateTimeUndo = () => {
 
 const updateDatePart = (nextDate: string) => {
   clearCurrentDateTimeUndo();
-  updateValue('date', buildDateTimeText(nextDate.trim(), dateTimeParts.time, dateTimeParts.offset));
+  updateValue('date', buildDateTimeText(nextDate.trim(), dateTimeParts.time));
 };
 
 const updateTimePart = (nextTime: string) => {
   clearCurrentDateTimeUndo();
-  updateValue('date', buildDateTimeText(dateTimeParts.date, nextTime.trim(), dateTimeParts.offset));
+  updateValue('date', buildDateTimeText(dateTimeParts.date, nextTime.trim()));
 };
 
 const updateLocationText = (nextLocation: string) => {
@@ -125,7 +109,8 @@ const updateInlineTagsText = (nextTags: string) => {
 };
 
 const useCurrentDateTime = () => {
-  const nextValue = formatLocalBitsDateTime();
+  // 站点时区而非浏览器本地时区：作者在不同时区写作时写入的是同一个站点时刻。
+  const nextValue = formatSiteNowDateTimeText();
   currentDateTimeUndoValue = value.date;
   currentDateTimeAppliedValue = nextValue;
   updateValue('date', nextValue);

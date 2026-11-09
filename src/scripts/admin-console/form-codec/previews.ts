@@ -1,4 +1,8 @@
-import { normalizeEntryVersionNameMode } from '@/lib/entry-display';
+import {
+  normalizeEntrySeriesMode,
+  normalizeEntrySeriesOrder,
+  normalizeEntryVersionNameMode
+} from '@/lib/entry-display';
 import { normalizeSiteFilingIconPath } from '@/utils/format';
 import {
   ADMIN_VIEW_STATS_PV_LABEL_DEFAULT,
@@ -11,6 +15,7 @@ export type PreviewCodec = {
   refreshArticleMetaPreview: () => void;
   refreshViewStatsPreview: () => void;
   refreshEntryVersionPreview: () => void;
+  refreshEntrySeriesPreview: () => void;
   refreshFooterPreview: () => void;
   refreshFilingsPreview: () => void;
   syncAdminOverviewControls: () => void;
@@ -33,6 +38,8 @@ export const createPreviewCodec = (context: FormCodecContext): PreviewCodec => {
     inputArticleMetaShowTags,
     inputArticleMetaShowWordCount,
     inputEntryVersionName,
+    inputEntrySeriesMode,
+    inputEntrySeriesOrder,
     inputHeroImageAlt,
     inputHeroImageSrc,
     inputHomeShowHero,
@@ -167,6 +174,25 @@ export const createPreviewCodec = (context: FormCodecContext): PreviewCodec => {
     });
   };
 
+  /**
+   * 条目系列预览：档位（四档）与序号开关（`show` / `hide`）各是一个 select，
+   * 组合起来才是唯一的预览态，所以这里同时比对两个 dataset 值。
+   * 预渲染每个组合再切换 `hidden`，与条目版本预览同一套做法：
+   * 下拉切换只改可见性，不重新渲染条目组件。
+   */
+  const refreshEntrySeriesPreview = (): void => {
+    const mode = normalizeEntrySeriesMode(inputEntrySeriesMode.value);
+    const order = normalizeEntrySeriesOrder(inputEntrySeriesOrder.value);
+    document.querySelectorAll<HTMLElement>('[data-entry-series-preview]').forEach((preview) => {
+      preview.dataset.seriesMode = mode;
+      preview.dataset.seriesOrder = order;
+      preview.querySelectorAll<HTMLElement>('[data-entry-series-preview-variant]').forEach((variant) => {
+        variant.hidden = (variant.dataset.entrySeriesPreviewVariant ?? '') !== mode
+          || (variant.dataset.entrySeriesOrder ?? '') !== order;
+      });
+    });
+  };
+
   /** 总开关关掉时三个页面各自的勾选框置灰并加 `aria-disabled`。 */
   const syncListRssControls = (): void => {
     const enabled = Boolean(inputPageListRssEnabled.checked);
@@ -259,6 +285,7 @@ export const createPreviewCodec = (context: FormCodecContext): PreviewCodec => {
     refreshArticleMetaPreview,
     refreshViewStatsPreview,
     refreshEntryVersionPreview,
+    refreshEntrySeriesPreview,
     refreshFooterPreview,
     refreshFilingsPreview,
     syncAdminOverviewControls,

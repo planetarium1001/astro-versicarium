@@ -11,7 +11,7 @@ const versions = route.versions;
 const currentVersion = versions.find((version) => version.entryId === route.entry.id) ?? versions[0]!;
 const latestVersion = versions.find((version) => version.isLatest) ?? versions[0]!;
 const versionCount = versions.length;
-const shouldShow = Boolean(route.group.series) && versionCount > 1;
+const shouldShow = Boolean(route.group.versionGroup) && versionCount > 1;
 const isLatest = route.isLatest;
 const drawerId = `article-version-drawer-${route.entry.id.replaceAll('/', '-')}`;
 
@@ -28,6 +28,7 @@ const statusLabel = (version: (typeof versions)[number]): string => {
   <section
     class:list={['article-version-notice', isLatest ? 'article-version-notice--latest' : 'article-version-notice--history']}
     aria-label="版本信息"
+    data-article-drawer
     data-article-version
   >
     <div class="article-version-notice__row">
@@ -41,7 +42,7 @@ const statusLabel = (version: (typeof versions)[number]): string => {
         </span>
         <span class="article-version-notice__note-row">
           <span class="article-version-notice__note">
-            {isLatest ? '这是本系列的最新内容。' : '该版本已归档，部分内容可能过时。'}
+            {isLatest ? '这是该版本组的最新内容。' : '该版本已归档，部分内容可能过时。'}
           </span>
           {!isLatest ? (
             <a class="article-version-notice__latest" href={withBase(latestVersion.href)}>

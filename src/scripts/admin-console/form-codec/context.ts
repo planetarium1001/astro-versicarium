@@ -138,6 +138,8 @@ export type FormCodecContext = {
   inputTypographyBrand: HTMLElement;
   inputFontCoverage: HTMLSelectElement;
   inputEntryVersionName: HTMLSelectElement;
+  inputEntrySeriesMode: HTMLSelectElement;
+  inputEntrySeriesOrder: HTMLSelectElement;
 };
 
 /**

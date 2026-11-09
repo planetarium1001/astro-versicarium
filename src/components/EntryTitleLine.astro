@@ -3,6 +3,9 @@ import { getThemeSettings } from '../lib/theme-settings';
 import {
   ENTRY_TITLE_COLON,
   buildEntryTitleSegments,
+  resolveEntrySeriesDisplay,
+  type EntrySeriesMode,
+  type EntrySeriesOrder,
   type EntryTitleKind,
   type EntryTitleSurface,
   type EntryVersionNameMode
@@ -16,6 +19,10 @@ interface Props {
   project?: string | null;
   versionLabel?: string | null;
   versionName?: string | null;
+  /** 系列显示名与 `N/M` 阅读序号；三者一起提供才会产出系列段。 */
+  seriesName?: string | null;
+  seriesIndex?: number | null;
+  seriesTotal?: number | null;
   titleAs?: 'link' | 'span';
   /** 显式指定标题标签；归档行/项目卡片整块被按钮或链接包裹时传 span。 */
   titleTag?: 'h2' | 'h3' | 'span';
@@ -25,6 +32,9 @@ interface Props {
   class?: string;
   /** 仅后台预览使用：按指定模式渲染，不读取当前站点设置。 */
   versionNameMode?: EntryVersionNameMode;
+  /** 仅后台预览使用：按指定系列档位渲染，不读取当前站点设置。 */
+  seriesMode?: EntrySeriesMode;
+  seriesOrderMode?: EntrySeriesOrder;
 }
 
 const {
@@ -35,24 +45,45 @@ const {
   project = null,
   versionLabel = null,
   versionName = null,
+  seriesName = null,
+  seriesIndex = null,
+  seriesTotal = null,
   titleAs = 'span',
   titleTag,
   titleHref = '#',
   titleId,
   titleClass: titleClassProp = '',
   class: className = '',
-  versionNameMode
+  versionNameMode,
+  seriesMode,
+  seriesOrderMode
 } = Astro.props as Props;
 
 const {
   settings: { ui }
 } = getThemeSettings();
 
+// 未显式指定时按站点设置；`meta` 档在这里等价于「不产出系列段」，由元信息行负责呈现。
+const seriesDisplay = resolveEntrySeriesDisplay(ui);
+const effectiveSeriesMode = seriesMode ?? seriesDisplay.mode;
+const effectiveSeriesOrder = seriesOrderMode ?? seriesDisplay.order;
+
 const segments = buildEntryTitleSegments(
-  { kind, badge, project, title, versionLabel, versionName },
+  { kind, badge, project, title, versionLabel, versionName, seriesName, seriesIndex, seriesTotal },
   surface,
-  versionNameMode ?? ui.entryVersionName
+  versionNameMode ?? ui.entryVersionName,
+  { mode: effectiveSeriesMode, order: effectiveSeriesOrder }
 );
+
+/**
+ * 只有真的产出系列段时才写档位属性：普通条目（没有系列）的标题行保持原样，
+ * 不因为站点设置多出一个空的 data-* 钩子。
+ */
+const seriesModeAttr = segments.some(
+  (segment) => segment.kind === 'series-name' || segment.kind === 'series-label'
+)
+  ? effectiveSeriesMode
+  : undefined;
 
 const TitleTag = titleTag ?? (titleAs === 'link' ? 'h2' : 'h3');
 /** 根节点与标题标签随 `titleTag` 切换；span 根用于整块被链接或按钮包裹的场景。 */
@@ -65,7 +96,7 @@ const titleClassName = [
 const rootClassName = `entry-title entry-title--${surface}${className ? ` ${className}` : ''}`;
 ---
 
-<RootTag class={rootClassName} data-entry-title={surface}>
+<RootTag class={rootClassName} data-entry-title={surface} data-entry-series-mode={seriesModeAttr}>
   {segments.map((segment) => {
     if (segment.kind === 'badge') {
       return <span class="badge entry-title__badge" data-entry-title-token="badge">{segment.text}</span>;
@@ -85,6 +116,17 @@ const rootClassName = `entry-title entry-title--${surface}${className ? ` ${clas
     if (segment.kind === 'version-label') {
       return (
         <span class="muted-pill entry-title__version-label" data-entry-title-token="version-label">
+          {segment.text}
+        </span>
+      );
+    }
+    if (segment.kind === 'series-name') {
+      return <span class="entry-title__series-name" data-entry-title-token="series-name">{segment.text}</span>;
+    }
+    if (segment.kind === 'series-label') {
+      // 顺序是「第 N 篇 / 共 M 篇」的阅读序号，不是版本号：类名独立，避免与版本号胶囊互相覆盖。
+      return (
+        <span class="muted-pill entry-title__series-label" data-entry-title-token="series-label">
           {segment.text}
         </span>
       );

@@ -1,18 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildAdminContentListGroups,
   buildAdminContentListProjectGroups,
   buildAdminContentListProjectSections,
   buildAdminContentListSections,
-  compareAdminContentSeriesVersions,
-  getAdminContentSeriesDisplayTitle,
+  buildAdminContentListVersionGroups,
+  buildAdminContentSeriesBadges,
+  compareAdminContentVersions,
+  getAdminContentGroupDisplayTitle,
+  getAdminContentSeriesBadgeLabel,
   resolveAdminContentProjectVersionStates,
-  resolveAdminContentSeriesVersionStates
+  resolveAdminContentVersionGroupStates
 } from '../src/lib/admin-console/content-series';
 
 type VersionInput = {
   id: string;
-  series: string | null;
+  versionGroup: string | null;
   dateText?: string | null;
   versionOrder?: number | null;
   title?: string;
@@ -21,14 +23,14 @@ type VersionInput = {
 
 const version = ({
   id,
-  series,
+  versionGroup,
   dateText = '2026-01-01',
   versionOrder = null,
   title = id,
   versionName = null
 }: VersionInput) => ({
   id,
-  series,
+  versionGroup,
   title,
   versionName,
   date: dateText ? new Date(`${dateText}T00:00:00+08:00`) : null,
@@ -36,7 +38,7 @@ const version = ({
 });
 
 const withStates = (items: ReturnType<typeof version>[]) => {
-  const states = resolveAdminContentSeriesVersionStates(items);
+  const states = resolveAdminContentVersionGroupStates(items);
   return items.map((item) => ({
     ...item,
     ...(states.get(item.id) ?? { isLatestVersion: true, versionGroupSize: 1 })
@@ -79,17 +81,17 @@ const withProjectStates = (items: ReturnType<typeof projectVersion>[]) => {
   }));
 };
 
-describe('admin-console/content-series', () => {
+describe('admin-console/content-series version groups', () => {
   it('sorts versions by date and marks only the newest one as latest', () => {
     const items = [
-      version({ id: 'post-v1', series: 'post', dateText: '2026-01-01' }),
-      version({ id: 'post-v2', series: 'post', dateText: '2026-03-01' })
+      version({ id: 'post-v1', versionGroup: 'post', dateText: '2026-01-01' }),
+      version({ id: 'post-v2', versionGroup: 'post', dateText: '2026-03-01' })
     ];
 
-    expect(items.slice().sort(compareAdminContentSeriesVersions).map((item) => item.id))
+    expect(items.slice().sort(compareAdminContentVersions).map((item) => item.id))
       .toEqual(['post-v2', 'post-v1']);
 
-    const states = resolveAdminContentSeriesVersionStates(items);
+    const states = resolveAdminContentVersionGroupStates(items);
 
     expect(states.get('post-v2')).toEqual({ isLatestVersion: true, versionGroupSize: 2 });
     expect(states.get('post-v1')).toEqual({ isLatestVersion: false, versionGroupSize: 2 });
@@ -97,12 +99,12 @@ describe('admin-console/content-series', () => {
 
   it('uses versionOrder then entryId to break date ties', () => {
     const items = [
-      version({ id: 'post-order-1', series: 'post', dateText: '2026-01-01', versionOrder: 1 }),
-      version({ id: 'post-order-2', series: 'post', dateText: '2026-01-01', versionOrder: 2 }),
-      version({ id: 'post-order-2-b', series: 'post', dateText: '2026-01-01', versionOrder: 2 })
+      version({ id: 'post-order-1', versionGroup: 'post', dateText: '2026-01-01', versionOrder: 1 }),
+      version({ id: 'post-order-2', versionGroup: 'post', dateText: '2026-01-01', versionOrder: 2 }),
+      version({ id: 'post-order-2-b', versionGroup: 'post', dateText: '2026-01-01', versionOrder: 2 })
     ];
 
-    const states = resolveAdminContentSeriesVersionStates(items);
+    const states = resolveAdminContentVersionGroupStates(items);
 
     // 同 date / versionOrder 时按 entryId 升序兜底，最新版必须稳定可复现。
     expect(states.get('post-order-2')?.isLatestVersion).toBe(true);
@@ -110,14 +112,14 @@ describe('admin-console/content-series', () => {
     expect(states.get('post-order-1')?.isLatestVersion).toBe(false);
   });
 
-  it('treats entries without a series as their own single version', () => {
+  it('treats entries without a version group as their own single version', () => {
     const items = [
-      version({ id: 'single-a', series: null }),
-      version({ id: 'single-b', series: null, dateText: '2026-02-01' })
+      version({ id: 'single-a', versionGroup: null }),
+      version({ id: 'single-b', versionGroup: null, dateText: '2026-02-01' })
     ];
 
-    const states = resolveAdminContentSeriesVersionStates(items);
-    const groups = buildAdminContentListGroups(withStates(items));
+    const states = resolveAdminContentVersionGroupStates(items);
+    const groups = buildAdminContentListVersionGroups(withStates(items));
 
     expect(states.get('single-a')).toEqual({ isLatestVersion: true, versionGroupSize: 1 });
     expect(states.get('single-b')).toEqual({ isLatestVersion: true, versionGroupSize: 1 });
@@ -135,41 +137,41 @@ describe('admin-console/content-series', () => {
     ]);
   });
 
-  it('groups series versions at their first list position and keeps single entries inline', () => {
+  it('groups version group members at their first list position and keeps single entries inline', () => {
     const items = withStates([
-      version({ id: 'post-v1', series: 'post', dateText: '2026-01-01', title: '旧标题', versionName: '初版' }),
-      version({ id: 'single', series: null, dateText: '2026-02-01' }),
-      version({ id: 'post-v2', series: 'post', dateText: '2026-03-01', title: '系列名: 最新版', versionName: '最新版' })
+      version({ id: 'post-v1', versionGroup: 'post', dateText: '2026-01-01', title: '旧标题', versionName: '初版' }),
+      version({ id: 'single', versionGroup: null, dateText: '2026-02-01' }),
+      version({ id: 'post-v2', versionGroup: 'post', dateText: '2026-03-01', title: '组名: 最新版', versionName: '最新版' })
     ]);
 
-    const groups = buildAdminContentListGroups(items);
+    const groups = buildAdminContentListVersionGroups(items);
 
-    expect(groups.map((group) => group.kind)).toEqual(['series', 'entry']);
-    const seriesGroup = groups[0];
-    expect(seriesGroup).toMatchObject({
-      kind: 'series',
-      key: 'series:post',
-      series: 'post',
-      title: '系列名: 最新版',
-      displayTitle: '系列名',
+    expect(groups.map((group) => group.kind)).toEqual(['version-group', 'entry']);
+    const versionGroup = groups[0];
+    expect(versionGroup).toMatchObject({
+      kind: 'version-group',
+      key: 'versionGroup:post',
+      versionGroup: 'post',
+      title: '组名: 最新版',
+      displayTitle: '组名',
       versionCount: 2
     });
-    if (seriesGroup?.kind !== 'series') throw new Error('expected a series group');
-    expect(seriesGroup.items.map((item) => item.id)).toEqual(['post-v2', 'post-v1']);
+    if (versionGroup?.kind !== 'version-group') throw new Error('expected a version group');
+    expect(versionGroup.items.map((item) => item.id)).toEqual(['post-v2', 'post-v1']);
     expect(groups[1]).toMatchObject({ kind: 'entry', item: { id: 'single' } });
   });
 
-  it('lists standalone entries first, then series sections', () => {
+  it('lists standalone entries first, then version group sections', () => {
     const items = withStates([
-      version({ id: 'post-v1', series: 'post', dateText: '2026-01-01', title: '系列名：最新版', versionName: '最新版' }),
-      version({ id: 'single-a', series: null, dateText: '2026-02-01' }),
-      version({ id: 'post-v2', series: 'post', dateText: '2026-03-01', title: '系列名：最新版', versionName: '最新版' }),
-      version({ id: 'single-b', series: null, dateText: '2026-02-02' })
+      version({ id: 'post-v1', versionGroup: 'post', dateText: '2026-01-01', title: '组名：最新版', versionName: '最新版' }),
+      version({ id: 'single-a', versionGroup: null, dateText: '2026-02-01' }),
+      version({ id: 'post-v2', versionGroup: 'post', dateText: '2026-03-01', title: '组名：最新版', versionName: '最新版' }),
+      version({ id: 'single-b', versionGroup: null, dateText: '2026-02-02' })
     ]);
 
     const sections = buildAdminContentListSections(items);
 
-    expect(sections.map((section) => section.kind)).toEqual(['standalone', 'series']);
+    expect(sections.map((section) => section.kind)).toEqual(['standalone', 'version-group']);
 
     const standaloneSection = sections[0];
     expect(standaloneSection).toMatchObject({
@@ -181,46 +183,47 @@ describe('admin-console/content-series', () => {
     if (standaloneSection?.kind !== 'standalone') throw new Error('expected a standalone section');
     expect(standaloneSection.items.map((item) => item.id)).toEqual(['single-a', 'single-b']);
 
-    const seriesSection = sections[1];
-    expect(seriesSection).toMatchObject({
-      kind: 'series',
-      key: 'series',
-      label: '系列',
+    const versionGroupSection = sections[1];
+    expect(versionGroupSection).toMatchObject({
+      kind: 'version-group',
+      key: 'version-group',
+      // 版本家族只叫「版本组」，不再与内容系列混称。
+      label: '版本组',
       count: 1
     });
-    if (seriesSection?.kind !== 'series') throw new Error('expected a series section');
-    expect(seriesSection.groups.map((group) => group.series)).toEqual(['post']);
-    expect(seriesSection.groups[0]?.displayTitle).toBe('系列名');
+    if (versionGroupSection?.kind !== 'version-group') throw new Error('expected a version group section');
+    expect(versionGroupSection.groups.map((group) => group.versionGroup)).toEqual(['post']);
+    expect(versionGroupSection.groups[0]?.displayTitle).toBe('组名');
   });
 
   it('omits empty sections so subheads only render for real content', () => {
     const standaloneOnly = withStates([
-      version({ id: 'single', series: null })
+      version({ id: 'single', versionGroup: null })
     ]);
-    const seriesOnly = withStates([
-      version({ id: 'post-v1', series: 'post', dateText: '2026-01-01' }),
-      version({ id: 'post-v2', series: 'post', dateText: '2026-02-01' })
+    const versionGroupOnly = withStates([
+      version({ id: 'post-v1', versionGroup: 'post', dateText: '2026-01-01' }),
+      version({ id: 'post-v2', versionGroup: 'post', dateText: '2026-02-01' })
     ]);
 
     expect(buildAdminContentListSections(standaloneOnly).map((section) => section.kind))
       .toEqual(['standalone']);
-    expect(buildAdminContentListSections(seriesOnly).map((section) => section.kind))
-      .toEqual(['series']);
+    expect(buildAdminContentListSections(versionGroupOnly).map((section) => section.kind))
+      .toEqual(['version-group']);
   });
 
-  it('keeps the full version count when a page only shows part of a series', () => {
+  it('keeps the full version count when a page only shows part of a version group', () => {
     const items = [
       {
-        ...version({ id: 'post-v2', series: 'post', dateText: '2026-03-01' }),
+        ...version({ id: 'post-v2', versionGroup: 'post', dateText: '2026-03-01' }),
         isLatestVersion: true,
         versionGroupSize: 3
       }
     ];
 
-    const groups = buildAdminContentListGroups(items);
+    const groups = buildAdminContentListVersionGroups(items);
 
     expect(groups[0]).toMatchObject({
-      kind: 'series',
+      kind: 'version-group',
       title: 'post-v2',
       versionCount: 3
     });
@@ -228,13 +231,111 @@ describe('admin-console/content-series', () => {
 
   it('sorts null dates after dated versions', () => {
     const items = [
-      version({ id: 'post-undated', series: 'post', dateText: null }),
-      version({ id: 'post-dated', series: 'post', dateText: '2026-01-01' })
+      version({ id: 'post-undated', versionGroup: 'post', dateText: null }),
+      version({ id: 'post-dated', versionGroup: 'post', dateText: '2026-01-01' })
     ];
 
-    expect(items.slice().sort(compareAdminContentSeriesVersions).map((item) => item.id))
+    expect(items.slice().sort(compareAdminContentVersions).map((item) => item.id))
       .toEqual(['post-dated', 'post-undated']);
-    expect(resolveAdminContentSeriesVersionStates(items).get('post-dated')?.isLatestVersion).toBe(true);
+    expect(resolveAdminContentVersionGroupStates(items).get('post-dated')?.isLatestVersion).toBe(true);
+  });
+});
+
+describe('admin-console/content-series badges', () => {
+  type SeriesInput = {
+    id: string;
+    series: string | null;
+    seriesName?: string | null;
+    seriesOrder?: number | null;
+    versionGroup?: string | null;
+    dateText?: string;
+    title?: string;
+  };
+
+  const seriesItem = ({
+    id,
+    series,
+    seriesName = null,
+    seriesOrder = null,
+    versionGroup = null,
+    dateText = '2026-01-01',
+    title = id
+  }: SeriesInput) => ({
+    id,
+    title,
+    series,
+    seriesName,
+    seriesOrder,
+    versionGroup,
+    date: new Date(`${dateText}T00:00:00+08:00`),
+    versionOrder: null
+  });
+
+  it('numbers series members by seriesOrder and falls back to the series slug', () => {
+    const badges = buildAdminContentSeriesBadges([
+      seriesItem({ id: 'build-2', series: 'pc-build', seriesName: '折腾主机', seriesOrder: 2 }),
+      seriesItem({ id: 'build-1', series: 'pc-build', seriesName: '折腾主机', seriesOrder: 1 }),
+      seriesItem({ id: 'build-3', series: 'pc-build', seriesOrder: 3 })
+    ]);
+
+    expect(badges.get('build-1')).toEqual({ series: 'pc-build', name: '折腾主机', index: 1, total: 3 });
+    expect(badges.get('build-2')).toEqual({ series: 'pc-build', name: '折腾主机', index: 2, total: 3 });
+    expect(badges.get('build-3')).toEqual({ series: 'pc-build', name: '折腾主机', index: 3, total: 3 });
+  });
+
+  it('puts members without seriesOrder after ordered ones, ordered by date', () => {
+    const badges = buildAdminContentSeriesBadges([
+      seriesItem({ id: 'undated', series: 'pc-build', dateText: '2026-05-01' }),
+      seriesItem({ id: 'first', series: 'pc-build', seriesOrder: 0, dateText: '2026-06-01' })
+    ]);
+
+    expect(badges.get('first')?.index).toBe(1);
+    expect(badges.get('undated')?.index).toBe(2);
+  });
+
+  it('does not emit a badge for entries outside any series', () => {
+    const badges = buildAdminContentSeriesBadges([
+      seriesItem({ id: 'loose', series: null }),
+      seriesItem({ id: 'build-1', series: 'pc-build' })
+    ]);
+
+    expect(badges.has('loose')).toBe(false);
+    expect(badges.get('build-1')?.index).toBe(1);
+  });
+
+  it('counts each version group once and shares the badge with its other versions', () => {
+    const badges = buildAdminContentSeriesBadges([
+      seriesItem({
+        id: 'build-v1',
+        series: 'pc-build',
+        seriesName: '折腾主机',
+        seriesOrder: 1,
+        versionGroup: 'pc-build-post',
+        dateText: '2026-01-01'
+      }),
+      seriesItem({
+        id: 'build-v2',
+        series: 'pc-build',
+        seriesName: '折腾主机',
+        seriesOrder: 1,
+        versionGroup: 'pc-build-post',
+        dateText: '2026-03-01'
+      }),
+      seriesItem({ id: 'other', series: 'pc-build', seriesOrder: 2 })
+    ]);
+
+    // 同一版本组只算一篇：系列总篇数是 2，两个版本共享同一枚徽标。
+    expect(badges.get('build-v1')).toEqual({ series: 'pc-build', name: '折腾主机', index: 1, total: 2 });
+    expect(badges.get('build-v2')).toEqual({ series: 'pc-build', name: '折腾主机', index: 1, total: 2 });
+    expect(badges.get('other')).toEqual({ series: 'pc-build', name: '折腾主机', index: 2, total: 2 });
+  });
+
+  it('formats the row label as a reading position, never a version number', () => {
+    expect(getAdminContentSeriesBadgeLabel({
+      name: '折腾主机',
+      index: 2,
+      total: 5
+    })).toBe('折腾主机 · 第 2/5 篇');
   });
 });
 
@@ -352,27 +453,27 @@ describe('admin-console/content-series projects', () => {
   });
 });
 
-describe('getAdminContentSeriesDisplayTitle', () => {
+describe('getAdminContentGroupDisplayTitle', () => {
   it('strips a trailing version name after either colon style', () => {
-    expect(getAdminContentSeriesDisplayTitle('资源管理演示：最新版', 'resource-demo', '最新版'))
+    expect(getAdminContentGroupDisplayTitle('资源管理演示：最新版', 'resource-demo', '最新版'))
       .toBe('资源管理演示');
-    expect(getAdminContentSeriesDisplayTitle('资源管理演示: 最新版', 'resource-demo', '最新版'))
+    expect(getAdminContentGroupDisplayTitle('资源管理演示: 最新版', 'resource-demo', '最新版'))
       .toBe('资源管理演示');
-    expect(getAdminContentSeriesDisplayTitle('资源管理演示 ： 最新版 ', 'resource-demo', '最新版'))
+    expect(getAdminContentGroupDisplayTitle('资源管理演示 ： 最新版 ', 'resource-demo', '最新版'))
       .toBe('资源管理演示');
   });
 
-  it('keeps the title when the suffix does not match and falls back to the series slug', () => {
-    expect(getAdminContentSeriesDisplayTitle('资源管理演示：初版', 'resource-demo', '最新版'))
+  it('keeps the title when the suffix does not match and falls back to the group key', () => {
+    expect(getAdminContentGroupDisplayTitle('资源管理演示：初版', 'resource-demo', '最新版'))
       .toBe('资源管理演示：初版');
-    expect(getAdminContentSeriesDisplayTitle('资源管理演示', 'resource-demo'))
+    expect(getAdminContentGroupDisplayTitle('资源管理演示', 'resource-demo'))
       .toBe('资源管理演示');
-    expect(getAdminContentSeriesDisplayTitle('   ', 'resource-demo', '最新版'))
+    expect(getAdminContentGroupDisplayTitle('   ', 'resource-demo', '最新版'))
       .toBe('resource-demo');
   });
 
   it('escapes regex characters in the version name', () => {
-    expect(getAdminContentSeriesDisplayTitle('Demo: v1.0 (latest)', 'demo', 'v1.0 (latest)'))
+    expect(getAdminContentGroupDisplayTitle('Demo: v1.0 (latest)', 'demo', 'v1.0 (latest)'))
       .toBe('Demo');
   });
 });

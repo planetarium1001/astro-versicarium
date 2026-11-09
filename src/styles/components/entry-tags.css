@@ -619,6 +619,25 @@
   margin: 0 auto;
 }
 
+/*
+ * 标签区块与系列区块之间的一条淡色分割线：说明这是第二组选项，不是另一个面板。
+ * `margin-block` 取负值时会把 flex gap 吃掉一半，让线贴近两组列表而不是把弹窗撑高。
+ */
+.entry-tags-dialog__divider {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 720px;
+  height: 0;
+  margin: -2px auto;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+}
+
+/* 系列区块沿用标签列表的排布，只是不再显示 `#` 前缀。 */
+.entry-tags-dialog__list--series .entry-tag-option__label {
+  font-weight: 600;
+}
+
 /* 触控覆盖层：视觉 28px、可点 44px，不占布局。构建产物里伪元素会被规范化为单冒号 :before，功能不变 */
 .entry-tag-option::before {
   content: '';

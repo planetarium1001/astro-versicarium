@@ -1,6 +1,31 @@
 import { describe, expect, it } from 'vitest';
 import YAML from 'yaml';
 import { patchMarkdownFrontmatter, replaceMarkdownBody, splitMarkdownFrontmatter } from '../src/lib/frontmatter';
+import { buildBlogFrontmatterFromValues } from '../src/lib/admin-console/content-blog-frontmatter';
+import type { AdminBlogEditorValues } from '../src/lib/admin-console/content-editor-payload';
+
+const toBlogEditorValues = (overrides: Partial<AdminBlogEditorValues> = {}): AdminBlogEditorValues => ({
+  title: 'Demo blog',
+  description: '',
+  date: '2026-11-09',
+  publishedAt: '',
+  updatedAt: '',
+  tagsText: '',
+  draft: false,
+  slug: '',
+  versionGroup: '',
+  versionLabel: '',
+  versionName: '',
+  versionSummary: '',
+  versionOrder: '',
+  series: '',
+  seriesName: '',
+  seriesOrder: '',
+  ogImage: '',
+  ogImageAlt: '',
+  badge: '',
+  ...overrides
+});
 
 const getFrontmatter = (source: string): Record<string, unknown> => {
   const section = splitMarkdownFrontmatter(source);
@@ -147,4 +172,117 @@ describe('admin-console/frontmatter', () => {
     ]);
   });
 
+});
+
+describe('admin blog frontmatter from editor values', () => {
+  it('keeps the time part of updatedAt instead of compressing it to a date', () => {
+    const { frontmatter, issues } = buildBlogFrontmatterFromValues(
+      toBlogEditorValues({ updatedAt: '2026-11-09 14:30' })
+    );
+
+    expect(issues).toEqual([]);
+    expect(frontmatter?.updatedAt).toBe('2026-11-09 14:30');
+  });
+
+  it('normalizes a changed updatedAt into site timezone text', () => {
+    const { frontmatter, issues } = buildBlogFrontmatterFromValues(
+      toBlogEditorValues({ updatedAt: '2026-11-09T06:30Z' }),
+      { originalUpdatedAt: '2026-11-08' }
+    );
+
+    expect(issues).toEqual([]);
+    expect(frontmatter?.updatedAt).toBe('2026-11-09 14:30');
+  });
+
+  it('keeps the original updatedAt text when the instant did not change', () => {
+    const original = '2026-11-09T03:44Z';
+    const { frontmatter, issues } = buildBlogFrontmatterFromValues(
+      toBlogEditorValues({ updatedAt: '2026-11-09 11:44' }),
+      { originalUpdatedAt: original }
+    );
+
+    // 作者提交的文本与原文指向同一时刻时保留原文，避免无意义 diff。
+    expect(issues).toEqual([]);
+    expect(frontmatter?.updatedAt).toBe(original);
+  });
+
+  it('rejects an updatedAt earlier than the blog date', () => {
+    const { frontmatter, issues } = buildBlogFrontmatterFromValues(
+      toBlogEditorValues({ updatedAt: '2026-11-08 23:30' })
+    );
+
+    expect(frontmatter).toBeUndefined();
+    expect(issues).toEqual([expect.objectContaining({ path: 'updatedAt' })]);
+  });
+
+  it('accepts every supported publishedAt text', () => {
+    const inputs = [
+      '2026-11-09',
+      '2026-11-09 14:30',
+      '2026-11-09T14:30',
+      '2026-11-09T06:30Z',
+      '2026-11-09T14:30+08:00'
+    ];
+
+    for (const publishedAt of inputs) {
+      const { frontmatter, issues } = buildBlogFrontmatterFromValues(
+        toBlogEditorValues({ publishedAt })
+      );
+      expect(issues, publishedAt).toEqual([]);
+      expect(frontmatter?.publishedAt, publishedAt).toBe(publishedAt);
+    }
+  });
+
+  it('rejects an unreadable publishedAt text', () => {
+    const { frontmatter, issues } = buildBlogFrontmatterFromValues(
+      toBlogEditorValues({ publishedAt: '下周一' })
+    );
+
+    expect(frontmatter).toBeUndefined();
+    expect(issues).toEqual([expect.objectContaining({ path: 'publishedAt' })]);
+  });
+
+  it('writes versionGroup and the three series fields independently', () => {
+    const { frontmatter, issues } = buildBlogFrontmatterFromValues(
+      toBlogEditorValues({
+        versionGroup: 'theme-introduction',
+        versionLabel: 'v2',
+        series: 'pc-build',
+        seriesName: '折腾主机',
+        seriesOrder: '2'
+      })
+    );
+
+    expect(issues).toEqual([]);
+    expect(frontmatter).toMatchObject({
+      versionGroup: 'theme-introduction',
+      versionLabel: 'v2',
+      series: 'pc-build',
+      seriesName: '折腾主机',
+      seriesOrder: 2
+    });
+  });
+
+  it('drops series fields when the author clears them', () => {
+    const { frontmatter, issues } = buildBlogFrontmatterFromValues(
+      toBlogEditorValues({ versionGroup: 'theme-introduction' })
+    );
+
+    expect(issues).toEqual([]);
+    expect(frontmatter).not.toHaveProperty('series');
+    expect(frontmatter).not.toHaveProperty('seriesName');
+    expect(frontmatter).not.toHaveProperty('seriesOrder');
+  });
+
+  it('rejects a seriesOrder that is not a non-negative integer', () => {
+    for (const seriesOrder of ['-1', '2.5', 'abc']) {
+      const { frontmatter, issues } = buildBlogFrontmatterFromValues(
+        toBlogEditorValues({ series: 'pc-build', seriesOrder })
+      );
+      expect(issues, seriesOrder).toEqual([
+        expect.objectContaining({ path: 'seriesOrder', message: 'seriesOrder 必须是非负整数' })
+      ]);
+      expect(frontmatter, seriesOrder).toBeUndefined();
+    }
+  });
 });

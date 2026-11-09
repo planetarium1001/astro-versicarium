@@ -1,19 +1,25 @@
 ---
 import { getSiteTimezone } from '../utils/site-timezone';
 import { resolveArticleDateItems } from '../lib/display-date';
-import type { ArticleDateGranularity, ArticleMetaSettings } from '../lib/theme-settings';
+import { getThemeSettings, type ArticleDateGranularity, type ArticleMetaSettings } from '../lib/theme-settings';
 import EntryTitleLine from './EntryTitleLine.astro';
 import { isRoutableTagKey, toTagKey } from '../lib/tags';
 import { createWithBase } from '../utils/format';
+import { resolveEntrySeriesSlots } from '../lib/entry-display';
+import { getSeriesFilterHref, getSeriesTagKey } from '../lib/blog-series';
 
 const {
   href,
   title,
   excerpt,
   badge = '随笔',
-  series = null,
+  versionGroup = null,
   versionLabel = null,
   versionName = null,
+  seriesName = null,
+  seriesIndex = null,
+  seriesTotal = null,
+  seriesSlug = null,
   dateGranularity,
   date,
   dateText,
@@ -32,11 +38,17 @@ const {
   title: string;
   excerpt?: string | null;
   badge?: string;
-  series?: string | null;
+  versionGroup?: string | null;
   versionLabel?: string | null;
   versionName?: string | null;
   versionSummary?: string | null;
   versionOrder?: number | null;
+  /** 系列显示名 / 阅读序号 / 成员总数；没有系列时三个都传 null。 */
+  seriesName?: string | null;
+  seriesIndex?: number | null;
+  seriesTotal?: number | null;
+  /** 系列稳定键（frontmatter `series`），用来生成 canonical 筛选链接。 */
+  seriesSlug?: string | null;
   dateGranularity?: ArticleDateGranularity;
   date: Date;
   dateText?: string;
@@ -52,7 +64,25 @@ const {
   articleMetaSettings: ArticleMetaSettings;
 };
 
-const shouldShowMetaLine = articleMetaSettings.showDate || (articleMetaSettings.showTags && visibleTags.length > 0);
+const {
+  settings: { ui }
+} = getThemeSettings();
+const seriesTagKey = seriesSlug ? getSeriesTagKey(seriesSlug) : '';
+/**
+ * 槽位判定与列表卡片共用一处实现（`resolveEntrySeriesSlots`）：
+ * `pill` / `prefix` 由标题行承担系列呈现，`meta` 落到元信息行，`hidden` 什么都不做。
+ */
+const {
+  showInTitle: showSeriesInTitle,
+  showInMeta: showSeriesInMeta,
+  orderText: seriesOrderText
+} = resolveEntrySeriesSlots(
+  { name: seriesName, slug: seriesSlug, index: seriesIndex, total: seriesTotal },
+  ui
+);
+const shouldShowMetaLine = articleMetaSettings.showDate
+  || (articleMetaSettings.showTags && visibleTags.length > 0)
+  || showSeriesInMeta;
 // 与文章详情页、BlogCard 一致：列表条目里的 #tag 指向博客标签检索。
 const base = import.meta.env.BASE_URL ?? '/';
 const withBase = createWithBase(base);
@@ -82,8 +112,11 @@ const dateItems = resolveArticleDateItems({
       surface="list"
       title={title}
       badge={badge}
-      versionLabel={series ? versionLabel : null}
-      versionName={series ? versionName : null}
+      versionLabel={versionGroup ? versionLabel : null}
+      versionName={versionGroup ? versionName : null}
+      seriesName={showSeriesInTitle ? seriesName : null}
+      seriesIndex={showSeriesInTitle ? seriesIndex : null}
+      seriesTotal={showSeriesInTitle ? seriesTotal : null}
       titleAs="link"
       titleHref={href}
     />
@@ -106,6 +139,20 @@ const dateItems = resolveArticleDateItems({
               >{`${item.label}${item.text}`}</time>
             </>
           ))}
+        </span>
+      ) : null}
+      {showSeriesInMeta ? (
+        <span class="meta-line__item meta-line__item--series">
+          {/*
+            系列成员是并列的独立文章：链接只是「按系列筛选」的入口，
+            文案是「系列名 N/M」，不使用任何版本语义。
+          */}
+          <a
+            class="entry-series-link"
+            href={withBase(getSeriesFilterHref(seriesSlug ?? ''))}
+            aria-label={`筛选系列 ${seriesName}`}
+            data-article-series-link={seriesTagKey}
+          >{seriesOrderText ? `${seriesName} ${seriesOrderText}` : seriesName}</a>
         </span>
       ) : null}
       {articleMetaSettings.showTags && tagLinks.length ? (

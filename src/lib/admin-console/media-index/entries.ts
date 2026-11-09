@@ -52,9 +52,11 @@ const readEntryMeta = async (
 
   const title = normalizeText(frontmatter.title);
   const slug = normalizeText(frontmatter.slug);
-  const rawSeries = normalizeText(frontmatter.series);
-  const hasSeries = rawSeries.length > 0;
-  const series = rawSeries || slug || entryId;
+  // 媒体树按版本线（versionGroup）分组。字段在 frontmatter 里已从 series 改名，
+  // 这里不再回退读 series：那会把它和真正的内容系列混成一个概念。
+  const rawVersionGroup = normalizeText(frontmatter.versionGroup);
+  const hasVersionGroup = rawVersionGroup.length > 0;
+  const versionGroup = rawVersionGroup || slug || entryId;
   const versionLabel = normalizeText(frontmatter.versionLabel)
     || normalizeText(frontmatter.versionName)
     || entryId;
@@ -63,15 +65,15 @@ const readEntryMeta = async (
     collection,
     entryId,
     dirRel: toAdminContentRelativeProjectPath(directory),
-    series,
-    seriesLabel: series,
+    versionGroup,
+    versionGroupLabel: versionGroup,
     version: entryId,
     versionLabel,
     entryLabel: title || versionLabel,
     title: title || entryId,
     date: readDateValue(frontmatter.date),
     exists: true,
-    hasSeries
+    hasVersionGroup
   };
 };
 

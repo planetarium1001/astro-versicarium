@@ -1,7 +1,11 @@
 import { prefersReducedMotion } from './input-modality';
 import { lockScrollFor, unlockScrollFor } from './modal-scroll-lock';
 
-type VersionDrawerRoot = HTMLElement;
+/**
+ * 版本抽屉与系列抽屉共用同一套交互：两者在自己的根节点上带 `data-article-drawer`，
+ * 内部仍是 trigger → dialog 的固定约定，所以这里只认这一个根标记。
+ */
+type ArticleDrawerRoot = HTMLElement;
 
 /** 退出动画 220ms，兜底留 20ms 余量：animationend 丢失时也不会把抽屉卡住。 */
 const CLOSE_FALLBACK_MS = 600;
@@ -11,7 +15,7 @@ const CLOSE_FALLBACK_MS = 600;
  * 两段都用同一份 trigger→dialog 约定，避免模板挪动位置后交互静默失效。
  */
 const resolveDialog = (
-  root: VersionDrawerRoot,
+  root: ArticleDrawerRoot,
   trigger: HTMLButtonElement
 ): HTMLDialogElement | null => {
   const scoped = root.querySelector<HTMLDialogElement>('[data-version-drawer]');
@@ -40,7 +44,7 @@ const clearPointerFocus = (element: HTMLElement | null): void => {
   delete element.dataset.pointerFocus;
 };
 
-const roots = Array.from(document.querySelectorAll<VersionDrawerRoot>('[data-article-version]'));
+const roots = Array.from(document.querySelectorAll<ArticleDrawerRoot>('[data-article-drawer]'));
 
 for (const root of roots) {
   const trigger = root.querySelector<HTMLButtonElement>('[data-version-trigger]');

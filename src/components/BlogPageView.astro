@@ -2,9 +2,11 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import TagFilterHeader from './TagFilterHeader.astro';
 import BlogCard from './BlogCard.astro';
-import { createWithBase, getBlogDerivedText, type BlogListItem } from '../lib/content';
+import { createWithBase, getBlogDerivedText, getVisibleBlogSeriesIndex, type BlogListItem } from '../lib/content';
 import { getThemeSettings, getVisibleArticleMetaTags } from '../lib/theme-settings';
 import { collectTagSummary, type TagSummary } from '../lib/tags';
+import { buildEntrySeriesLookup } from '../lib/entry-display';
+import { getSeriesTagKey } from '../lib/blog-series';
 import { joinPageSubtitleText } from '../utils/format';
 
 const { items, resultCount } = Astro.props as {
@@ -14,6 +16,18 @@ const { items, resultCount } = Astro.props as {
 
 /** `/blog/` 的标签入口：不传 tagOptions 时 TagFilterHeader 不渲染标签 dialog。 */
 const tagOptions: TagSummary[] = collectTagSummary(items.map((item) => item.entry));
+
+/**
+ * 系列区块与标签区块共用同一个 dialog 和同一条表达式：键是命名空间化的 `series:<slug>`，
+ * 所以筛选 URL 仍然只有 `?tags=` 一套。没有系列时传空数组，TagFilterHeader 整块不渲染。
+ */
+const seriesIndex = await getVisibleBlogSeriesIndex();
+const seriesOptions = [...seriesIndex.values()].map((group) => ({
+  key: getSeriesTagKey(group.slug),
+  label: group.name,
+  count: group.total
+}));
+const seriesByEntryId = buildEntrySeriesLookup(seriesIndex);
 
 const base = import.meta.env.BASE_URL ?? '/';
 const withBase = createWithBase(base);
@@ -55,39 +69,47 @@ const fallbackListId = 'blog-tag-list';
       dialogTitleId="blog-tag-dialog-title"
       searchAriaLabel={`搜索${pageTitleText}`}
       tagOptions={tagOptions}
+      seriesOptions={seriesOptions}
       showRss={showListRss}
       headerClass="page-header page-header--blog page-header--with-search"
     />
   </div>
 
   <div class="list" data-entry-list>
-    {items.map((item) => (
-      <BlogCard
-        href={withBase(item.href)}
-        slug={item.entry.id}
-        title={item.entry.data.title}
-        excerpt={getBlogDerivedText(item.entry).excerpt}
-        date={item.entry.data.date}
-        dateText={item.entry.data.dateText}
-        dateHasTime={item.entry.data.dateHasTime}
-        dateGranularity={item.entry.data.dateGranularity ?? articleMeta.dateGranularity}
-        publishedAt={item.entry.data.publishedAt}
-        publishedAtText={item.entry.data.publishedAtText}
-        publishedAtHasTime={item.entry.data.publishedAtHasTime}
-        updatedAt={item.entry.data.updatedAt}
-        updatedAtText={item.entry.data.updatedAtText}
-        updatedAtHasTime={item.entry.data.updatedAtHasTime}
-        dateDisplay={item.entry.data.cardDateDisplay ?? cardDateDisplay}
-        visibleTags={getVisibleArticleMetaTags(item.entry.data.tags, 'list')}
-        articleMetaSettings={articleMeta}
-        badge={item.entry.data.badge}
-        series={item.series}
-        versionLabel={item.versionLabel}
-        versionName={item.entry.data.versionName ?? null}
-        versionSummary={item.entry.data.versionSummary ?? null}
-        versionOrder={item.entry.data.versionOrder ?? null}
-      />
-    ))}
+    {items.map((item) => {
+      const series = seriesByEntryId.get(item.entry.id) ?? null;
+      return (
+        <BlogCard
+          href={withBase(item.href)}
+          slug={item.entry.id}
+          title={item.entry.data.title}
+          excerpt={getBlogDerivedText(item.entry).excerpt}
+          date={item.entry.data.date}
+          dateText={item.entry.data.dateText}
+          dateHasTime={item.entry.data.dateHasTime}
+          dateGranularity={item.entry.data.dateGranularity ?? articleMeta.dateGranularity}
+          publishedAt={item.entry.data.publishedAt}
+          publishedAtText={item.entry.data.publishedAtText}
+          publishedAtHasTime={item.entry.data.publishedAtHasTime}
+          updatedAt={item.entry.data.updatedAt}
+          updatedAtText={item.entry.data.updatedAtText}
+          updatedAtHasTime={item.entry.data.updatedAtHasTime}
+          dateDisplay={item.entry.data.cardDateDisplay ?? cardDateDisplay}
+          visibleTags={getVisibleArticleMetaTags(item.entry.data.tags, 'list')}
+          articleMetaSettings={articleMeta}
+          badge={item.entry.data.badge}
+          versionGroup={item.versionGroup}
+          versionLabel={item.versionLabel}
+          versionName={item.entry.data.versionName ?? null}
+          versionSummary={item.entry.data.versionSummary ?? null}
+          versionOrder={item.entry.data.versionOrder ?? null}
+          seriesName={series?.name ?? null}
+          seriesIndex={series?.index ?? null}
+          seriesTotal={series?.total ?? null}
+          seriesSlug={series?.slug ?? null}
+        />
+      );
+    })}
   </div>
 
   <nav class="pagination" data-entry-pagination hidden aria-label={`${pageTitleText}分页`}>

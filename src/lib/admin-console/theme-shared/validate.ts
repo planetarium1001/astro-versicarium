@@ -5,7 +5,7 @@ import type {
   SiteSocialPresetId
 } from '../../theme-settings';
 import { isValidIanaTimeZone } from '../../../utils/timezone';
-import { isEntryVersionNameMode } from '../../entry-display';
+import { isEntrySeriesMode, isEntrySeriesOrder, isEntryVersionNameMode } from '../../entry-display';
 import {
   getHeroImageLocalFilePath as getAdminHeroImageLocalFilePath,
   getSiteFaviconLocalFilePath as getAdminSiteFaviconLocalFilePath,
@@ -611,6 +611,14 @@ export const validateAdminThemeSettings = (
 
   if (!isEntryVersionNameMode(settings.ui?.entryVersionName ?? '')) {
     pushIssue('ui.entryVersionName', '版本名称只允许 不显示 / 标题后 / 版本号后');
+  }
+
+  if (!isEntrySeriesMode(settings.ui?.entrySeriesMode ?? '')) {
+    pushIssue('ui.entrySeriesMode', '条目系列呈现只允许 不显示 / 元信息行 / 标题胶囊 / 标题前缀');
+  }
+
+  if (!isEntrySeriesOrder(settings.ui?.entrySeriesOrder ?? '')) {
+    pushIssue('ui.entrySeriesOrder', '系列阅读序号只允许 显示序号 / 不显示序号');
   }
 
   const nav = Array.isArray(settings.shell.nav) ? settings.shell.nav : [];

@@ -7,7 +7,11 @@ import type {
   TypographyRole,
   TypographySettings
 } from '@/lib/theme-settings';
-import { normalizeEntryVersionNameMode } from '@/lib/entry-display';
+import {
+  normalizeEntrySeriesMode,
+  normalizeEntrySeriesOrder,
+  normalizeEntryVersionNameMode
+} from '@/lib/entry-display';
 import {
   ADMIN_ARTICLE_DATE_GRANULARITY_DEFAULT,
   ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT,
@@ -157,6 +161,8 @@ export const createSettingsCodec = (
     inputSidebarActionsShowThemeToggle,
     inputSidebarActionsShowAdminEntry,
     inputEntryVersionName,
+    inputEntrySeriesMode,
+    inputEntrySeriesOrder,
     inputFontCoverage,
     inputSidebarDividerDefault,
     inputSidebarDividerNone,
@@ -401,7 +407,10 @@ export const createSettingsCodec = (
           brand: getSelectedTypographyFontId('brand')
         },
         fontCoverage: getSelectedFontCoverage(),
-        entryVersionName: normalizeEntryVersionNameMode(inputEntryVersionName.value)
+        entryVersionName: normalizeEntryVersionNameMode(inputEntryVersionName.value),
+        // 系列与版本同构读取：白名单外的值一律回落到默认档，服务端还有一层校验兜底。
+        entrySeriesMode: normalizeEntrySeriesMode(inputEntrySeriesMode.value),
+        entrySeriesOrder: normalizeEntrySeriesOrder(inputEntrySeriesOrder.value)
       }
     };
   };
@@ -521,6 +530,9 @@ export const createSettingsCodec = (
     refreshFontCoveragePreview();
     inputEntryVersionName.value = normalizeEntryVersionNameMode(settings.ui?.entryVersionName);
     previews.refreshEntryVersionPreview();
+    inputEntrySeriesMode.value = normalizeEntrySeriesMode(settings.ui?.entrySeriesMode);
+    inputEntrySeriesOrder.value = normalizeEntrySeriesOrder(settings.ui?.entrySeriesOrder);
+    previews.refreshEntrySeriesPreview();
     previews.refreshFooterPreview();
     previews.refreshFilingsPreview();
     previews.refreshArticleMetaPreview();

@@ -8,9 +8,9 @@
 
 | 项 | 值 | 来源 |
 |---|---|---|
-| 主题版本 | `0.1.0-rc.1` | `package.json` |
-| 版本清单 | `{".": "0.1.0-rc.1"}` | `.release-please-manifest.json` |
-| 最新变更记录 | `[0.1.0-rc.1] - 2026-10-31` | `CHANGELOG.md` |
+| 主题版本 | `0.2.0` | `package.json` |
+| 版本清单 | `{".": "0.2.0"}` | `.release-please-manifest.json` |
+| 最新变更记录 | `[0.2.0] - 2026-11-09` | `CHANGELOG.md` |
 | 标签 | 旧版本线 `v1.0.0-rc.1`、`v1.0.0-rc.2`；0.x 版本线发布后再创建 `v0.1.0-rc.x` | `git tag` |
 | Node 要求 | `>=22.12.0` | `package.json` 的 `engines` |
 | `.nvmrc` | `24.22.1` | `.nvmrc` |
@@ -147,7 +147,7 @@
 - 后台只有这五个页面，没有图片浏览器、媒体控制台或附件控制台。
 - 页面与接口边界见[后台使用](../admin.md)，接口分组与写入流程见[后台实现](../developers/admin.md)。
 
-## 设置文件与七组设置
+## 设置文件与八组设置
 
 | 文件 | 设置组 |
 |---|---|
@@ -155,9 +155,9 @@
 | `src/data/settings/shell.json` | 侧栏设置 |
 | `src/data/settings/home.json` | 首页设置 |
 | `src/data/settings/page.json` | 内页设置 |
-| `src/data/settings/ui.json` | 条目版本、代码显示、排版字体 |
+| `src/data/settings/ui.json` | 条目版本、条目系列、代码显示、排版字体 |
 
-- 七组依次为：站点设置、侧栏设置、首页设置、内页设置、条目版本、代码显示、排版字体。
+- 八组依次为：站点设置、侧栏设置、首页设置、内页设置、条目版本、条目系列、代码显示、排版字体。
 - 解析与默认值在 `src/lib/theme-settings.ts`；字段说明见[主题设置](../settings.md)。
 
 ## 字体清单

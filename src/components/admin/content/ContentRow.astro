@@ -7,6 +7,7 @@ import {
   getAdminContentPublicFallbackLabel
 } from '../../../lib/admin-console/content';
 import { ADMIN_CONTENT_EXPORT_API_PATH } from '../../../lib/admin-console/admin-api-paths';
+import { getAdminContentSeriesBadgeLabel } from '../../../lib/admin-console/content-series';
 import { isAdminContentDeletableCollectionKey } from '../../../lib/admin-console/content-delete-contract';
 import { createWithBase, formatISODate } from '../../../utils/format';
 import AdminIcon from '../AdminIcon.astro';
@@ -51,11 +52,23 @@ const bulkCheckboxLabel = hasBulkIdentity
 const rowDateLabel = item.collection === 'bits' && item.date
   ? formatISODate(item.date)
   : item.dateLabel;
-// 版本标记只属于有版本分组的内容：blog 看 series，projects 看多版本项目。
+// 版本标记只属于有版本分组的内容：blog 看 versionGroup，projects 看多版本项目。
 // 单版本项目不显示版本号与最新/历史，避免把普通项目伪装成版本组。
 const showVersionMeta = item.collection === 'blog'
-  ? Boolean(item.series)
+  ? Boolean(item.versionGroup)
   : item.collection === 'projects' && Boolean(item.projectSlug) && item.versionGroupSize > 1;
+
+// 真系列徽标：与版本标记并列但语义独立，只表达「系列里的第几篇」，不出现最新/历史。
+const seriesBadgeLabel = item.collection === 'blog'
+  && item.series
+  && item.seriesIndex !== null
+  && item.seriesTotal !== null
+  ? getAdminContentSeriesBadgeLabel({
+      name: item.seriesName ?? item.series,
+      index: item.seriesIndex,
+      total: item.seriesTotal
+    })
+  : null;
 
 const getContentPublicLinkLabel = (): string => {
   if (capability.fixedPage) return `转到${capability.label}`;
@@ -119,6 +132,17 @@ const getContentInfoActionLabel = (): string => {
             {item.isLatestVersion ? '最新' : '历史'}
           </span>
         </>
+      ) : null
+    }
+    {
+      seriesBadgeLabel ? (
+        <span
+          class="admin-content-row-mark admin-content-row-mark--series"
+          data-admin-content-row-series={item.series ?? undefined}
+          title={`内容系列 ${item.series}（有序阅读集合，与版本组无关）`}
+        >
+          {seriesBadgeLabel}
+        </span>
       ) : null
     }
     {

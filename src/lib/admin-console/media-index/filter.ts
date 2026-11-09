@@ -7,8 +7,8 @@ const matchesQuery = (item: AdminMediaItem, query: string): boolean => {
   const haystack = [
     item.path,
     item.fileName,
-    item.series,
-    item.seriesLabel,
+    item.versionGroup,
+    item.versionGroupLabel,
     item.version,
     item.versionLabel,
     item.entryId,
@@ -34,7 +34,7 @@ export const filterMediaItems = (
 
   return items.filter((item) => {
     if (filters.collection && item.collection !== filters.collection) return false;
-    if (filters.series && item.series !== filters.series) return false;
+    if (filters.versionGroup && item.versionGroup !== filters.versionGroup) return false;
     // entry 精确到条目目录；同时接受 versionLabel，便于直接用 v1/v2 筛选。
     const matchesEntry = (value: string): boolean =>
       item.entryId === value || item.version === value || item.versionLabel === value;

@@ -1,4 +1,5 @@
 import { getTagKeys, toTagKey } from '../lib/tags';
+import { BLOG_SERIES_TAG_PREFIX } from '../lib/blog-series';
 import { lockScrollFor, unlockScrollFor } from './modal-scroll-lock';
 import {
   createSelectedChipActions,
@@ -45,6 +46,8 @@ type IndexItem = {
   title: string;
   description: string;
   tags: string[];
+  /** 系列键（`series:<slug>`）：与标签共用同一条表达式，索引里单独给出。 */
+  seriesKeys?: string[];
   text: string;
   date: string | null;
 };
@@ -80,6 +83,13 @@ if (!root) {
   const tagModeButtons = Array.from(tagDialog?.querySelectorAll<HTMLButtonElement>('[data-entry-tag-mode]') ?? []);
   /** 标题与标签列表之间的逻辑预览长胶囊（已选标签 + 运算符）。 */
   const tagExpressionEl = tagDialog?.querySelector<HTMLElement>('[data-entry-tag-expression]') ?? null;
+  /**
+   * 空态提示优先复用服务端渲染的原文（有系列区块时文案会不同）；
+   * 没有 dialog 的页面才回落到只提标签的那一句。
+   */
+  const expressionHintTemplate =
+    tagExpressionEl?.querySelector<HTMLElement>('.entry-tags-dialog__expression-hint')?.textContent?.trim()
+    || '选择标签后，这里会实时显示筛选逻辑';
   const tagClearBtn = tagDialog?.querySelector<HTMLButtonElement>('[data-entry-tag-clear]') ?? null;
   const tagEmptyHint = tagDialog?.querySelector<HTMLElement>('[data-entry-tag-empty]') ?? null;
   const tagSwitchOrBtn = tagDialog?.querySelector<HTMLButtonElement>('[data-entry-tag-switch-or]') ?? null;
@@ -499,12 +509,29 @@ if (!root) {
   };
 
   /** `TagFilterHeader` 的 `.page-subtitle` 承载状态文案（描述 + 共 N 篇），控件条只补已选胶囊与动作。 */
+  /** 按表达式键找回 dialog 里的选项按钮（标签与系列都可能命中）。 */
+  const findOptionButton = (key: string): HTMLButtonElement | undefined =>
+    tagOptionButtons().find((item) => (item.dataset.entryTagKey ?? '').trim() === key);
+
   /** 标签 key → 展示标签（优先取 dialog 里的标签文案，回退到 key）。 */
   const labelForTagKey = (key: string) => {
-    const button = tagOptionButtons().find((item) => (item.dataset.entryTagKey ?? '').trim() === key);
-    const raw = button?.querySelector<HTMLElement>('.entry-tag-option__label')?.textContent ?? '';
+    const raw = findOptionButton(key)?.querySelector<HTMLElement>('.entry-tag-option__label')?.textContent ?? '';
     return raw.replace(/^#/, '').trim() || key;
   };
+
+  /**
+   * 系列键与标签键共用同一条表达式：系列只是命名空间化的键（`series:<slug>`）。
+   * 选项按钮上的 `data-entry-option-kind="series"` 是唯一判据，兜底再看键前缀，
+   * 这样深链接里没渲染成选项的键也能按系列显示。
+   */
+  const isSeriesKey = (key: string): boolean => {
+    if ((findOptionButton(key)?.dataset.entryOptionKind ?? '').trim() === 'series') return true;
+    return key.startsWith(BLOG_SERIES_TAG_PREFIX);
+  };
+
+  /** 胶囊文案：系列显示成「系列：名称」，标签保持 `#名称`。 */
+  const displayLabelFor = (key: string): string =>
+    isSeriesKey(key) ? `系列：${labelForTagKey(key)}` : `#${labelForTagKey(key)}`;
 
   /**
    * dialog 里的逻辑预览长胶囊：渲染 `tag-expression.ts` 产出的记号流
@@ -515,7 +542,7 @@ if (!root) {
     if (token.type === 'tag') {
       const chip = document.createElement('span');
       chip.className = 'entry-tags-dialog__expression-chip';
-      chip.textContent = `#${labelForTagKey(token.key)}`;
+      chip.textContent = displayLabelFor(token.key);
       return chip;
     }
     const span = document.createElement('span');
@@ -543,10 +570,10 @@ if (!root) {
     if (tokens.length === 0) {
       const hint = document.createElement('span');
       hint.className = 'entry-tags-dialog__expression-hint';
-      hint.textContent = '选择标签后，这里会实时显示筛选逻辑';
+      hint.textContent = expressionHintTemplate;
       tagExpressionEl.replaceChildren(hint);
       tagExpressionEl.dataset.empty = 'true';
-      tagExpressionEl.setAttribute('aria-label', '标签逻辑预览：暂无');
+      tagExpressionEl.setAttribute('aria-label', '筛选逻辑预览：暂无');
       return;
     }
 
@@ -603,7 +630,7 @@ if (!root) {
 
     tagExpressionEl.setAttribute(
       'aria-label',
-      `标签逻辑预览：${next.map((el) => el.textContent ?? '').join(' ')}`
+      `筛选逻辑预览：${next.map((el) => el.textContent ?? '').join(' ')}`
     );
   };
 
@@ -648,9 +675,10 @@ if (!root) {
       chipHost,
       createSelectedChipBar({
         itemNoun: tagNoun(),
-        labelPrefix: '#',
+        // 前缀由 `labelOf` 一并给出，系列胶囊才能显示成「系列：名称」而不是 `#系列：名称`。
+        labelPrefix: '',
         tokens: buildExpressionTokens(tagExpression),
-        labelOf: labelForTagKey
+        labelOf: displayLabelFor
       }),
       createSelectedChipActions(tagNoun())
     );
@@ -693,7 +721,10 @@ if (!root) {
           buildSearchHaystack([item.title, item.description, item.tags, item.text])
         ])
       );
-      indexTagKeys = new Map(data.map((item) => [item.slug, getTagKeys(item.tags)]));
+      // 系列键与标签键并进同一个键集合：表达式引擎不需要知道两者的区别。
+      indexTagKeys = new Map(
+        data.map((item) => [item.slug, [...getTagKeys(item.tags), ...(item.seriesKeys ?? [])]])
+      );
       setStatus('');
     },
     onRejected: () => {

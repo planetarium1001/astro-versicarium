@@ -297,11 +297,14 @@ type AdminBlogCurrentFrontmatter = {
   tags: unknown;
   draft: unknown;
   slug: unknown;
-  series: unknown;
+  versionGroup: unknown;
   versionLabel: unknown;
   versionName: unknown;
   versionSummary: unknown;
   versionOrder: unknown;
+  series: unknown;
+  seriesName: unknown;
+  seriesOrder: unknown;
   ogImage: unknown;
   ogImageAlt: unknown;
   legacyCover: unknown;
@@ -326,6 +329,7 @@ const buildBlogCurrentFrontmatter = (state: AdminContentSourceState): AdminBlogC
     ? (parseBlogPublishedAtInput(currentPublishedAt) ? currentPublishedAt : undefined)
     : undefined;
   const currentUpdatedAt = getCurrentOptionalTextValue(frontmatter, 'updatedAt');
+  const currentUpdatedAtText = typeof currentUpdatedAt === 'string' ? currentUpdatedAt : undefined;
   const currentUpdatedAtResult = parseBlogDateInput(currentUpdatedAt);
 
   return {
@@ -334,16 +338,20 @@ const buildBlogCurrentFrontmatter = (state: AdminContentSourceState): AdminBlogC
     date: currentDate,
     publishedAt: currentPublishedAt,
     ...(preservedPublishedAt ? { preservedPublishedAt } : {}),
-    updatedAt: currentUpdatedAtResult?.dateText ?? currentUpdatedAt,
-    ...(currentUpdatedAtResult ? { preservedUpdatedAt: currentUpdatedAtResult.dateText } : {}),
+    // 当前值保留原文：作者没改时间点时写回的也是原文，字段矩阵比较后不会产生 diff。
+    updatedAt: currentUpdatedAt,
+    ...(currentUpdatedAtText && currentUpdatedAtResult ? { preservedUpdatedAt: currentUpdatedAtText } : {}),
     tags: getCurrentStringArrayValue(frontmatter, 'tags', []),
     draft: getCurrentBooleanValue(frontmatter, 'draft', false),
     slug: getCurrentOptionalTextValue(frontmatter, 'slug'),
-    series: getCurrentOptionalTextValue(frontmatter, 'series'),
+    versionGroup: getCurrentOptionalTextValue(frontmatter, 'versionGroup'),
     versionLabel: getCurrentOptionalTextValue(frontmatter, 'versionLabel'),
     versionName: getCurrentOptionalTextValue(frontmatter, 'versionName'),
     versionSummary: getCurrentOptionalTextValue(frontmatter, 'versionSummary'),
     versionOrder: getCurrentOptionalTextValue(frontmatter, 'versionOrder'),
+    series: getCurrentOptionalTextValue(frontmatter, 'series'),
+    seriesName: getCurrentOptionalTextValue(frontmatter, 'seriesName'),
+    seriesOrder: getCurrentOptionalTextValue(frontmatter, 'seriesOrder'),
     ogImage: getCurrentOptionalTextValue(frontmatter, 'ogImage') ?? getCurrentOptionalTextValue(frontmatter, 'cover'),
     ogImageAlt: getCurrentOptionalTextValue(frontmatter, 'ogImageAlt'),
     legacyCover: getCurrentOptionalTextValue(frontmatter, 'cover'),
@@ -438,7 +446,9 @@ const buildBlogWritePlan = async (
       : {}),
     ...(shouldPreserveUpdatedAt && current.preservedUpdatedAt
       ? { preservedUpdatedAt: current.preservedUpdatedAt }
-      : {})
+      : {}),
+    // 原文始终传进去：用在「时间点没变就不重写」的判断上，与 payload 是否带该字段无关。
+    ...(current.preservedUpdatedAt ? { originalUpdatedAt: current.preservedUpdatedAt } : {})
   });
   if (!next.frontmatter) {
     return { issues: next.issues, changedFields: [], patches: [] };
@@ -474,11 +484,14 @@ const buildBlogWritePlan = async (
     { field: 'tags', path: ['tags'], currentValue: current.tags, nextValue: next.frontmatter.tags },
     { field: 'draft', path: ['draft'], currentValue: current.draft, nextValue: next.frontmatter.draft },
     { field: 'slug', path: ['slug'], currentValue: current.slug, nextValue: next.frontmatter.slug },
-    { field: 'series', path: ['series'], currentValue: current.series, nextValue: next.frontmatter.series },
+    { field: 'versionGroup', path: ['versionGroup'], currentValue: current.versionGroup, nextValue: next.frontmatter.versionGroup },
     { field: 'versionLabel', path: ['versionLabel'], currentValue: current.versionLabel, nextValue: next.frontmatter.versionLabel },
     { field: 'versionName', path: ['versionName'], currentValue: current.versionName, nextValue: next.frontmatter.versionName },
     { field: 'versionSummary', path: ['versionSummary'], currentValue: current.versionSummary, nextValue: next.frontmatter.versionSummary },
     { field: 'versionOrder', path: ['versionOrder'], currentValue: current.versionOrder, nextValue: next.frontmatter.versionOrder },
+    { field: 'series', path: ['series'], currentValue: current.series, nextValue: next.frontmatter.series },
+    { field: 'seriesName', path: ['seriesName'], currentValue: current.seriesName, nextValue: next.frontmatter.seriesName },
+    { field: 'seriesOrder', path: ['seriesOrder'], currentValue: current.seriesOrder, nextValue: next.frontmatter.seriesOrder },
     { field: 'ogImage', path: ['ogImage'], currentValue: current.ogImage, nextValue: next.frontmatter.ogImage },
     { field: 'ogImageAlt', path: ['ogImageAlt'], currentValue: current.ogImageAlt, nextValue: next.frontmatter.ogImageAlt },
     { field: 'cover', path: ['cover'], currentValue: current.legacyCover, nextValue: undefined },

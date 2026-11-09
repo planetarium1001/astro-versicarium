@@ -270,7 +270,7 @@ const buildBlogContentCreatePlan = async (
 
   const slugIssues = await validateBlogPublicSlug({ publicEntryId }, frontmatter, {
     slugUsage: slugIndex.usage,
-    seriesByEntryId: slugIndex.seriesByEntryId
+    versionGroupByEntryId: slugIndex.versionGroupByEntryId
   });
   if (slugIssues.length > 0) {
     return {

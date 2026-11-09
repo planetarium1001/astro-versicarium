@@ -18,7 +18,7 @@ type FilterOption = {
   label: string;
   count: number;
   collection?: string;
-  series?: string;
+  versionGroup?: string;
   entryId?: string;
 };
 
@@ -31,13 +31,13 @@ type MediaItem = {
   size: number;
   mtimeMs: number | null;
   collection: string;
-  series: string;
-  seriesLabel: string;
+  versionGroup: string;
+  versionGroupLabel: string;
   version: string;
   versionLabel: string;
   entryId: string;
   entryLabel: string;
-  hasSeries: boolean;
+  hasVersionGroup: boolean;
   entryExists: boolean;
   directory: string;
   referenceCount: number;
@@ -48,14 +48,14 @@ type MediaItem = {
 
 type TreeNode = {
   id: string;
-  kind: 'collection' | 'series' | 'version' | 'directory' | 'shared';
+  kind: 'collection' | 'versionGroup' | 'version' | 'directory' | 'shared';
   label: string;
   count: number;
   imageCount: number;
   fileCount: number;
   orphanCount: number;
   collection: string;
-  series: string;
+  versionGroup: string;
   version: string;
   entryId: string;
   directory: string;
@@ -67,7 +67,7 @@ type Breadcrumb = {
   label: string;
   filters: {
     collection?: string;
-    series?: string;
+    versionGroup?: string;
     entry?: string;
     directory?: string;
   };
@@ -81,7 +81,7 @@ type ListResult = {
   tree: TreeNode[];
   breadcrumb: Breadcrumb[];
   options?: {
-    series?: FilterOption[];
+    versionGroups?: FilterOption[];
     versions?: FilterOption[];
     directories?: FilterOption[];
   };
@@ -89,7 +89,7 @@ type ListResult = {
 
 type State = {
   collection: string;
-  series: string;
+  versionGroup: string;
   entry: string;
   dir: string;
   ref: '' | ReferenceStatus;
@@ -224,7 +224,7 @@ class ResourceCombobox {
     return this.options
       .map((option) => ({
         option,
-        score: fuzzyScore(`${option.label} ${option.series ?? ''} ${option.entryId ?? ''}`, query)
+        score: fuzzyScore(`${option.label} ${option.versionGroup ?? ''} ${option.entryId ?? ''}`, query)
       }))
       .filter((entry) => entry.score >= 0)
       .sort((left, right) => right.score - left.score || left.option.label.localeCompare(right.option.label, 'zh-CN'))
@@ -252,7 +252,7 @@ class ResourceCombobox {
         label.textContent = option.label;
         const meta = document.createElement('span');
         meta.className = 'resources-combobox__option-meta';
-        meta.textContent = [option.series, option.entryId, `${option.count} 个文件`].filter(Boolean).join(' · ');
+        meta.textContent = [option.versionGroup, option.entryId, `${option.count} 个文件`].filter(Boolean).join(' · ');
         item.append(label, meta);
         item.addEventListener('mousedown', (event) => {
           event.preventDefault();
@@ -425,7 +425,8 @@ const init = () => {
     const type = params.get('type');
     return {
       collection: params.get('collection') ?? '',
-      series: params.get('series') ?? '',
+      // 兼容旧的 `?series=` 深链：媒体库以前把「版本组」叫 series，改名后旧链接继续可用。
+      versionGroup: params.get('versionGroup') ?? params.get('series') ?? '',
       entry: params.get('entry') ?? params.get('version') ?? '',
       dir: params.get('dir') ?? '',
       ref: (params.get('ref') ?? '') as State['ref'],
@@ -448,7 +449,7 @@ const init = () => {
     const url = new URL(window.location.href);
     const keys: Array<[string, string]> = [
       ['collection', state.collection],
-      ['series', state.series],
+      ['versionGroup', state.versionGroup],
       ['entry', state.entry],
       ['dir', state.dir],
       ['ref', state.ref],
@@ -463,6 +464,8 @@ const init = () => {
       else url.searchParams.delete(key);
     }
     url.searchParams.delete('version');
+    // 旧参数不再回写，避免同一个筛选在地址栏出现两套键。
+    url.searchParams.delete('series');
     history.replaceState(null, '', `${url.pathname}${url.search}`);
   };
 
@@ -485,14 +488,14 @@ const init = () => {
     resultsEl.dataset.view = state.view;
   };
 
-  const seriesCombo = new ResourceCombobox(
-    root.querySelector<HTMLElement>('[data-resources-combobox="series"]')!,
-    '系列',
+  const versionGroupCombo = new ResourceCombobox(
+    root.querySelector<HTMLElement>('[data-resources-combobox="versionGroup"]')!,
+    '版本组',
     (option) => {
       state = {
         ...state,
         collection: option?.collection ?? state.collection,
-        series: option?.value ?? '',
+        versionGroup: option?.value ?? '',
         entry: '',
         dir: '',
         page: 1
@@ -507,7 +510,7 @@ const init = () => {
       state = {
         ...state,
         collection: option?.collection ?? state.collection,
-        series: option?.series ?? state.series,
+        versionGroup: option?.versionGroup ?? state.versionGroup,
         entry: option?.value ?? '',
         dir: '',
         page: 1
@@ -522,7 +525,7 @@ const init = () => {
       state = {
         ...state,
         collection: option?.collection ?? state.collection,
-        series: option?.series ?? state.series,
+        versionGroup: option?.versionGroup ?? state.versionGroup,
         entry: option?.entryId ?? state.entry,
         dir: option?.value ?? '',
         page: 1
@@ -533,17 +536,17 @@ const init = () => {
 
   const syncComboboxes = () => {
     const options = lastResult?.options;
-    const seriesOptions = (options?.series ?? []).filter((option) =>
+    const versionGroupOptions = (options?.versionGroups ?? []).filter((option) =>
       !state.collection || option.collection === state.collection
     );
     const entryOptions = (options?.versions ?? []).filter((option) =>
       (!state.collection || option.collection === state.collection)
-      && (!state.series || option.series === state.series)
+      && (!state.versionGroup || option.versionGroup === state.versionGroup)
     );
     const directoryOptions = (options?.directories ?? []).filter((option) =>
       (!state.entry || option.entryId === state.entry)
     );
-    seriesCombo.setOptions(seriesOptions, state.series);
+    versionGroupCombo.setOptions(versionGroupOptions, state.versionGroup);
     entryCombo.setOptions(entryOptions, state.entry);
     directoryCombo.setOptions(directoryOptions, state.dir);
   };
@@ -552,8 +555,8 @@ const init = () => {
     state = {
       ...state,
       collection: node.collection,
-      series: node.kind === 'collection' || node.kind === 'shared' ? '' : node.series,
-      entry: node.kind === 'series' || node.kind === 'collection' ? '' : node.entryId,
+      versionGroup: node.kind === 'collection' || node.kind === 'shared' ? '' : node.versionGroup,
+      entry: node.kind === 'versionGroup' || node.kind === 'collection' ? '' : node.entryId,
       dir: node.kind === 'directory' ? node.directory : '',
       page: 1
     };
@@ -561,8 +564,8 @@ const init = () => {
   };
 
   const isNodeActive = (node: TreeNode): boolean => {
-    if (node.kind === 'collection') return state.collection === node.collection && !state.series && !state.entry && !state.dir;
-    if (node.kind === 'series') return state.collection === node.collection && state.series === node.series && !state.entry && !state.dir;
+    if (node.kind === 'collection') return state.collection === node.collection && !state.versionGroup && !state.entry && !state.dir;
+    if (node.kind === 'versionGroup') return state.collection === node.collection && state.versionGroup === node.versionGroup && !state.entry && !state.dir;
     if (node.kind === 'shared') return state.collection === node.collection && state.entry === SHARED_ENTRY_ID && !state.dir;
     if (node.kind === 'version') return state.entry === node.entryId && state.dir === '';
     return state.entry === node.entryId && state.dir === node.directory;
@@ -608,7 +611,7 @@ const init = () => {
     allButton.dataset.active = String(!state.collection);
     allButton.innerHTML = '<span class="resources-tree__swatch"></span><span class="resources-tree__label">全部资源</span>';
     allButton.addEventListener('click', () => {
-      state = { ...state, collection: '', series: '', entry: '', dir: '', page: 1 };
+      state = { ...state, collection: '', versionGroup: '', entry: '', dir: '', page: 1 };
       void load();
     });
     allRow.append(allPlaceholder, allButton);
@@ -685,7 +688,7 @@ const init = () => {
         state = {
           ...state,
           collection: item.filters.collection ?? '',
-          series: item.filters.series ?? '',
+          versionGroup: item.filters.versionGroup ?? '',
           entry: item.filters.entry ?? '',
           dir: item.filters.directory ?? '',
           page: 1
@@ -795,8 +798,8 @@ const init = () => {
     }
     const meta = detailDialog.querySelector<HTMLElement>('[data-resources-detail-meta]')!;
     meta.replaceChildren();
-    const scopeLabel = item.hasSeries
-      ? `${getCollectionLabel(item.collection)} / ${item.seriesLabel} / ${item.versionLabel}`
+    const scopeLabel = item.hasVersionGroup
+      ? `${getCollectionLabel(item.collection)} / ${item.versionGroupLabel} / ${item.versionLabel}`
       : `${getCollectionLabel(item.collection)} / ${item.entryLabel}`;
     const rows: Array<[string, string]> = [
       ['所属', scopeLabel],
@@ -887,7 +890,7 @@ const init = () => {
         title.textContent = item.fileName;
         const owner = document.createElement('div');
         owner.className = 'resources-row__owner';
-        owner.textContent = `${getCollectionLabel(item.collection)} / ${item.seriesLabel} / ${item.versionLabel} / ${item.directory || '根目录'}`;
+        owner.textContent = `${getCollectionLabel(item.collection)} / ${item.versionGroupLabel} / ${item.versionLabel} / ${item.directory || '根目录'}`;
         main.append(title, owner);
         const meta = document.createElement('div');
         meta.className = 'resources-row__meta';
@@ -927,7 +930,7 @@ const init = () => {
     syncUrl();
     const params = new URLSearchParams();
     if (state.collection) params.set('collection', state.collection);
-    if (state.series) params.set('series', state.series);
+    if (state.versionGroup) params.set('versionGroup', state.versionGroup);
     if (state.entry) params.set('entry', state.entry);
     if (state.dir) params.set('dir', state.dir);
     if (state.ref) params.set('ref', state.ref);
@@ -1019,7 +1022,7 @@ const init = () => {
   });
 
   collectionEl.addEventListener('change', () => {
-    state = { ...state, collection: collectionEl.value, series: '', entry: '', dir: '', page: 1 };
+    state = { ...state, collection: collectionEl.value, versionGroup: '', entry: '', dir: '', page: 1 };
     void load();
   });
   referenceEl.addEventListener('change', () => {
@@ -1033,7 +1036,7 @@ const init = () => {
   });
   root.querySelectorAll<HTMLElement>('[data-resources-reset]').forEach((button) => {
     button.addEventListener('click', () => {
-      state = { collection: '', series: '', entry: '', dir: '', ref: '', type: '', from: '', to: '', q: '', page: 1, view: state.view };
+      state = { collection: '', versionGroup: '', entry: '', dir: '', ref: '', type: '', from: '', to: '', q: '', page: 1, view: state.view };
       void load();
     });
   });

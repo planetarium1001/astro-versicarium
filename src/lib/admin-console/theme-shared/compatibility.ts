@@ -160,6 +160,14 @@ const fillAdminThemeSettingsUiCompatibilityDefaults = (
     next = { ...next, fontCoverage: canonicalUi.fontCoverage };
   }
 
+  // 条目系列的两个顶层标量（呈现档位 / 序号开关）也是后加的：旧 ui.json 缺键时补默认，
+  // 否则 schema-mismatch 比对会把「缺字段」当成损坏配置，后台直接锁死不能保存。
+  for (const key of ['entrySeriesMode', 'entrySeriesOrder'] as const) {
+    if (canonicalUi[key] !== undefined && next[key] === undefined) {
+      next = { ...next, [key]: canonicalUi[key] };
+    }
+  }
+
   // 旧的条目格式组合器已移除：保留该键会被误判为 schema-mismatch，读取时直接忽略，
   // 下次保存会自然把它从 ui.json 里去掉。
   if ('entryFormat' in next) {

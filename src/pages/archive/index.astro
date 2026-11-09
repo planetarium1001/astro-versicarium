@@ -3,7 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import EntryTitleLine from '../../components/EntryTitleLine.astro';
 import TagFilterHeader from '../../components/TagFilterHeader.astro';
 import { createWithBase, getVisibleblogs, getVisibleDevlogs } from '../../lib/content';
-import { getArchiveRows, groupArchiveRows } from '../../lib/archive';
+import { collectArchiveSeriesOptions, getArchiveRows, groupArchiveRows } from '../../lib/archive';
 import { buildArchiveScopePills } from '../../lib/archive-scope-pills';
 import { collectTagScopedSummary, type TagSummary } from '../../lib/tags';
 import { getThemeSettings } from '../../lib/theme-settings';
@@ -68,6 +68,9 @@ const scopePills = buildArchiveScopePills({
 });
 
 const tagPayload = { blog: blogTags, projects: projectTags, devlog: devlogTags, all: allTags };
+
+/** 归档的系列筛选项与计数口径由 `collectArchiveSeriesOptions` 统一给出，与行渲染共用同一份 rows。 */
+const seriesOptions = collectArchiveSeriesOptions(rows);
 ---
 
 <BaseLayout title={pageTitleText} description={pageDescription}>
@@ -90,6 +93,7 @@ const tagPayload = { blog: blogTags, projects: projectTags, devlog: devlogTags, 
       searchAriaLabel={`搜索${pageTitleText}`}
       showRss={page.listRss.enabled !== false && page.listRss.archive !== false}
       tagOptions={allTags}
+      seriesOptions={seriesOptions}
     />
   </div>
 
@@ -144,8 +148,11 @@ const tagPayload = { blog: blogTags, projects: projectTags, devlog: devlogTags, 
                   kind={row.kind}
                   title={row.title}
                   project={row.project ?? null}
-                  versionLabel={row.kind === 'blog' && !row.series ? null : row.versionLabel ?? null}
+                  versionLabel={row.kind === 'blog' && !row.versionGroup ? null : row.versionLabel ?? null}
                   versionName={row.versionName ?? null}
+                  seriesName={row.seriesName ?? null}
+                  seriesIndex={row.seriesIndex ?? null}
+                  seriesTotal={row.seriesTotal ?? null}
                   titleTag="span"
                 />
               </a>

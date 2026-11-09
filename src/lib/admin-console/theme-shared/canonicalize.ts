@@ -1,6 +1,10 @@
 import type { EditableThemeSettings, SiteSocialIconKey } from '../../theme-settings';
 import { asThemeFontIdForRole } from '../../fonts/registry';
-import { normalizeEntryVersionNameMode } from '../../entry-display';
+import {
+  normalizeEntrySeriesMode,
+  normalizeEntrySeriesOrder,
+  normalizeEntryVersionNameMode
+} from '../../entry-display';
 import {
   normalizeHeroImageSrc as normalizeAdminHeroImageSrc,
   normalizeSiteFaviconPath as normalizeAdminSiteFaviconPath,
@@ -407,7 +411,11 @@ export const canonicalizeAdminThemeSettings = (
         brand: asThemeFontIdForRole('brand', rawTypographyBrand) ?? ADMIN_TYPOGRAPHY_DEFAULT.brand
       },
       fontCoverage: isAdminFontCoverage(ui.fontCoverage) ? ui.fontCoverage : ADMIN_FONT_COVERAGE_DEFAULT,
-      entryVersionName: normalizeEntryVersionNameMode(ui.entryVersionName)
+      entryVersionName: normalizeEntryVersionNameMode(ui.entryVersionName),
+      // 系列呈现的两个键与版本名称同构：白名单归一化，缺键 / 未知值都落回默认档，
+      // 这样后台拿到的 snapshot 永远是四档之一，表单与预览不必再判空。
+      entrySeriesMode: normalizeEntrySeriesMode(ui.entrySeriesMode),
+      entrySeriesOrder: normalizeEntrySeriesOrder(ui.entrySeriesOrder)
     }
   };
 };
@@ -490,6 +498,8 @@ export const createAdminWritableThemeSettingsGroups = (
     layout: { ...settings.ui.layout },
     typography: { ...settings.ui.typography },
     fontCoverage: settings.ui.fontCoverage,
-    entryVersionName: settings.ui.entryVersionName
+    entryVersionName: settings.ui.entryVersionName,
+    entrySeriesMode: settings.ui.entrySeriesMode,
+    entrySeriesOrder: settings.ui.entrySeriesOrder
   }
 });

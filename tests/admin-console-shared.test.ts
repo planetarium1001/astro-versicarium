@@ -23,7 +23,11 @@ import {
   ADMIN_SHELL_TITLE_NARROW_MAX_LENGTH
 } from '../src/lib/admin-console/theme-shared';
 import { getEditableThemeSettingsPayload, type EditableThemeSettings } from '../src/lib/theme-settings';
-import { DEFAULT_ENTRY_VERSION_NAME_MODE } from '../src/lib/entry-display';
+import {
+  DEFAULT_ENTRY_SERIES_MODE,
+  DEFAULT_ENTRY_SERIES_ORDER,
+  DEFAULT_ENTRY_VERSION_NAME_MODE
+} from '../src/lib/entry-display';
 import {
   buildSearchHaystack,
   getBitsAvatarLocalFilePath,
@@ -665,6 +669,101 @@ describe('条目版本名称设置', () => {
 
     const paths = validateAdminThemeSettings(invalid).map((issue) => issue.path);
     expect(paths).toContain('ui.entryVersionName');
+  });
+});
+
+describe('条目系列设置', () => {
+  it('缺省时补齐默认档位与默认序号开关', () => {
+    const raw = baseSettings() as Record<string, any>;
+    delete raw.ui.entrySeriesMode;
+    delete raw.ui.entrySeriesOrder;
+
+    const canonical = canonicalizeAdminThemeSettings(raw);
+    expect(canonical.ui.entrySeriesMode).toBe(DEFAULT_ENTRY_SERIES_MODE);
+    expect(canonical.ui.entrySeriesOrder).toBe(DEFAULT_ENTRY_SERIES_ORDER);
+    expect(DEFAULT_ENTRY_SERIES_MODE).toBe('meta');
+    expect(DEFAULT_ENTRY_SERIES_ORDER).toBe('show');
+  });
+
+  it('四档与两种序号取值原样保留', () => {
+    for (const mode of ['hidden', 'meta', 'pill', 'prefix'] as const) {
+      const raw = baseSettings() as Record<string, any>;
+      raw.ui.entrySeriesMode = mode;
+      expect(canonicalizeAdminThemeSettings(raw).ui.entrySeriesMode).toBe(mode);
+    }
+
+    for (const order of ['show', 'hide'] as const) {
+      const raw = baseSettings() as Record<string, any>;
+      raw.ui.entrySeriesOrder = order;
+      expect(canonicalizeAdminThemeSettings(raw).ui.entrySeriesOrder).toBe(order);
+    }
+  });
+
+  it('canonical snapshot 与 writable ui 分组可往返', () => {
+    const canonical = canonicalizeAdminThemeSettings({
+      ...baseSettings(),
+      ui: { ...baseSettings().ui, entrySeriesMode: 'pill', entrySeriesOrder: 'hide' }
+    });
+    const groups = createAdminWritableThemeSettingsGroups(canonical);
+    expect(groups.ui.entrySeriesMode).toBe('pill');
+    expect(groups.ui.entrySeriesOrder).toBe('hide');
+
+    const roundTrip = canonicalizeAdminThemeSettings({
+      ...canonical,
+      ui: {
+        ...canonical.ui,
+        entrySeriesMode: groups.ui.entrySeriesMode,
+        entrySeriesOrder: groups.ui.entrySeriesOrder
+      }
+    });
+    expect(roundTrip.ui.entrySeriesMode).toBe('pill');
+    expect(roundTrip.ui.entrySeriesOrder).toBe('hide');
+  });
+
+  it('未知取值归一化为默认并触发 canonical mismatch', () => {
+    const raw = baseSettings() as Record<string, any>;
+    raw.ui.entrySeriesMode = 'latest';
+    raw.ui.entrySeriesOrder = 'always';
+
+    const canonical = canonicalizeAdminThemeSettings(raw);
+    expect(canonical.ui.entrySeriesMode).toBe(DEFAULT_ENTRY_SERIES_MODE);
+    expect(canonical.ui.entrySeriesOrder).toBe(DEFAULT_ENTRY_SERIES_ORDER);
+
+    const mismatchPaths = createAdminThemeSettingsCanonicalMismatchIssues(raw, canonical).map(
+      (issue) => issue.path
+    );
+    expect(mismatchPaths).toContain('ui.entrySeriesMode');
+    expect(mismatchPaths).toContain('ui.entrySeriesOrder');
+  });
+
+  it('旧 ui.json 缺这两个键时由兼容层补默认，不产生 canonical mismatch', () => {
+    const raw = baseSettings() as Record<string, any>;
+    delete raw.ui.entrySeriesMode;
+    delete raw.ui.entrySeriesOrder;
+
+    const canonical = canonicalizeAdminThemeSettings(raw);
+    // 兼容层在比对前补默认值：缺键属于「还没保存过新字段」，不是损坏配置。
+    const comparable = fillAdminThemeSettingsCompatibilityDefaults(raw, canonical) as Record<string, any>;
+
+    expect(comparable.ui.entrySeriesMode).toBe(DEFAULT_ENTRY_SERIES_MODE);
+    expect(comparable.ui.entrySeriesOrder).toBe(DEFAULT_ENTRY_SERIES_ORDER);
+
+    const mismatchPaths = createAdminThemeSettingsCanonicalMismatchIssues(comparable, canonical).map(
+      (issue) => issue.path
+    );
+    expect(mismatchPaths).not.toContain('ui.entrySeriesMode');
+    expect(mismatchPaths).not.toContain('ui.entrySeriesOrder');
+  });
+
+  it('共享校验把错误定位到 ui.entrySeriesMode 与 ui.entrySeriesOrder', () => {
+    const invalid = {
+      ...baseSettings(),
+      ui: { ...baseSettings().ui, entrySeriesMode: 'latest', entrySeriesOrder: 'always' }
+    } as unknown as EditableThemeSettings;
+
+    const paths = validateAdminThemeSettings(invalid).map((issue) => issue.path);
+    expect(paths).toContain('ui.entrySeriesMode');
+    expect(paths).toContain('ui.entrySeriesOrder');
   });
 });
 

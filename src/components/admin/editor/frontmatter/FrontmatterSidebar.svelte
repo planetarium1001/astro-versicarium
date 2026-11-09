@@ -7,7 +7,14 @@ import type {
 } from '../../../../lib/admin-console/content-editor-payload';
 import type { BitsCardAuthorInput } from '../../../../lib/bits-card-view-model';
 import { getAdminImageFieldPreviewSrc } from '../../../../lib/admin-console/image-params';
-import { parseBlogDateInput } from '../../../../utils/date-only';
+import {
+  formatSiteNowDateTimeText,
+  formatSiteTodayDateText,
+  formatSiteTodayDateTimeText,
+  getDateTimeInputErrorMessage
+} from '../../../../lib/admin-console/datetime-field';
+import { parseContentDateInput } from '../../../../utils/date-only';
+import AdminDateTimeField from './AdminDateTimeField.svelte';
 import AdminEditorIcon from '../shared/AdminEditorIcon.svelte';
 import FrontmatterTagsInput from './FrontmatterTagsInput.svelte';
 import {
@@ -77,61 +84,33 @@ const getFieldDescribedBy = (
 
 const base = import.meta.env.BASE_URL ?? '/';
 
-const padDatePart = (value: number): string => String(value).padStart(2, '0');
-
-const formatLocalDateText = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = padDatePart(date.getMonth() + 1);
-  const day = padDatePart(date.getDate());
-  return `${year}-${month}-${day}`;
-};
-
-const getLocalDateText = (): string => formatLocalDateText(new Date());
-
-const getLocalTimezoneOffsetText = (date: Date): string => {
-  const offsetMinutes = -date.getTimezoneOffset();
-  const sign = offsetMinutes >= 0 ? '+' : '-';
-  const absoluteOffsetMinutes = Math.abs(offsetMinutes);
-  const hours = padDatePart(Math.floor(absoluteOffsetMinutes / 60));
-  const minutes = padDatePart(absoluteOffsetMinutes % 60);
-  return `${sign}${hours}:${minutes}`;
-};
-
-const formatLocalDateTimeWithZoneText = (date: Date): string => {
-  const hours = padDatePart(date.getHours());
-  const minutes = padDatePart(date.getMinutes());
-  const seconds = padDatePart(date.getSeconds());
-  return `${formatLocalDateText(date)}T${hours}:${minutes}:${seconds}${getLocalTimezoneOffsetText(date)}`;
-};
-
-const getPublishedAtResult = (value: string) => {
-  const result = parseBlogDateInput(value);
-  return result?.publishedAt ? result : null;
-};
-
+/**
+ * 时间字段一律按站点时区取值与展示：后台可能在不等于站点时区的浏览器里打开，
+ * 早先按浏览器本地时区生成 `...T...+08:00` 会把机器写法带进正文。
+ */
 const getPublishedAtSyncDate = (value: string): string =>
-  getPublishedAtResult(value)?.dateText ?? '';
+  parseContentDateInput(value)?.dateText ?? '';
 
 const getEffectivePublishDateResult = (date: string, publishedAt: string) =>
-  getPublishedAtResult(publishedAt) ?? parseBlogDateInput(date);
+  parseContentDateInput(publishedAt) ?? parseContentDateInput(date);
 
 const getPublishedAtInputIssue = (value: string): string =>
-  value.trim() && !getPublishedAtResult(value)
-    ? '需填写带时区的合法 ISO 日期时间'
+  value.trim() && !parseContentDateInput(value)
+    ? getDateTimeInputErrorMessage()
     : '';
 
 const getUpdatedAtInputIssue = (value: string, date: string, publishedAt: string): string => {
   const trimmed = value.trim();
   if (!trimmed) return '';
 
-  const result = parseBlogDateInput(trimmed);
+  const result = parseContentDateInput(trimmed);
   if (!result) {
-    return '需填写 YYYY-MM-DD 或带时区的合法 ISO 日期时间';
+    return getDateTimeInputErrorMessage();
   }
 
   const publishDateResult = getEffectivePublishDateResult(date, publishedAt);
   return publishDateResult && result.date.valueOf() < publishDateResult.date.valueOf()
-    ? '更新日期不能早于发布日期'
+    ? '更新时间不能早于发布日期'
     : '';
 };
 
@@ -140,7 +119,8 @@ const publishedAtSyncDate = $derived(
 );
 const publishedAtSyncMessage = $derived(
   isBlogEditorValues(value) && publishedAtSyncDate && value.date !== publishedAtSyncDate
-    ? `发布日期与详细时间不一致，保存后将自动更新发布日期为 ${publishedAtSyncDate}`
+    // 保存流程不会替作者改发布日期（date 与 publishedAt 相互独立），这里只提示不一致。
+    ? `发布日期 ${value.date || '（空）'} 与详细时间的日期 ${publishedAtSyncDate} 不一致，请确认`
     : ''
 );
 const publishedAtIssue = $derived(
@@ -153,14 +133,15 @@ const updatedAtIssue = $derived(
 const setPublishedAtNow = () => {
   if (!isBlogEditorValues(value)) return;
   const now = new Date();
-  value.date = formatLocalDateText(now);
-  value.publishedAt = formatLocalDateTimeWithZoneText(now);
+  value.date = formatSiteTodayDateText(now);
+  value.publishedAt = formatSiteNowDateTimeText(now);
   onDirty?.();
 };
 
 const setUpdatedAtToday = () => {
   if (!isBlogEditorValues(value)) return;
-  value.updatedAt = getLocalDateText();
+  // 只换日期；原文已有时刻时保留该时刻，避免一键操作静默丢掉精度。
+  value.updatedAt = formatSiteTodayDateTimeText(value.updatedAt, new Date());
   onDirty?.();
 };
 
@@ -237,7 +218,7 @@ const bitsAuthorAvatarFallback = $derived(
           <p id={getFieldIssueId('date')} class="admin-content-editor__error" hidden={!getIssue('date')}>{getIssue('date')}</p>
         </div>
 
-        <div class="admin-field admin-content-editor__field" class:is-invalid={Boolean(publishedAtIssue)}>
+        <div class="admin-field admin-content-editor__field admin-field--full" class:is-invalid={Boolean(publishedAtIssue)}>
           <div class="admin-editor-frontmatter__label-row admin-editor-frontmatter__label-row--with-action">
             <span class="admin-editor-frontmatter__label-help">
               <label class="admin-field__label" for="admin-blog-published-at">详细时间 publishedAt（可选）</label>
@@ -250,7 +231,7 @@ const bitsAuthorAvatarFallback = $derived(
                 <AdminEditorIcon name="info" size={13} strokeWidth={2} />
               </button>
               <span id="admin-blog-published-at-tip" class="admin-editor-frontmatter__tooltip" role="tooltip">
-                按 ISO 日期时间填写，需包含时区，日期需与发布日期一致；留空时仅使用发布日期。
+                支持 2026-11-09、2026-11-09 14:30、2026-11-09T14:30、2026-11-09T06:30Z 等写法，无时区按站点时区解释；日期需与发布日期一致，留空时仅使用发布日期。
               </span>
             </span>
             <button
@@ -262,16 +243,14 @@ const bitsAuthorAvatarFallback = $derived(
               设为当前
             </button>
           </div>
-          <input
+          <AdminDateTimeField
             id="admin-blog-published-at"
-            class="admin-field__control"
             name="publishedAt"
-            type="text"
             bind:value={value.publishedAt}
-            placeholder="2024-11-23T18:00:00+08:00"
-            aria-invalid={publishedAtIssue ? 'true' : undefined}
-            aria-describedby={getFieldDescribedBy('publishedAt', publishedAtIssue, ['admin-blog-published-at-tip'])}
             {disabled}
+            invalid={Boolean(publishedAtIssue)}
+            ariaDescribedby={getFieldDescribedBy('publishedAt', publishedAtIssue, ['admin-blog-published-at-tip'])}
+            onDirty={onDirty}
           />
         </div>
 
@@ -298,7 +277,7 @@ const bitsAuthorAvatarFallback = $derived(
           <p id={getFieldIssueId('badge')} class="admin-content-editor__error" hidden={!getIssue('badge')}>{getIssue('badge')}</p>
         </label>
 
-        <div class="admin-field admin-content-editor__field" class:is-invalid={Boolean(updatedAtIssue)}>
+        <div class="admin-field admin-content-editor__field admin-field--full" class:is-invalid={Boolean(updatedAtIssue)}>
           <div class="admin-editor-frontmatter__label-row admin-editor-frontmatter__label-row--with-action">
             <span class="admin-editor-frontmatter__label-help">
               <label class="admin-field__label" for="admin-blog-updated-at">更新日期 updatedAt（可选）</label>
@@ -311,7 +290,7 @@ const bitsAuthorAvatarFallback = $derived(
                 <AdminEditorIcon name="info" size={13} strokeWidth={2} />
               </button>
               <span id="admin-blog-updated-at-tip" class="admin-editor-frontmatter__tooltip" role="tooltip">
-                支持 YYYY-MM-DD 或 ISO 日期时间，需包含时区；填写后文章日期显示为“更新于：YYYY-MM-DD”。
+                与详细时间同样的写法，可精确到分钟；填写后文章日期显示为“更新于：YYYY-MM-DD”。
               </span>
             </span>
             <button
@@ -323,16 +302,14 @@ const bitsAuthorAvatarFallback = $derived(
               设为今日
             </button>
           </div>
-          <input
+          <AdminDateTimeField
             id="admin-blog-updated-at"
-            class="admin-field__control"
             name="updatedAt"
-            type="text"
             bind:value={value.updatedAt}
-            placeholder="2026-01-02"
-            aria-invalid={updatedAtIssue ? 'true' : undefined}
-            aria-describedby={getFieldDescribedBy('updatedAt', updatedAtIssue, ['admin-blog-updated-at-tip'])}
             {disabled}
+            invalid={Boolean(updatedAtIssue)}
+            ariaDescribedby={getFieldDescribedBy('updatedAt', updatedAtIssue, ['admin-blog-updated-at-tip'])}
+            onDirty={onDirty}
           />
         </div>
 
@@ -375,8 +352,8 @@ const bitsAuthorAvatarFallback = $derived(
 
       <div class="admin-field-row">
         <label class="admin-field admin-content-editor__field">
-          <span class="admin-field__label" title="同一系列的版本共用这个标识">系列 series</span>
-          <input class="admin-field__control" name="series" type="text" bind:value={value.series} spellcheck="false" {disabled} />
+          <span class="admin-field__label" title="同一内容的多个版本共用这个标识，决定最新版与历史版">版本线 versionGroup</span>
+          <input class="admin-field__control" name="versionGroup" type="text" bind:value={value.versionGroup} spellcheck="false" placeholder="theme-introduction" {disabled} />
         </label>
         <label class="admin-field admin-content-editor__field">
           <span class="admin-field__label" title="数字越大越新，同日期时用于排序">版本顺序 versionOrder</span>
@@ -398,6 +375,59 @@ const bitsAuthorAvatarFallback = $derived(
       <label class="admin-field admin-content-editor__field">
         <span class="admin-field__label" title="显示在版本历史抽屉">版本摘要 versionSummary</span>
         <textarea class="admin-field__control" name="versionSummary" rows="2" bind:value={value.versionSummary} {disabled}></textarea>
+      </label>
+
+      <div class="admin-field-row">
+        <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('series'))}>
+          <span class="admin-field__label" title="系列是有序阅读集合：成员是并列的独立文章，与版本无关">系列 series</span>
+          <input
+            class="admin-field__control"
+            name="series"
+            type="text"
+            bind:value={value.series}
+            spellcheck="false"
+            placeholder="pc-build"
+            aria-invalid={getIssue('series') ? 'true' : undefined}
+            aria-describedby={getFieldDescribedBy('series')}
+            {disabled}
+          />
+          <p id={getFieldIssueId('series')} class="admin-content-editor__error" hidden={!getIssue('series')}>{getIssue('series')}</p>
+        </label>
+        <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('seriesOrder'))}>
+          <span class="admin-field__label" title="越小越靠前；留空按发布日期排在系列末尾">系列次序 seriesOrder</span>
+          <input
+            class="admin-field__control"
+            name="seriesOrder"
+            type="number"
+            min="0"
+            step="1"
+            value={value.seriesOrder}
+            aria-invalid={getIssue('seriesOrder') ? 'true' : undefined}
+            aria-describedby={getFieldDescribedBy('seriesOrder')}
+            {disabled}
+            oninput={(event) => {
+              // 不用 bind:value：Svelte 会把 number 输入绑定成 number，而编辑器字段袋全是字符串。
+              value.seriesOrder = event.currentTarget.value;
+              onDirty?.();
+            }}
+          />
+          <p id={getFieldIssueId('seriesOrder')} class="admin-content-editor__error" hidden={!getIssue('seriesOrder')}>{getIssue('seriesOrder')}</p>
+        </label>
+      </div>
+
+      <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('seriesName'))}>
+        <span class="admin-field__label" title="列表与文章页展示的系列名；留空回退 series 键">系列名称 seriesName</span>
+        <input
+          class="admin-field__control"
+          name="seriesName"
+          type="text"
+          bind:value={value.seriesName}
+          placeholder="折腾主机"
+          aria-invalid={getIssue('seriesName') ? 'true' : undefined}
+          aria-describedby={getFieldDescribedBy('seriesName')}
+          {disabled}
+        />
+        <p id={getFieldIssueId('seriesName')} class="admin-content-editor__error" hidden={!getIssue('seriesName')}>{getIssue('seriesName')}</p>
       </label>
 
       <label class="admin-field admin-content-editor__field" class:is-invalid={Boolean(getIssue('ogImage'))}>

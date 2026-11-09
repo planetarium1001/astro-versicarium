@@ -161,7 +161,9 @@ if (!root) {
       inputTypographyMono: controls.inputTypographyMono,
       inputTypographyBrand: controls.inputTypographyBrand,
       inputFontCoverage: controls.inputFontCoverage,
-      inputEntryVersionName: controls.inputEntryVersionName
+      inputEntryVersionName: controls.inputEntryVersionName,
+      inputEntrySeriesMode: controls.inputEntrySeriesMode,
+      inputEntrySeriesOrder: controls.inputEntrySeriesOrder
     });
 
     const getNavFieldTarget = (

@@ -42,7 +42,7 @@ describe('ArticleVersionNotice：版本提示结构与文案', () => {
     expect(source).toContain("'当前版本' : '历史版本'");
     expect(source).toContain('{currentVersion.versionLabel}');
     expect(source).toContain('{currentVersion.date}');
-    expect(source).toContain('这是本系列的最新内容。');
+    expect(source).toContain('这是该版本组的最新内容。');
     expect(source).toContain('该版本已归档，部分内容可能过时。');
     expect(source).toContain('article-version-notice__latest');
     expect(source).toContain('查看最新版');

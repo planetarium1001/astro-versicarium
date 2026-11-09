@@ -295,7 +295,7 @@
 }
 
 .resources-tree__node[data-kind='collection'] .resources-tree__swatch { background: var(--accent); }
-.resources-tree__node[data-kind='series'] .resources-tree__swatch { background: var(--muted); }
+.resources-tree__node[data-kind='versionGroup'] .resources-tree__swatch { background: var(--muted); }
 .resources-tree__node[data-kind='version'] .resources-tree__swatch { background: var(--admin-border-strong); }
 
 .resources-tree__label {

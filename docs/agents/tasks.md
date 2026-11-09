@@ -11,9 +11,9 @@
   - `src/data/settings/shell.json`：侧栏站点名、导航
   - `src/data/settings/home.json`：首页导语与主图
   - `src/data/settings/page.json`：列表页标题与分页
-  - `src/data/settings/ui.json`：排版、浏览数据、阅读模式
+  - `src/data/settings/ui.json`：排版、条目版本、条目系列、浏览数据、阅读模式
 - 注意
-  - 七组设置与文件的对应见 [facts.md](facts.md)。
+  - 八组设置与文件的对应见 [facts.md](facts.md)。
   - 默认值与校验在 `src/lib/theme-settings.ts`，非法值会被修补并产生诊断。
   - 开发环境改完刷新即可；生产构建缓存解析结果，需要重新构建。
 - 验证
@@ -31,7 +31,7 @@
   - 关于页：`content/about/index.md`，固定单页
 - 注意
   - 目录名以 `YYYY-MM-DD` 开头，`<SLUG>` 换成地址标识，`<PROJECT>` 换成项目目录名。
-  - 开发日志的文件开头需要 `project`，项目与博客可带 `series`、`versionLabel` 等版本字段。
+  - 开发日志的文件开头需要 `project`；博客可带 `versionGroup`、`versionLabel` 等版本线字段，也可带 `series`、`seriesName`、`seriesOrder` 系列字段。
   - 条目主文件顺序：`index.md` → 目录内唯一 `.md` → 唯一标了 `entry: true` 的文件。
   - 图片与附件放条目目录的 `images/`、`files/`、`assets/`，不要放进 `public/`。
 - 验证
@@ -96,7 +96,7 @@
   - `theme.json`：站点合并基准
 - 注意
   - 稳定版的版本号与 `CHANGELOG.md` 由 Release Please 生成；预览候选（如 `0.1.0-rc.x`）由维护者手动写入。
-  - 标签形如 `v0.1.0-rc.1`；创建 Release 后手动运行 `release.yml` 打包模板 zip 与 `SHA256SUMS`。
+  - 标签形如 `v0.2.0`；创建 Release 后手动运行 `release.yml` 打包模板 zip 与 `SHA256SUMS`。
   - `theme.json` 的 `commit` 是站点合并基准，发版时同步为发布提交。
 - 验证
   - `SITE_URL=https://example.com npm run verify`

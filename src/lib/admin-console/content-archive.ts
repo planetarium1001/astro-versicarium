@@ -186,7 +186,7 @@ const parseArchive = (buffer: Uint8Array): {
     throw new AdminContentArchiveError('multiple-entries', 400, '一次只能导入一个 collection 的条目');
   }
 
-  // 条目根目录优先由 Markdown 主文件所在目录推导，兼容 series/version 多级条目。
+  // 条目根目录优先由 Markdown 主文件所在目录推导，兼容 `系列/版本` 这类多级条目目录。
   const markdownDirectories = Array.from(new Set(
     parsedFiles
       .filter((file) => /\.(?:md|mdx)$/i.test(file.segments.at(-1) ?? ''))

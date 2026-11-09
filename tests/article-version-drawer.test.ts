@@ -41,6 +41,8 @@ const appendDrawer = ({ insideSection }: { insideSection: boolean }) => {
   const section = document.createElement('section');
   section.className = 'article-version-notice';
   section.setAttribute('aria-label', '版本信息');
+  // 抽屉脚本按泛化后的根标记 `[data-article-drawer]` 挂载；版本提示条同时保留 `data-article-version`。
+  section.setAttribute('data-article-drawer', '');
   section.setAttribute('data-article-version', '');
   section.innerHTML = triggerMarkup(drawerId);
 

@@ -4,8 +4,9 @@ const DATE_ONLY_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DATE_ONLY_SLASH_RE = /^(\d{4})\/(\d{2})\/(\d{2})$/;
 const LOCAL_DATETIME_RE =
   /^(\d{4})[-/](\d{2})[-/](\d{2})[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,9}))?)?$/;
+// 带偏移的写法既可能是 `T` 分隔，也可能是空格分隔（作者手写或表格粘贴），两者都接受。
 const ZONED_DATETIME_RE =
-  /^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,9}))?)?(Z|[+-]\d{2}:\d{2})$/;
+  /^(\d{4})-(\d{2})-(\d{2})[ Tt](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,9}))?)?(Z|z|[+-]\d{2}:\d{2})$/;
 
 export const SUPPORTED_CONTENT_DATE_FORMATS = [
   'YYYY-MM-DD',
@@ -14,8 +15,13 @@ export const SUPPORTED_CONTENT_DATE_FORMATS = [
   'YYYY-MM-DD HH:mm:ss',
   'YYYY/MM/DD HH:mm',
   'YYYY/MM/DD HH:mm:ss',
+  'YYYY-MM-DDTHH:mm',
+  'YYYY-MM-DDTHH:mm:ss',
+  'YYYY-MM-DDTHH:mmZ',
+  'YYYY-MM-DDTHH:mm:ssZ',
+  'YYYY-MM-DDTHH:mm+08:00',
   'YYYY-MM-DDTHH:mm:ss+08:00',
-  'YYYY-MM-DDTHH:mm:ssZ'
+  'YYYY-MM-DD HH:mm:ss+08:00'
 ] as const;
 
 export type ParsedContentDate = {
@@ -23,6 +29,10 @@ export type ParsedContentDate = {
   date: Date;
   /** 站点时区下的日历日期（YYYY-MM-DD）。 */
   dateText: string;
+  /** 站点时区下的时间文本（HH:mm:ss）；纯日期为 00:00:00。 */
+  timeText: string;
+  /** 站点时区在该时间点的 UTC 偏移（+08:00），供后台时区徽标使用。 */
+  offsetText: string;
   /** 输入是否包含时间部分。 */
   hasTime: boolean;
   /** 展示用 ISO：纯日期为 YYYY-MM-DD，日期时间为 UTC ISO。 */
@@ -113,16 +123,35 @@ export const zonedDateTimeToUtc = (
   return new Date(timestamp);
 };
 
+/** 站点时区下的日期 / 时间 / UTC 偏移文本；后台日期时间控件与时区徽标共用这一处换算。 */
+export const getSiteDateTimeParts = (
+  date: Date,
+  timeZone = getSiteTimezone()
+): { dateText: string; timeText: string; offsetText: string } => {
+  const parts = getZonedParts(date, timeZone);
+  const offsetMinutes = Math.round(getTimeZoneOffsetMs(date, timeZone) / 60_000);
+  const absoluteOffsetMinutes = Math.abs(offsetMinutes);
+  return {
+    dateText: toDateOnlyText(parts.year, parts.month, parts.day),
+    timeText: `${pad(parts.hour)}:${pad(parts.minute)}:${pad(parts.second)}`,
+    offsetText: `${offsetMinutes < 0 ? '-' : '+'}${pad(Math.floor(absoluteOffsetMinutes / 60))}:${pad(absoluteOffsetMinutes % 60)}`
+  };
+};
+
 const parseDateOnlyParts = (
   year: number,
   month: number,
-  day: number
+  day: number,
+  timeZone: string
 ): ParsedContentDate | null => {
   if (!isValidCalendarDate(year, month, day)) return null;
   const dateText = toDateOnlyText(year, month, day);
+  const date = zonedDateTimeToUtc(year, month, day, 0, 0, 0, 0, timeZone);
   return {
-    date: zonedDateTimeToUtc(year, month, day, 0, 0, 0, 0),
+    date,
     dateText,
+    timeText: '00:00:00',
+    offsetText: getSiteDateTimeParts(date, timeZone).offsetText,
     hasTime: false,
     iso: dateText
   };
@@ -140,8 +169,10 @@ const parseZonedDateTime = (
   timeZone: string
 ): ParsedContentDate | null => {
   if (!isValidCalendarDate(year, month, day)) return null;
+  // 越界时刻不做滚动修正：25:00 不能悄悄变成次日 01:00。
+  if (hour > 23 || minute > 59 || second > 59) return null;
 
-  const offsetMinutes = offsetText === 'Z'
+  const offsetMinutes = offsetText === 'Z' || offsetText === 'z'
     ? 0
     : (() => {
         const sign = offsetText.startsWith('-') ? -1 : 1;
@@ -154,10 +185,12 @@ const parseZonedDateTime = (
   );
   if (!Number.isFinite(date.valueOf())) return null;
 
-  const siteParts = getZonedParts(date, timeZone);
+  const siteParts = getSiteDateTimeParts(date, timeZone);
   return {
     date,
-    dateText: toDateOnlyText(siteParts.year, siteParts.month, siteParts.day),
+    dateText: siteParts.dateText,
+    timeText: siteParts.timeText,
+    offsetText: siteParts.offsetText,
     hasTime: true,
     iso: date.toISOString()
   };
@@ -177,9 +210,12 @@ export const parseContentDateInput = (
       && value.getUTCMinutes() === 0
       && value.getUTCSeconds() === 0
       && value.getUTCMilliseconds() === 0;
+    const siteParts = getSiteDateTimeParts(value, timeZone);
     return {
       date: value,
       dateText,
+      timeText: siteParts.timeText,
+      offsetText: siteParts.offsetText,
       hasTime: !isMidnightUtc,
       iso: isMidnightUtc ? dateText : value.toISOString()
     };
@@ -194,7 +230,8 @@ export const parseContentDateInput = (
     return parseDateOnlyParts(
       Number(dateOnlyMatch[1]),
       Number(dateOnlyMatch[2]),
-      Number(dateOnlyMatch[3])
+      Number(dateOnlyMatch[3]),
+      timeZone
     );
   }
 
@@ -242,13 +279,19 @@ export const parseContentDateInput = (
   return {
     date,
     dateText,
+    timeText: `${pad(hour)}:${pad(minute)}:${pad(second)}`,
+    offsetText: getSiteDateTimeParts(date, timeZone).offsetText,
     hasTime: true,
     iso: date.toISOString()
   };
 };
 
+/**
+ * 后台 / 构建期的校验提示：列出人类可读书写方式，并点名无时区写法按站点时区解释。
+ * 这里只给写法清单，详细示例由后台日期时间控件给出。
+ */
 export const formatContentDateError = (field: string): string =>
-  `${field} must be one of: ${SUPPORTED_CONTENT_DATE_FORMATS.join(', ')}`;
+  `${field} 必须是以下写法之一：${SUPPORTED_CONTENT_DATE_FORMATS.join('、')}；无时区写法按站点时区 ${getSiteTimezone()} 解释`;
 
 /** 严格 UTC 日期：只用于确实需要 UTC 日期的工具与兼容层。 */
 export const parseDateOnlyUtc = (value: string): Date | null => {

@@ -42,5 +42,7 @@
     "brand": "serif-georgia"
   },
   "fontCoverage": "full",
-  "entryVersionName": "after-label"
+  "entryVersionName": "after-label",
+  "entrySeriesMode": "meta",
+  "entrySeriesOrder": "show"
 }

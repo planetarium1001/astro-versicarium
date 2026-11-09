@@ -4,9 +4,9 @@ description: 当前版本的主题说明：内容结构、版本能力、后台�
 date: 2026-10-22
 publishedAt: 2026-10-22
 tags: [主题, 介绍]
-series: theme-introduction
+versionGroup: theme-introduction
 slug: theme-introduction
-versionLabel: 0.1.0-rc.1
+versionLabel: 0.2.0
 versionName: 当前版本
 versionSummary: 收束内容结构、版本能力与发布方式的当前说明。
 versionOrder: 2
@@ -21,7 +21,7 @@ Versicarium 是一个面向开发者的内容与版本管理主题，基于 Astr
 
 ## 版本与后台
 
-文章可以按系列保留多个版本，项目可以在弹窗里切换历史版本；读者默认看到最新版，旧版本仍有独立地址。开发环境自带后台，可以编辑内容、管理图片与修改设置；线上只输出静态页面。
+文章可以按版本线保留多个版本，项目可以在弹窗里切换历史版本；读者默认看到最新版，旧版本仍有独立地址。开发环境自带后台，可以编辑内容、管理图片与修改设置；线上只输出静态页面。
 
 ## 发布
 

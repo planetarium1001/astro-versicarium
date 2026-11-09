@@ -18,12 +18,12 @@
 
 | 位置 | 当前值 |
 | --- | --- |
-| `package.json` 的 `version` | `0.1.0-rc.1` |
-| `.release-please-manifest.json` | `0.1.0-rc.1` |
-| `CHANGELOG.md` 最新条目 | `0.1.0-rc.1`（2026-10-31），前一条为 `1.0.0-rc.2`（2026-10-21） |
-| 版本标签 | 旧版本线 `v1.0.0-rc.1`、`v1.0.0-rc.2`；`v0.1.0-rc.1` 在发布时创建 |
+| `package.json` 的 `version` | `0.2.0` |
+| `.release-please-manifest.json` | `0.2.0` |
+| `CHANGELOG.md` 最新条目 | `0.2.0`（2026-11-09），前一条为 `0.1.0-rc.1`（2026-10-31） |
+| 版本标签 | 已发布：`v1.0.0-rc.1`、`v1.0.0-rc.2`；`v0.1.0-rc.1` 与 `v0.2.0` 标记后暂未发布，标签在正式发布时创建 |
 
-- 版本线从 `0.1.0-rc.1` 重新开始；`1.0.0-rc.x` 是旧版本线的历史标签，保留但不再推进。
+- 版本线：`0.1.0-rc.1` 是 0.x 的第一个候选版本并已发布；`0.2.0` 为当前标记版本（未发布）。`1.0.0-rc.x` 是旧版本线的历史标签，保留但不再推进。
 - 版本号里不写日期：日期不表达兼容性，提交时间由 Git 记录。
 
 ## 关键文件与入口
@@ -68,7 +68,7 @@
 
 - 工作流维护一个发布 PR，更新 `package.json` 的版本与 `CHANGELOG.md`；手动运行才执行，不随推送自动触发。
 - 预览候选的版本号、CHANGELOG 与 manifest 由维护者手动写入，不从发布 PR 产生。
-- 发布 `0.1.0` 稳定版时去掉 `versioning`、`prerelease`、`prerelease-type`，把 manifest 与 `package.json` 的版本改成 `0.1.0`；仓库里没有对应脚本。
+- 本次已把版本标记为 `0.2.0`（稳定号）但**未发布**：四种版本位置中的 `package.json`、`.release-please-manifest.json`、`CHANGELOG.md` 已更新，Git 标签留到正式发布时创建。正式发布稳定版前去掉 `versioning`、`prerelease`、`prerelease-type`，再创建 `v0.2.0` 标签；仓库里没有对应脚本。
 
 ## 数据流
 
@@ -102,7 +102,7 @@
 
 | 资产 | 命名 |
 | --- | --- |
-| 标签 | `v<version>`，例如 `v0.1.0-rc.1` |
+| 标签 | `v<version>`，例如 `v0.2.0` |
 | 模板压缩包 | `astro-versicarium-<version>.zip` |
 | 校验文件 | `SHA256SUMS` |
 | 解压目录 | `astro-versicarium-<version>/` |
@@ -137,7 +137,7 @@
 ## 下载与校验
 
 ```bash
-VERSION=0.1.0-rc.1
+VERSION=0.2.0
 BASE="https://github.com/planetarium1001/astro-versicarium/releases/download/v${VERSION}"
 curl -LO "${BASE}/astro-versicarium-${VERSION}.zip"
 curl -LO "${BASE}/SHA256SUMS"
@@ -148,13 +148,13 @@ cd "astro-versicarium-${VERSION}" && npm ci
 
 - 校验失败时不要解压使用，重新下载并核对 `SHA256SUMS` 中的文件名与下载文件名。
 - 压缩包没有 `.git`，作为自有站点使用前按 [仓库 README](../../README.md) 的获取模板步骤初始化仓库。
-- 发布后确认附件时，在能访问 GitHub 的环境执行 `gh release view v0.1.0-rc.1`；这一步依赖网络与登录状态，不在仓库内校验。
+- 发布后确认附件时，在能访问 GitHub 的环境执行 `gh release view v0.2.0`；这一步依赖网络与登录状态，不在仓库内校验。
 - 本地核对版本链：
 
 ```bash
 node -p "require('./package.json').version"
 cat .release-please-manifest.json
 git tag -l
-git rev-list -n1 v0.1.0-rc.1
+git rev-list -n1 v0.2.0
 npm run ci
 ```

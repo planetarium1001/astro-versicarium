@@ -10,8 +10,8 @@
 | --- | --- |
 | [architecture.md](architecture.md) | 目录分层、模块边界、数据流、路由模型、运行模式、设置解析、布局与样式、Markdown 管线、构建流程 |
 | [development.md](development.md) | 环境与 Node 解析、35 个命令、`verify` 九步、源码与产物检查、字体管线、测试组织、浏览器约定、CI 与发布联动 |
-| [content.md](content.md) | 五个集合与条目加载、日期解析与显示、各集合字段、系列与版本路由、图片与附件、Markdown 插件、末尾链接组、关于页指令 |
-| [admin.md](admin.md) | 五个后台页面、七组设置、保存与冲突、写作、资源、快照、API 分组、生产边界 |
+| [content.md](content.md) | 五个集合与条目加载、日期解析与显示、各集合字段、版本线路由与内容系列、图片与附件、Markdown 插件、末尾链接组、关于页指令 |
+| [admin.md](admin.md) | 五个后台页面、八组设置、保存与冲突、写作、资源、快照、API 分组、生产边界 |
 | [deploy.md](deploy.md) | 产物与运行模式、`main` / `demo` 分支、四个工作流、构建期变量、Pages 与 base 推导、其他托管 |
 | [release.md](release.md) | 版本策略、Release Please、Release 工作流、产物命名、发布清单、`theme.json` 基准、下载与校验 |
 | [provenance.md](provenance.md) | 与 Whono 的派生关系、MIT 许可、脱离 fork network、`theme:update` 三方合并、站点自有路径 |

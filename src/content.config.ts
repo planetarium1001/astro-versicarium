@@ -5,17 +5,19 @@ import { normalizeBitsAvatarPath } from './utils/format';
 import { formatContentDateError, parseContentDateInput } from './utils/date-only';
 import { entryDirLoader } from './lib/content-loader';
 
-const slugRule = z
-  .string()
-  .trim()
-  .regex(BLOG_PUBLIC_SLUG_RE, 'slug must be lowercase kebab-case（允许 CJK）');
+const createSlugRule = (field: string) =>
+  z
+    .string()
+    .trim()
+    .regex(BLOG_PUBLIC_SLUG_RE, `${field} must be lowercase kebab-case（允许 CJK）`);
 
-const seriesRule = z
-  .string()
-  .trim()
-  .regex(BLOG_PUBLIC_SLUG_RE, 'series must be lowercase kebab-case（允许 CJK）');
+const slugRule = createSlugRule('slug');
 
-const versionOrderRule = z.number().int().min(0);
+const versionGroupRule = createSlugRule('versionGroup');
+
+const seriesRule = createSlugRule('series');
+
+const orderRule = z.number().int().min(0);
 
 const baseFields = {
   date: z.unknown(),
@@ -24,11 +26,21 @@ const baseFields = {
 };
 
 const blogVersionFields = {
-  series: seriesRule.optional(),
+  versionGroup: versionGroupRule.optional(),
   versionLabel: z.string().trim().optional(),
   versionName: z.string().trim().optional(),
   versionSummary: z.string().trim().optional(),
-  versionOrder: versionOrderRule.optional()
+  versionOrder: orderRule.optional()
+};
+
+/**
+ * 真实的内容系列：同 `series` 的条目构成有序阅读集合，成员是并列的独立文章，
+ * 不参与版本判定、不改变公开 URL。与 `blogVersionFields` 正交，两者可同时出现。
+ */
+const blogSeriesFields = {
+  series: seriesRule.optional(),
+  seriesName: z.string().trim().optional(),
+  seriesOrder: orderRule.optional()
 };
 
 /**
@@ -39,7 +51,7 @@ const projectVersionFields = {
   versionLabel: z.string().trim().optional(),
   versionName: z.string().trim().optional(),
   versionSummary: z.string().trim().optional(),
-  versionOrder: versionOrderRule.optional(),
+  versionOrder: orderRule.optional(),
   versions: z
     .array(
       z.object({
@@ -47,7 +59,7 @@ const projectVersionFields = {
         name: z.string().trim().optional(),
         date: z.unknown(),
         summary: z.string().trim().optional(),
-        order: versionOrderRule.optional()
+        order: orderRule.optional()
       })
     )
     .optional()
@@ -212,6 +224,7 @@ const blog = defineCollection({
       .object({
         ...baseFields,
         ...blogVersionFields,
+        ...blogSeriesFields,
         title: z.string().trim(),
         description: z.string().trim().optional(),
         publishedAt: z.unknown().optional(),
@@ -333,7 +346,7 @@ const devlog = defineCollection({
     .object({
       title: z.string().trim(),
       project: z.string().trim(),
-      projectSlug: seriesRule.optional(),
+      projectSlug: createSlugRule('projectSlug').optional(),
       kind: z.string().trim().optional(),
       description: z.string().trim().optional(),
       ...baseFields

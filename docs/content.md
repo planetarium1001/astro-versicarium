@@ -2,7 +2,7 @@
 
 ## 范围
 
-本篇覆盖：五个内容区、文件开头的设置、系列与版本、正文写法、图片与附件。前置：站点能在本地运行，见[安装与运行](install.md)。
+本篇覆盖：五个内容区、文件开头的设置、版本线与内容系列、时间字段写法、正文写法、图片与附件。前置：站点能在本地运行，见[安装与运行](install.md)。
 
 ## 内容放在哪
 
@@ -10,7 +10,7 @@
 
 | 区 | 内容 | 位置 |
 |---|---|---|
-| 文章 | 长文，可以组成系列 | `content/blog/` |
+| 文章 | 长文，可以按版本线保留多版，也可以组成系列 | `content/blog/` |
 | 项目 | 项目介绍与历史版本 | `content/projects/` |
 | 动态 | 短记录、图片与作者 | `content/bits/` |
 | 开发日志 | 按项目归档的开发进展 | `content/devlog/` |
@@ -30,12 +30,12 @@
 | 字段 | 用途 |
 |---|---|
 | `title` | 标题。动态可以省略 |
-| `date` | 日期。写 `2026-05-01` 或 `2026-05-01 09:30` |
+| `date` | 日期。写 `2026-05-01`，也可以带时间与时区，见下文「时间字段写法」 |
 | `description` | 一句话摘要，列表与搜索会用到 |
 | `tags` | 标签列表，例如 `[记录, 整理]` |
 | `draft` | 草稿。`true` 时只在本机可见 |
 
-各区的必填项不同：文章与项目要 `title` 与 `date`，动态只要 `date`，开发日志要 `title`、`date`、`project`，关于页不需要任何字段。日期格式写错时构建直接报错。
+各区的必填项不同：文章与项目要 `title` 与 `date`，动态只要 `date`，开发日志要 `title`、`date`、`project`，关于页不需要任何字段。日期格式写错时构建直接报错。文章还可以加版本线与系列字段，见下一节。
 
 <details>
 <summary>一篇文章开头的设置</summary>
@@ -57,37 +57,107 @@ draft: false
 
 </details>
 
-## 文章系列与项目版本
+## 版本线与内容系列
 
-普通文章不需要额外设置。同一篇内容需要保留多次改版时，才用文章系列。
+普通文章不需要额外设置。有两类字段按需添加，作用不同：版本线表示同一篇内容的多次改版，内容系列表示同一主题下并列的独立文章。两者互不影响，一篇文章可以同时属于一个版本线和一个系列。
 
-- 每个版本放在自己的目录里，各自写上日期，所有版本填同一个 `series` 值，再分别写 `versionLabel`、`versionName`、`versionSummary` 与 `versionOrder`。
-- 排序先看日期，日期相同看 `versionOrder`；排在最前的就是当前版本，需要固定地址时同系列共用一个地址标识。
+### 版本线（versionGroup）
+
+新版会取代旧版、读者只需读最新那份时，用版本线。每个版本一个目录，各自写日期，所有版本填同一个 `versionGroup`。
+
+| 字段 | 用途 |
+|---|---|
+| `versionGroup` | 版本线标识，同一内容的各版本保持一致；规则同 `slug` |
+| `versionLabel` | 版本号，例如 `0.5.0`、`v2` |
+| `versionName` | 版本的可读名，例如「早期版本」；缺省用标题 |
+| `versionSummary` | 该版本的摘要；缺省用 `description` |
+| `versionOrder` | 同一天的多个版本之间的次序，非负整数，越大越新；缺省按 `0` 参与排序 |
+
+- 排序是 `date` 倒序 → `versionOrder` 倒序 → 条目 ID，排在最前的是最新版。
+- 需要固定地址时各版本写同一个 `slug`：最新版占 `/blog/<slug>/`，历史版本留在 `YYYY-MM-DD-...` 日期地址上并带 `noindex`，读者仍能读到。同组 `slug` 必须一致，否则构建报错。
+- 历史版本的文章页有提示条和版本抽屉，可以跳回最新版；订阅源与 sitemap 只收录最新版。
 
 <details>
-<summary>两个版本的设置</summary>
+<summary>两个版本的写法</summary>
+
+```markdown
+---
+title: <TITLE>
+date: <DATE>
+versionGroup: <VERSION-GROUP>
+versionLabel: <VERSION-LABEL>
+versionName: <VERSION-NAME>
+versionOrder: 2
+slug: <VERSION-GROUP>
+---
+```
+
+- `<VERSION-GROUP>` 换成版本线标识，所有版本保持一致；`<VERSION-LABEL>` 换成版本号；`versionOrder` 写同一天的次序，越大越新。
+- 最后一行是地址标识，与版本线标识相同，不需要固定地址时删掉。
+
+</details>
+
+项目不用 `versionGroup`：每个版本一个目录，所有版本填同一个稳定 `slug`，再分别写 `versionLabel` 与 `versionName`；项目列表只显示最新版，点开卡片可以切换其他版本。
+
+![文章页的目录与版本入口](images/article-light.webp)
+
+![项目版本弹窗](images/projects-dialog-light.webp)
+
+### 内容系列（series）
+
+同一主题下的一组独立文章用内容系列串起来，每篇都是完整有效的文章，按次序阅读。
+
+| 字段 | 用途 |
+|---|---|
+| `series` | 系列标识，同一系列填同一个值；规则同 `slug` |
+| `seriesName` | 系列显示名；缺省回退 `series` |
+| `seriesOrder` | 阅读次序，非负整数，越小越靠前；缺省排在最后 |
+
+- 排序是 `seriesOrder` 升序 → `date` 升序 → 条目 ID，序号就是排序后的第几篇。
+- 系列不改变任何文章的地址，也不产生「最新版 / 历史版」：成员之间平等，不会互相标记过时。
+- 文章页有「同系列」抽屉，按序号列出全部成员并标出正在阅读的一篇；系列只有一篇时不显示。
+- 同一篇内容的多个版本在系列清单里只占一行，取最新版那一条。
+- `/blog` 的筛选面板里，系列排在标签区块下面，与标签共用同一套筛选表达式和 `+` / `/` 开关，可以多选；链接形如 `/blog/?tags=series%3A<slug>&mode=and`。
+- 条目上的系列呈现由主题设置的两组选项决定，见[主题设置](settings.md#条目系列)。
+
+<details>
+<summary>三篇同系列的写法</summary>
 
 ```markdown
 ---
 title: <TITLE>
 date: <DATE>
 series: <SERIES-ID>
-versionLabel: <VERSION-LABEL>
-versionOrder: 2
-slug: <SERIES-ID>
+seriesName: <SERIES-NAME>
+seriesOrder: 2
 ---
 ```
 
-- `<SERIES-ID>` 换成系列标识，所有版本保持一致；`<VERSION-LABEL>` 换成版本号，`versionOrder` 写序号，越大越新。
-- 最后一行是地址标识，与系列标识相同，不需要固定地址时删掉。
+- `<SERIES-ID>` 三篇保持一致；`<SERIES-NAME>` 换成系列显示名，写在其中一篇也可以，缺省用 `<SERIES-ID>`。
+- `seriesOrder` 按阅读次序写 1、2、3，公开侧的序号随之确定。
 
 </details>
 
-项目保留多个版本时做法相同：每个版本一个目录，所有版本填同一个地址标识，再分别写 `versionLabel` 与 `versionName`。项目列表只显示最新版，点开卡片可以切换其他版本。
+### 何时用哪个
 
-![文章页的目录与版本入口](images/article-light.webp)
+- 新版取代旧版，旧版只作为历史留存：用 `versionGroup`。
+- 多篇文章各自成立、合起来才完整：用 `series`。
+- 两件事都要时同时写：版本线决定「哪一份是新的」，系列决定「按什么顺序读」。
 
-![项目版本弹窗](images/projects-dialog-light.webp)
+### 时间字段写法
+
+`date`、`publishedAt`、`updatedAt` 接受同一组写法：
+
+| 写法 | 例子 |
+|---|---|
+| 日期 | `2026-11-09`、`2026/11/09` |
+| 日期 + 时间，无时区 | `2026-11-09 14:30`、`2026-11-09T14:30`、`2026-11-09 14:30:00` |
+| 带时区 | `2026-11-09T06:30Z`、`2026-11-09T14:30+08:00`、`2026-11-09 14:30:00+08:00` |
+
+- 没写时区的时间按站点时区解释：`SITE_TIMEZONE` 优先，其次是 `site.json` 的 `timezone`，都没写时用 `Asia/Shanghai`。
+- `updatedAt` 不能早于 `date`；只写日期时按站点时区的当日零点比较。
+- 后台用「日期 + 时间」两个控件录入，按站点时区显示并标注时区；「精确编辑」可以粘贴上面任意一种写法。只填日期时保存成 `2026-11-09`，填了时间保存成 `2026-11-09 14:30`。
+- 作者没改动的字段不会被重写：原文是 `2026-11-09T06:30Z` 时，打开再保存不会变成别的写法。
 
 ## 项目卡片
 

@@ -33,7 +33,7 @@ const normalizeRequest = (request: Partial<AdminMediaListRequest>): AdminMediaLi
 
   return {
     collection: (request.collection ?? '').trim(),
-    series: (request.series ?? '').trim(),
+    versionGroup: (request.versionGroup ?? '').trim(),
     version: (request.version ?? '').trim(),
     entry: (request.entry ?? '').trim(),
     directory: (request.directory ?? '').trim().replace(/^\/+|\/+$/g, ''),
@@ -57,11 +57,11 @@ export const listAdminMediaItems = async (
   ]);
   const allItems = await loadAssets(entries, referenceIndex);
 
-  // 树和筛选项基于 q/reference/type/time，而 collection/series/version/dir 只用于列表下钻。
+  // 树和筛选项基于 q/reference/type/time，而 collection/versionGroup/version/dir 只用于列表下钻。
   const treePool = filterMediaItems(allItems, {
     ...filters,
     collection: '',
-    series: '',
+    versionGroup: '',
     version: '',
     entry: '',
     directory: ''
@@ -90,7 +90,9 @@ export const listAdminMediaItems = async (
 export const getAdminMediaListRequest = (searchParams: URLSearchParams): AdminMediaListRequest =>
   normalizeRequest({
     collection: searchParams.get('collection') ?? '',
-    series: searchParams.get('series') ?? '',
+    // 兼容旧的 `?series=` 深链：以前媒体库把「版本组」叫 series，改名后旧链接仍应落到同一分组。
+    // 只做读取映射，不复写回 URL；新链接一律用 `?versionGroup=`。
+    versionGroup: searchParams.get('versionGroup') ?? searchParams.get('series') ?? '',
     version: searchParams.get('version') ?? '',
     entry: searchParams.get('entry') ?? '',
     directory: searchParams.get('dir') ?? '',

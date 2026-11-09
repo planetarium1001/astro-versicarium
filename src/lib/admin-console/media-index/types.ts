@@ -17,9 +17,10 @@ export type AdminMediaItem = {
   size: number;
   mtimeMs: number | null;
   collection: AdminContentCollectionKey;
-  series: string;
-  seriesLabel: string;
-  hasSeries: boolean;
+  /** 版本线键（frontmatter `versionGroup`）；同一键的多个目录是同一内容的不同版本。 */
+  versionGroup: string;
+  versionGroupLabel: string;
+  hasVersionGroup: boolean;
   version: string;
   versionLabel: string;
   entryId: string;
@@ -37,20 +38,20 @@ export type AdminMediaFilterOption = {
   label: string;
   count: number;
   collection?: AdminContentCollectionKey;
-  series?: string;
+  versionGroup?: string;
   entryId?: string;
 };
 
 export type AdminMediaTreeNode = {
   id: string;
-  kind: 'collection' | 'series' | 'version' | 'directory' | 'shared';
+  kind: 'collection' | 'versionGroup' | 'version' | 'directory' | 'shared';
   label: string;
   count: number;
   imageCount: number;
   fileCount: number;
   orphanCount: number;
   collection: AdminContentCollectionKey;
-  series: string;
+  versionGroup: string;
   version: string;
   entryId: string;
   directory: string;
@@ -65,7 +66,7 @@ export type AdminMediaBreadcrumb = {
 
 export type AdminMediaListRequest = {
   collection: string;
-  series: string;
+  versionGroup: string;
   version: string;
   entry: string;
   directory: string;
@@ -89,7 +90,7 @@ export type AdminMediaListResult = {
   referenceOptions: AdminMediaFilterOption[];
   typeOptions: AdminMediaFilterOption[];
   options: {
-    series: AdminMediaFilterOption[];
+    versionGroups: AdminMediaFilterOption[];
     versions: AdminMediaFilterOption[];
     directories: AdminMediaFilterOption[];
   };
@@ -99,9 +100,9 @@ export type MediaEntryMeta = {
   collection: AdminContentCollectionKey;
   entryId: string;
   dirRel: string;
-  series: string;
-  seriesLabel: string;
-  hasSeries: boolean;
+  versionGroup: string;
+  versionGroupLabel: string;
+  hasVersionGroup: boolean;
   version: string;
   versionLabel: string;
   entryLabel: string;
@@ -113,7 +114,8 @@ export type MediaEntryMeta = {
 export const MARKDOWN_EXT_RE = /\.(?:md|mdx)$/i;
 export const ASSET_DIR_NAMES = new Set(['images', 'files', 'assets']);
 const IGNORED_FILE_NAMES = new Set(['.DS_Store', 'Thumbs.db']);
-export const UNASSIGNED_SERIES = '(未归类)';
+// 「版本组」是旧代码里的「系列」：媒体树按版本线分组，与 frontmatter 的内容系列 series 无关。
+export const UNASSIGNED_VERSION_GROUP = '(未归类)';
 export const UNASSIGNED_VERSION = '(未归类)';
 export const UNASSIGNED_LABEL = '未归属条目';
 export const SHARED_ENTRY_ID = '_shared';

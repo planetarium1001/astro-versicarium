@@ -31,10 +31,10 @@ describe('admin media api', () => {
       await writeFile(path.join(directory, 'index.md'), lines.join('\n'), 'utf8');
     };
 
-    await writeEntry('series/2026-01-01', [
+    await writeEntry('version-group/2026-01-01', [
       '---',
-      'title: 系列 v1',
-      'series: alpha',
+      'title: 版本组 v1',
+      'versionGroup: alpha',
       'versionLabel: v1',
       'date: 2026-01-01',
       '---',
@@ -44,10 +44,10 @@ describe('admin media api', () => {
       '[说明](./files/note.pdf)',
       ''
     ]);
-    await writeEntry('series/2026-02-01', [
+    await writeEntry('version-group/2026-02-01', [
       '---',
-      'title: 系列 v2',
-      'series: alpha',
+      'title: 版本组 v2',
+      'versionGroup: alpha',
       'versionLabel: v2',
       'date: 2026-02-01',
       '---',
@@ -56,11 +56,11 @@ describe('admin media api', () => {
       ''
     ]);
 
-    await mkdir(path.join(tempRoot, 'content', 'blog', 'series', '2026-01-01', 'images'), { recursive: true });
-    await mkdir(path.join(tempRoot, 'content', 'blog', 'series', '2026-01-01', 'files'), { recursive: true });
-    await writeFile(path.join(tempRoot, 'content', 'blog', 'series', '2026-01-01', 'images', 'cover.png'), PNG_1X1);
-    await writeFile(path.join(tempRoot, 'content', 'blog', 'series', '2026-01-01', 'files', 'note.pdf'), 'pdf');
-    await writeFile(path.join(tempRoot, 'content', 'blog', 'series', '2026-01-01', 'files', 'old.txt'), 'orphan-ish');
+    await mkdir(path.join(tempRoot, 'content', 'blog', 'version-group', '2026-01-01', 'images'), { recursive: true });
+    await mkdir(path.join(tempRoot, 'content', 'blog', 'version-group', '2026-01-01', 'files'), { recursive: true });
+    await writeFile(path.join(tempRoot, 'content', 'blog', 'version-group', '2026-01-01', 'images', 'cover.png'), PNG_1X1);
+    await writeFile(path.join(tempRoot, 'content', 'blog', 'version-group', '2026-01-01', 'files', 'note.pdf'), 'pdf');
+    await writeFile(path.join(tempRoot, 'content', 'blog', 'version-group', '2026-01-01', 'files', 'old.txt'), 'orphan-ish');
     await writeFile(path.join(tempRoot, 'content', 'blog', 'gone.png'), PNG_1X1);
   });
 
@@ -69,10 +69,10 @@ describe('admin media api', () => {
     await rm(tempRoot, { recursive: true, force: true });
   });
 
-  it('lists images and attachments with series/version/entry tree and breadcrumb', async () => {
+  it('lists images and attachments with versionGroup/version/entry tree and breadcrumb', async () => {
     const { GET } = await import('../src/pages/api/admin/media/list');
     const response = await GET({
-      url: new URL('http://127.0.0.1:4321/api/admin/media/list?collection=blog&series=alpha&entry=series%2F2026-01-01&limit=50')
+      url: new URL('http://127.0.0.1:4321/api/admin/media/list?collection=blog&versionGroup=alpha&entry=version-group%2F2026-01-01&limit=50')
     } as never);
 
     expect(response.status).toBe(200);
@@ -80,25 +80,25 @@ describe('admin media api', () => {
     expect(payload.ok).toBe(true);
     expect(payload.result.items).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        path: 'content/blog/series/2026-01-01/images/cover.png',
+        path: 'content/blog/version-group/2026-01-01/images/cover.png',
         kind: 'image',
-        series: 'alpha',
-        version: 'series/2026-01-01',
+        versionGroup: 'alpha',
+        version: 'version-group/2026-01-01',
         versionLabel: 'v1',
-        entryId: 'series/2026-01-01',
+        entryId: 'version-group/2026-01-01',
         directory: 'images',
         referenceCount: 1,
         referenceStatus: 'referenced'
       }),
       expect.objectContaining({
-        path: 'content/blog/series/2026-01-01/files/note.pdf',
+        path: 'content/blog/version-group/2026-01-01/files/note.pdf',
         kind: 'file',
         directory: 'files',
         referenceCount: 1,
         referenceStatus: 'referenced'
       }),
       expect.objectContaining({
-        path: 'content/blog/series/2026-01-01/files/old.txt',
+        path: 'content/blog/version-group/2026-01-01/files/old.txt',
         referenceStatus: 'unreferenced'
       })
     ]));
@@ -106,9 +106,13 @@ describe('admin media api', () => {
 
     const collectionNode = payload.result.tree[0];
     expect(collectionNode).toEqual(expect.objectContaining({ kind: 'collection', collection: 'blog', label: '博客' }));
-    const seriesNode = collectionNode.children.find((node: { series: string }) => node.series === 'alpha');
-    expect(seriesNode).toEqual(expect.objectContaining({ kind: 'series', series: 'alpha' }));
-    const versionNode = seriesNode.children.find((node: { version: string }) => node.version === 'series/2026-01-01');
+    const versionGroupNode = collectionNode.children.find(
+      (node: { versionGroup: string }) => node.versionGroup === 'alpha'
+    );
+    expect(versionGroupNode).toEqual(expect.objectContaining({ kind: 'versionGroup', versionGroup: 'alpha' }));
+    const versionNode = versionGroupNode.children.find(
+      (node: { version: string }) => node.version === 'version-group/2026-01-01'
+    );
     expect(versionNode).toEqual(expect.objectContaining({ kind: 'version', label: 'v1' }));
     expect(versionNode.children.map((node: { directory: string }) => node.directory)).toEqual(['files', 'images']);
 
@@ -118,18 +122,46 @@ describe('admin media api', () => {
       'alpha',
       'v1'
     ]);
-    expect(payload.result.options.series).toEqual(expect.arrayContaining([
+    expect(payload.result.options.versionGroups).toEqual(expect.arrayContaining([
       expect.objectContaining({ value: 'alpha', label: 'alpha', collection: 'blog' })
     ]));
     expect(payload.result.options.versions).toEqual(expect.arrayContaining([
-      expect.objectContaining({ value: 'series/2026-01-01', label: 'v1' })
+      expect.objectContaining({ value: 'version-group/2026-01-01', label: 'v1' })
     ]));
     expect(payload.result.options.directories).toEqual(expect.arrayContaining([
       expect.objectContaining({ value: 'images', label: 'images' })
     ]));
   });
 
-  it('keeps non-series entries as a single tree level above their directories', async () => {
+  it('still reads the legacy ?series= query as the version group filter', async () => {
+    const { GET } = await import('../src/pages/api/admin/media/list');
+    const list = async (query: string) => {
+      const response = await GET({
+        url: new URL(`http://127.0.0.1:4321/api/admin/media/list?${query}`)
+      } as never);
+      return JSON.parse(await response.text());
+    };
+
+    // 改名前媒体库把「版本组」叫 series，旧深链不能打开空列表。
+    const legacy = await list('collection=blog&series=alpha&limit=50');
+    expect(legacy.result.filters.versionGroup).toBe('alpha');
+    expect(legacy.result.filters).not.toHaveProperty('series');
+    expect(legacy.result.items.every(
+      (item: { versionGroup: string }) => item.versionGroup === 'alpha'
+    )).toBe(true);
+    expect(legacy.result.breadcrumb.map((crumb: { label: string }) => crumb.label)).toEqual([
+      '全部媒体',
+      '博客',
+      'alpha'
+    ]);
+
+    // 新旧键同时出现时以新键为准，避免地址栏里的历史参数盖掉新链接。
+    const both = await list('collection=blog&versionGroup=none&series=alpha&limit=50');
+    expect(both.result.filters.versionGroup).toBe('none');
+    expect(both.result.totalCount).toBe(0);
+  });
+
+  it('keeps entries without a version group as a single tree level above their directories', async () => {
     const entryDirectory = path.join(tempRoot, 'content', 'blog', 'plain-entry');
     await mkdir(path.join(entryDirectory, 'images'), { recursive: true });
     await mkdir(path.join(entryDirectory, 'files'), { recursive: true });
@@ -139,7 +171,7 @@ describe('admin media api', () => {
       'date: 2026-03-01',
       '---',
       '',
-      '没有系列。',
+      '没有版本组。',
       ''
     ].join('\n'), 'utf8');
     await writeFile(path.join(entryDirectory, 'images', 'a.png'), PNG_1X1);
@@ -152,14 +184,16 @@ describe('admin media api', () => {
     const payload = JSON.parse(await response.text());
 
     const collectionNode = payload.result.tree[0];
-    expect(collectionNode.children.some((node: { kind: string }) => node.kind === 'series')).toBe(true);
+    expect(
+      collectionNode.children.some((node: { kind: string }) => node.kind === 'versionGroup')
+    ).toBe(true);
     const entryNode = collectionNode.children.find(
       (node: { kind: string; label: string }) => node.kind === 'version' && node.label === '普通条目'
     );
     expect(entryNode).toEqual(expect.objectContaining({
       kind: 'version',
       entryId: 'plain-entry',
-      series: ''
+      versionGroup: ''
     }));
     expect(entryNode.children.map((node: { directory: string }) => node.directory)).toEqual(['files', 'images']);
 
@@ -204,7 +238,7 @@ describe('admin media api', () => {
       kind: 'shared',
       label: '共享资源',
       entryId: '_shared',
-      series: '',
+      versionGroup: '',
       version: ''
     }));
     expect(unassignedNode).toBeTruthy();
@@ -223,7 +257,7 @@ describe('admin media api', () => {
         entryId: '_shared',
         entryLabel: '共享资源',
         entryExists: true,
-        hasSeries: false,
+        hasVersionGroup: false,
         version: '_shared',
         versionLabel: '共享资源',
         directory: ''
@@ -287,10 +321,10 @@ describe('admin media api', () => {
 
     const versionLabelPayload = await list('collection=blog&version=v1');
     expect(versionLabelPayload.result.items.every(
-      (item: { version: string }) => item.version === 'series/2026-01-01'
+      (item: { version: string }) => item.version === 'version-group/2026-01-01'
     )).toBe(true);
 
-    const imagePath = path.join(tempRoot, 'content', 'blog', 'series', '2026-01-01', 'images', 'cover.png');
+    const imagePath = path.join(tempRoot, 'content', 'blog', 'version-group', '2026-01-01', 'images', 'cover.png');
     const oldTime = new Date('2025-01-01T00:00:00.000Z');
     const newTime = new Date('2026-06-01T00:00:00.000Z');
     await utimes(imagePath, oldTime, oldTime);
@@ -308,7 +342,7 @@ describe('admin media api', () => {
     const renameResponse = await POST({
       request: createJsonWriteRequest(url, {
         action: 'rename',
-        items: [{ path: 'content/blog/series/2026-01-01/files/note.pdf', name: '说明.pdf' }]
+        items: [{ path: 'content/blog/version-group/2026-01-01/files/note.pdf', name: '说明.pdf' }]
       }),
       url: new URL(url)
     } as never);
@@ -317,10 +351,10 @@ describe('admin media api', () => {
     expect(renamePayload.ok).toBe(true);
     expect(renamePayload.result.results[0]).toEqual(expect.objectContaining({
       ok: true,
-      to: 'content/blog/series/2026-01-01/files/说明.pdf'
+      to: 'content/blog/version-group/2026-01-01/files/说明.pdf'
     }));
     const source = await readFile(
-      path.join(tempRoot, 'content', 'blog', 'series', '2026-01-01', 'index.md'),
+      path.join(tempRoot, 'content', 'blog', 'version-group', '2026-01-01', 'index.md'),
       'utf8'
     );
     expect(source).toContain('./files/说明.pdf');
@@ -329,17 +363,17 @@ describe('admin media api', () => {
       request: createJsonWriteRequest(url, {
         action: 'move',
         items: [{
-          path: 'content/blog/series/2026-01-01/images/cover.png',
-          to: 'content/blog/series/2026-01-01/files'
+          path: 'content/blog/version-group/2026-01-01/images/cover.png',
+          to: 'content/blog/version-group/2026-01-01/files'
         }]
       }),
       url: new URL(url)
     } as never);
     const movePayload = JSON.parse(await moveResponse.text());
     expect(movePayload.ok).toBe(true);
-    expect(movePayload.result.results[0].to).toBe('content/blog/series/2026-01-01/files/cover.png');
+    expect(movePayload.result.results[0].to).toBe('content/blog/version-group/2026-01-01/files/cover.png');
     expect(await readFile(
-      path.join(tempRoot, 'content', 'blog', 'series', '2026-01-01', 'index.md'),
+      path.join(tempRoot, 'content', 'blog', 'version-group', '2026-01-01', 'index.md'),
       'utf8'
     )).toContain('./files/cover.png');
   });
@@ -369,8 +403,8 @@ describe('admin media api', () => {
       request: createJsonWriteRequest(url, {
         action: 'delete',
         items: [
-          { path: 'content/blog/series/2026-01-01/files/old.txt' },
-          { path: 'content/blog/series/2026-01-01/files/missing.txt' }
+          { path: 'content/blog/version-group/2026-01-01/files/old.txt' },
+          { path: 'content/blog/version-group/2026-01-01/files/missing.txt' }
         ]
       }),
       url: new URL(url)
@@ -381,7 +415,7 @@ describe('admin media api', () => {
     expect(payload.result.okCount).toBe(1);
     expect(payload.result.failedCount).toBe(1);
     await expect(
-      readFile(path.join(tempRoot, 'content', 'blog', 'series', '2026-01-01', 'files', 'old.txt'))
+      readFile(path.join(tempRoot, 'content', 'blog', 'version-group', '2026-01-01', 'files', 'old.txt'))
     ).rejects.toThrow();
   });
 });

@@ -2,6 +2,40 @@
 
 本文件记录面向模板使用者的公共变更。版本号遵循 Semantic Versioning 的 `0.y.z` 方案，日期使用 `YYYY-MM-DD`。
 
+## [0.2.0] - 2026-11-09
+
+版本家族与内容系列解耦：版本家族键从 `series` 改名为 `versionGroup`，`series` 归还真正的「内容系列」。主题暂无外部使用者，本次不做兼容读取，仓库内示例内容已随本次迁移。
+
+### Breaking Changes
+
+- frontmatter 的版本家族键从 `series` 改为 `versionGroup`；`versionLabel`、`versionName`、`versionSummary`、`versionOrder` 语义不变。
+- 旧的 `series` 写法不再被当作版本家族：只写 `series` 的多篇内容会被当成彼此独立的普通文章，不再产生「最新版 / 历史版」与版本抽屉。
+- 从旧写法迁移：
+
+  1. 把同一版本家族各版本的 `series: <key>` 全部改成 `versionGroup: <key>`，同组取值保持一致。
+  2. 复查原来表示「同一主题下多篇文章」的 `series`：确实要按顺序阅读的才保留，并补 `seriesName`（可选）与 `seriesOrder`（按次序写 1、2、3）。
+  3. 运行 `npm run build`，确认没有同组 `slug` 不一致或路径冲突导致的 `BlogRoutingError`。
+  4. 打开相关文章页，确认版本提示条落在版本组上、「同系列」抽屉落在系列成员上。
+
+### Added
+
+- 内容系列字段 `series`、`seriesName`、`seriesOrder`：同 `series` 的文章构成有序阅读集合，次序为 `seriesOrder` 升序 → `date` 升序 → 条目 ID，序号是 1-based 位置；系列不改变任何文章的 URL，也不产生「最新版 / 历史版」。缺省 `seriesName` 回退 `series`，缺省 `seriesOrder` 排在最后。
+- 文章页新增「同系列」抽屉，复用版本历史抽屉的视觉与交互，列出全部成员的序号与标题并标出「正在阅读」，没有版本语义文案；系列只有一篇时不渲染。
+- 主题页新增「条目系列」分组：`ui.entrySeriesMode` 取 `hidden` / `meta`（默认）/ `pill` / `prefix`，`ui.entrySeriesOrder` 取 `show`（默认）/ `hide`，两者都带列表与归档实时预览；旧 `ui.json` 缺这两个字段时回落到默认值。
+- `/blog` 筛选面板新增系列区块：位于标签区块下方，用一条淡色分割线分隔，支持多选并与标签共用同一条表达式与同一个 `+` / `/` 开关；筛选 URL 仍只有 `?tags=` 一套，系列键为命名空间化的 `series:<slug>`（例如 `/blog/?tags=series%3Apc-build&mode=and`）。
+- 后台编辑器新增 `series`、`seriesName`、`seriesOrder` 输入与校验；后台内容列表在行内给出系列徽标（系列名 + 第 N/M 篇）。
+- 日期字段统一支持 `YYYY-MM-DD`、`YYYY/MM/DD`、`YYYY-MM-DD HH:mm[:ss]`、`YYYY-MM-DDTHH:mm[:ss]`（无时区按站点时区解释）、`YYYY-MM-DDTHH:mm[:ss]Z` 与 `YYYY-MM-DDTHH:mm:ss+08:00`（也接受空格分隔带偏移的写法）；校验失败提示改为列出可读写法，不再只说 ISO。
+
+### Changed
+
+- 后台发布日期、详细时间与更新时间改为「日期 + 时间」双原生控件，按站点时区解释并标注时区（`SITE_TIMEZONE` > `site.json` 的 `timezone` > 默认 `Asia/Shanghai`）；`<details>` 内保留可粘贴任意支持写法的原文入口，「设为当前 / 设为今日」改用站点时区。
+- `updatedAt` 不再被压成纯日期；时间点未变时保留 frontmatter 原文，不产生无意义 diff。
+- 后台动态（bits）发布条的时间改用站点时区并写入 `YYYY-MM-DD HH:mm`，不再用浏览器本地时区与硬编码偏移；只填日期时按 `00:00` 补齐，与改造前一致。
+- 后台内容列表的分组标题从「系列」改为「版本组」；媒体库的分组与查询参数同步改为 `versionGroup`，旧的 `?series=` 链接仍能打开同一分组。
+- 主题页设置分组由七组变为八组，「条目系列」紧跟「条目版本」。
+- 文档同步新语义：`docs/content.md` 拆出版本线、内容系列与时间字段写法三节，`docs/developers/` 记录系列模型与筛选命名空间键。
+- `/archive` 与 `/bits` 的筛选面板与 URL 行为不变。
+
 ## [0.1.0-rc.1] - 2026-10-31
 
 版本线从 `1.0.0-rc.2` 重启为 `0.y.z`：0.x 阶段破坏性变更提升次版本，功能与修复提升修订版本；旧版本线 `v1.0.0-rc.x` 标签保留，不再推进。

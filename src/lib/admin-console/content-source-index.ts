@@ -35,9 +35,10 @@ import { getStringArray } from './content-editor-payload';
 import { normalizeOptionalText } from './content-entry-utils';
 import { compareByNullableDateDesc } from './content-shared';
 import {
-  compareAdminContentSeriesVersions,
+  buildAdminContentSeriesBadges,
+  compareAdminContentVersions,
   resolveAdminContentProjectVersionStates,
-  resolveAdminContentSeriesVersionStates
+  resolveAdminContentVersionGroupStates
 } from './content-series';
 import { isDateFormProjectSlug } from '../project-routing';
 import { isRecord } from '../is-record';
@@ -78,13 +79,20 @@ export type AdminContentSourceIndexItem = {
   project: string | null;
   // projects 的版本分组稳定键：frontmatter.slug（非日期形式）；缺失时回退 publicEntryId。
   projectSlug: string | null;
-  // series/version 元数据：仅 blog 从 frontmatter 读取，其余 collection 保持空值。
-  series: string | null;
+  // 版本线元数据：frontmatter.versionGroup 等，仅 blog 从 frontmatter 读取，其余 collection 保持空值。
+  versionGroup: string | null;
   versionLabel: string | null;
   versionName: string | null;
   versionOrder: number | null;
   versionGroupSize: number;
   isLatestVersion: boolean;
+  // 内容系列元数据：frontmatter.series / seriesName / seriesOrder，与版本线正交。
+  series: string | null;
+  seriesName: string | null;
+  seriesOrder: number | null;
+  // 系列徽标：1-based 阅读次序与系列总篇数，由 buildAdminContentSeriesBadges 算出。
+  seriesIndex: number | null;
+  seriesTotal: number | null;
   searchHaystack: string;
   readonlyReason: string | null;
   sourceError: string | null;
@@ -233,9 +241,39 @@ const getSourceRecordErrorMessage = (error: unknown): string => {
 const getBodyDerived = (record: SourceRecord): AdminContentSourceBodyDerived | null =>
   record.bodyDerived ?? null;
 
-type AdminContentVersionFields = Pick<
+type AdminContentMetadataFields = Pick<
   AdminContentSourceIndexItem,
-  'series' | 'versionLabel' | 'versionName' | 'versionOrder' | 'projectSlug'
+  | 'projectSlug'
+  | 'versionGroup'
+  | 'versionLabel'
+  | 'versionName'
+  | 'versionOrder'
+  | 'series'
+  | 'seriesName'
+  | 'seriesOrder'
+>;
+
+/** 版本组/系列元数据与徽标默认值：只有 blog 会填，其余 collection 保持空值。 */
+const EMPTY_METADATA_FIELDS = {
+  projectSlug: null,
+  versionGroup: null,
+  versionLabel: null,
+  versionName: null,
+  versionOrder: null,
+  series: null,
+  seriesName: null,
+  seriesOrder: null,
+  seriesIndex: null,
+  seriesTotal: null,
+  versionGroupSize: 1,
+  isLatestVersion: true
+} satisfies Pick<
+  AdminContentSourceIndexItem,
+  | keyof AdminContentMetadataFields
+  | 'seriesIndex'
+  | 'seriesTotal'
+  | 'versionGroupSize'
+  | 'isLatestVersion'
 >;
 
 const createBaseItem = (
@@ -247,24 +285,17 @@ const createBaseItem = (
     | 'publicEntryId'
     | 'relativePath'
     | 'readonlyReason'
-    | keyof AdminContentVersionFields
-    | 'versionGroupSize'
-    | 'isLatestVersion'
+    | keyof typeof EMPTY_METADATA_FIELDS
   >,
-  versionFields: Partial<AdminContentVersionFields> = {}
+  metadataFields: Partial<AdminContentMetadataFields> = {}
 ): AdminContentSourceIndexItem => ({
   collection: record.collection,
   id: record.entryId,
   publicEntryId: record.publicEntryId,
   relativePath: record.relativePath,
   readonlyReason: getAdminContentReadOnlyReason(record.collection),
-  series: versionFields.series ?? null,
-  projectSlug: versionFields.projectSlug ?? null,
-  versionLabel: versionFields.versionLabel ?? null,
-  versionName: versionFields.versionName ?? null,
-  versionOrder: versionFields.versionOrder ?? null,
-  versionGroupSize: 1,
-  isLatestVersion: true,
+  ...EMPTY_METADATA_FIELDS,
+  ...metadataFields,
   ...values
 });
 
@@ -278,10 +309,13 @@ const createBlogSourceIndexItem: FrontmatterAdapter = (record) => {
   const tags = getStringArray(frontmatter.tags);
   const explicitSlug = normalizeOptionalText(frontmatter.slug);
   const slug = explicitSlug || flattenEntryIdToSlug(record.publicEntryId);
-  const series = normalizeOptionalText(frontmatter.series) || null;
+  const versionGroup = normalizeOptionalText(frontmatter.versionGroup) || null;
   const versionLabel = normalizeOptionalText(frontmatter.versionLabel);
   const versionName = normalizeOptionalText(frontmatter.versionName);
   const versionOrder = parseVersionOrder(frontmatter.versionOrder);
+  const series = normalizeOptionalText(frontmatter.series) || null;
+  const seriesName = normalizeOptionalText(frontmatter.seriesName) || null;
+  const seriesOrder = parseVersionOrder(frontmatter.seriesOrder);
   const bodyDerived = getBodyDerived(record);
   const sourceError = mergeSourceError(
     record.sourceError,
@@ -305,9 +339,11 @@ const createBlogSourceIndexItem: FrontmatterAdapter = (record) => {
       record.entryId,
       record.publicEntryId,
       slug,
-      series,
+      versionGroup,
       versionLabel,
       versionName,
+      series,
+      seriesName,
       normalizeOptionalText(frontmatter.description),
       tags,
       bodyDerived?.text,
@@ -315,10 +351,13 @@ const createBlogSourceIndexItem: FrontmatterAdapter = (record) => {
     ]),
     sourceError
   }, {
-    series,
+    versionGroup,
     versionLabel: versionLabel || null,
     versionName: versionName || null,
-    versionOrder
+    versionOrder,
+    series,
+    seriesName,
+    seriesOrder
   });
 };
 
@@ -621,13 +660,27 @@ const loadSourceRecords = async (
   );
 
 /** 最新版判定基于 collection 全量记录，不受列表筛选与分页影响。 */
-const applySeriesVersionStates = (
+const applyVersionGroupVersionStates = (
   items: readonly AdminContentSourceIndexItem[]
 ): AdminContentSourceIndexItem[] => {
-  const states = resolveAdminContentSeriesVersionStates(items);
+  const states = resolveAdminContentVersionGroupStates(items);
   return items.map((item) => {
     const state = states.get(item.id);
     return state ? { ...item, ...state } : item;
+  });
+};
+
+/**
+ * 真系列徽标：只给有 `series` 的条目补「第 N/M 篇」。
+ * 与版本组的「最新 / 历史」互不影响，两套字段在 UI 上分开渲染。
+ */
+const applySeriesBadges = (
+  items: readonly AdminContentSourceIndexItem[]
+): AdminContentSourceIndexItem[] => {
+  const badges = buildAdminContentSeriesBadges(items);
+  return items.map((item) => {
+    const badge = badges.get(item.id);
+    return badge ? { ...item, seriesIndex: badge.index, seriesTotal: badge.total } : item;
   });
 };
 
@@ -646,7 +699,7 @@ const applyProjectVersionStates = (
 const orderProjectSourceIndexItems = (
   items: readonly AdminContentSourceIndexItem[]
 ): AdminContentSourceIndexItem[] =>
-  items.slice().sort(compareAdminContentSeriesVersions);
+  items.slice().sort(compareAdminContentVersions);
 
 const createSourceIndexItems = (
   collection: AdminContentCollectionKey,
@@ -663,7 +716,7 @@ const createSourceIndexItems = (
     return orderProjectSourceIndexItems(applyProjectVersionStates(items));
   }
 
-  return orderSourceIndexItemsByRecent(applySeriesVersionStates(items));
+  return orderSourceIndexItemsByRecent(applySeriesBadges(applyVersionGroupVersionStates(items)));
 };
 
 export const loadAdminContentSourceManifest = async (): Promise<AdminContentSourceManifest> => {
