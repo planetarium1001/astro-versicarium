@@ -167,6 +167,16 @@ describe('归档：行内没有元信息行，meta 档退化为淡色文本', ()
     expect(css).toMatch(/\.entry-title__series-name[\s\S]*?font-size:\s*0\.78em/);
   });
 
+  it('卡片里的系列入口浮在整块覆盖层之上，不被卡片遮罩截走', async () => {
+    const css = await read(LISTS_CSS);
+
+    // 整卡可点靠 `.list-item__stretch::after` 覆盖层（定位元素），
+    // 元信息行里的入口必须是定位元素并抬高层级，否则悬停与点击都落到卡片上。
+    expect(css).toMatch(
+      /\.list-item--link \.meta-line \.tag--link,\s*\.list-item--link \.meta-line \.entry-series-link\s*\{[^}]*position:\s*relative[^}]*z-index:\s*1/
+    );
+  });
+
   it('/archive 也提供系列筛选：选项来自博客行，索引输出 seriesKeys', async () => {
     const [page, index, archiveLib] = await Promise.all([
       read(ARCHIVE_PAGE),
