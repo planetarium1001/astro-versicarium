@@ -110,11 +110,14 @@ const createEmptyBlogFrontmatter = (): AdminBlogEditorValues => ({
   tagsText: '',
   draft: false,
   slug: '',
-  series: '',
+  versionGroup: '',
   versionLabel: '',
   versionName: '',
   versionSummary: '',
   versionOrder: '',
+  series: '',
+  seriesName: '',
+  seriesOrder: '',
   ogImage: '',
   ogImageAlt: '',
   badge: ''
@@ -689,7 +692,7 @@ const handleClick = (event: MouseEvent) => {
     event.preventDefault();
     const entryId = (createVersionTrigger.dataset.entryId ?? '').trim();
     if (!entryId) return;
-    if (!window.confirm(`基于 ${entryId} 所属系列的最新版新建一个草稿版本？`)) return;
+    if (!window.confirm(`基于 ${entryId} 所属版本组的最新版新建一个草稿版本？`)) return;
     void (async () => {
       try {
         const response = await fetch(createVersionEndpoint, {

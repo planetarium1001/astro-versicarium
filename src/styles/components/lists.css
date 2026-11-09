@@ -455,11 +455,48 @@
   line-height: calc(var(--entry-pill-height) - 2px);
 }
 
-.entry-title__version-name {
+.entry-title__version-name,
+.entry-title__series-name {
   color: var(--muted);
   font-size: 0.78em;
   line-height: inherit;
   white-space: nowrap;
+}
+
+/*
+ * `prefix` 档把系列名放在标题之前，它就是标题的一部分：
+ * 字号与标题一致（含它后面的冒号和空隙），只是颜色更淡；过长时允许换行，
+ * 否则会把标题挤出容器。
+ */
+.entry-title[data-entry-series-mode='prefix'] .entry-title__series-name {
+  font-size: inherit;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* 前缀的冒号属于系列名，跟着它一起淡化，不要用标题分隔符的 `--faint`。 */
+.entry-title[data-entry-series-mode='prefix'] .entry-title__colon {
+  color: var(--muted);
+}
+
+/*
+ * 系列序号胶囊（`2/5`）与版本号胶囊同款外观，但单独成规则：
+ * 版本段的既有选择器与对齐断言都按精确组合写死，合并会连带改动版本段行为。
+ */
+.entry-title .entry-title__series-label {
+  position: relative;
+  top: 0;
+  align-self: flex-start;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  height: var(--entry-pill-height);
+  margin-top: calc(
+    (var(--entry-title-font-size) * var(--entry-title-line-height) - var(--entry-pill-height)) / 2
+  );
+  padding-block: 0;
+  padding-inline: 6px;
+  line-height: calc(var(--entry-pill-height) - 2px);
 }
 
 .entry-title__project {
@@ -629,6 +666,32 @@
 
 .meta-line .tag {
   color: var(--accent);
+}
+
+/*
+ * `meta` 档的系列入口（「系列名 N/M」）：与标签同属可点的筛选入口，
+ * 但系列不是标签，不套 `#`，也不抢标签的强调色。
+ */
+.meta-line .entry-series-link {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.meta-line .entry-series-link:focus-visible {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: 3px;
+}
+
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .meta-line .entry-series-link:hover {
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
 }
 
 /* 详情页 tag 可点，跳到 /blog/?tags=<key> 继续筛选；常态无下划线，悬停/聚焦才显下划线 */

@@ -85,7 +85,7 @@
 | `npm run font:coverage` | 构建后检查页面字符覆盖；`--strict` 用于 `verify` |
 | `npm run font:report` | 输出各页面的字体下载量估算，调试用 |
 
-`predev` 与 `prebuild` 由 npm 生命周期自动触发。`scripts/favicon.mjs` 的生成物写在 `public/images/site/generated/`，标记文件为 `tools/favicon-generated.json` 与 `public/images/site/generated/.favicon-generated.json`；用户放在根目录的 `public/favicon.ico` 不会被覆盖。
+`predev` 与 `prebuild` 由 npm 生命周期自动触发。`scripts/favicon.mjs` 的生成物写在 `public/images/site/generated/`，标记文件为 `tools/favicon-generated.json` 与 `public/images/site/generated/.favicon-generated.json`；模板默认源图下，用户放在根目录的 `public/favicon.ico` 不会被覆盖，配置非默认源图（自定义图标）时以配置为准。
 
 ## verify 的九个步骤
 

@@ -388,6 +388,14 @@ export const createValidation = ({
       return () => form.querySelector<HTMLElement>('#ui-entry-version-name');
     }
 
+    if (path === 'ui.entrySeriesMode') {
+      return () => form.querySelector<HTMLElement>('#ui-entry-series-mode');
+    }
+
+    if (path === 'ui.entrySeriesOrder') {
+      return () => form.querySelector<HTMLElement>('#ui-entry-series-order');
+    }
+
     if (path === 'ui.fontCoverage') {
       return () => form.querySelector<HTMLElement>('#ui-font-coverage');
     }

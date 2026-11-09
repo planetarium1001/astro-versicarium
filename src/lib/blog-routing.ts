@@ -4,7 +4,7 @@ import {
   flattenEntryIdToSlug
 } from '../utils/slug-rules';
 
-/** 博客 series / version 的纯路由模型：不依赖 astro:content，可被后台与脚本复用。 */
+/** 博客版本组的纯路由模型：不依赖 astro:content，可被后台与脚本复用。 */
 
 export type BlogRoutingEntryData = {
   title: string;
@@ -12,7 +12,7 @@ export type BlogRoutingEntryData = {
   dateText?: string | undefined;
   draft?: boolean | undefined;
   description?: string | undefined;
-  series?: string | undefined;
+  versionGroup?: string | undefined;
   slug?: string | undefined;
   versionLabel?: string | undefined;
   versionName?: string | undefined;
@@ -42,9 +42,9 @@ export type BlogVersionItem<TEntry extends BlogRoutingEntry = BlogRoutingEntry> 
   isCurrent: boolean;
 };
 
-export type BlogSeriesGroup<TEntry extends BlogRoutingEntry = BlogRoutingEntry> = {
-  series: string | null;
-  seriesKey: string;
+export type BlogVersionGroup<TEntry extends BlogRoutingEntry = BlogRoutingEntry> = {
+  versionGroup: string | null;
+  versionGroupKey: string;
   versions: TEntry[];
   latest: TEntry;
   stableSlug: string | null;
@@ -55,7 +55,7 @@ export type BlogSeriesGroup<TEntry extends BlogRoutingEntry = BlogRoutingEntry> 
 
 export type BlogRouteInfo<TEntry extends BlogRoutingEntry = BlogRoutingEntry> = {
   entry: TEntry;
-  group: BlogSeriesGroup<TEntry>;
+  group: BlogVersionGroup<TEntry>;
   kind: BlogRouteKind;
   path: string;
   slugParam: string;
@@ -68,7 +68,7 @@ export type BlogRouteInfo<TEntry extends BlogRoutingEntry = BlogRoutingEntry> = 
 };
 
 export type BlogRoutingResult<TEntry extends BlogRoutingEntry = BlogRoutingEntry> = {
-  groups: BlogSeriesGroup<TEntry>[];
+  groups: BlogVersionGroup<TEntry>[];
   routes: BlogRouteInfo<TEntry>[];
   latestEntries: TEntry[];
   routeByPath: Map<string, BlogRouteInfo<TEntry>>;
@@ -89,9 +89,9 @@ export const getEntryDatedPath = (entry: Pick<BlogRoutingEntry, 'id'>): string =
 
 export const getStablePath = (slug: string): string => `/blog/${slug}/`;
 
-export const getSeriesKey = (entry: Pick<BlogRoutingEntry, 'id' | 'data'>): string => {
-  const series = entry.data.series?.trim();
-  return series ? `series:${series}` : `single:${entry.id}`;
+export const getVersionGroupKey = (entry: Pick<BlogRoutingEntry, 'id' | 'data'>): string => {
+  const versionGroup = entry.data.versionGroup?.trim();
+  return versionGroup ? `versionGroup:${versionGroup}` : `single:${entry.id}`;
 };
 
 const compareVersions = (left: BlogRoutingEntry, right: BlogRoutingEntry): number => {
@@ -137,11 +137,11 @@ const assertValidStableSlug = (slug: string, entryId: string): void => {
 
 export const buildBlogGroups = <TEntry extends BlogRoutingEntry>(
   entries: readonly TEntry[]
-): BlogSeriesGroup<TEntry>[] => {
+): BlogVersionGroup<TEntry>[] => {
   const groups = new Map<string, TEntry[]>();
 
   for (const entry of entries) {
-    const key = getSeriesKey(entry);
+    const key = getVersionGroupKey(entry);
     const current = groups.get(key);
     if (current) {
       current.push(entry);
@@ -151,10 +151,10 @@ export const buildBlogGroups = <TEntry extends BlogRoutingEntry>(
   }
 
   return Array.from(groups.entries())
-    .map(([seriesKey, groupEntries]) => {
+    .map(([versionGroupKey, groupEntries]) => {
       const versions = sortBlogVersions(groupEntries);
       const latest = versions[0]!;
-      const series = latest.data.series?.trim() || null;
+      const versionGroup = latest.data.versionGroup?.trim() || null;
 
       const nonEmptySlugs = new Set(
         versions
@@ -165,8 +165,8 @@ export const buildBlogGroups = <TEntry extends BlogRoutingEntry>(
       if (nonEmptySlugs.size > 1) {
         throw new BlogRoutingError(
           [
-            'Series versions must share one public slug.',
-            `  Series:      ${series ?? seriesKey}`,
+            'Version group entries must share one public slug.',
+            `  Group:       ${versionGroup ?? versionGroupKey}`,
             `  Slugs:       ${Array.from(nonEmptySlugs).join(', ')}`,
             `  Entries:     ${versions.map((entry) => entry.id).join(', ')}`,
             '  How to fix:  use the same frontmatter.slug on every version, or remove the conflicting slug.'
@@ -178,8 +178,8 @@ export const buildBlogGroups = <TEntry extends BlogRoutingEntry>(
       if (sharedSlug && !latest.data.slug?.trim()) {
         throw new BlogRoutingError(
           [
-            'Latest series version is missing the series slug.',
-            `  Series:      ${series ?? seriesKey}`,
+            'Latest version is missing the version group slug.',
+            `  Group:       ${versionGroup ?? versionGroupKey}`,
             `  Latest:      ${latest.id}`,
             `  Expected:    ${sharedSlug}`,
             '  How to fix:  add the same frontmatter.slug to the latest version.'
@@ -194,21 +194,21 @@ export const buildBlogGroups = <TEntry extends BlogRoutingEntry>(
       const latestDatedPath = getEntryDatedPath(latest);
 
       return {
-        series,
-        seriesKey,
+        versionGroup,
+        versionGroupKey,
         versions,
         latest,
         stableSlug,
         stablePath,
         latestDatedPath,
         canonicalPath: stablePath ?? latestDatedPath
-      } satisfies BlogSeriesGroup<TEntry>;
+      } satisfies BlogVersionGroup<TEntry>;
     })
     .sort((left, right) => compareVersions(left.latest, right.latest));
 };
 
 const buildVersions = <TEntry extends BlogRoutingEntry>(
-  group: BlogSeriesGroup<TEntry>
+  group: BlogVersionGroup<TEntry>
 ): BlogVersionItem<TEntry>[] =>
   group.versions.map((entry) => {
     const isLatest = entry.id === group.latest.id;
@@ -251,7 +251,7 @@ export const buildBlogRouting = <TEntry extends BlogRoutingEntry>(
         latestHref: group.canonicalPath
       });
 
-      if (group.series && group.stablePath !== group.latestDatedPath) {
+      if (group.versionGroup && group.stablePath !== group.latestDatedPath) {
         routes.push({
           entry: group.latest,
           group,
@@ -350,7 +350,7 @@ export const getBlogEntryHrefMap = <TEntry extends BlogRoutingEntry>(
 export const getBlogVersionInfo = <TEntry extends BlogRoutingEntry>(
   routing: BlogRoutingResult<TEntry>,
   entry: TEntry
-): { isLatest: boolean; versionLabel: string; latestHref: string; series: string | null } => {
+): { isLatest: boolean; versionLabel: string; latestHref: string; versionGroup: string | null } => {
   const group = routing.groups.find((candidate) =>
     candidate.versions.some((version) => version.id === entry.id)
   );
@@ -359,14 +359,14 @@ export const getBlogVersionInfo = <TEntry extends BlogRoutingEntry>(
       isLatest: true,
       versionLabel: entry.data.versionLabel?.trim() || '',
       latestHref: getEntryDatedPath(entry),
-      series: null
+      versionGroup: null
     };
   }
   return {
     isLatest: group.latest.id === entry.id,
     versionLabel: entry.data.versionLabel?.trim() || '',
     latestHref: group.canonicalPath,
-    series: group.series
+    versionGroup: group.versionGroup
   };
 };
 

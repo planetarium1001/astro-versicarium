@@ -72,12 +72,17 @@ const createItem = (overrides: Partial<AdminContentIndexItem> = {}): AdminConten
     tags: ['admin'],
     project: null,
     projectSlug: null,
-    series: null,
+    versionGroup: null,
     versionLabel: null,
     versionName: null,
     versionOrder: null,
     versionGroupSize: 1,
     isLatestVersion: true,
+    series: null,
+    seriesName: null,
+    seriesOrder: null,
+    seriesIndex: null,
+    seriesTotal: null,
     searchHaystack: 'admin console guide admin admin-console-guide guide description',
     readonlyReason: null,
     sourceError: null,
@@ -602,7 +607,7 @@ describe('admin-console/content', () => {
     expect(BlogSection?.items).toHaveLength(10);
   });
 
-  it('renders all 14 overview blog entries: 9 standalone posts and 2 series with 5 versions', async () => {
+  it('renders all 14 overview blog entries: 9 standalone posts and 2 version groups with 5 versions', async () => {
     const standalone = Array.from({ length: 9 }, (_, index) => createItem({
       id: `standalone-${index + 1}`,
       publicEntryId: `standalone-${index + 1}`,
@@ -613,7 +618,7 @@ describe('admin-console/content', () => {
       id: `series-a-v${versionOrder}`,
       publicEntryId: `series-a-v${versionOrder}`,
       title: `Series A: v${versionOrder}`,
-      series: 'series-a',
+      versionGroup: 'series-a',
       versionName: `v${versionOrder}`,
       versionOrder,
       versionGroupSize: 3,
@@ -624,7 +629,7 @@ describe('admin-console/content', () => {
       id: `series-b-v${versionOrder}`,
       publicEntryId: `series-b-v${versionOrder}`,
       title: `Series B: v${versionOrder}`,
-      series: 'series-b',
+      versionGroup: 'series-b',
       versionName: `v${versionOrder}`,
       versionOrder,
       versionGroupSize: 2,
@@ -661,14 +666,18 @@ describe('admin-console/content', () => {
     const standaloneSection = listSections.find((section) => section.kind === 'standalone');
     if (standaloneSection?.kind !== 'standalone') throw new Error('expected a standalone section');
     expect(standaloneSection.items).toHaveLength(9);
-    const seriesSection = listSections.find((section) => section.kind === 'series');
-    if (seriesSection?.kind !== 'series') throw new Error('expected a series section');
-    expect(seriesSection.count).toBe(2);
-    expect(seriesSection.groups.map((group) => [group.series, group.versionCount, group.items.map((item) => item.id)]))
-      .toEqual([
-        ['series-a', 3, ['series-a-v3', 'series-a-v2', 'series-a-v1']],
-        ['series-b', 2, ['series-b-v2', 'series-b-v1']]
-      ]);
+    const versionGroupSection = listSections.find((section) => section.kind === 'version-group');
+    if (versionGroupSection?.kind !== 'version-group') throw new Error('expected a version group section');
+    expect(versionGroupSection.label).toBe('版本组');
+    expect(versionGroupSection.count).toBe(2);
+    expect(versionGroupSection.groups.map((group) => [
+      group.versionGroup,
+      group.versionCount,
+      group.items.map((item) => item.id)
+    ])).toEqual([
+      ['series-a', 3, ['series-a-v3', 'series-a-v2', 'series-a-v1']],
+      ['series-b', 2, ['series-b-v2', 'series-b-v1']]
+    ]);
   });
 
   it('renders all 10 devlog overview entries', async () => {
@@ -694,7 +703,7 @@ describe('admin-console/content', () => {
     expect(DevlogSection?.items.map((item) => item.id)).toEqual(entries.map((item) => item.id));
   });
 
-  it('keeps a series inside the same pagination window instead of splitting it across pages', async () => {
+  it('keeps a version group inside the same pagination window instead of splitting it across pages', async () => {
     const olderStandalone = Array.from({ length: 4 }, (_, index) => createItem({
       id: `older-${index + 1}`,
       publicEntryId: `older-${index + 1}`,
@@ -707,12 +716,12 @@ describe('admin-console/content', () => {
       title: `Newer ${index + 1}`,
       date: new Date(`2026-05-${String(19 - index).padStart(2, '0')}T00:00:00.000Z`)
     }));
-    const seriesEntries = [
+    const versionGroupEntries = [
       createItem({
         id: 'page-series-v2',
         publicEntryId: 'page-series-v2',
-        title: 'Page Series: 当前版本',
-        series: 'page-series',
+        title: 'Page Version Group: 当前版本',
+        versionGroup: 'page-series',
         versionName: '当前版本',
         versionOrder: 2,
         versionGroupSize: 2,
@@ -722,8 +731,8 @@ describe('admin-console/content', () => {
       createItem({
         id: 'page-series-v1',
         publicEntryId: 'page-series-v1',
-        title: 'Page Series: 初版',
-        series: 'page-series',
+        title: 'Page Version Group: 初版',
+        versionGroup: 'page-series',
         versionName: '初版',
         versionOrder: 1,
         versionGroupSize: 2,
@@ -731,7 +740,7 @@ describe('admin-console/content', () => {
         date: new Date('2026-04-29T00:00:00.000Z')
       })
     ];
-    setSourceItems({ blog: [...newerStandalone, ...seriesEntries, ...olderStandalone] });
+    setSourceItems({ blog: [...newerStandalone, ...versionGroupEntries, ...olderStandalone] });
     setSourceCounts({ blog: 25, bits: 0, about: 0 });
 
     const firstPage = await getAdminContentConsolePageData(new URLSearchParams([
@@ -744,15 +753,15 @@ describe('admin-console/content', () => {
     const firstPageItems = firstPage.sections[0]?.items ?? [];
     const secondPageItems = secondPage.sections[0]?.items ?? [];
 
-    // 分页元信息保持不变；窗口内出现的 series 把跨页的另一个版本带回本页。
+    // 分页元信息保持不变；窗口内出现的 versionGroup 把跨页的另一个版本带回本页。
     expect(firstPage.pagination).toMatchObject({ page: 1, totalItems: 25, totalPages: 2 });
     expect(firstPageItems).toHaveLength(21);
-    expect(firstPageItems.filter((item) => item.series === 'page-series').map((item) => item.id))
+    expect(firstPageItems.filter((item) => item.versionGroup === 'page-series').map((item) => item.id))
       .toEqual(['page-series-v2', 'page-series-v1']);
 
     const secondPageGroup = buildAdminContentListSections(secondPageItems)
-      .find((section) => section.kind === 'series');
-    if (secondPageGroup?.kind !== 'series') throw new Error('expected a series section');
+      .find((section) => section.kind === 'version-group');
+    if (secondPageGroup?.kind !== 'version-group') throw new Error('expected a version group section');
     expect(secondPageGroup.groups[0]?.items.map((item) => item.id))
       .toEqual(['page-series-v2', 'page-series-v1']);
   });

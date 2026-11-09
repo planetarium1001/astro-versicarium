@@ -4,7 +4,7 @@ description: 0.5.0 时期的上手说明：npm install 起站，内容放在 src
 date: 2026-10-02
 publishedAt: 2026-10-02
 tags: [快速开始]
-series: theme-quick-start
+versionGroup: theme-quick-start
 slug: theme-quick-start
 versionLabel: "0.5.0"
 versionName: 四集合时期

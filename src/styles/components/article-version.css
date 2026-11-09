@@ -79,6 +79,35 @@
   }
 }
 
+/*
+ * 系列抽屉尾部的「筛选当前系列」：与条目状态文字同档（12px）、右对齐，
+ * 但用主题色——它是可点的筛选入口，需要一眼能看出可以点。
+ */
+.article-series-notice__filter-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: 8px 0 0;
+}
+
+.article-series-notice__filter {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--accent);
+  border-bottom: 0;
+}
+
+.article-series-notice__filter:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  text-decoration: underline;
+}
+
+@media (hover: hover) {
+  :root:not([data-input="touch"]) .article-series-notice__filter:hover {
+    text-decoration: underline;
+  }
+}
+
 /**
  * 入口收进引用框最右端：文字说明 + 图标（宽屏 `<`、窄屏 `^`），
  * 文字与图标同属一个按钮，点任一位置都展开抽屉。

@@ -11,7 +11,12 @@ import {
   getFontCoverageCopy,
   readFontManifest
 } from '../../lib/fonts/budget';
-import { ENTRY_VERSION_NAME_MODE_OPTIONS } from '../../lib/entry-display';
+import {
+  ENTRY_SERIES_MODE_OPTIONS,
+  ENTRY_SERIES_ORDER_OPTIONS,
+  ENTRY_VERSION_NAME_MODE_OPTIONS,
+  formatEntrySeriesOrder
+} from '../../lib/entry-display';
 import { getThemeSettings } from '../../lib/theme-settings';
 import EntryTitleLine from '../EntryTitleLine.astro';
 
@@ -19,6 +24,44 @@ const {
   settings: { ui }
 } = getThemeSettings();
 const entryVersionMode = ui.entryVersionName;
+const entrySeriesMode = ui.entrySeriesMode;
+const entrySeriesOrder = ui.entrySeriesOrder;
+
+/**
+ * 系列预览固定用「第 2 篇 / 共 5 篇」：只有中段的序号才能同时说明
+ * 「这是第几篇」和「一共几篇」，`1/1` 或 `1/5` 会被误读成普通编号。
+ */
+const SERIES_PREVIEW_NAME = '折腾主机';
+const SERIES_PREVIEW_INDEX = 2;
+const SERIES_PREVIEW_TOTAL = 5;
+
+/**
+ * 预览态 = 档位 × 序号开关：两个下拉各自只是半个答案，所以预渲染全部组合，
+ * 由 `previews.ts` 的 `refreshEntrySeriesPreview` 按下拉值切换 `hidden`——
+ * 与「条目版本」预览同一套做法，切换时不重新渲染条目组件。
+ *
+ * `metaText` 只给列表预览用，且只对 `meta` 档有值：列表的 `meta` 档由元信息行承担，
+ * 标题行本身不产出系列段，这里补出「系列名 2/5」这一段的真实文案。
+ * 归档预览不需要它——归档没有元信息行，`meta` 档由 `buildEntryTitleSegments`
+ * 退化成标题后的小字，标题行已经渲染过一次，再补一段就是重复文案。
+ */
+const seriesPreviewVariants = ENTRY_SERIES_MODE_OPTIONS.flatMap((modeOption) =>
+  ENTRY_SERIES_ORDER_OPTIONS.map((orderOption) => {
+    const orderText =
+      orderOption.id === 'show' ? formatEntrySeriesOrder(SERIES_PREVIEW_INDEX, SERIES_PREVIEW_TOTAL) : '';
+    return {
+      mode: modeOption.id,
+      order: orderOption.id,
+      active: modeOption.id === entrySeriesMode && orderOption.id === entrySeriesOrder,
+      metaText:
+        modeOption.id === 'meta'
+          ? orderText
+            ? `${SERIES_PREVIEW_NAME} ${orderText}`
+            : SERIES_PREVIEW_NAME
+          : ''
+    };
+  })
+);
 const fontCoverage = ui.fontCoverage;
 // 清单可能尚未生成（还没跑 font:build）：budget helper 内部回退静态估算，后台不因此报错。
 const fontManifest = readFontManifest();
@@ -102,6 +145,121 @@ const typographyFields = [
               titleAs="span"
               titleTag="span"
               versionNameMode={option.id}
+            />
+          </span>
+        ))}
+      </span>
+    </p>
+  </div>
+</fieldset>
+
+<fieldset class="admin-group">
+  <legend class="admin-group__legend">
+    <AdminIcon name="layout-list" class="admin-group__legend-icon" size={14} />
+    <span class="admin-group__legend-copy">
+      <span class="admin-group__legend-zh">条目系列</span>
+      <span class="admin-group__legend-en">Entry series</span>
+    </span>
+  </legend>
+
+  <p class="admin-help">
+    系列是同一主题下并列的独立文章，<strong>与版本无关</strong>：这里的 <code>2/5</code> 是阅读序号（第 2 篇 / 共 5 篇），
+    不是版本号，也不会出现「最新 / 历史 / 查看最新版」。分类胶囊的样式与位置在四种档位下都不变；
+    没有系列字段的条目不会显示系列信息，文章页的同系列侧栏不受这里影响。
+  </p>
+
+  <div class="admin-stack">
+    <label class="admin-field" for="ui-entry-series-mode">
+      <span class="admin-label">
+        <span class="admin-label__main">呈现档位</span>
+        <span class="admin-label__hint">（列表、归档与首页共用）</span>
+      </span>
+      <select class="admin-field__control" id="ui-entry-series-mode">
+        {ENTRY_SERIES_MODE_OPTIONS.map((option) => (
+          <option value={option.id} selected={option.id === entrySeriesMode}>{option.label}</option>
+        ))}
+      </select>
+    </label>
+
+    <label class="admin-field" for="ui-entry-series-order">
+      <span class="admin-label">
+        <span class="admin-label__main">阅读序号</span>
+        <span class="admin-label__hint">（只控制 N/M，系列名照旧显示）</span>
+      </span>
+      <select class="admin-field__control" id="ui-entry-series-order">
+        {ENTRY_SERIES_ORDER_OPTIONS.map((option) => (
+          <option value={option.id} selected={option.id === entrySeriesOrder}>{option.label}</option>
+        ))}
+      </select>
+    </label>
+
+    {/*
+      预览沿用「条目版本」预览的样式类（`.admin-help--entry-version-preview` 给间距、
+      `.admin-entry-version-preview` 给条目行与胶囊的缩放），它们描述的是「帮助文本里的
+      条目行预览」这件事本身，不是版本特有的排版；这里只多挂 `data-entry-series-preview`
+      这组钩子区分刷新逻辑，避免为同一套尺度再复制一份 CSS。
+    */}
+    <p class="admin-help admin-help--entry-version-preview">
+      预览（列表）：<span
+        class="admin-help__preview-value admin-entry-version-preview"
+        data-entry-series-preview
+        data-series-mode={entrySeriesMode}
+        data-series-order={entrySeriesOrder}
+      >
+        {seriesPreviewVariants.map((variant) => (
+          <span
+            class="admin-entry-version-preview__variant"
+            data-entry-series-preview-variant={variant.mode}
+            data-entry-series-order={variant.order}
+            hidden={!variant.active}
+          >
+            <EntryTitleLine
+              surface="list"
+              title="Versicarium 主题示例"
+              badge="主题"
+              seriesName={SERIES_PREVIEW_NAME}
+              seriesIndex={SERIES_PREVIEW_INDEX}
+              seriesTotal={SERIES_PREVIEW_TOTAL}
+              titleAs="span"
+              titleTag="span"
+              seriesMode={variant.mode}
+              seriesOrderMode={variant.order}
+            />
+            {variant.metaText ? (
+              <span class="meta-line meta-line--items">
+                <span class="meta-line__item meta-line__item--series">
+                  <span class="entry-series-link">{variant.metaText}</span>
+                </span>
+              </span>
+            ) : null}
+          </span>
+        ))}
+      </span>
+      <br />
+      预览（归档）：<span
+        class="admin-help__preview-value admin-entry-version-preview"
+        data-entry-series-preview
+        data-series-mode={entrySeriesMode}
+        data-series-order={entrySeriesOrder}
+      >
+        {seriesPreviewVariants.map((variant) => (
+          <span
+            class="admin-entry-version-preview__variant"
+            data-entry-series-preview-variant={variant.mode}
+            data-entry-series-order={variant.order}
+            hidden={!variant.active}
+          >
+            <EntryTitleLine
+              surface="archive"
+              title="Versicarium 主题示例"
+              badge="主题"
+              seriesName={SERIES_PREVIEW_NAME}
+              seriesIndex={SERIES_PREVIEW_INDEX}
+              seriesTotal={SERIES_PREVIEW_TOTAL}
+              titleAs="span"
+              titleTag="span"
+              seriesMode={variant.mode}
+              seriesOrderMode={variant.order}
             />
           </span>
         ))}

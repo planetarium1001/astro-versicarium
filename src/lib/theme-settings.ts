@@ -17,8 +17,14 @@ import {
 import { DEFAULT_SITE_FAVICON, GENERATED_SITE_FAVICON } from '../utils/favicon-defaults';
 import { isValidIanaTimeZone } from '../utils/timezone';
 import {
+  DEFAULT_ENTRY_SERIES_MODE,
+  DEFAULT_ENTRY_SERIES_ORDER,
   DEFAULT_ENTRY_VERSION_NAME_MODE,
+  normalizeEntrySeriesMode,
+  normalizeEntrySeriesOrder,
   normalizeEntryVersionNameMode,
+  type EntrySeriesMode,
+  type EntrySeriesOrder,
   type EntryVersionNameMode
 } from './entry-display';
 import {
@@ -378,6 +384,16 @@ interface UiSettings {
   typography: TypographySettings;
   fontCoverage: FontCoverage;
   entryVersionName: EntryVersionNameMode;
+  /**
+   * 条目上的系列呈现：`hidden` / `meta` / `pill` / `prefix` 四档。
+   * 系列与版本无关，这里只决定「系列名 + 第 N 篇」怎么排，不参与任何版本判定。
+   */
+  entrySeriesMode: EntrySeriesMode;
+  /**
+   * 系列阅读序号（`2/5`）的开关：关掉后系列名仍在，只是不显示序号。
+   * 序号是阅读次序，不是版本号，所以单独可控而不是并进档位里。
+   */
+  entrySeriesOrder: EntrySeriesOrder;
 }
 
 interface ThemeSettings {
@@ -488,6 +504,8 @@ interface ThemeSettingsSources {
     typographyBrand: SettingSource;
     fontCoverage: SettingSource;
     entryVersionName: SettingSource;
+    entrySeriesMode: SettingSource;
+    entrySeriesOrder: SettingSource;
   };
 }
 
@@ -794,7 +812,9 @@ const DEFAULT_UI: UiSettings = {
     ...ADMIN_TYPOGRAPHY_DEFAULT
   },
   fontCoverage: ADMIN_FONT_COVERAGE_DEFAULT,
-  entryVersionName: DEFAULT_ENTRY_VERSION_NAME_MODE
+  entryVersionName: DEFAULT_ENTRY_VERSION_NAME_MODE,
+  entrySeriesMode: DEFAULT_ENTRY_SERIES_MODE,
+  entrySeriesOrder: DEFAULT_ENTRY_SERIES_ORDER
 };
 
 const NAV_IDS: ReadonlySet<SidebarNavId> = new Set(['blog', 'projects', 'bits', 'devlog', 'archive', 'about']);
@@ -1797,6 +1817,18 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
     undefined,
     DEFAULT_UI.entryVersionName
   );
+  // 系列呈现的两个键同样是「后加的顶层标量」：旧 ui.json 里没有这两个键时回落到默认档，
+  // 非法值由 normalize 收敛到默认，读取期不因此把后台锁进 invalid-settings。
+  const entrySeriesMode = resolveValue<EntrySeriesMode>(
+    uiJson?.entrySeriesMode === undefined ? undefined : normalizeEntrySeriesMode(uiJson.entrySeriesMode),
+    undefined,
+    DEFAULT_UI.entrySeriesMode
+  );
+  const entrySeriesOrder = resolveValue<EntrySeriesOrder>(
+    uiJson?.entrySeriesOrder === undefined ? undefined : normalizeEntrySeriesOrder(uiJson.entrySeriesOrder),
+    undefined,
+    DEFAULT_UI.entrySeriesOrder
+  );
 
   const showLineNumbers = resolveValue(
     asBoolean(uiCodeBlock?.showLineNumbers),
@@ -2099,7 +2131,9 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
           brand: typographyBrand.value
         },
         fontCoverage: fontCoverage.value,
-        entryVersionName: entryVersionName.value
+        entryVersionName: entryVersionName.value,
+        entrySeriesMode: entrySeriesMode.value,
+        entrySeriesOrder: entrySeriesOrder.value
       }
     },
     sources: {
@@ -2201,7 +2235,9 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
         typographyMono: typographyMono.source,
         typographyBrand: typographyBrand.source,
         fontCoverage: fontCoverage.source,
-        entryVersionName: entryVersionName.source
+        entryVersionName: entryVersionName.source,
+        entrySeriesMode: entrySeriesMode.source,
+        entrySeriesOrder: entrySeriesOrder.source
       }
     }
   };
@@ -2309,7 +2345,9 @@ const buildEditableThemeSettingsSnapshot = (
       layout: { ...resolved.settings.ui.layout },
       typography: { ...resolved.settings.ui.typography },
       fontCoverage: resolved.settings.ui.fontCoverage,
-      entryVersionName: resolved.settings.ui.entryVersionName
+      entryVersionName: resolved.settings.ui.entryVersionName,
+      entrySeriesMode: resolved.settings.ui.entrySeriesMode,
+      entrySeriesOrder: resolved.settings.ui.entrySeriesOrder
     }
   });
 

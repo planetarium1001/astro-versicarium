@@ -17,7 +17,7 @@
   gap: 0;
 }
 
-/* 列表内分区标题：把系列与单篇文章分开，避免版本行混在普通文章中间。 */
+/* 列表内分区标题：把版本组与单篇文章分开，避免版本行混在普通文章中间。 */
 .admin-content-list-subhead {
   display: flex;
   align-items: baseline;
@@ -41,13 +41,13 @@
   letter-spacing: 0;
 }
 
-/* series 分组：details + summary 原生折叠，标题行保持无底色，仅用 chevron 提示可展开。 */
+/* 版本组分组：details + summary 原生折叠，标题行保持无底色，仅用 chevron 提示可展开。 */
 .admin-content-series,
 .admin-content-series-details {
   min-width: 0;
 }
 
-/* 系列标题：不参与 data-admin-content-item 行选择器，避免影响批量操作。 */
+/* 版本组标题：不参与 data-admin-content-item 行选择器，避免影响批量操作。 */
 .admin-content-series-head {
   display: flex;
   flex-wrap: wrap;
@@ -135,7 +135,7 @@
   display: none;
 }
 
-/* 系列 → 版本层级：左侧竖线 + 缩进；版本行自身保持普通行样式。 */
+/* 版本组 → 版本层级：左侧竖线 + 缩进；版本行自身保持普通行样式。 */
 .admin-content-series-versions {
   display: grid;
   min-width: 0;
@@ -986,6 +986,11 @@
   font-size: 11px;
   line-height: 1.5;
   white-space: nowrap;
+}
+
+.admin-content-row-mark--series {
+  /* 系列徽标只表达「第几篇」，用低对比色与版本胶囊区分，避免读成版本号。 */
+  color: color-mix(in srgb, var(--faint) 62%, var(--muted) 38%);
 }
 
 .admin-content-row-mark--latest {

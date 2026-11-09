@@ -31,11 +31,16 @@ export type AdminBlogEditorValues = {
   tagsText: string;
   draft: boolean;
   slug: string;
-  series: string;
+  /** 版本线稳定键（frontmatter `versionGroup`），多版本内容共用。 */
+  versionGroup: string;
   versionLabel: string;
   versionName: string;
   versionSummary: string;
   versionOrder: string;
+  /** 内容系列：有序阅读集合的稳定键、显示名与阅读次序，与版本无关。 */
+  series: string;
+  seriesName: string;
+  seriesOrder: string;
   ogImage: string;
   ogImageAlt: string;
   badge: string;
@@ -197,11 +202,6 @@ const getDateString = (frontmatter: Record<string, unknown>, key: string, fallba
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback;
 };
 
-const getBlogDateText = (value: unknown): string => {
-  const parsed = parseBlogDateInput(value);
-  return parsed?.dateText ?? normalizeOptionalText(value);
-};
-
 const toBlogEditorValues = (state: AdminContentSourceState): AdminBlogEditorValues => {
   const frontmatter = state.rawFrontmatter;
   const rawDate = getDateString(frontmatter, 'date', '');
@@ -213,15 +213,19 @@ const toBlogEditorValues = (state: AdminContentSourceState): AdminBlogEditorValu
     description: normalizeOptionalText(frontmatter.description),
     date: dateResult?.dateText ?? rawDate,
     publishedAt: rawPublishedAt,
-    updatedAt: getBlogDateText(frontmatter.updatedAt),
+    // 原文进编辑器：日期时间控件负责按站点时区展示，作者不改时保存也不重写。
+    updatedAt: normalizeOptionalText(frontmatter.updatedAt),
     tagsText: getStringArray(frontmatter.tags).join('\n'),
     draft: frontmatter.draft === true,
     slug: normalizeOptionalText(frontmatter.slug),
-    series: normalizeOptionalText(frontmatter.series),
+    versionGroup: normalizeOptionalText(frontmatter.versionGroup),
     versionLabel: normalizeOptionalText(frontmatter.versionLabel),
     versionName: normalizeOptionalText(frontmatter.versionName),
     versionSummary: normalizeOptionalText(frontmatter.versionSummary),
     versionOrder: frontmatter.versionOrder == null ? '' : String(frontmatter.versionOrder),
+    series: normalizeOptionalText(frontmatter.series),
+    seriesName: normalizeOptionalText(frontmatter.seriesName),
+    seriesOrder: frontmatter.seriesOrder == null ? '' : String(frontmatter.seriesOrder),
     ogImage: normalizeOptionalText(frontmatter.ogImage ?? frontmatter.cover),
     ogImageAlt: normalizeOptionalText(frontmatter.ogImageAlt),
     badge: normalizeOptionalText(frontmatter.badge)

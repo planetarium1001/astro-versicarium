@@ -44,7 +44,8 @@ type BlogSource = {
   filePath: string;
   directory: string;
   title: string;
-  series: string | null;
+  /** 版本线稳定键（frontmatter `versionGroup`）；与内容系列 `series` 无关。 */
+  versionGroup: string | null;
   slug: string | null;
   date: Date;
   dateText: string;
@@ -65,7 +66,7 @@ const loadBlogSources = async (): Promise<BlogSource[]> => {
       filePath: file.filePath,
       directory: path.dirname(file.filePath),
       title: normalizeOptionalText(frontmatter.title) || entryId,
-      series: normalizeOptionalText(frontmatter.series) || null,
+      versionGroup: normalizeOptionalText(frontmatter.versionGroup) || null,
       slug: normalizeOptionalText(frontmatter.slug) || null,
       date: parsedDate.date,
       dateText: parsedDate.dateText,
@@ -94,12 +95,12 @@ export const createAdminBlogVersion = async (
   const source = sources.find((candidate) => candidate.entryId === sourceEntryId);
   if (!source) throw new Error(`找不到博客条目：${sourceEntryId}`);
 
-  const series = source.series ?? source.slug ?? source.entryId;
-  const seriesSources = sources
-    .filter((candidate) => (candidate.series ?? candidate.slug ?? candidate.entryId) === series)
+  const versionGroup = source.versionGroup ?? source.slug ?? source.entryId;
+  const versionGroupSources = sources
+    .filter((candidate) => (candidate.versionGroup ?? candidate.slug ?? candidate.entryId) === versionGroup)
     .sort(compareSources);
-  const latest = seriesSources[0] ?? source;
-  const maxVersionOrder = Math.max(...seriesSources.map((candidate) => candidate.versionOrder), 0);
+  const latest = versionGroupSources[0] ?? source;
+  const maxVersionOrder = Math.max(...versionGroupSources.map((candidate) => candidate.versionOrder), 0);
 
   const timeZone = getSiteTimezone();
   const dateInput = input.date?.trim();
@@ -123,8 +124,9 @@ export const createAdminBlogVersion = async (
   const sourceText = await readFile(mainPath, 'utf8');
   const nextVersionOrder = maxVersionOrder + 1;
   const nextText = patchMarkdownFrontmatter(sourceText, [
-    { path: ['series'], action: 'set', value: series },
-    { path: ['slug'], action: 'set', value: latest.slug ?? series },
+    // 只写版本线键：内容系列 series/seriesName/seriesOrder 由目录复制原样带过来。
+    { path: ['versionGroup'], action: 'set', value: versionGroup },
+    { path: ['slug'], action: 'set', value: latest.slug ?? versionGroup },
     { path: ['date'], action: 'set', value: dateText },
     { path: ['versionLabel'], action: 'set', value: input.versionLabel?.trim() || `v${nextVersionOrder}` },
     { path: ['versionName'], action: 'set', value: latest.title },

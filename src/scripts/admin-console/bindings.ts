@@ -72,12 +72,15 @@ export const bindAdminThemeFieldEvents = ({
     inputHomeIntroMoreLinkSecondary,
     inputHomeShowHero,
     inputFontCoverage,
-    inputEntryVersionName
+    inputEntryVersionName,
+    inputEntrySeriesMode,
+    inputEntrySeriesOrder
   } = controls;
   const {
     refreshArticleMetaPreview,
     refreshViewStatsPreview,
     refreshEntryVersionPreview,
+    refreshEntrySeriesPreview,
     refreshFontCoveragePreview,
     refreshHomeIntroPreview,
     syncAdminOverviewControls,
@@ -134,6 +137,9 @@ export const bindAdminThemeFieldEvents = ({
   inputViewStatsOnArticleMeta.addEventListener('change', refreshViewStatsPreview);
   inputViewStatsOnIndexPages.addEventListener('change', refreshViewStatsPreview);
   inputEntryVersionName.addEventListener('change', refreshEntryVersionPreview);
+  // 档位与序号开关都会改变预览形态：两个 select 共用同一个刷新函数。
+  inputEntrySeriesMode.addEventListener('change', refreshEntrySeriesPreview);
+  inputEntrySeriesOrder.addEventListener('change', refreshEntrySeriesPreview);
   inputFontCoverage.addEventListener('change', refreshFontCoveragePreview);
   inputHomeIntroMore.addEventListener('input', refreshHomeIntroPreview);
   inputHomeShowIntroMore.addEventListener('change', refreshHomeIntroPreview);

@@ -23,7 +23,7 @@ describe('admin content create version api', () => {
     expect(payload.result.editHref).toContain('/admin/content/blog/_edit/');
 
     const source = await readFile(path.join(getTempRoot(), payload.result.relativePath), 'utf8');
-    expect(source).toContain('series: demo');
+    expect(source).toContain('versionGroup: demo');
     expect(source).toContain('slug: demo');
     expect(source).toContain('versionLabel: v2');
     expect(source).toContain('draft: true');

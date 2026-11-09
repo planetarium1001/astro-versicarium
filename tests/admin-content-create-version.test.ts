@@ -27,21 +27,25 @@ describe('createAdminBlogVersion', () => {
     tempRoot = await mkdtemp(path.join(tmpdir(), 'astro-whono-version-'));
     process.env.ASTRO_WHONO_INTERNAL_TEST_PROJECT_ROOT = tempRoot;
     await writeEntry('2026-01-01-post-v1', [
-      'title: Series post',
+      'title: Version post',
       'date: 2026-01-01',
-      'series: post',
+      'versionGroup: post',
       'slug: post',
       'versionLabel: v1',
       'versionOrder: 1',
       'draft: false'
     ].join('\n'));
     await writeEntry('2026-02-01-post-v2', [
-      'title: Series post',
+      'title: Version post',
       'date: 2026-02-01',
-      'series: post',
+      'versionGroup: post',
       'slug: post',
       'versionLabel: v2',
       'versionOrder: 2',
+      // 真系列字段：新建版本时原样保留，不能被版本线覆盖。
+      'series: pc-build',
+      'seriesName: 折腾主机',
+      'seriesOrder: 1',
       'draft: false'
     ].join('\n'), {
       'images/cover.webp': 'cover'
@@ -53,13 +57,16 @@ describe('createAdminBlogVersion', () => {
     await rm(tempRoot, { recursive: true, force: true });
   });
 
-  it('copies the latest version, keeps the series slug, and creates a draft version', async () => {
+  it('copies the latest version, keeps the version group slug, and creates a draft version', async () => {
     const result = await createAdminBlogVersion({ entryId: '2026-01-01-post-v1' });
     const source = await readFile(path.join(tempRoot, result.relativePath), 'utf8');
     const frontmatter = splitMarkdownFrontmatter(source).frontmatterText ?? '';
 
     expect(result.entryId).toContain('2026-');
-    expect(frontmatter).toContain('series: post');
+    expect(frontmatter).toContain('versionGroup: post');
+    // 版本线改名后不再写 series；真系列字段随目录复制保留原值。
+    expect(frontmatter).toContain('series: pc-build');
+    expect(frontmatter).toContain('seriesName: 折腾主机');
     expect(frontmatter).toContain('slug: post');
     expect(frontmatter).toContain('versionOrder: 3');
     expect(frontmatter).toContain('draft: true');

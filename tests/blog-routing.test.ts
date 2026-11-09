@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   buildBlogRouting,
   getBlogEntryHrefMap,
+  getBlogVersionInfo,
   getLatestBlogEntries,
+  getVersionGroupKey,
   suggestAvailableBlogSlug
 } from '../src/lib/blog-routing';
 
@@ -25,12 +27,12 @@ describe('blog routing', () => {
   it('builds a stable latest route, a dated alias, and permanent old-version routes', () => {
     const routing = buildBlogRouting([
       entry('2026-01-01-post-v1', '2026-01-01', {
-        series: 'post',
+        versionGroup: 'post',
         slug: 'post',
         versionLabel: 'v1'
       }),
       entry('2026-03-01-post-v2', '2026-03-01', {
-        series: 'post',
+        versionGroup: 'post',
         slug: 'post',
         versionLabel: 'v2'
       })
@@ -47,10 +49,10 @@ describe('blog routing', () => {
     expect(getLatestBlogEntries([...routing.groups.flatMap((group) => group.versions)])).toHaveLength(1);
   });
 
-  it('keeps a series without slug on dated URLs', () => {
+  it('keeps a version group without slug on dated URLs', () => {
     const routing = buildBlogRouting([
-      entry('2026-01-01-post-v1', '2026-01-01', { series: 'post' }),
-      entry('2026-03-01-post-v2', '2026-03-01', { series: 'post' })
+      entry('2026-01-01-post-v1', '2026-01-01', { versionGroup: 'post' }),
+      entry('2026-03-01-post-v2', '2026-03-01', { versionGroup: 'post' })
     ]);
 
     expect(routing.routes.map((route) => [route.path, route.kind])).toEqual([
@@ -60,22 +62,50 @@ describe('blog routing', () => {
     expect(routing.groups[0]?.canonicalPath).toBe('/blog/2026-03-01-post-v2/');
   });
 
-  it('allows the same slug inside one series but rejects it across series', () => {
+  it('exposes the version group key and the version group value', () => {
+    const routing = buildBlogRouting([
+      entry('2026-01-01-post-v1', '2026-01-01', { versionGroup: 'post', slug: 'post' })
+    ]);
+
+    expect(getVersionGroupKey(entry('2026-01-01-post-v1', '2026-01-01', { versionGroup: 'post' })))
+      .toBe('versionGroup:post');
+    expect(getVersionGroupKey(entry('2026-01-01-loose', '2026-01-01'))).toBe('single:2026-01-01-loose');
+    expect(routing.groups[0]?.versionGroup).toBe('post');
+    expect(routing.groups[0]?.versionGroupKey).toBe('versionGroup:post');
+    expect(getBlogVersionInfo(routing, routing.groups[0]!.latest).versionGroup).toBe('post');
+  });
+
+  it('treats the series field as a plain reading collection, not as a version group', () => {
+    const routing = buildBlogRouting([
+      entry('2026-01-01-first', '2026-01-01', { series: 'pc-build', slug: 'first' }),
+      entry('2026-02-01-second', '2026-02-01', { series: 'pc-build', slug: 'second' })
+    ]);
+
+    expect(routing.groups).toHaveLength(2);
+    expect(routing.routes.map((route) => [route.path, route.kind, route.noindex])).toEqual([
+      ['/blog/second/', 'latest-stable', false],
+      ['/blog/first/', 'latest-stable', false]
+    ]);
+    expect(getBlogVersionInfo(routing, routing.groups[0]!.latest).versionGroup).toBeNull();
+    expect(getBlogVersionInfo(routing, routing.groups[0]!.latest).isLatest).toBe(true);
+  });
+
+  it('allows the same slug inside one version group but rejects it across version groups', () => {
     expect(() => buildBlogRouting([
-      entry('2026-01-01-a', '2026-01-01', { series: 'a', slug: 'same' }),
-      entry('2026-02-01-a', '2026-02-01', { series: 'a', slug: 'same' })
+      entry('2026-01-01-a', '2026-01-01', { versionGroup: 'a', slug: 'same' }),
+      entry('2026-02-01-a', '2026-02-01', { versionGroup: 'a', slug: 'same' })
     ])).not.toThrow();
 
     expect(() => buildBlogRouting([
-      entry('2026-01-01-a', '2026-01-01', { series: 'a', slug: 'same' }),
-      entry('2026-01-01-b', '2026-01-01', { series: 'b', slug: 'same' })
+      entry('2026-01-01-a', '2026-01-01', { versionGroup: 'a', slug: 'same' }),
+      entry('2026-01-01-b', '2026-01-01', { versionGroup: 'b', slug: 'same' })
     ])).toThrow(/Duplicate blog route/);
   });
 
-  it('rejects differing slugs inside one series', () => {
+  it('rejects differing slugs inside one version group', () => {
     expect(() => buildBlogRouting([
-      entry('2026-01-01-a', '2026-01-01', { series: 'a', slug: 'one' }),
-      entry('2026-02-01-a', '2026-02-01', { series: 'a', slug: 'two' })
+      entry('2026-01-01-a', '2026-01-01', { versionGroup: 'a', slug: 'one' }),
+      entry('2026-02-01-a', '2026-02-01', { versionGroup: 'a', slug: 'two' })
     ])).toThrow(/share one public slug/);
   });
 

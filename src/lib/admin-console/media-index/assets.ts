@@ -16,7 +16,7 @@ import {
   SHARED_ENTRY_ID,
   SHARED_LABEL,
   UNASSIGNED_LABEL,
-  UNASSIGNED_SERIES,
+  UNASSIGNED_VERSION_GROUP,
   UNASSIGNED_VERSION,
   isIgnoredFile,
   isImageFile,
@@ -83,9 +83,9 @@ export const loadAssets = async (
         size: 0,
         mtimeMs: null,
         collection: entry?.collection ?? collection,
-        series: isShared ? '' : entry?.series ?? UNASSIGNED_SERIES,
-        seriesLabel: isShared ? SHARED_LABEL : entry?.seriesLabel ?? UNASSIGNED_LABEL,
-        hasSeries: isShared ? false : entry?.hasSeries ?? false,
+        versionGroup: isShared ? '' : entry?.versionGroup ?? UNASSIGNED_VERSION_GROUP,
+        versionGroupLabel: isShared ? SHARED_LABEL : entry?.versionGroupLabel ?? UNASSIGNED_LABEL,
+        hasVersionGroup: isShared ? false : entry?.hasVersionGroup ?? false,
         version: isShared ? SHARED_ENTRY_ID : entry?.version ?? UNASSIGNED_VERSION,
         versionLabel: isShared ? SHARED_LABEL : entry?.versionLabel ?? UNASSIGNED_LABEL,
         entryId: isShared ? SHARED_ENTRY_ID : entry?.entryId ?? '',
@@ -115,9 +115,9 @@ export const loadAssets = async (
       size: 0,
       mtimeMs: null,
       collection: resolved.collection,
-      series: isShared ? '' : entry?.series ?? resolved.entryId ?? UNASSIGNED_SERIES,
-      seriesLabel: isShared ? SHARED_LABEL : entry?.seriesLabel ?? resolved.entryId ?? UNASSIGNED_LABEL,
-      hasSeries: isShared ? false : entry?.hasSeries ?? false,
+      versionGroup: isShared ? '' : entry?.versionGroup ?? resolved.entryId ?? UNASSIGNED_VERSION_GROUP,
+      versionGroupLabel: isShared ? SHARED_LABEL : entry?.versionGroupLabel ?? resolved.entryId ?? UNASSIGNED_LABEL,
+      hasVersionGroup: isShared ? false : entry?.hasVersionGroup ?? false,
       version: isShared ? SHARED_ENTRY_ID : entry?.version ?? resolved.entryId ?? UNASSIGNED_VERSION,
       versionLabel: isShared ? SHARED_LABEL : entry?.versionLabel ?? resolved.entryId ?? UNASSIGNED_LABEL,
       entryId: isShared ? SHARED_ENTRY_ID : resolved.entryId,
@@ -153,8 +153,8 @@ export const loadAssets = async (
     const collectionDiff = ADMIN_CONTENT_COLLECTION_KEYS.indexOf(left.collection)
       - ADMIN_CONTENT_COLLECTION_KEYS.indexOf(right.collection);
     if (collectionDiff !== 0) return collectionDiff;
-    const seriesDiff = left.series.localeCompare(right.series, 'zh-CN');
-    if (seriesDiff !== 0) return seriesDiff;
+    const versionGroupDiff = left.versionGroup.localeCompare(right.versionGroup, 'zh-CN');
+    if (versionGroupDiff !== 0) return versionGroupDiff;
     const versionDiff = left.version.localeCompare(right.version, 'zh-CN');
     if (versionDiff !== 0) return versionDiff;
     const directoryDiff = left.directory.localeCompare(right.directory, 'zh-CN');

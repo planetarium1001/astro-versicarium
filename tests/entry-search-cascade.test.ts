@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { BLOG_SERIES_TAG_PREFIX } from '../src/lib/blog-series';
 import { getTagKeys } from '../src/lib/tags';
 import {
   PAGES,
@@ -165,7 +166,11 @@ const createAnimationHarness = () => {
 const fewestMatchingTagKey = (indexItems: { slug: string; tags: string[] }[]) => {
   const countFor = (key: string) =>
     indexItems.filter((item) => getTagKeys(item.tags).includes(key)).length;
-  const keys = tagButtons().map((el) => (el.dataset.entryTagKey ?? '').trim());
+  // 筛选面板里系列键与标签键共用同一个按钮列表；本组测试观察的是标签筛选，
+  // 系列键要排除，否则「最少命中」会选到命中数为 0 的系列键。
+  const keys = tagButtons()
+    .map((el) => (el.dataset.entryTagKey ?? '').trim())
+    .filter((key) => key && !key.startsWith(BLOG_SERIES_TAG_PREFIX));
   return keys.sort((a, b) => countFor(a) - countFor(b))[0]!;
 };
 

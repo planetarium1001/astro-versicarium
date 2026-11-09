@@ -441,7 +441,7 @@ const getContentCreateAction = (
                   : null;
                 const shouldShowSectionCreateAction = Boolean(createAction);
                 const isSectionTitleLinked = pageData.mode === 'overview';
-                // projects 用项目稳定 slug 归并版本；其余 collection 仍按 blog series 分组。
+                // projects 用项目稳定 slug 归并版本；其余 collection 按 blog versionGroup 分组。
                 const isProjectSection = section.collection === 'projects';
                 const sectionContentSections = isProjectSection
                   ? []
@@ -451,8 +451,8 @@ const getContentCreateAction = (
                     (projectSection) => projectSection.groups
                   )
                   : [];
-                const sectionHasSeries = sectionContentSections.some(
-                  (contentSection) => contentSection.kind === 'series'
+                const sectionHasVersionGroups = sectionContentSections.some(
+                  (contentSection) => contentSection.kind === 'version-group'
                 );
                 return (
                   <section class="admin-content-module" aria-labelledby={sectionTitleId}>
@@ -546,7 +546,7 @@ const getContentCreateAction = (
                                 <>
                                   {contentSection.kind === 'standalone' ? (
                                     <>
-                                      {sectionHasSeries ? (
+                                      {sectionHasVersionGroups ? (
                                         <li class="admin-content-list-subhead" data-admin-content-subhead="standalone">
                                           <span class="admin-content-list-subhead__label">{contentSection.label}</span>
                                           <span class="admin-content-list-subhead__count">{contentSection.count} 篇</span>
@@ -556,20 +556,20 @@ const getContentCreateAction = (
                                     </>
                                   ) : (
                                     <>
-                                      <li class="admin-content-list-subhead" data-admin-content-subhead="series">
+                                      <li class="admin-content-list-subhead" data-admin-content-subhead="version-group">
                                         <span class="admin-content-list-subhead__label">{contentSection.label}</span>
-                                        <span class="admin-content-list-subhead__count">{contentSection.count} 个系列</span>
+                                        <span class="admin-content-list-subhead__count">{contentSection.count} 个版本组</span>
                                       </li>
                                       {contentSection.groups.map((group) => (
                                         <li
                                           class="admin-content-series"
-                                          data-admin-content-series-group={group.series}
+                                          data-admin-content-version-group={group.versionGroup}
                                         >
                                           <details class="admin-content-series-details">
                                             <summary class="admin-content-series-head">
                                               <span class="admin-content-series-head__title">
                                                 <strong class="admin-content-series-head__name">{group.displayTitle}</strong>
-                                                <code class="admin-content-series-head__series">{group.series}</code>
+                                                <code class="admin-content-series-head__series">{group.versionGroup}</code>
                                               </span>
                                               <span class="admin-content-series-head__meta">
                                                 <span class="admin-content-series-head__count">{group.versionCount} 个版本</span>

@@ -359,11 +359,11 @@ export const getAdminContentFilterHref = (
 };
 
 /**
- * 版本分组的窗口完整性键：blog 用 series，projects 用 projectSlug。
- * 其余 collection 没有版本分组，返回 null。
+ * 版本分组的窗口完整性键：blog 用 versionGroup，projects 用 projectSlug。
+ * 内容系列（series）不参与这里：系列成员是并列的独立文章，不是同一个内容的不同版本。
  */
 const getAdminContentVersionGroupKey = (item: AdminContentIndexItem): string | null => {
-  if (item.series) return `series:${item.series}`;
+  if (item.versionGroup) return `versionGroup:${item.versionGroup}`;
   if (item.collection === 'projects' && item.projectSlug) return `project:${item.projectSlug}`;
   return null;
 };

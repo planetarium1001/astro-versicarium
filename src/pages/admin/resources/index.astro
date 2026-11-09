@@ -59,7 +59,7 @@ const endpoints = {
       >
         <div class="resources-intro">
           <p class="resources-intro__description">
-            按内容集合、系列和版本浏览资源。上传会自动落到当前条目的 images/ 或 files/，构建时只输出被引用的文件。
+            按内容集合、版本组和版本浏览资源。上传会自动落到当前条目的 images/ 或 files/，构建时只输出被引用的文件。
           </p>
           <div class="resources-intro__actions">
             <button class="admin-btn admin-btn--tool admin-btn--compact" type="button" data-resources-import-open>
@@ -130,7 +130,7 @@ const endpoints = {
                   type="search"
                   name="q"
                   autocomplete="off"
-                  placeholder="搜索文件名、系列或条目…"
+                  placeholder="搜索文件名、版本组或条目…"
                   aria-label="搜索资源"
                   data-resources-search
                 />
@@ -156,13 +156,14 @@ const endpoints = {
                   </select>
                 </label>
 
-                <div class="resources-combobox" data-resources-combobox="series">
-                  <span class="resources-field__label">系列</span>
+                <!-- 版本组指同一内容的版本线（frontmatter versionGroup），与文章的内容系列 series 不是一回事。 -->
+                <div class="resources-combobox" data-resources-combobox="versionGroup">
+                  <span class="resources-field__label">版本组</span>
                   <div class="resources-combobox__control">
-                    <input class="resources-field__control" type="text" autocomplete="off" placeholder="输入或选择系列" role="combobox" aria-expanded="false" aria-autocomplete="list" />
-                    <button type="button" class="resources-combobox__clear" aria-label="清除系列" hidden>×</button>
+                    <input class="resources-field__control" type="text" autocomplete="off" placeholder="输入或选择版本组" role="combobox" aria-expanded="false" aria-autocomplete="list" />
+                    <button type="button" class="resources-combobox__clear" aria-label="清除版本组" hidden>×</button>
                   </div>
-                  <input type="hidden" name="series" />
+                  <input type="hidden" name="versionGroup" />
                   <ul class="resources-combobox__menu" role="listbox" hidden></ul>
                 </div>
 

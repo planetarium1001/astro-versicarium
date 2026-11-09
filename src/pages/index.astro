@@ -7,7 +7,8 @@ import {
   ADMIN_HOME_INTRO_LINK_DEFAULT,
   getAdminHomeIntroLinkOption
 } from '../lib/admin-console/theme-shared';
-import { getBlogDerivedText, getVisibleBlogListItems } from '../lib/content';
+import { getBlogDerivedText, getVisibleBlogListItems, getVisibleBlogSeriesIndex } from '../lib/content';
+import { buildEntrySeriesLookup } from '../lib/entry-display';
 import { getThemeFontStack } from '../lib/fonts/registry';
 import { getThemeSettings, getVisibleArticleMetaTags } from '../lib/theme-settings';
 import { createWithBase } from '../utils/format';
@@ -36,6 +37,8 @@ const resolvedIntroMoreLinks = (introMoreLinks.length ? introMoreLinks : [...ADM
 );
 
 const allItems = await getVisibleBlogListItems();
+/** 系列呈现按站点设置（`ui.entrySeriesMode`）在 EntryListItem 内决定，这里只提供数据。 */
+const seriesByEntryId = buildEntrySeriesLookup(await getVisibleBlogSeriesIndex());
 const pagination = paginationSettings?.home ?? { enabled: true, pageSize: 12 };
 
 /* 首屏 critical CSS 只消费 readable/copy/brand 三个 role token（mono 首屏未用），
@@ -842,6 +845,7 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
     {allItems.map((item) => {
       const href = withBase(item.href);
       const visibleTags = getVisibleArticleMetaTags(item.entry.data.tags, 'home');
+      const series = seriesByEntryId.get(item.entry.id) ?? null;
       return (
         <EntryListItem
           href={href}
@@ -861,11 +865,15 @@ body[data-reading="immersive"] .reader-toggle .icon-book-open {
           visibleTags={visibleTags}
           articleMetaSettings={articleMeta}
           excerpt={getBlogDerivedText(item.entry).excerpt}
-          series={item.series}
+          versionGroup={item.versionGroup}
           versionLabel={item.versionLabel}
           versionName={item.entry.data.versionName ?? null}
           versionSummary={item.entry.data.versionSummary ?? null}
           versionOrder={item.entry.data.versionOrder ?? null}
+          seriesName={series?.name ?? null}
+          seriesIndex={series?.index ?? null}
+          seriesTotal={series?.total ?? null}
+          seriesSlug={series?.slug ?? null}
         />
       );
     })}

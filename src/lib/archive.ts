@@ -3,12 +3,15 @@ import { getSiteTimezone } from '../utils/site-timezone';
 import {
   getBlogDerivedText,
   getVisibleBlogRouting,
+  getVisibleBlogSeriesIndex,
   getVisibleDevlogs,
   getVisibleProjectGroups
 } from './content';
 import { getBlogEntryHrefMap } from './blog-routing';
 import { stripTrailingLinks } from './trailing-links';
 import { deriveEntryDescription } from './entry-body';
+import { buildEntrySeriesLookup } from './entry-display';
+import { getSeriesTagKey } from './blog-series';
 import { flattenEntryIdToSlug } from '../utils/slug-rules';
 
 export type ArchiveRowKind = 'blog' | 'projects' | 'devlog';
@@ -93,7 +96,12 @@ export type ArchiveRow = {
   versionName?: string;
   versionSummary?: string;
   isLatest?: boolean;
-  series?: string | null;
+  versionGroup?: string | null;
+  /** 真系列（frontmatter `series`）：显示名 + 阅读序号；不属于任何系列时三个字段都缺省。 */
+  seriesSlug?: string;
+  seriesName?: string;
+  seriesIndex?: number;
+  seriesTotal?: number;
   project?: string;
   description: string;
   tags: string[];
@@ -129,12 +137,19 @@ const orderRows = (left: ArchiveRow, right: ArchiveRow): number => {
 export const getArchiveRows = async (
   options: { versionMode?: 'all' | 'latest' } = {}
 ): Promise<ArchiveRow[]> => {
-  const [routing, projectGroups, devlogs] = await Promise.all([
+  const [routing, projectGroups, devlogs, seriesIndex] = await Promise.all([
     getVisibleBlogRouting(),
     getVisibleProjectGroups(),
-    getVisibleDevlogs()
+    getVisibleDevlogs(),
+    getVisibleBlogSeriesIndex()
   ]);
   const hrefByEntryId = getBlogEntryHrefMap(routing);
+
+  /**
+   * 系列索引按版本组去重（每个组只留最新版那一行），归档也按同一口径挂系列信息：
+   * 同一内容的旧版本行不重复展示序号，避免读者把版本当成系列里的另一篇。
+   */
+  const seriesByEntryId = buildEntrySeriesLookup(seriesIndex);
 
   const versionMode = options.versionMode ?? 'all';
   const blogRows: ArchiveRow[] = routing.groups.flatMap((group) => {
@@ -142,6 +157,7 @@ export const getArchiveRows = async (
     return versions.map((entry) => {
       const isLatest = entry.id === group.latest.id;
       const meta = toDateMeta(entry.data.date, entry.data.dateText);
+      const series = seriesByEntryId.get(entry.id);
       return {
         kind: 'blog',
         key: `blog:${entry.id}`,
@@ -154,7 +170,15 @@ export const getArchiveRows = async (
         versionLabel: entry.data.versionLabel?.trim() || '',
         ...(entry.data.versionName?.trim() ? { versionName: entry.data.versionName.trim() } : {}),
         isLatest,
-        series: group.series,
+        versionGroup: group.versionGroup,
+        ...(series
+          ? {
+              seriesSlug: series.slug,
+              seriesName: series.name,
+              seriesIndex: series.index,
+              seriesTotal: series.total
+            }
+          : {}),
         description: entry.data.description ?? '',
         tags: entry.data.tags ?? [],
         text: getBlogDerivedText(entry).text
@@ -232,6 +256,37 @@ export const getArchiveRows = async (
   });
 
   return [...blogRows, ...projectRows, ...devlogRows].sort(orderRows);
+};
+
+export type ArchiveSeriesOption = {
+  key: string;
+  label: string;
+  count: number;
+};
+
+/**
+ * 归档筛选面板的系列选项：系列是博客内容的概念，项目版本与开发日志没有系列。
+ * 只有版本组的代表行（最新版）带系列字段，所以每个版本组只计一次，
+ * 计数因此与 `/blog` 的「系列共 N 篇」同口径，而不是归档里的行数。
+ */
+export const collectArchiveSeriesOptions = (
+  rows: readonly ArchiveRow[]
+): ArchiveSeriesOption[] => {
+  const bySlug = new Map<string, ArchiveSeriesOption>();
+  for (const row of rows) {
+    if (row.kind !== 'blog' || !row.seriesSlug) continue;
+    const existing = bySlug.get(row.seriesSlug);
+    if (existing) {
+      existing.count += 1;
+      continue;
+    }
+    bySlug.set(row.seriesSlug, {
+      key: getSeriesTagKey(row.seriesSlug),
+      label: row.seriesName ?? row.seriesSlug,
+      count: 1
+    });
+  }
+  return Array.from(bySlug.values());
 };
 
 export const groupArchiveRows = (rows: readonly ArchiveRow[]): ArchiveGroup[] => {

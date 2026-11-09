@@ -1484,13 +1484,33 @@
   display: none;
 }
 
+/*
+ * 预览要贴着真实渲染：它挂在 `.admin-help` 里，若直接继承会拿到 `--faint` 与 12px，
+ * 整行发灰、`0.78em` 的版本/系列名称也跟着缩水。这里按公开页的实际取值还原
+ * 标题颜色与字号，胶囊回到真实高度，档位之间的差异才是读者真正会看到的样子。
+ */
 .admin-entry-version-preview .entry-title {
-  font-size: 13px;
+  color: var(--text);
+  font-size: 18px;
   vertical-align: baseline;
 }
 
-.admin-entry-version-preview .entry-title .badge,
+/* 归档行的标题在公开页是 15px，预览里的相对字号要跟着它走。 */
+.admin-entry-version-preview .entry-title--archive {
+  font-size: 15px;
+}
+
+.admin-entry-version-preview .entry-title .badge {
+  height: var(--entry-pill-height);
+  font-size: 12px;
+}
+
 .admin-entry-version-preview .entry-title .muted-pill {
-  height: 18px;
+  height: var(--entry-pill-height);
   font-size: 11px;
+}
+
+/* 元信息行的真实取值同为 13px；预览沿用同一档，避免和标题比例失真。 */
+.admin-entry-version-preview .meta-line {
+  font-size: 13px;
 }

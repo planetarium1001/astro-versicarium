@@ -155,7 +155,9 @@ const mergeFile = (filePath, base, ours, theirs, scratchDir) => {
   const result = spawnSync(
     'git',
     ['merge-file', '-p', '--diff3', oursPath, basePath, theirsPath],
-    { encoding: 'utf8' }
+    // 合并结果走 stdout：清单类文本（例如 tools/font-manifest.json）远超 spawnSync 默认 1 MB，
+    // 不放大缓冲会以 ENOBUFS 中断，且此时前面的文件已经写过，工作树会停在半合并状态。
+    { encoding: 'utf8', maxBuffer: GIT_MAX_BUFFER }
   );
   if (result.error) throw result.error;
 

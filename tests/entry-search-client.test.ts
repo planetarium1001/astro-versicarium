@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { BLOG_SERIES_TAG_PREFIX } from '../src/lib/blog-series';
 import { getTagKeys } from '../src/lib/tags';
 import {
   PAGES,
@@ -293,8 +294,10 @@ describe('entry-search 客户端行为', () => {
       indexItems.filter((item) => getTagKeys(item.tags).includes(key));
     // 取命中数最少的标签：断言可见分组数与命中项所在月分数一致，而非硬编码 1。
     // 语料变化时这个用例仍然成立。
+    // 系列键与标签键共用按钮列表；本用例观察的是标签筛选，系列键命中数为 0 会选中它。
     const candidate = tagButtons()
       .map((el) => (el.dataset.entryTagKey ?? '').trim())
+      .filter((key) => key && !key.startsWith(BLOG_SERIES_TAG_PREFIX))
       .sort((a, b) => matchesFor(a).length - matchesFor(b).length)[0];
     expect(candidate, '需要至少一个标签').toBeTruthy();
 

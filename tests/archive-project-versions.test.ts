@@ -256,7 +256,8 @@ describe('归档渲染接入契约', () => {
       readSource('src/lib/archive.ts')
     ]);
 
-    expect(page).toContain('versionLabel={row.kind === \'blog\' && !row.series ? null : row.versionLabel ?? null}');
+    // 版本段只认 versionGroup；`series` 已归还内容系列，不再参与版本判定。
+    expect(page).toContain('versionLabel={row.kind === \'blog\' && !row.versionGroup ? null : row.versionLabel ?? null}');
     expect(archiveLib).toContain('...(versionLabel ? { versionLabel } : {})');
     expect(archiveLib).toContain('...(versionName ? { versionName } : {})');
     expect(archiveLib).toContain('...(versionSummary ? { versionSummary } : {})');

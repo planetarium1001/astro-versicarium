@@ -13,6 +13,7 @@ import {
   type BlogRouteInfo,
   type BlogRoutingResult
 } from './blog-routing';
+import { buildBlogSeriesIndex, type BlogSeriesGroup } from './blog-series';
 import { getContentImageSrc } from './content-image';
 import { deriveEntryDescription, renderEntryBody } from './entry-body';
 import {
@@ -218,7 +219,8 @@ export type BlogListItem = {
   isLatest: boolean;
   versionLabel: string;
   latestHref: string;
-  series: string | null;
+  /** 版本组稳定键（frontmatter `versionGroup`），与内容系列无关。 */
+  versionGroup: string | null;
   versionCount: number;
 };
 
@@ -258,7 +260,7 @@ const loadSortedblogs = async ({ includeDraft }: BlogQueryOptions = {}) => {
     orderBy: orderBlogVersions
   });
   warnMissingPublishedAt(blogs);
-  // 构建期校验 series/slug/route 冲突；任何公开查询都会先触发。
+  // 构建期校验版本组/slug/route 冲突；任何公开查询都会先触发。
   buildBlogRouting(blogs);
   return blogs;
 };
@@ -312,6 +314,18 @@ export async function getVisibleBlogRouting(
   return buildBlogRouting(await getVisibleblogs(options));
 }
 
+/**
+ * 同系列文章索引：文章页侧栏、列表卡片与筛选面板共用，同一版本组只占一行。
+ * 条目需要的系列名 / 阅读序号 / 成员总数都从这里反查（`buildEntrySeriesLookup`），
+ * `BlogListItem` 因此只带版本线信息，同一件事不在两处各存一份。
+ */
+export async function getVisibleBlogSeriesIndex(
+  options: BlogQueryOptions = {}
+): Promise<Map<string, BlogSeriesGroup>> {
+  const entries = await getVisibleblogs(options);
+  return buildBlogSeriesIndex(entries, buildBlogRouting(entries));
+}
+
 export async function getVisibleBlogListItems(
   options: BlogQueryOptions = {}
 ): Promise<BlogListItem[]> {
@@ -333,7 +347,7 @@ export async function getVisibleBlogListItems(
       isLatest: info.isLatest,
       versionLabel: info.versionLabel,
       latestHref: info.latestHref,
-      series: info.series,
+      versionGroup: info.versionGroup,
       versionCount: versionCountByEntryId.get(entry.id) ?? 1
     } satisfies BlogListItem;
   });

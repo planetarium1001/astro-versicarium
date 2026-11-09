@@ -2,7 +2,7 @@
 
 ## 范围
 
-本篇覆盖：五个后台页面与路由、七组设置与写入文件、检查保存与冲突、写作、资源、快照、API 分组与写入规则、生产边界。前置：`npm run dev` 能启动，内容模型见 [content.md](content.md)。
+本篇覆盖：五个后台页面与路由、八组设置与写入文件、检查保存与冲突、写作、资源、快照、API 分组与写入规则、生产边界。前置：`npm run dev` 能启动，内容模型见 [content.md](content.md)。
 
 ## 页面与路由
 
@@ -11,7 +11,7 @@
 | 页面 | 路由 | 页面文件 | 作用 |
 | --- | --- | --- | --- |
 | 概览 | `/admin/` | `src/pages/admin/index.astro` | 内容规模、热门标签、字数、最近条目与写作活动 |
-| 主题 | `/admin/theme/` | `src/pages/admin/theme/index.astro` | 七组设置、检查、保存与只读诊断 |
+| 主题 | `/admin/theme/` | `src/pages/admin/theme/index.astro` | 八组设置、检查、保存与只读诊断 |
 | 写作 | `/admin/content/`、`/admin/content/<集合>/_edit/<条目 ID>/` | `src/pages/admin/content/index.astro`、`src/pages/admin/content/[collection]/[edit]/[...entryId].astro` | 内容列表、筛选与条目编辑 |
 | 资源 | `/admin/resources/` | `src/pages/admin/resources/index.astro` | 图片与附件的浏览、上传、批量操作与引用状态 |
 | 快照 | `/admin/data/` | `src/pages/admin/data/index.astro` | 设置快照的导出、校验与导入 |
@@ -22,9 +22,9 @@
 - 资源页是单页工作区，实现是 `src/scripts/admin-resources/index.ts` 一套脚本，根节点标记为 `data-admin-resources-root`。
 - 后台没有独立的图片浏览器、媒体控制台或附件控制台。
 
-## 七组设置与写入文件
+## 八组设置与写入文件
 
-主题页把设置分成七组，服务端只写入 `src/data/settings/` 的五个文件；`SETTINGS_RELATIVE_PATHS` 固定了文件映射（`src/lib/theme-settings.ts:560`）。
+主题页把设置分成八组，服务端只写入 `src/data/settings/` 的五个文件；`SETTINGS_RELATIVE_PATHS` 固定了文件映射（`src/lib/theme-settings.ts:560`）。
 
 | 分组 | 写入文件 | 主要字段 |
 | --- | --- | --- |
@@ -33,6 +33,7 @@
 | 首页设置 | `home.json` | 头图开关与图片、替代文本、导语与补充文案、更多入口与链接 |
 | 内页设置 | `page.json`、`ui.json` 的 `articleMeta`、`cardDateDisplay`、`viewStats`、`floatStack`、`readingMode` | 各页面标题与副标题、归档版本模式、列表订阅开关、动态默认作者、文章元信息、卡片日期、浏览数据、浮动按钮、分页 |
 | 条目版本 | `ui.json` 的 `entryVersionName` | 版本名称隐藏、放在版本号前或版本号后 |
+| 条目系列 | `ui.json` 的 `entrySeriesMode`、`entrySeriesOrder` | 系列名与阅读序号放在元信息行、标题胶囊、标题前缀或不显示；序号可单独关闭 |
 | 代码显示 | `ui.json` 的 `codeBlock` | 代码块行号 |
 | 排版字体 | `ui.json` 的 `typography`、`fontCoverage` | readable、copy、mono、brand 四个字体用途；覆盖策略 `full` 或 `common` |
 
@@ -40,7 +41,7 @@
 - 客户端表单编码在 `src/scripts/admin-console/form-codec/`（入口 `index.ts`）：它把 DOM 输入归一化成设置快照，归一化函数由 `theme-shared/guards.ts` 提供（经 `theme-shared.ts` 统一导出），两侧行为一致。
 - 改归一化规则只改 `theme-shared/guards.ts`；`form-codec/` 只负责 DOM 读写与调用顺序。
 
-- 归档版本模式 `all` 同时影响归档里的博客系列与项目版本文档，`latest` 只显示最新版；不影响项目弹窗与文章页的版本导航。
+- 归档版本模式 `all` 同时影响归档里的博客版本组与项目版本文档，`latest` 只显示最新版；不影响项目弹窗与文章页的版本导航。
 - 站点图标上传在 `src/lib/admin-console/site-assets.ts`：仅 `png`、`appleTouchIcon` 两个位置，接受 PNG，≤256KB，写入 `public/images/site/`，文件名带尺寸与内容哈希。
 - SVG 图标需手工放 `public/` 并在 `site.json` 的 `favicon.svg` 指定；保存前会校验本地文件存在。
 - 分页按首页、博客、动态、开发日志、归档分别开关，条数范围 1–100。
@@ -71,16 +72,18 @@
 
 - 新建、编辑、删除、新建版本与批量操作都走内容写锁 `withAdminContentWriteLock`；新建、上传、导入不需要 `revision`，编辑与删除需要。
 - 条目 ID：`blog`、`projects`、`devlog` 在 `ContentListActions.svelte` 按标题与日期生成 `YYYY-MM-DD-title`，`devlog` 填了 `projectSlug` 时加项目前缀；`bits` 在 `src/lib/admin-console/content-create.ts` 生成 `bits-YYYY-MM-DD-HHmm`。
-- `blog` 的「新建版本」在 `src/lib/admin-console/content-create-version.ts`：复制系列最新版条目目录，重写 `date`、`versionOrder`、`versionLabel`（默认 `vN`）、`versionName`，标记 `draft: true` 并删除 `publishedAt`、`updatedAt`。
+- `blog` 的「新建版本」在 `src/lib/admin-console/content-create-version.ts`：复制版本组最新版条目目录，重写 `date`、`versionOrder`、`versionLabel`（默认 `vN`）、`versionName`，标记 `draft: true` 并删除 `publishedAt`、`updatedAt`。
 - 删除把条目目录移到 `.trash/content/<时间戳>/`（`src/lib/admin-console/content-delete.ts:94`）；批量删除最多 200 条（`src/lib/admin-console/content-bulk.ts:4`）；列表每页 20 条（`src/lib/admin-console/content-routes.ts:22`）。
 - 列表正文搜索只在选中单个集合时生效，全部内容范围只匹配元信息。
-- 列表分组在 `src/lib/admin-console/content-series.ts`：`blog` 按 `series`，`projects` 按稳定 `projectSlug`；总览截断与分页窗口会把同组版本完整并入。
+- 列表分组在 `src/lib/admin-console/content-series.ts`：`blog` 按版本组（`versionGroup`），`projects` 按稳定 `projectSlug`；总览截断与分页窗口会把同组版本完整并入。同文件还给出内容系列徽标（系列名 + 第 N/M 篇），与版本组分组互不混称。
+- 编辑器可写 `series`、`seriesName`、`seriesOrder` 三个系列字段；它们只影响系列索引与呈现，不参与路由判定。
+- 发布与更新时间在编辑器里是「日期 + 时间」双控件，按站点时区解释并标注时区，`<details>` 里另有可粘贴任意支持写法的原文输入框；时间点没变时保存保留原文，不重写 frontmatter。
 - 保存 `blog` 正文时，`src/lib/admin-console/content-write-plan.ts` 用 `findMissingMarkdownBodyLocalImageReferences` 拒绝不存在的本地图片。
 - 编辑器插入项在 `src/components/admin/editor/markdown/markdown-tools.ts` 与 `src/components/admin/editor/markdown/insert-tools.ts`；预览接口是 `POST /api/admin/preview`。
 
 ## 资源
 
-- `src/lib/admin-console/media-index/` 扫描 `content/` 条目目录与 `public/images/`，组织成集合 → 系列 → 版本或条目 → 目录树（`tree.ts`）；`content/<集合>/_shared/` 标记为共享资源。
+- `src/lib/admin-console/media-index/` 扫描 `content/` 条目目录与 `public/images/`，组织成集合 → 版本组 → 版本或条目 → 目录树（`tree.ts`）；`content/<集合>/_shared/` 标记为共享资源。资源的筛选参数是 `versionGroup`，读取旧的 `?series=` 链接时映射到同一分组。
 - 引用状态：引用数大于 0 为 `referenced`，条目仍存在为 `unreferenced`，条目不存在为 `orphan`（`src/lib/admin-console/media-index/references.ts:120`）。
 - 上传：图片落当前条目的 `images/`，附件落 `files/`，共享资源落 `content/<集合>/_shared/`；文件名规范化，重名追加序号（`src/lib/admin-console/image-upload.ts`）。
 - 批量重命名、移动、删除与引用改写走 `src/lib/admin-console/media-batch.ts`，单次最多 100 个文件（`:306`）；移动与改名会同步改写 `content/` 中的引用。

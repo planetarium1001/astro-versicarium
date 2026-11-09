@@ -4,9 +4,9 @@ description: 当前预览版 1.0.0-rc.2：Versicarium · 垄录，五个集合�
 date: 2026-10-22
 publishedAt: 2026-10-22
 tags: [主题, 版本]
-series: theme-introduction
+versionGroup: theme-introduction
 slug: theme-introduction
-versionLabel: "1.0.0-rc.2"
+versionLabel: "0.2.0"
 versionName: 当前版本
 versionSummary: 改名与品牌重做后的预览版，补上资源管理、移动端回归修复与按角色分层的字体。
 versionOrder: 3

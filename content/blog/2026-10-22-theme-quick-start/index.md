@@ -4,9 +4,9 @@ description: 当前版本的上手说明：npm ci 起站，内容写在仓库根
 date: 2026-10-22
 publishedAt: 2026-10-22
 tags: [快速开始]
-series: theme-quick-start
+versionGroup: theme-quick-start
 slug: theme-quick-start
-versionLabel: "1.0.0-rc.2"
+versionLabel: "0.2.0"
 versionName: 当前版本
 versionSummary: npm ci 起站，五个集合，条目目录自带图片与附件，主题更新按文件合并。
 versionOrder: 2

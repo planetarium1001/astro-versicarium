@@ -2,6 +2,7 @@
 import BaseLayout from './BaseLayout.astro';
 import ArticleToc from '../components/ArticleToc.astro';
 import ArticleVersionNotice from '../components/ArticleVersionNotice.astro';
+import ArticleSeriesNotice from '../components/ArticleSeriesNotice.astro';
 import ViewStats from '../components/ViewStats.astro';
 import Lightbox from '../components/Lightbox.astro';
 import '../styles/article.css';
@@ -243,6 +244,8 @@ const shouldShowMetaLine = articleMetaSettings.showDate
   </div>
 
   <ArticleVersionNotice route={route} />
+  {/* 系列与版本正交：两套提示条并列，各自独立决定是否渲染。 */}
+  <ArticleSeriesNotice entryId={entry.id} seriesSlug={entry.data.series ?? null} />
 
   {hasToc ? <ArticleToc headings={tocHeadings} variant="inline" /> : null}
 

@@ -69,32 +69,40 @@ ogImage: images/share.webp
 
 只写日期时页面只显示日期，写了时分则按日期时间显示。
 
-## 文章系列与项目版本
+## 版本线与内容系列
 
-普通文章不需要额外设置。同一篇内容需要保留多次改版时，才用文章系列。
+普通文章不需要额外设置。两种「成组」的方式含义不同，别混用：
 
-- 每个版本放在自己的目录里，各自写上日期，所有版本填同一个 `series` 值。
-- 再分别写 `versionLabel`、`versionName`、`versionSummary` 与 `versionOrder`。
-- 排序先看日期，日期相同看 `versionOrder`；排在最前的就是当前版本。
-- 需要固定地址时，同系列共用一个 `slug`。
+- **版本线**（`versionGroup`）：同一篇内容改版多次，旧版本仍有独立地址，读者默认看到最新版。各版本写同一个 `versionGroup`，再分别写 `versionLabel`、`versionName`、`versionSummary` 与 `versionOrder`；排序先看日期，日期相同看 `versionOrder`，排在最前的就是当前版本。需要固定地址时，同一版本组共用一个 `slug`。
+- **内容系列**（`series`）：同一主题下并列的独立文章，有阅读次序但没有版本关系。各篇写同一个 `series`，用 `seriesOrder` 排次序，可选写 `seriesName` 作为系列显示名。系列不会改变任何一篇文章的地址，也不会把彼此标记成「旧版」。
 
 <details>
-<summary>两个版本的设置</summary>
+<summary>两个版本（版本线）与三篇连载（内容系列）的设置</summary>
+
+```markdown
+---
+title: <TITLE>
+date: <DATE>
+versionGroup: <VERSION-GROUP-ID>
+versionLabel: <VERSION-LABEL>
+versionOrder: 2
+slug: <VERSION-GROUP-ID>
+---
+```
 
 ```markdown
 ---
 title: <TITLE>
 date: <DATE>
 series: <SERIES-ID>
-versionLabel: <VERSION-LABEL>
-versionOrder: 2
-slug: <SERIES-ID>
+seriesName: <SERIES-NAME>
+seriesOrder: 1
 ---
 ```
 
 </details>
 
-项目保留多个版本时做法相同：每个版本一个目录，所有版本填同一个地址标识，再分别写 `versionLabel` 与 `versionName`。项目列表只显示最新版，点开卡片可以切换其他版本。
+项目保留多个版本时做法相同：每个版本一个目录，所有版本填同一个项目标识，再分别写 `versionLabel` 与 `versionName`。项目列表只显示最新版，点开卡片可以切换其他版本。
 
 ## 图片、附件与共享资源
 

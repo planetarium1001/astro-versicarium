@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getArchiveRows } from '../../lib/archive';
+import { getSeriesTagKey } from '../../lib/blog-series';
 import { getThemeSettings } from '../../lib/theme-settings';
 
 /**
@@ -23,7 +24,9 @@ type ArchiveIndexItem = {
   href: string;
   versionLabel?: string;
   isLatest?: boolean;
-  series?: string | null;
+  versionGroup?: string | null;
+  /** 客户端筛选用的命名空间键（`series:<slug>`），与 /blog/index.json 同一套。 */
+  seriesKeys?: string[];
   project?: string;
   type?: string;
 };
@@ -47,7 +50,8 @@ export const GET: APIRoute = async () => {
     href: row.href,
     ...(row.versionLabel ? { versionLabel: row.versionLabel } : {}),
     ...(row.isLatest === undefined ? {} : { isLatest: row.isLatest }),
-    ...(row.series ? { series: row.series } : {}),
+    ...(row.versionGroup ? { versionGroup: row.versionGroup } : {}),
+    ...(row.seriesSlug ? { seriesKeys: [getSeriesTagKey(row.seriesSlug)] } : {}),
     ...(row.project ? { project: row.project } : {})
   }));
 

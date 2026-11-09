@@ -2,7 +2,7 @@
 
 ## 范围
 
-本篇覆盖：五个集合与条目加载、日期解析与显示、各集合字段、博客系列与项目版本路由、图片附件与共享资源、Markdown 插件与白名单、末尾链接组、关于页指令、检查与测试。前置：能运行 `npm run dev`，内容放在 `content/`。
+本篇覆盖：五个集合与条目加载、日期解析与显示、各集合字段、版本线路由与内容系列、图片附件与共享资源、Markdown 插件与白名单、末尾链接组、关于页指令、检查与测试。前置：能运行 `npm run dev`，内容放在 `content/`。
 
 ## 集合与条目加载
 
@@ -37,10 +37,11 @@
 | 写法 | 说明 |
 | --- | --- |
 | `YYYY-MM-DD`、`YYYY/MM/DD` | 纯日期，按站点时区当日零点解释 |
-| `YYYY-MM-DD HH:mm[:ss]`、`YYYY/MM/DD HH:mm[:ss]` | 无偏移日期时间，按站点时区解释 |
-| ISO 8601 带 `Z` 或 `+08:00` 偏移 | 按绝对时间解析 |
+| `YYYY-MM-DD HH:mm[:ss]`、`YYYY-MM-DDTHH:mm[:ss]`、`YYYY/MM/DD HH:mm[:ss]` | 无偏移日期时间，分隔符可以是空格或 `T`，按站点时区解释 |
+| 带 `Z` 或 `±HH:mm` 偏移 | 按绝对时间解析，`T` 与空格分隔都接受，偏移前可以带秒 |
 
-- `date`、`publishedAt`、`updatedAt` 在 schema 里先以 `z.unknown()` 接收，再由 `normalizeDateFields` 解析成 `date`、`dateText`、`dateHasTime`（`src/content.config.ts:82`）。
+- `date`、`publishedAt`、`updatedAt` 在 schema 里先以 `z.unknown()` 接收，再由 `normalizeDateFields` 解析成 `date`、`dateText`、`dateHasTime`（`src/content.config.ts:82`）。可接受写法清单在 `SUPPORTED_CONTENT_DATE_FORMATS`，校验失败提示由 `formatContentDateError()` 拼出。
+- 后台写回时只在作者改动时间点时归一化：带时间写 `YYYY-MM-DD HH:mm`（站点时区），只写日期写 `YYYY-MM-DD`；时间点没变则沿用原文，UTC 写法不会被顺手改写。控件侧拆分与合并在 `src/lib/admin-console/datetime-field.ts`。
 - YAML 可能把纯日期解析成 `Date`，`parseContentDateInput` 会处理：UTC 零点视为纯日期，其余保留时分（`src/utils/date-only.ts:166`）。
 - 站点时区优先级：`SITE_TIMEZONE` > `src/data/settings/site.json` 的 `timezone` > `site.config.mjs` 的 `DEFAULT_SITE_TIMEZONE`（默认 `Asia/Shanghai`）；非法的 `SITE_TIMEZONE` 直接抛错（`src/utils/site-timezone.ts:59`）。
 - 浏览器端使用配置期注入的快照，改 `site.json` 的时区后要重启开发服务器；`publishedAt` 缺失时回退 `date`，`updatedAt` 不得早于 `date`。
@@ -67,14 +68,18 @@
 | `ogImage` | ✗ | `none`（转成 `null`）、条目内相对图片或 `https://` 地址 |
 | `ogImageAlt` | ✗ | 分享图替代文本 |
 | `badge` | ✗ | 标题前的纯文本角标 |
-| `series` | ✗ | 系列键；规则同 `slug`，同一系列填同一个值 |
+| `versionGroup` | ✗ | 版本线标识；规则同 `slug`，同一内容的各版本填同一个值 |
+| `series` | ✗ | 内容系列标识；规则同 `slug`，同一系列填同一个值 |
+| `seriesName` | ✗ | 系列显示名；缺省回退 `series` |
+| `seriesOrder` | ✗ | 系列内阅读次序，非负整数，升序；缺省排在最后 |
 
 - 日期显示字段：`articleDateDisplay`、`cardDateDisplay` 取 `published`、`updated`、`both`，`dateGranularity` 取 `date` 或 `datetime`。
 - 版本字段：`versionLabel` 是版本号字符串，`versionName` 缺省用标题，`versionSummary` 缺省用 `description`，`versionOrder` 是非负整数，缺省按 `0` 参与排序。
 
 - 图片字段由 schema 的 `image()` 处理：本地图片会优化并带 `width`、`height`、`format`，外链只接受 `https://`（`src/content.config.ts:208`）。
 - `slug` 不填时，默认公开路径取条目 ID 压平后的值，因此带日期前缀。
-- `series` 与版本字段只有同一 `series` 下才参与路由分组，单篇文章填了也不会产生版本页面。
+- `versionGroup` 与版本字段只有同一 `versionGroup` 下才参与路由分组，单篇文章填了也不会产生版本页面。
+- `series`、`seriesName`、`seriesOrder` 只参与系列索引与呈现，不参与路由判定，不影响任何条目的公开地址。
 
 ## bits
 
@@ -135,9 +140,9 @@
 - 页面标题与副标题来自 `src/data/settings/page.json` 的 `about.title` 与 `about.subtitle`，不读 frontmatter（`src/pages/about/index.astro:14`）。
 - 关于页专用指令只在这个文件生效。
 
-## 博客系列与版本路由
+## 版本线路由与内容系列
 
-- 分组键由 `series` 决定：有 `series` 用 `series:<值>`，没有则单条一组 `single:<条目 ID>`（`src/lib/blog-routing.ts:92`）。
+- 分组键由 `versionGroup` 决定：有 `versionGroup` 用 `versionGroup:<值>`，没有则单条一组 `single:<条目 ID>`（`src/lib/blog-routing.ts:92`）。
 - 组内排序为 `date` 降序、`versionOrder` 降序、条目 ID 升序，排在最前的是最新版。
 - 同组所有非空 `slug` 必须一致，否则抛 `BlogRoutingError`；有版本写了 `slug` 时最新版必须也写。
 - 稳定 `slug` 必须匹配 `BLOG_PUBLIC_SLUG_RE`，且不能是保留名 `page`、`rss.xml`；不同分组产生相同路径时报错。
@@ -149,10 +154,17 @@
 | `latest-alias` | 最新版的日期路径 | 稳定地址 | ✗ |
 | `version` | 历史版各自的日期路径 | 组的规范地址 | ✓ |
 
-- `latest-alias` 只在系列设置了 `slug`、且最新版的日期路径与稳定路径不同时生成。
+- `latest-alias` 只在版本组设置了 `slug`、且最新版的日期路径与稳定路径不同时生成。
 - 历史版本页面只显示版本日期；RSS 与 sitemap 只保留最新版，`/rss.xml` 与 `/blog/rss.xml` 条目相同、频道标题不同。
 - sitemap 在构建结束后按 `/blog/index.json` 中 `isLatest` 条目的 href 生成规范地址集合，移除历史版本与日期别名（`astro.config.mjs:66`）。
-- 修改已发布系列的 `slug` 会改变规范地址，旧链接失效。
+- 修改已发布版本组的 `slug` 会改变规范地址，旧链接失效。
+
+内容系列不进路由层：
+
+- `src/lib/blog-series.ts` 的 `buildBlogSeriesIndex(entries, routing)` 只从 `routing.groups` 取「每个版本组一行」（组内最新版，`href` 用组的规范地址），系列清单因此不会重复列出同一内容的多个版本。
+- 排序为 `seriesOrder` 升序（缺失视为无穷大排最后）→ `date` 升序 → 条目 ID，序号是 1-based 位置；显示名取排序后第一个非空 `seriesName`，缺省回退 slug。
+- 筛选键是命名空间化的标签键 `series:<slug>`（`getSeriesTagKey()`），链接由 `getSeriesFilterHref()` 生成 `/blog/?tags=series%3A<slug>&mode=and`；表达式引擎不区分标签与系列。
+- 条目上的四档呈现由 `ui.entrySeriesMode`（`hidden` / `meta` / `pill` / `prefix`，默认 `meta`）与 `ui.entrySeriesOrder`（`show` / `hide`）控制，解析在 `src/lib/entry-display.ts`。
 
 ## 项目多版本路由
 
@@ -234,7 +246,7 @@
 
 - `npm test`：写作相关用例集中在 `tests/blog-routing.test.ts`、`tests/project-routing.test.ts`、`tests/date-only.test.ts`、`tests/display-date.test.ts`、`tests/content-entry-files.test.ts`、`tests/trailing-links.test.ts`、`tests/about-directives.test.ts`、`tests/markdown-pipeline-contract.test.ts`。
 - `npm run verify`：类型检查、构建、字体覆盖、测试与产物检查；schema 与路由错误会在构建期暴露。
-- 构建期失败：非法日期、`updatedAt` 早于 `date`、`versions` 缺少 `versionLabel`、历史版本日期晚于项目 `date`、博客系列 `slug` 不一致、博客或项目 `slug` 格式非法、博客路径重复、项目锚点冲突、条目主文件缺失、保留 `slug` 被占用。
+- 构建期失败：非法日期、`updatedAt` 早于 `date`、`versions` 缺少 `versionLabel`、历史版本日期晚于项目 `date`、博客版本组 `slug` 不一致、博客或项目 `slug` 格式非法、博客路径重复、项目锚点冲突、条目主文件缺失、保留 `slug` 被占用。
 - 构建期告警：已发布文章缺 `publishedAt`、项目同组 `versionOrder` 重复、`devlog.projectSlug` 非空但未解析。
 
 字段变更通常还要同步后台编辑器与校验逻辑（`src/lib/admin-console/`），后台细节见 [admin.md](admin.md)。

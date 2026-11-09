@@ -4,7 +4,7 @@ description: 1.0.0 时的主题状态：内容根迁出 src/，条目改为目�
 date: 2026-10-19
 publishedAt: 2026-10-19
 tags: [主题, 版本]
-series: theme-introduction
+versionGroup: theme-introduction
 slug: theme-introduction
 versionLabel: "1.0.0"
 versionName: 条目目录与版本

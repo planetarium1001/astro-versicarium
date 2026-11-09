@@ -4,7 +4,7 @@ description: 0.5.0 时的主题状态：从 Whono 派生的阅读增强版本，
 date: 2026-10-02
 publishedAt: 2026-10-02
 tags: [主题, 版本]
-series: theme-introduction
+versionGroup: theme-introduction
 slug: theme-introduction
 versionLabel: "0.5.0"
 versionName: 分叉起点

@@ -18,6 +18,7 @@ export const createFormCodec = (context: FormCodecContext) => {
     refreshArticleMetaPreview: previews.refreshArticleMetaPreview,
     refreshViewStatsPreview: previews.refreshViewStatsPreview,
     refreshEntryVersionPreview: previews.refreshEntryVersionPreview,
+    refreshEntrySeriesPreview: previews.refreshEntrySeriesPreview,
     refreshFontCoveragePreview: settings.refreshFontCoveragePreview,
     refreshHomeIntroPreview: homeIntro.refreshHomeIntroPreview,
     syncAdminOverviewControls: previews.syncAdminOverviewControls,

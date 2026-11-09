@@ -157,7 +157,10 @@ describe('frontmatter sidebar labels', () => {
     const source = await readFile(path.join(process.cwd(), FRONTMATTER_SIDEBAR), 'utf8');
     const labels = [
       '分类胶囊 badge',
+      '版本线 versionGroup',
       '系列 series',
+      '系列名称 seriesName',
+      '系列次序 seriesOrder',
       '版本顺序 versionOrder',
       '版本号 versionLabel',
       '版本名称 versionName',
@@ -178,7 +181,10 @@ describe('frontmatter sidebar labels', () => {
     const source = await readFile(path.join(process.cwd(), FRONTMATTER_SIDEBAR), 'utf8');
     const tooltips = [
       '列表中的分类标签',
-      '同一系列的版本共用这个标识',
+      '同一内容的多个版本共用这个标识，决定最新版与历史版',
+      '系列是有序阅读集合：成员是并列的独立文章，与版本无关',
+      '越小越靠前；留空按发布日期排在系列末尾',
+      '列表与文章页展示的系列名；留空回退 series 键',
       '数字越大越新，同日期时用于排序',
       '例如 v2.0',
       '例如 稳定版',

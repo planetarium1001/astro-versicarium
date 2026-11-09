@@ -196,19 +196,19 @@ describe('admin-console/content-source-index', () => {
     });
   });
 
-  it('reads blog series/version metadata and marks the latest version per series', async () => {
+  it('reads blog version group metadata and marks the latest version per group', async () => {
     await writeContent('blog', 'post-v1/index.md', markdown(`
-      title: Series v1
+      title: Version v1
       date: 2026-01-01
-      series: post
+      versionGroup: post
       versionLabel: v1.0.0
       versionName: First
       versionOrder: 1
     `));
     await writeContent('blog', 'post-v2/index.md', markdown(`
-      title: Series v2
+      title: Version v2
       date: 2026-03-01
-      series: post
+      versionGroup: post
       versionLabel: v2.0.0
       versionName: Second
       versionOrder: 2
@@ -223,15 +223,18 @@ describe('admin-console/content-source-index', () => {
     const byId = new Map(items.map((item) => [item.id, item]));
 
     expect(byId.get('post-v2')).toMatchObject({
-      series: 'post',
+      versionGroup: 'post',
       versionLabel: 'v2.0.0',
       versionName: 'Second',
       versionOrder: 2,
       versionGroupSize: 2,
-      isLatestVersion: true
+      isLatestVersion: true,
+      series: null,
+      seriesIndex: null,
+      seriesTotal: null
     });
     expect(byId.get('post-v1')).toMatchObject({
-      series: 'post',
+      versionGroup: 'post',
       versionLabel: 'v1.0.0',
       versionName: 'First',
       versionOrder: 1,
@@ -239,7 +242,7 @@ describe('admin-console/content-source-index', () => {
       isLatestVersion: false
     });
     expect(byId.get('standalone')).toMatchObject({
-      series: null,
+      versionGroup: null,
       versionLabel: null,
       versionName: null,
       versionOrder: null,
@@ -249,6 +252,66 @@ describe('admin-console/content-source-index', () => {
     expect(byId.get('post-v2')?.searchHaystack).toContain('post');
     expect(byId.get('post-v2')?.searchHaystack).toContain('v2.0.0');
     expect(byId.get('post-v2')?.projectSlug).toBeNull();
+  });
+
+  it('reads real series metadata and numbers members without version semantics', async () => {
+    await writeContent('blog', 'pc-build-2/index.md', markdown(`
+      title: 装机第二步
+      date: 2026-01-05
+      series: pc-build
+      seriesName: 折腾主机
+      seriesOrder: 2
+    `));
+    await writeContent('blog', 'pc-build-1/index.md', markdown(`
+      title: 装机第一步
+      date: 2026-02-05
+      series: pc-build
+      seriesName: 折腾主机
+      seriesOrder: 1
+      versionGroup: pc-build-post
+    `));
+    await writeContent('blog', 'pc-build-1-next/index.md', markdown(`
+      title: 装机第一步（修订）
+      date: 2026-03-05
+      series: pc-build
+      seriesName: 折腾主机
+      seriesOrder: 1
+      versionGroup: pc-build-post
+      versionLabel: v2
+      versionOrder: 2
+    `));
+
+    const manifest = await loadAdminContentSourceManifest();
+    const items = await loadAdminContentSourceIndex(manifest, 'blog');
+    const byId = new Map(items.map((item) => [item.id, item]));
+
+    // 系列元数据与版本组元数据互不影响。
+    expect(byId.get('pc-build-2')).toMatchObject({
+      series: 'pc-build',
+      seriesName: '折腾主机',
+      seriesOrder: 2,
+      seriesIndex: 2,
+      seriesTotal: 2,
+      versionGroup: null,
+      isLatestVersion: true
+    });
+    // 同一版本组只算一篇系列成员，两个版本共享同一枚徽标。
+    expect(byId.get('pc-build-1')).toMatchObject({
+      series: 'pc-build',
+      seriesOrder: 1,
+      seriesIndex: 1,
+      seriesTotal: 2,
+      versionGroup: 'pc-build-post',
+      isLatestVersion: false
+    });
+    expect(byId.get('pc-build-1-next')).toMatchObject({
+      series: 'pc-build',
+      seriesIndex: 1,
+      seriesTotal: 2,
+      versionGroup: 'pc-build-post',
+      isLatestVersion: true
+    });
+    expect(byId.get('pc-build-2')?.searchHaystack).toContain('折腾主机');
   });
 
   it('reads projects stable frontmatter slug and marks latest project versions', async () => {
