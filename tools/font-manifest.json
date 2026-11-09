@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-09T06:28:51.853Z",
+  "generatedAt": "2026-11-09T06:51:42.175Z",
   "generator": "scripts/font-subset.mjs",
   "targets": {
     "core": {
@@ -24,7 +24,7 @@
   "inputs": {
     "charsetCommon": "ef24faa157580ccc0b21823380bebfcd6bcb6b1374a7952d12d7874909420d3b",
     "charsetBase": "79a6c710013cc86617d5db65871f59b2d67dee72415d380a2cc7145a51450fe4",
-    "charsetRoles": "ce57b1dd78765816d4f36c29f797eb078937c03ddad7cc4a64cc8a112ba2e827",
+    "charsetRoles": "da21f5af5d8cdfe38a56329a028ea59b4f74bf89970ed73890b0226b9a3699ad",
     "charsetFrequency": "43576c6e9f752306a21a02263839926f63a64abadc8ce3ec3cf7c65b3935b4c3",
     "fontSourcesDigest": "c141a2ce81b1cd1a38ca652c3c929116a2bfa1bf1b31cad73f52863e89ef4b14",
     "pipelineConfig": "9ed001142f5b6fbf1b93cfab2af9d68949549c2f679c66b5934ef6b096853c73"
